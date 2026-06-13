@@ -1,0 +1,98 @@
+"use client";
+
+import { useActionState, useEffect, useRef } from "react";
+import { createLeadAction } from "@/app/actions/leads";
+import { initialLeadActionState } from "@/lib/lead-schema";
+
+const interests = [
+  { value: "order", label: "Заказ" },
+  { value: "b2b", label: "B2B" },
+  { value: "career", label: "Работа" },
+  { value: "franchise", label: "Франшиза" },
+  { value: "other", label: "Другое" }
+] as const;
+
+export function LeadForm() {
+  const [state, formAction, isPending] = useActionState(createLeadAction, initialLeadActionState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.status === "success") {
+      formRef.current?.reset();
+    }
+  }, [state.status]);
+
+  return (
+    <section id="lead" className="container-page py-16 sm:py-24">
+      <div className="grid gap-8 rounded-lg border border-karimoff-line bg-karimoff-cream p-6 shadow-card sm:p-10 lg:grid-cols-[0.85fr_1.15fr] lg:p-12">
+        <div>
+          <p className="text-sm font-semibold text-karimoff-orange">Заявка</p>
+          <h2 className="mt-3 text-balance text-4xl font-black leading-none text-karimoff-black sm:text-6xl">
+            Связаться с KARIMOFF
+          </h2>
+          <p className="mt-6 text-base leading-7 text-karimoff-muted">
+            Оставьте контакт, и мы вернёмся с ответом по заказу, B2B, работе
+            или франшизе.
+          </p>
+        </div>
+
+        <form ref={formRef} action={formAction} className="grid gap-4">
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
+            <input
+              name="name"
+              required
+              placeholder="Ваше имя"
+              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+            />
+          </label>
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
+            <input
+              name="phone"
+              required
+              inputMode="tel"
+              placeholder="+7"
+              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+            />
+          </label>
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-karimoff-muted">Интерес</span>
+            <select
+              name="interest"
+              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+              defaultValue="order"
+            >
+              {interests.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>
+            <textarea
+              name="comment"
+              rows={5}
+              placeholder="Расскажите, что нужно подготовить"
+              className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="mt-2 rounded-full bg-karimoff-orange px-7 py-4 text-sm font-bold text-white transition hover:bg-karimoff-black disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isPending ? "Отправляем" : "Отправить заявку"}
+          </button>
+          {state.status !== "idle" ? (
+            <p className={state.status === "success" ? "text-sm font-semibold text-karimoff-orange" : "text-sm font-semibold text-red-600"}>
+              {state.message}
+            </p>
+          ) : null}
+        </form>
+      </div>
+    </section>
+  );
+}
