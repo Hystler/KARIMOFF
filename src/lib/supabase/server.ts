@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
+import type { Product } from "@/lib/product-types";
 
 export type LeadRow = {
   id: string;
@@ -12,6 +13,8 @@ export type LeadRow = {
   status: "new" | "in_progress" | "closed";
   source: string | null;
 };
+
+export type ProductRow = Product;
 
 export function isSupabaseConfigured() {
   return Boolean(

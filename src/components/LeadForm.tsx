@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createLeadAction } from "@/app/actions/leads";
 import { initialLeadActionState } from "@/lib/lead-schema";
+import { CHECKOUT_COMMENT_KEY } from "./cart/CartProvider";
 
 const interests = [
   { value: "order", label: "Заказ" },
@@ -15,12 +16,33 @@ const interests = [
 export function LeadForm() {
   const [state, formAction, isPending] = useActionState(createLeadAction, initialLeadActionState);
   const formRef = useRef<HTMLFormElement>(null);
+  const commentRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
+      window.localStorage.removeItem(CHECKOUT_COMMENT_KEY);
+      window.dispatchEvent(new Event("karimoff-lead-success"));
     }
   }, [state.status]);
+
+  useEffect(() => {
+    function applyCheckoutComment(comment: string | null) {
+      if (comment && commentRef.current) {
+        commentRef.current.value = comment;
+      }
+    }
+
+    applyCheckoutComment(window.localStorage.getItem(CHECKOUT_COMMENT_KEY));
+
+    function handleCheckout(event: Event) {
+      const detail = (event as CustomEvent<string>).detail;
+      applyCheckoutComment(detail);
+    }
+
+    window.addEventListener("karimoff-cart-checkout", handleCheckout);
+    return () => window.removeEventListener("karimoff-cart-checkout", handleCheckout);
+  }, []);
 
   return (
     <section id="lead" className="container-page py-16 sm:py-24">
@@ -73,6 +95,7 @@ export function LeadForm() {
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>
             <textarea
+              ref={commentRef}
               name="comment"
               rows={5}
               placeholder="Расскажите, что нужно подготовить"

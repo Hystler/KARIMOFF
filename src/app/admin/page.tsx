@@ -5,7 +5,8 @@ import { logoutAction } from "./login/actions";
 
 const cards = [
   { title: "Заявки", href: "/admin/leads", enabled: true },
-  { title: "Меню", href: "#", enabled: false },
+  { title: "Меню", href: "/admin/products", enabled: true },
+  { title: "Юнит-экономика", href: "/admin/economics", enabled: true },
   { title: "Франшиза", href: "#", enabled: false },
   { title: "Вакансии", href: "#", enabled: false },
   { title: "Настройки", href: "#", enabled: false }
@@ -38,7 +39,7 @@ export default async function AdminPage() {
           </form>
         </header>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) =>
             card.enabled ? (
               <Link

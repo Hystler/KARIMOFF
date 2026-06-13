@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { CartButton } from "./cart/CartButton";
 import { Logo } from "./Logo";
 
 const navItems = [
@@ -33,7 +34,8 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center lg:flex">
+        <div className="hidden items-center gap-3 lg:flex">
+          <CartButton />
           <Link
             href="/admin/login"
             className="rounded-full border border-karimoff-black/20 bg-white px-5 py-2.5 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
@@ -42,7 +44,8 @@ export function Header() {
           </Link>
         </div>
 
-        <div className="flex items-center lg:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
+          <CartButton />
           <button
             type="button"
             aria-label={isOpen ? "Закрыть меню" : "Открыть меню"}

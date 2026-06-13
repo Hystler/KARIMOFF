@@ -7,12 +7,15 @@ import { FranchiseTeaser } from "@/components/FranchiseTeaser";
 import { Hero } from "@/components/Hero";
 import { LeadForm } from "@/components/LeadForm";
 import { PopularMenu } from "@/components/PopularMenu";
+import { getActiveProducts } from "@/lib/products";
 
-export default function Home() {
+export default async function Home() {
+  const products = await getActiveProducts(4);
+
   return (
     <main>
       <Hero />
-      <PopularMenu />
+      <PopularMenu products={products} />
       <BrandSection />
       <Directions />
       <BusinessSection />
