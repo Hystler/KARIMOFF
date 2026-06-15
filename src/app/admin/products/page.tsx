@@ -64,7 +64,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/admin/products/new"
-              className="rounded-full bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-karimoff-black"
+              className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
             >
               Создать товар
             </Link>

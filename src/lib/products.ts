@@ -1,20 +1,10 @@
 import "server-only";
 
-import { menuItems } from "@/data/menu";
+import { demoProducts } from "@/data/products";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Product } from "./product-types";
 
-export const fallbackProducts: Product[] = menuItems.map((item, index) => ({
-  id: item.id,
-  name: item.name,
-  slug: item.id,
-  category: item.category,
-  description: item.description,
-  price: item.price,
-  image_url: item.image,
-  is_active: true,
-  sort_order: (index + 1) * 10
-}));
+export const fallbackProducts: Product[] = demoProducts;
 
 function normalizeProduct(row: Record<string, unknown>): Product {
   return {

@@ -38,7 +38,7 @@ export function Header() {
           <CartButton />
           <Link
             href="/admin/login"
-            className="rounded-full border border-karimoff-black/20 bg-white px-5 py-2.5 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
+            className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
           >
             Войти / Регистрация
           </Link>
@@ -74,7 +74,7 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-2 border-t border-karimoff-line pt-4">
-              <Link href="/admin/login" onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-black/20 px-5 py-3 text-sm font-semibold text-karimoff-black">
+              <Link href="/admin/login" onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
                 Войти / Регистрация
               </Link>
             </div>

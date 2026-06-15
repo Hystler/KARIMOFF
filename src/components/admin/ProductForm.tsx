@@ -40,9 +40,9 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           <input
             name="category"
             required
-            defaultValue={product?.category ?? "burgers"}
+            defaultValue={product?.category ?? "Бургеры"}
             className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-            placeholder="burgers"
+            placeholder="Бургеры"
           />
         </label>
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
@@ -77,7 +77,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           name="image_url"
           defaultValue={product?.image_url ?? ""}
           className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-          placeholder="/assets/burger-obama.png или https://..."
+          placeholder="/assets/products/placeholder-burger.svg или https://..."
         />
       </label>
 
@@ -105,7 +105,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="submit"
-          className="rounded-full bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-karimoff-black"
+          className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
         >
           {submitLabel}
         </button>

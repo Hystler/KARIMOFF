@@ -17,7 +17,7 @@ export function BusinessSection() {
               </p>
               <Link
                 href="#lead"
-                className="mt-7 inline-flex rounded-full bg-karimoff-orange px-6 py-3 text-sm font-bold text-white transition hover:bg-karimoff-black"
+                className="mt-7 inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
               >
                 Обсудить сотрудничество
               </Link>

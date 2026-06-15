@@ -3,7 +3,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { getActiveProducts } from "@/lib/products";
 
 export default async function MenuPage() {
-  const products = await getActiveProducts(24);
+  const products = await getActiveProducts(100);
 
   return (
     <main className="pt-28">
@@ -16,12 +16,12 @@ export default async function MenuPage() {
             Фирменные позиции без ресторанной паузы
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-karimoff-muted sm:text-lg">
-            Первый набор меню собран вокруг сытных burger и street food позиций.
-            Карточки уже готовы к будущему подключению корзины и доставки.
+            Бургеры, шаурма, хот-доги, боксы, горячие закуски и напитки.
+            Добавляйте позиции в корзину и оставляйте заявку.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((product, index) => (
             <ProductCard key={product.id} product={product} index={index} />
           ))}

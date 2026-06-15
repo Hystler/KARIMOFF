@@ -105,7 +105,7 @@ export function LeadForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="mt-2 rounded-full bg-karimoff-orange px-7 py-4 text-sm font-bold text-white transition hover:bg-karimoff-black disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-2 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isPending ? "Отправляем" : "Отправить заявку"}
           </button>

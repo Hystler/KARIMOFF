@@ -14,8 +14,39 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
+function getProductPlaceholder(category: string) {
+  if (category === "Бургеры") {
+    return "/assets/products/placeholder-burger.svg";
+  }
+
+  if (category === "Шаурма") {
+    return "/assets/products/placeholder-shaurma.svg";
+  }
+
+  if (category === "Хот-Доги") {
+    return "/assets/products/placeholder-hotdog.svg";
+  }
+
+  if (category === "Боксы") {
+    return "/assets/products/placeholder-box.svg";
+  }
+
+  if (category === "Напитки") {
+    return "/assets/products/placeholder-drink.svg";
+  }
+
+  return "/assets/products/placeholder-snack.svg";
+}
+
 function ProductImage({ product }: { product: Product }) {
-  const src = product.image_url || "/assets/burger-obama.png";
+  const src = product.image_url || getProductPlaceholder(product.category);
+
+  if (src.endsWith(".svg")) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+    );
+  }
 
   if (src.startsWith("/")) {
     return (
@@ -46,28 +77,28 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       transition={{ duration: 0.45, delay: index * 0.05 }}
       className="group overflow-hidden rounded-xl border border-karimoff-line bg-white shadow-card transition hover:-translate-y-1 hover:border-karimoff-orange/55 hover:shadow-[0_20px_55px_rgba(18,18,20,0.12)]"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-karimoff-soft">
+      <div className="relative aspect-[16/9] overflow-hidden bg-karimoff-soft lg:aspect-[5/3]">
         <ProductImage product={product} />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/72 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white/72 to-transparent" />
       </div>
-      <div className="p-5 sm:p-6">
+      <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-2xl font-black text-karimoff-black">{product.name}</h3>
-          <span className="rounded-full bg-karimoff-orange/10 px-3 py-1 text-sm font-black text-karimoff-orange">
+          <h3 className="line-clamp-2 text-xl font-black leading-tight text-karimoff-black">{product.name}</h3>
+          <span className="shrink-0 rounded-full bg-karimoff-orange/10 px-3 py-1 text-sm font-black text-karimoff-orange">
             {formatPrice(product.price)} ₽
           </span>
         </div>
         {product.description ? (
-          <p className="mt-3 min-h-20 text-sm leading-6 text-karimoff-muted">{product.description}</p>
+          <p className="mt-3 line-clamp-2 text-sm leading-6 text-karimoff-muted">{product.description}</p>
         ) : (
-          <p className="mt-3 min-h-20 text-sm leading-6 text-karimoff-muted">Фирменная позиция KARIMOFF.</p>
+          <p className="mt-3 line-clamp-2 text-sm leading-6 text-karimoff-muted">Фирменная позиция KARIMOFF.</p>
         )}
         <button
           type="button"
           onClick={() => addItem(product)}
-          className="mt-5 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-4 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-karimoff-black"
+          className="mt-4 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-4 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
         >
-          В заказ
+          В корзину
         </button>
       </div>
     </motion.article>
