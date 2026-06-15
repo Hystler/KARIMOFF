@@ -4,6 +4,7 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { logoutAction } from "./login/actions";
 
 const cards = [
+  { title: "Заказы", href: "/admin/orders", enabled: true },
   { title: "Заявки", href: "/admin/leads", enabled: true },
   { title: "Меню", href: "/admin/products", enabled: true },
   { title: "Юнит-экономика", href: "/admin/economics", enabled: true },

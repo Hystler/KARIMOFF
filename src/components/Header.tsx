@@ -18,8 +18,8 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-karimoff-line bg-white/92 backdrop-blur-xl">
-      <div className="container-page flex h-[72px] items-center justify-between gap-4">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-karimoff-black/10 bg-[rgba(255,255,255,0.96)] shadow-[0_12px_40px_rgba(18,18,20,0.08)] backdrop-blur-xl">
+      <div className="container-page flex h-[74px] items-center justify-between gap-4">
         <Logo />
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="Основная навигация">
@@ -27,7 +27,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-karimoff-muted transition hover:text-karimoff-black"
+              className="text-[15px] font-semibold text-karimoff-black transition hover:text-karimoff-orange"
             >
               {item.label}
             </Link>
@@ -37,7 +37,7 @@ export function Header() {
         <div className="hidden items-center gap-3 lg:flex">
           <CartButton />
           <Link
-            href="/admin/login"
+            href="/login"
             className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
           >
             Войти / Регистрация
@@ -51,7 +51,7 @@ export function Header() {
             aria-label={isOpen ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={isOpen}
             onClick={() => setIsOpen((value) => !value)}
-            className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 rounded-full border border-karimoff-black/15 bg-white"
+            className="flex h-12 w-12 flex-col items-center justify-center gap-1.5 rounded-full border border-karimoff-black/15 bg-white shadow-[0_10px_24px_rgba(18,18,20,0.06)]"
           >
             <span className={cn("h-0.5 w-5 rounded-full bg-karimoff-black transition", isOpen && "translate-y-2 rotate-45")} />
             <span className={cn("h-0.5 w-5 rounded-full bg-karimoff-black transition", isOpen && "opacity-0")} />
@@ -74,7 +74,7 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-2 border-t border-karimoff-line pt-4">
-              <Link href="/admin/login" onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
+              <Link href="/login" onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
                 Войти / Регистрация
               </Link>
             </div>

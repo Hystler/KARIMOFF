@@ -23,8 +23,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
           На сайт KARIMOFF
         </Link>
         <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card sm:p-8">
-          <p className="text-sm font-semibold text-karimoff-orange">Админка</p>
-          <h1 className="mt-3 text-4xl font-black leading-none">Вход</h1>
+          <h1 className="text-4xl font-black leading-none">Вход</h1>
           <form action={loginAction} className="mt-8 grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>

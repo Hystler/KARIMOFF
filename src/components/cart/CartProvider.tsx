@@ -46,14 +46,6 @@ function toCartProduct(product: Product): CartLine["product"] {
   };
 }
 
-function buildOrderComment(lines: CartLine[], totalPrice: number) {
-  const items = lines
-    .map((line) => `- ${line.product.name}: ${line.quantity} x ${line.product.price} ₽ = ${line.quantity * line.product.price} ₽`)
-    .join("\n");
-
-  return `Состав заказа:\n${items}\nИтого: ${totalPrice} ₽`;
-}
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -90,6 +82,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
     window.addEventListener("karimoff-lead-success", handleLeadSuccess);
     return () => window.removeEventListener("karimoff-lead-success", handleLeadSuccess);
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+
+    if (searchParams.get("checkout") === "1") {
+      const timeoutId = window.setTimeout(() => {
+        setIsOpen(true);
+        window.dispatchEvent(new Event("karimoff-cart-checkout-request"));
+      }, 100);
+      searchParams.delete("checkout");
+      const nextSearch = searchParams.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(null, "", nextUrl);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    return undefined;
+  }, [isHydrated]);
 
   const totalItems = useMemo(() => lines.reduce((sum, line) => sum + line.quantity, 0), [lines]);
   const totalPrice = useMemo(
@@ -138,12 +153,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const comment = buildOrderComment(lines, totalPrice);
-    window.localStorage.setItem(CHECKOUT_COMMENT_KEY, comment);
-    window.dispatchEvent(new CustomEvent("karimoff-cart-checkout", { detail: comment }));
-    setIsOpen(false);
-    window.location.href = "/#lead";
-  }, [lines, totalPrice]);
+    setIsOpen(true);
+    window.dispatchEvent(new Event("karimoff-cart-checkout-request"));
+  }, [lines]);
 
   const value = useMemo<CartContextValue>(
     () => ({

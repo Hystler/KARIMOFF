@@ -6,10 +6,9 @@ import { directions } from "@/data/directions";
 
 export function Directions() {
   return (
-    <section className="container-page py-16 sm:py-24">
+    <section className="container-page py-12 sm:py-[72px]">
       <div className="max-w-3xl">
-        <p className="text-sm font-semibold text-karimoff-orange">Сценарии</p>
-        <h2 className="mt-3 text-balance text-4xl font-black text-karimoff-black sm:text-5xl">
+        <h2 className="text-balance text-4xl font-black text-karimoff-black sm:text-5xl">
           Выберите свой сценарий
         </h2>
       </div>
