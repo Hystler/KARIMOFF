@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
-import { createOrderAction, getCurrentCustomerAction } from "@/app/actions/orders";
+import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
 import { initialOrderActionState } from "@/lib/order-schema";
 import { useCart } from "./CartProvider";
 
@@ -10,6 +10,11 @@ type CustomerProfile = {
   id: string;
   name: string;
   phone: string;
+};
+
+type CheckoutSettings = {
+  delivery_enabled: boolean;
+  pickup_enabled: boolean;
 };
 
 function formatPrice(value: number) {
@@ -21,9 +26,14 @@ export function CartDrawer() {
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
+  const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings>({
+    delivery_enabled: true,
+    pickup_enabled: true
+  });
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
   const [orderState, orderFormAction, isOrderPending] = useActionState(createOrderAction, initialOrderActionState);
   const cartPayload = useMemo(() => JSON.stringify(lines), [lines]);
+  const isCheckoutDisabled = !checkoutSettings.pickup_enabled && !checkoutSettings.delivery_enabled;
 
   const startCheckout = useCallback(async () => {
     if (!lines.length) {
@@ -31,15 +41,17 @@ export function CartDrawer() {
     }
 
     setIsCustomerLoading(true);
-    const profile = await getCurrentCustomerAction();
+    const context = await getCheckoutContextAction();
     setIsCustomerLoading(false);
 
-    if (!profile) {
+    if (!context.customer) {
       setMode("auth");
       return;
     }
 
-    setCustomer(profile);
+    setCheckoutSettings(context.settings);
+    setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
+    setCustomer(context.customer);
     setMode("checkout");
   }, [lines.length]);
 
@@ -160,10 +172,11 @@ export function CartDrawer() {
                       name="delivery_type"
                       value="pickup"
                       checked={deliveryType === "pickup"}
+                      disabled={!checkoutSettings.pickup_enabled}
                       onChange={() => setDeliveryType("pickup")}
                       className="accent-karimoff-orange"
                     />
-                    Самовывоз
+                    {checkoutSettings.pickup_enabled ? "Самовывоз" : "Самовывоз недоступен"}
                   </label>
                   <label className="flex items-center gap-2 rounded-full border border-karimoff-line px-4 py-3 text-sm font-semibold">
                     <input
@@ -171,12 +184,18 @@ export function CartDrawer() {
                       name="delivery_type"
                       value="delivery"
                       checked={deliveryType === "delivery"}
+                      disabled={!checkoutSettings.delivery_enabled}
                       onChange={() => setDeliveryType("delivery")}
                       className="accent-karimoff-orange"
                     />
-                    Доставка
+                    {checkoutSettings.delivery_enabled ? "Доставка" : "Доставка недоступна"}
                   </label>
                 </div>
+                {isCheckoutDisabled ? (
+                  <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    Оформление заказа временно недоступно.
+                  </p>
+                ) : null}
                 {deliveryType === "delivery" ? (
                   <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
                     Адрес доставки
@@ -225,7 +244,7 @@ export function CartDrawer() {
 
               <button
                 type="submit"
-                disabled={isOrderPending || !lines.length}
+                disabled={isOrderPending || !lines.length || isCheckoutDisabled}
                 className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {isOrderPending ? "Отправляем заказ" : "Отправить заказ"}

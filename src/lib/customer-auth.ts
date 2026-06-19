@@ -13,6 +13,7 @@ export type CustomerProfile = {
   id: string;
   name: string;
   phone: string;
+  birthday: string | null;
 };
 
 const CUSTOMER_COOKIE_NAME = "karimoff_customer_session";
@@ -133,7 +134,7 @@ export async function getCurrentCustomer(): Promise<CustomerProfile | null> {
 
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, phone")
+    .select("id, name, phone, birthday")
     .eq("id", session.customerId)
     .maybeSingle();
 
@@ -144,6 +145,7 @@ export async function getCurrentCustomer(): Promise<CustomerProfile | null> {
   return {
     id: String(data.id),
     name: String(data.name),
-    phone: String(data.phone)
+    phone: String(data.phone),
+    birthday: typeof data.birthday === "string" ? data.birthday : null
   };
 }

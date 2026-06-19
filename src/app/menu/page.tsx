@@ -17,7 +17,7 @@ export default async function MenuPage() {
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-karimoff-muted sm:text-lg">
             Бургеры, шаурма, хот-доги, боксы, горячие закуски и напитки.
-            Добавляйте позиции в корзину и оставляйте заявку.
+            Добавляйте позиции в корзину и оформляйте заказ после входа.
           </p>
         </div>
 

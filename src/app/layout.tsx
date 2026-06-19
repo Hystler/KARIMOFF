@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Rubik } from "next/font/google";
 import { SiteChrome } from "@/components/SiteChrome";
+import { getSiteSettings } from "@/lib/settings";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,15 +24,17 @@ const rubik = Rubik({
   display: "swap"
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSiteSettings();
+
   return (
     <html lang="ru" data-scroll-behavior="smooth" className={`${manrope.variable} ${rubik.variable}`}>
       <body>
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome defaultTheme={settings.theme}>{children}</SiteChrome>
       </body>
     </html>
   );

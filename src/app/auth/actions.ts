@@ -16,6 +16,7 @@ import {
   registerRequestSchema,
   type AuthActionState
 } from "@/lib/customer-schema";
+import { ensureLoyaltyAccount } from "@/lib/loyalty";
 import { sendVerificationCode } from "@/lib/verification/send-code";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -172,6 +173,7 @@ export async function confirmRegisterAction(
     return { status: "error", message: "Не удалось создать профиль.", phone: normalizedPhone, name: parsed.data.name };
   }
 
+  await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
   redirect(getNextPath(parsed.data.next));
 }
@@ -261,6 +263,7 @@ export async function confirmLoginAction(
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
 
+  await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
   redirect(getNextPath(parsed.data.next));
 }

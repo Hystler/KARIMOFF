@@ -1,0 +1,19 @@
+import { z } from "zod";
+
+export const siteThemeSchema = z.enum(["light", "dark"]);
+
+export const siteSettingsSchema = z.object({
+  site_name: z.string().trim().min(1, "Укажите название сайта").max(120, "Название слишком длинное"),
+  phone: z.string().trim().max(80, "Телефон слишком длинный").optional(),
+  address: z.string().trim().max(240, "Адрес слишком длинный").optional(),
+  working_hours: z.string().trim().max(160, "Часы работы слишком длинные").optional(),
+  delivery_enabled: z.coerce.boolean().default(false),
+  pickup_enabled: z.coerce.boolean().default(false),
+  theme: siteThemeSchema,
+  loyalty_enabled: z.coerce.boolean().default(false),
+  loyalty_percent: z.coerce.number().min(0, "Процент не может быть отрицательным").max(100, "Процент слишком высокий"),
+  hero_title: z.string().trim().max(160, "Заголовок слишком длинный").optional(),
+  hero_subtitle: z.string().trim().max(240, "Подзаголовок слишком длинный").optional()
+});
+
+export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>;

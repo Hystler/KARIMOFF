@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { awardLoyaltyForCompletedOrder } from "@/lib/loyalty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const allowedStatuses = new Set(["new", "in_progress", "completed", "cancelled"]);
@@ -41,13 +42,19 @@ export async function updateOrderStatusAction(formData: FormData) {
     redirect("/admin/orders?error=supabase");
   }
 
+  const { data: currentOrder } = await supabase.from("orders").select("status").eq("id", id).maybeSingle();
   const { error } = await supabase.from("orders").update({ status }).eq("id", id);
 
   if (error) {
     redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);
   }
 
+  if (status === "completed" && currentOrder?.status !== "completed") {
+    await awardLoyaltyForCompletedOrder(id);
+  }
+
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/loyalty");
   redirect("/admin/orders?saved=1");
 }
 

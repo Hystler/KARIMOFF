@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getCurrentCustomerAction } from "@/app/actions/orders";
 import { cn } from "@/lib/utils";
 import { CartButton } from "./cart/CartButton";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./theme/ThemeToggle";
 
 const navItems = [
   { label: "Меню", href: "/menu" },
@@ -16,6 +18,27 @@ const navItems = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [customerName, setCustomerName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCurrentCustomerAction()
+      .then((customer) => {
+        if (isMounted) {
+          setCustomerName(customer?.name ?? null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setCustomerName(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-karimoff-black/10 bg-[rgba(255,255,255,0.96)] shadow-[0_12px_40px_rgba(18,18,20,0.08)] backdrop-blur-xl">
@@ -35,16 +58,18 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
+          <ThemeToggle />
           <CartButton />
           <Link
-            href="/login"
+            href={customerName ? "/profile" : "/login"}
             className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
           >
-            Войти / Регистрация
+            {customerName ? "Профиль" : "Войти / Регистрация"}
           </Link>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
+          <ThemeToggle />
           <CartButton />
           <button
             type="button"
@@ -74,8 +99,8 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-2 border-t border-karimoff-line pt-4">
-              <Link href="/login" onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
-                Войти / Регистрация
+              <Link href={customerName ? "/profile" : "/login"} onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
+                {customerName ? "Профиль" : "Войти / Регистрация"}
               </Link>
             </div>
           </nav>

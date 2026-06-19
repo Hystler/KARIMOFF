@@ -8,9 +8,10 @@ const cards = [
   { title: "Заявки", href: "/admin/leads", enabled: true },
   { title: "Меню", href: "/admin/products", enabled: true },
   { title: "Юнит-экономика", href: "/admin/economics", enabled: true },
+  { title: "Лояльность", href: "/admin/loyalty", enabled: true },
+  { title: "Настройки", href: "/admin/settings", enabled: true },
   { title: "Франшиза", href: "#", enabled: false },
-  { title: "Вакансии", href: "#", enabled: false },
-  { title: "Настройки", href: "#", enabled: false }
+  { title: "Вакансии", href: "#", enabled: false }
 ];
 
 export const dynamic = "force-dynamic";

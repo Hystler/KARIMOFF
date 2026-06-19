@@ -1,5 +1,6 @@
 import "server-only";
 
+import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AdminOrderItem = {
@@ -73,7 +74,7 @@ export async function getAdminOrders() {
     return {
       orders: [] as AdminOrder[],
       notConfigured: false,
-      error: ordersError.message
+      error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
     };
   }
 
@@ -96,7 +97,7 @@ export async function getAdminOrders() {
     return {
       orders: [] as AdminOrder[],
       notConfigured: false,
-      error: itemsError.message
+      error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
     };
   }
 

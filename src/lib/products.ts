@@ -1,6 +1,7 @@
 import "server-only";
 
 import { demoProducts } from "@/data/products";
+import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Product } from "./product-types";
 
@@ -69,7 +70,7 @@ export async function getAdminProducts() {
   return {
     products: (data ?? []).map((row) => normalizeProduct(row)),
     notConfigured: false,
-    error: error?.message ?? null
+    error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
   };
 }
 
@@ -93,6 +94,6 @@ export async function getAdminProductById(id: string) {
   return {
     product: data ? normalizeProduct(data) : null,
     notConfigured: false,
-    error: error?.message ?? null
+    error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
   };
 }

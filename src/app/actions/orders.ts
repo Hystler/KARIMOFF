@@ -1,7 +1,9 @@
 "use server";
 
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { ensureLoyaltyAccount } from "@/lib/loyalty";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
+import { getSiteSettings } from "@/lib/settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function isUuid(value: string) {
@@ -10,6 +12,18 @@ function isUuid(value: string) {
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
+}
+
+export async function getCheckoutContextAction() {
+  const [customer, settings] = await Promise.all([getCurrentCustomer(), getSiteSettings()]);
+
+  return {
+    customer,
+    settings: {
+      delivery_enabled: settings.delivery_enabled,
+      pickup_enabled: settings.pickup_enabled
+    }
+  };
 }
 
 export async function createOrderAction(
@@ -59,6 +73,22 @@ export async function createOrderAction(
     };
   }
 
+  const settings = await getSiteSettings();
+
+  if (parsed.data.delivery_type === "delivery" && !settings.delivery_enabled) {
+    return {
+      status: "error",
+      message: "Доставка временно недоступна."
+    };
+  }
+
+  if (parsed.data.delivery_type === "pickup" && !settings.pickup_enabled) {
+    return {
+      status: "error",
+      message: "Самовывоз временно недоступен."
+    };
+  }
+
   const supabase = createSupabaseServerClient();
 
   if (!supabase) {
@@ -69,6 +99,7 @@ export async function createOrderAction(
   }
 
   const total = parsed.data.cart.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
+  await ensureLoyaltyAccount(customer.id);
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
