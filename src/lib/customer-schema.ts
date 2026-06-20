@@ -11,6 +11,30 @@ export const verificationCodeSchema = z
   .trim()
   .regex(/^\d{6}$/, "Код должен состоять из 6 цифр");
 
+export const passwordSchema = z
+  .string()
+  .min(6, "Пароль должен быть не короче 6 символов")
+  .max(120, "Пароль слишком длинный");
+
+export const passwordRegisterSchema = z
+  .object({
+    name: z.string().trim().min(2, "Укажите имя").max(80, "Имя слишком длинное"),
+    phone: phoneSchema,
+    password: passwordSchema,
+    password_confirm: z.string(),
+    next: z.string().optional()
+  })
+  .refine((data) => data.password === data.password_confirm, {
+    message: "Пароли не совпадают",
+    path: ["password_confirm"]
+  });
+
+export const passwordLoginSchema = z.object({
+  phone: phoneSchema,
+  password: passwordSchema,
+  next: z.string().optional()
+});
+
 export const registerRequestSchema = z.object({
   name: z.string().trim().min(2, "Укажите имя").max(80, "Имя слишком длинное"),
   phone: phoneSchema

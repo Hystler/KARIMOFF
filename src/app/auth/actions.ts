@@ -11,12 +11,15 @@ import {
 import {
   initialAuthActionState,
   loginConfirmSchema,
+  passwordLoginSchema,
+  passwordRegisterSchema,
   loginRequestSchema,
   registerConfirmSchema,
   registerRequestSchema,
   type AuthActionState
 } from "@/lib/customer-schema";
 import { ensureLoyaltyAccount } from "@/lib/loyalty";
+import { hashPassword, verifyPassword } from "@/lib/password-auth";
 import { sendVerificationCode } from "@/lib/verification/send-code";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -126,6 +129,66 @@ export async function requestRegisterCodeAction(
   };
 }
 
+export async function registerWithPasswordAction(
+  _previousState: AuthActionState = initialAuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  void _previousState;
+
+  const parsed = passwordRegisterSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    password: formData.get("password"),
+    password_confirm: formData.get("password_confirm"),
+    next: formData.get("next")
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
+  }
+
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase) {
+    return { status: "error", message: "Supabase не подключён." };
+  }
+
+  const normalizedPhone = normalizePhone(parsed.data.phone);
+  const { data: existingCustomer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("phone", normalizedPhone)
+    .maybeSingle();
+
+  if (existingCustomer) {
+    return {
+      status: "error",
+      message: "Профиль с таким телефоном уже есть. Войдите или используйте вход по коду.",
+      phone: normalizedPhone,
+      name: parsed.data.name
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("customers")
+    .insert({
+      name: parsed.data.name,
+      phone: normalizedPhone,
+      password_hash: hashPassword(parsed.data.password),
+      last_login_at: new Date().toISOString()
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { status: "error", message: "Не удалось создать профиль.", phone: normalizedPhone, name: parsed.data.name };
+  }
+
+  await ensureLoyaltyAccount(String(data.id));
+  await setCustomerSession(String(data.id));
+  redirect(getNextPath(parsed.data.next));
+}
+
 export async function confirmRegisterAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
@@ -221,6 +284,57 @@ export async function requestLoginCodeAction(
     message: saved.message,
     phone: normalizedPhone
   };
+}
+
+export async function loginWithPasswordAction(
+  _previousState: AuthActionState = initialAuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  void _previousState;
+
+  const parsed = passwordLoginSchema.safeParse({
+    phone: formData.get("phone"),
+    password: formData.get("password"),
+    next: formData.get("next")
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
+  }
+
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase) {
+    return { status: "error", message: "Supabase не подключён." };
+  }
+
+  const normalizedPhone = normalizePhone(parsed.data.phone);
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, password_hash")
+    .eq("phone", normalizedPhone)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
+  }
+
+  if (!data.password_hash) {
+    return {
+      status: "error",
+      message: "Для входа по паролю зарегистрируйтесь заново или используйте вход по коду.",
+      phone: normalizedPhone
+    };
+  }
+
+  if (!verifyPassword(parsed.data.password, String(data.password_hash))) {
+    return { status: "error", message: "Неверный телефон или пароль.", phone: normalizedPhone };
+  }
+
+  await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await ensureLoyaltyAccount(String(data.id));
+  await setCustomerSession(String(data.id));
+  redirect(getNextPath(parsed.data.next));
 }
 
 export async function confirmLoginAction(

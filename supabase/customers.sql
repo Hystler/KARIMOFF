@@ -5,6 +5,7 @@ create table if not exists public.customers (
   name text not null,
   phone text unique not null,
   birthday date,
+  password_hash text,
   last_login_at timestamptz
 );
 
@@ -13,6 +14,7 @@ alter table public.customers add column if not exists updated_at timestamptz def
 alter table public.customers add column if not exists name text;
 alter table public.customers add column if not exists phone text;
 alter table public.customers add column if not exists birthday date;
+alter table public.customers add column if not exists password_hash text;
 alter table public.customers add column if not exists last_login_at timestamptz;
 
 create table if not exists public.verification_codes (

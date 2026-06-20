@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { RepeatOrderButton } from "@/components/profile/RepeatOrderButton";
 import { getCustomerProfileData } from "@/lib/customer-data";
 import { logoutCustomerAction } from "./actions";
@@ -32,7 +33,7 @@ function formatPrice(value: number) {
 }
 
 export default async function ProfilePage() {
-  const { customer, account, orders, transactions, error } = await getCustomerProfileData();
+  const { customer, account, avatar, orders, transactions, error } = await getCustomerProfileData();
 
   if (!customer) {
     redirect("/login");
@@ -41,11 +42,30 @@ export default async function ProfilePage() {
   return (
     <main className="bg-karimoff-cream pt-28 text-karimoff-black">
       <section className="container-page pb-16">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-karimoff-orange">Профиль</p>
-            <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">{customer.name}</h1>
-            <p className="mt-4 text-base font-semibold text-karimoff-muted">{customer.phone}</p>
+        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
+          <div className="rounded-[1.5rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-7">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <AvatarPreview avatar={avatar} size="md" />
+              <div>
+                <p className="text-sm font-semibold text-karimoff-orange">Профиль</p>
+                <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">{customer.name}</h1>
+                <p className="mt-4 text-base font-semibold text-karimoff-muted">{customer.phone}</p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link
+                    href="/profile/avatar"
+                    className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+                  >
+                    Настроить аватар
+                  </Link>
+                  <Link
+                    href="/menu"
+                    className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                  >
+                    В меню
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
           <form action={logoutCustomerAction}>
             <button

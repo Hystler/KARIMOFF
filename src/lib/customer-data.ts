@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getCustomerAvatar } from "@/lib/avatar";
+import { defaultAvatar, type AvatarConfig } from "@/lib/avatar-schema";
 import { ensureLoyaltyAccount, type LoyaltyAccount, type LoyaltyTransaction } from "@/lib/loyalty";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -73,6 +75,7 @@ export async function getCustomerProfileData() {
     return {
       customer: null,
       account: null as LoyaltyAccount | null,
+      avatar: defaultAvatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       error: null as string | null
@@ -85,6 +88,7 @@ export async function getCustomerProfileData() {
     return {
       customer,
       account: null as LoyaltyAccount | null,
+      avatar: defaultAvatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       error: "Supabase не подключён."
@@ -92,6 +96,7 @@ export async function getCustomerProfileData() {
   }
 
   const account = await ensureLoyaltyAccount(customer.id);
+  const avatarResult = await getCustomerAvatar(customer.id);
 
   const { data: ordersData, error: ordersError } = await supabase
     .from("orders")
@@ -103,6 +108,7 @@ export async function getCustomerProfileData() {
     return {
       customer,
       account,
+      avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
@@ -121,6 +127,7 @@ export async function getCustomerProfileData() {
     return {
       customer,
       account,
+      avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
@@ -138,6 +145,7 @@ export async function getCustomerProfileData() {
     return {
       customer,
       account,
+      avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       error: formatMissingTableError(transactionsError.message, "loyalty_transactions", "supabase/loyalty.sql")
@@ -149,6 +157,7 @@ export async function getCustomerProfileData() {
   return {
     customer,
     account,
+    avatar: avatarResult.avatar as AvatarConfig,
     orders: (ordersData ?? []).map((order) =>
       normalizeOrder(
         order,
