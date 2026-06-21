@@ -15,9 +15,10 @@ import { initialAuthActionState } from "@/lib/customer-schema";
 type AuthFormProps = {
   mode: "login" | "register";
   next?: string;
+  redirectTo?: string;
 };
 
-export function AuthForm({ mode, next }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [passwordState, passwordAction, isPasswordPending] = useActionState(
@@ -33,10 +34,11 @@ export function AuthForm({ mode, next }: AuthFormProps) {
     initialAuthActionState
   );
 
-  const phone = confirmState.phone || requestState.phone || passwordState.phone || "";
+  const phone = confirmState.phone || requestState.phone || passwordState.phone || "+7";
   const name = confirmState.name || requestState.name || passwordState.name || "";
   const codeMessage = confirmState.message || requestState.message;
   const codeStatus = confirmState.status !== "idle" ? confirmState.status : requestState.status;
+  const shouldShowConfirmCode = requestState.status === "code_sent" || confirmState.status !== "idle";
 
   return (
     <section className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
@@ -98,6 +100,7 @@ export function AuthForm({ mode, next }: AuthFormProps) {
           </label>
         ) : null}
         <input type="hidden" name="next" value={next ?? ""} />
+        <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
         <button
           type="submit"
           disabled={isPasswordPending}
@@ -144,7 +147,7 @@ export function AuthForm({ mode, next }: AuthFormProps) {
                   required
                   inputMode="tel"
                   defaultValue={phone}
-                  className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
                   placeholder="+7"
                 />
               </label>
@@ -157,11 +160,12 @@ export function AuthForm({ mode, next }: AuthFormProps) {
               </button>
             </form>
 
-            {requestState.status === "code_sent" || phone ? (
+            {shouldShowConfirmCode ? (
               <form action={confirmAction} className="grid gap-4 border-t border-karimoff-line pt-4">
                 {isRegister ? <input type="hidden" name="name" value={name} /> : null}
                 <input type="hidden" name="phone" value={phone} />
                 <input type="hidden" name="next" value={next ?? ""} />
+                <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
                 <label className="grid gap-2">
                   <span className="text-sm font-semibold text-karimoff-muted">Код подтверждения</span>
                   <input
@@ -195,14 +199,14 @@ export function AuthForm({ mode, next }: AuthFormProps) {
         {isRegister ? (
           <>
             Уже есть профиль?{" "}
-            <Link href={`/login${next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
+            <Link href={`/login${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
               Войти
             </Link>
           </>
         ) : (
           <>
             Нет профиля?{" "}
-            <Link href={`/register${next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
+            <Link href={`/register${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
               Зарегистрироваться
             </Link>
           </>

@@ -73,6 +73,7 @@ export function LeadForm() {
               name="phone"
               required
               inputMode="tel"
+              defaultValue="+7"
               placeholder="+7"
               className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
             />

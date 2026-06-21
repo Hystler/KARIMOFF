@@ -20,6 +20,7 @@ import {
 } from "@/lib/customer-schema";
 import { ensureLoyaltyAccount } from "@/lib/loyalty";
 import { hashPassword, verifyPassword } from "@/lib/password-auth";
+import { getPhoneLookupCandidates } from "@/lib/phone";
 import { sendVerificationCode } from "@/lib/verification/send-code";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -90,12 +91,44 @@ async function verifyCode(phone: string, code: string) {
   return { ok: true, message: "" };
 }
 
-function getNextPath(next?: string | null) {
+function sanitizeRedirectPath(path?: string | null) {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return null;
+  }
+
+  return path;
+}
+
+function getRedirectPath(redirectTo?: string | null, next?: string | null) {
+  const sanitizedRedirect = sanitizeRedirectPath(redirectTo);
+
+  if (sanitizedRedirect) {
+    return sanitizedRedirect;
+  }
+
   if (next === "checkout") {
     return "/?checkout=1";
   }
 
-  return "/";
+  return "/profile";
+}
+
+async function findCustomerForLogin(phone: string) {
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase) {
+    return { supabase, data: null, error: null };
+  }
+
+  const candidates = getPhoneLookupCandidates(phone);
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, phone, password_hash")
+    .in("phone", candidates)
+    .limit(1)
+    .maybeSingle();
+
+  return { supabase, data, error };
 }
 
 export async function requestRegisterCodeAction(
@@ -140,6 +173,7 @@ export async function registerWithPasswordAction(
     phone: formData.get("phone"),
     password: formData.get("password"),
     password_confirm: formData.get("password_confirm"),
+    redirectTo: formData.get("redirectTo"),
     next: formData.get("next")
   });
 
@@ -157,7 +191,8 @@ export async function registerWithPasswordAction(
   const { data: existingCustomer } = await supabase
     .from("customers")
     .select("id")
-    .eq("phone", normalizedPhone)
+    .in("phone", getPhoneLookupCandidates(parsed.data.phone))
+    .limit(1)
     .maybeSingle();
 
   if (existingCustomer) {
@@ -186,7 +221,7 @@ export async function registerWithPasswordAction(
 
   await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
-  redirect(getNextPath(parsed.data.next));
+  redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
 
 export async function confirmRegisterAction(
@@ -199,6 +234,7 @@ export async function confirmRegisterAction(
     name: formData.get("name"),
     phone: formData.get("phone"),
     code: formData.get("code"),
+    redirectTo: formData.get("redirectTo"),
     next: formData.get("next")
   });
 
@@ -238,7 +274,7 @@ export async function confirmRegisterAction(
 
   await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
-  redirect(getNextPath(parsed.data.next));
+  redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
 
 export async function requestLoginCodeAction(
@@ -265,7 +301,8 @@ export async function requestLoginCodeAction(
   const { data, error } = await supabase
     .from("customers")
     .select("id")
-    .eq("phone", normalizedPhone)
+    .in("phone", getPhoneLookupCandidates(parsed.data.phone))
+    .limit(1)
     .maybeSingle();
 
   if (error || !data) {
@@ -295,6 +332,7 @@ export async function loginWithPasswordAction(
   const parsed = passwordLoginSchema.safeParse({
     phone: formData.get("phone"),
     password: formData.get("password"),
+    redirectTo: formData.get("redirectTo"),
     next: formData.get("next")
   });
 
@@ -302,19 +340,13 @@ export async function loginWithPasswordAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
-  const supabase = createSupabaseServerClient();
+  const { supabase, data, error } = await findCustomerForLogin(parsed.data.phone);
 
   if (!supabase) {
     return { status: "error", message: "Supabase не подключён." };
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
-  const { data, error } = await supabase
-    .from("customers")
-    .select("id, password_hash")
-    .eq("phone", normalizedPhone)
-    .maybeSingle();
-
   if (error || !data) {
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
@@ -334,7 +366,7 @@ export async function loginWithPasswordAction(
   await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
   await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
-  redirect(getNextPath(parsed.data.next));
+  redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
 
 export async function confirmLoginAction(
@@ -346,6 +378,7 @@ export async function confirmLoginAction(
   const parsed = loginConfirmSchema.safeParse({
     phone: formData.get("phone"),
     code: formData.get("code"),
+    redirectTo: formData.get("redirectTo"),
     next: formData.get("next")
   });
 
@@ -368,16 +401,17 @@ export async function confirmLoginAction(
 
   const { data, error } = await supabase
     .from("customers")
-    .update({ last_login_at: new Date().toISOString() })
-    .eq("phone", normalizedPhone)
     .select("id")
+    .in("phone", getPhoneLookupCandidates(parsed.data.phone))
+    .limit(1)
     .maybeSingle();
 
   if (error || !data) {
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
 
+  await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
   await ensureLoyaltyAccount(String(data.id));
   await setCustomerSession(String(data.id));
-  redirect(getNextPath(parsed.data.next));
+  redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }

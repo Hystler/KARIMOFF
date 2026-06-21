@@ -133,13 +133,13 @@ export function CartDrawer() {
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link
-                  href="/login?next=checkout"
+                  href="/login?redirectTo=%2Fcheckout"
                   className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-center text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
                 >
                   Войти
                 </Link>
                 <Link
-                  href="/register?next=checkout"
+                  href="/register?redirectTo=%2Fcheckout"
                   className="rounded-full border border-karimoff-orange bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-orange transition hover:-translate-y-0.5 hover:bg-karimoff-orange hover:text-white"
                 >
                   Зарегистрироваться

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentCustomerAction } from "@/app/actions/orders";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ const navItems = [
 ];
 
 export function Header() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [customerName, setCustomerName] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ export function Header() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-karimoff-black/10 bg-[rgba(255,255,255,0.96)] shadow-[0_12px_40px_rgba(18,18,20,0.08)] backdrop-blur-xl">

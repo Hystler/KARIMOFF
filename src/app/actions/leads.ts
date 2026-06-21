@@ -1,6 +1,7 @@
 "use server";
 
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
+import { normalizeRussianPhone } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function createLeadAction(
@@ -37,7 +38,7 @@ export async function createLeadAction(
   const { name, phone, interest, comment } = parsed.data;
   const { error } = await supabase.from("leads").insert({
     name,
-    phone,
+    phone: normalizeRussianPhone(phone),
     interest,
     comment: comment || null,
     source: "site"

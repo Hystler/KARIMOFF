@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { normalizeRussianPhone } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type CustomerSession = {
@@ -53,7 +54,7 @@ function safeCompare(left: string, right: string) {
 }
 
 export function normalizePhone(phone: string) {
-  return phone.trim().replace(/[^\d+]/g, "");
+  return normalizeRussianPhone(phone);
 }
 
 export function createVerificationCode() {

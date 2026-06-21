@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/auth/AuthForm";
 type RegisterPageProps = {
   searchParams?: Promise<{
     next?: string;
+    redirectTo?: string;
   }>;
 };
 
@@ -16,7 +17,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <Link href="/" className="mb-8 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
           На сайт KARIMOFF
         </Link>
-        <AuthForm mode="register" next={params.next} />
+        <AuthForm mode="register" next={params.next} redirectTo={params.redirectTo} />
       </div>
     </main>
   );

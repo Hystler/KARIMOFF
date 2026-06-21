@@ -8,6 +8,7 @@ const cards = [
   { title: "Заявки", href: "/admin/leads", enabled: true },
   { title: "Меню", href: "/admin/products", enabled: true },
   { title: "Ингредиенты", href: "/admin/ingredients", enabled: true },
+  { title: "Пользователи", href: "/admin/customers", enabled: true },
   { title: "Юнит-экономика", href: "/admin/economics", enabled: true },
   { title: "Лояльность", href: "/admin/loyalty", enabled: true },
   { title: "Настройки", href: "/admin/settings", enabled: true },

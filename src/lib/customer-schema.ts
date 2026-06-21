@@ -22,6 +22,7 @@ export const passwordRegisterSchema = z
     phone: phoneSchema,
     password: passwordSchema,
     password_confirm: z.string(),
+    redirectTo: z.string().optional(),
     next: z.string().optional()
   })
   .refine((data) => data.password === data.password_confirm, {
@@ -32,6 +33,7 @@ export const passwordRegisterSchema = z
 export const passwordLoginSchema = z.object({
   phone: phoneSchema,
   password: passwordSchema,
+  redirectTo: z.string().optional(),
   next: z.string().optional()
 });
 
@@ -46,11 +48,13 @@ export const loginRequestSchema = z.object({
 
 export const registerConfirmSchema = registerRequestSchema.extend({
   code: verificationCodeSchema,
+  redirectTo: z.string().optional(),
   next: z.string().optional()
 });
 
 export const loginConfirmSchema = loginRequestSchema.extend({
   code: verificationCodeSchema,
+  redirectTo: z.string().optional(),
   next: z.string().optional()
 });
 

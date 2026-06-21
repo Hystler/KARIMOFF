@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const leadInterestSchema = z.enum(["order", "b2b", "career", "franchise", "other"]);
+export const leadInterestSchema = z.enum(["b2b", "career", "franchise", "other"]);
 
 export const leadFormSchema = z.object({
   name: z.string().trim().min(2, "Укажите имя").max(80, "Имя слишком длинное"),
