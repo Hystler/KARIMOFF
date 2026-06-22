@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AvatarBuilder } from "@/components/avatar/AvatarBuilder";
-import { getCustomerAvatar } from "@/lib/avatar";
+import { getAvatarAssets, getCustomerAvatar } from "@/lib/avatar";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 
 type AvatarPageProps = {
@@ -18,8 +18,8 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
   }
 
   const params = searchParams ? await searchParams : {};
-  const { avatar, error } = await getCustomerAvatar(customer.id);
-  const message = params.error === "supabase" ? "Supabase не подключён." : params.error ? decodeURIComponent(params.error) : error;
+  const [{ avatar, error }, assetsResult] = await Promise.all([getCustomerAvatar(customer.id), getAvatarAssets()]);
+  const message = params.error === "supabase" ? "Supabase не подключён." : params.error ? decodeURIComponent(params.error) : error ?? assetsResult.error;
 
   return (
     <main className="bg-karimoff-cream pt-28 text-karimoff-black">
@@ -33,7 +33,7 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
         </p>
 
         <div className="mt-8">
-          <AvatarBuilder initialAvatar={avatar} error={message} />
+          <AvatarBuilder initialAvatar={avatar} options={assetsResult.options} error={message} />
         </div>
       </section>
     </main>

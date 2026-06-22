@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { saveAvatarAction } from "@/app/profile/avatar/actions";
-import { avatarOptions, type AvatarConfig } from "@/lib/avatar-schema";
+import { avatarOptions, type AvatarConfig, type AvatarOptions } from "@/lib/avatar-schema";
 import { AvatarPreview } from "./AvatarPreview";
 
 type AvatarBuilderProps = {
   initialAvatar: AvatarConfig;
+  options?: AvatarOptions;
   error?: string | null;
 };
 
-type EditableAvatarKey = Exclude<keyof AvatarConfig, "base">;
+type EditableAvatarKey = keyof AvatarConfig;
 
 const sections: Array<{ key: EditableAvatarKey; label: string }> = [
+  { key: "base", label: "Основа" },
   { key: "eyes", label: "Глаза" },
   { key: "mouth", label: "Рот" },
   { key: "accessory", label: "Аксессуар" },
@@ -20,7 +22,7 @@ const sections: Array<{ key: EditableAvatarKey; label: string }> = [
   { key: "background", label: "Фон" }
 ];
 
-export function AvatarBuilder({ initialAvatar, error }: AvatarBuilderProps) {
+export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }: AvatarBuilderProps) {
   const [avatar, setAvatar] = useState<AvatarConfig>(initialAvatar);
 
   return (
@@ -36,25 +38,31 @@ export function AvatarBuilder({ initialAvatar, error }: AvatarBuilderProps) {
       </section>
 
       <form action={saveAvatarAction} className="rounded-[1.5rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)]">
-        <input type="hidden" name="base" value={avatar.base} />
         <div className="grid gap-5">
-          {sections.map((section) => (
-            <label key={section.key} className="grid gap-2 text-sm font-semibold text-karimoff-black">
-              {section.label}
-              <select
-                name={section.key}
-                value={avatar[section.key]}
-                onChange={(event) => setAvatar((current) => ({ ...current, [section.key]: event.target.value }))}
-                className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
-              >
-                {avatarOptions[section.key].map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+          {sections.map((section) => {
+            const currentValue = avatar[section.key];
+            const sectionOptions = options[section.key].some((option) => option.value === currentValue)
+              ? options[section.key]
+              : [{ value: currentValue, label: `Текущее: ${currentValue}` }, ...options[section.key]];
+
+            return (
+              <label key={section.key} className="grid gap-2 text-sm font-semibold text-karimoff-black">
+                {section.label}
+                <select
+                  name={section.key}
+                  value={currentValue}
+                  onChange={(event) => setAvatar((current) => ({ ...current, [section.key]: event.target.value }))}
+                  className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+                >
+                  {sectionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          })}
         </div>
 
         {error ? (

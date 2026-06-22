@@ -9,7 +9,11 @@ type UploadImageParams = {
   upsert?: boolean;
 };
 
-const maxImageSize = 8 * 1024 * 1024;
+const bucketImageLimits = {
+  brand: 5 * 1024 * 1024,
+  hero: 5 * 1024 * 1024,
+  products: 3 * 1024 * 1024
+} satisfies Record<UploadImageParams["bucket"], number>;
 
 function extensionFromMime(mimeType: string) {
   if (mimeType === "image/png") {
@@ -76,8 +80,9 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
     return { url: null as string | null, error: "Загрузите изображение." };
   }
 
-  if (file.size > maxImageSize) {
-    return { url: null as string | null, error: "Файл слишком большой. Максимум 8 MB." };
+  if (file.size > bucketImageLimits[bucket]) {
+    const limitMb = bucketImageLimits[bucket] / 1024 / 1024;
+    return { url: null as string | null, error: `Файл слишком большой. Максимум ${limitMb} MB.` };
   }
 
   const prepared = await prepareImage(file);
@@ -117,4 +122,3 @@ export async function removeStoragePublicUrl(bucket: "products" | "hero" | "bran
     await supabase.storage.from(bucket).remove([path]);
   }
 }
-

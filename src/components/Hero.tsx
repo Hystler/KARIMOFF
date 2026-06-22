@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 
 type HeroProps = {
   imageUrl?: string | null;
@@ -40,23 +39,9 @@ export function Hero({ imageUrl, title, subtitle }: HeroProps) {
           <h1 className="text-balance font-heading text-[clamp(1.85rem,3.8vw,3.25rem)] font-black leading-[0.98] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.28)]">
             {heroTitle}
           </h1>
-          <p className="mt-3 max-w-md text-[15px] font-semibold leading-7 text-white/82 sm:text-base">
+          <p className="mt-4 max-w-md text-[15px] font-bold leading-7 text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.28)] sm:text-base">
             {heroSubtitle}
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/about"
-              className="hidden min-h-[50px] items-center justify-center rounded-full border border-karimoff-black/20 bg-white px-6 py-3 text-sm font-bold text-karimoff-black shadow-[0_12px_28px_rgba(18,18,20,0.08)] transition hover:-translate-y-0.5 hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 sm:inline-flex"
-            >
-              О нас
-            </Link>
-            <Link
-              href="#menu"
-              className="inline-flex min-h-[50px] items-center justify-center rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.24)] transition hover:-translate-y-0.5 hover:bg-[#D95405] hover:shadow-[0_16px_34px_rgba(251,103,10,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
-            >
-              Заказать
-            </Link>
-          </div>
         </motion.div>
       </div>
     </section>
