@@ -1,0 +1,1032 @@
+[
+  {
+    "source_id": "79719510",
+    "category": "Бургеры",
+    "name": "Рокки",
+    "slug": "rokki",
+    "description": "Пшеничная булочка, соус чесночный и сырный, сочная котлета из говядины, сыр чеддер, сырные палочки моцарелла, салат, помидор, красный лук.",
+    "unit": "1 шт.",
+    "price": 450,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/rokki",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/9ee11595d6a03ba1714698bbfc79beea.jpg?v1778735189",
+    "image_url_local": "/assets/products/burgers/rokki.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 1,
+    "source_category_url": "tovary",
+    "source_order": 11,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 450,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79717361",
+    "category": "Бургеры",
+    "name": "Себастиан",
+    "slug": "sebastian",
+    "description": "Пшеничная булочка, соус цезарь, салат, помидор, красный лук, королевские креветки.",
+    "unit": "1 шт.",
+    "price": 430,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/sebastian",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/9c8e3ba61beb43178821ce103e733993.jpg?v1779372419",
+    "image_url_local": "/assets/products/burgers/sebastian.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 2,
+    "source_category_url": "tovary",
+    "source_order": 12,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 430,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "64071834",
+    "category": "Бургеры",
+    "name": "Бургер КантриГранд сочная котлета из говядины",
+    "slug": "kantrigrand",
+    "description": "Пшеничная булочка, соус барбекю и кетчуп, сочная говяжья котлета, сыр чеддер, свежий салат, помидор и маринованный огурец.",
+    "unit": "1 шт.",
+    "price": 390,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/kantrigrand",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/fd415f623ba24372034722917421de24.jpg?v1778735473",
+    "image_url_local": "/assets/products/burgers/kantrigrand.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 3,
+    "source_category_url": "tovary",
+    "source_order": 13,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 390,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79657040",
+    "category": "Бургеры",
+    "name": "Борак Абама",
+    "slug": "borak-abama",
+    "description": "Черная булочка, фирменный соус барбекю, лист салата, свежий помидор, маринованный огурец, красный лук, сочная котлета из говядины, сыр чеддер.",
+    "unit": "1 шт.",
+    "price": 430,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/borak-abama",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/e768460abeeb33ddfeb8a02477f379e7.jpg?v1778735218",
+    "image_url_local": "/assets/products/burgers/borak-abama.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 4,
+    "source_category_url": "tovary",
+    "source_order": 14,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 430,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "64293667",
+    "category": "Бургеры",
+    "name": "Бургер Воин Дракона с сочной говядиной",
+    "slug": "voin-drakona",
+    "description": "Пшеничная булочка, соус фирменный чесночный, салат, лук фри, свежий помидор, сочная котлета из говядины, сыр чеддер.",
+    "unit": "1 шт.",
+    "price": 390,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/voin-drakona",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/67ebae353506d66947af52e33f93dadd.jpg?v1778735357",
+    "image_url_local": "/assets/products/burgers/voin-drakona.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 5,
+    "source_category_url": "tovary",
+    "source_order": 15,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 390,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "64092235",
+    "category": "Бургеры",
+    "name": "Бургер КантриБиф с котлетой из говядины",
+    "slug": "kantribif",
+    "description": "Пшеничная булочка, соус медовая-горчица и кетчуп, салат, помидор, маринованный огурец, красный лук, сочная котлета из говядины, сыр чеддер.",
+    "unit": "1 шт.",
+    "price": 390,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/kantribif",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/c84ed0216734aa753a23654a2da13ac3.jpg?v1778735317",
+    "image_url_local": "/assets/products/burgers/kantribif.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 6,
+    "source_category_url": "tovary",
+    "source_order": 16,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 390,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "64070743",
+    "category": "Бургеры",
+    "name": "Бургер Тайсон с сочной котлетой из говядины и жареным беконом",
+    "slug": "tayson",
+    "description": "Пшеничная булочка, фирменный соус тейсти, сочная котлета из говядины, помидор, маринованный огурец, салат, жареный бекон, сыр чеддер.",
+    "unit": "1 шт.",
+    "price": 430,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/tovary/tayson",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/19138a9a851f55a0ef6cdb19b0ca7838.jpg?v1779372462",
+    "image_url_local": "/assets/products/burgers/tayson.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 7,
+    "source_category_url": "tovary",
+    "source_order": 17,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 430,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79796068",
+    "category": "Шаурма",
+    "name": "Фирменная Шаурма",
+    "slug": "firmennaya-shaurma",
+    "description": "Состав: Лаваш тандырный, Фирменный соус барбекю, Сочная курочка, картошка фри, бекон жареный, Маринованный огурец, красный лук, свежий помидор, Сырные палочки.",
+    "unit": "1 шт.",
+    "price": 550,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/firmennaya-shaurma",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/cdb1115d869f7f256ac6e8773c59cf6f.jpg?v1763196706",
+    "image_url_local": "/assets/products/shaurma/firmennaya-shaurma.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 8,
+    "source_category_url": "shaurma",
+    "source_order": 3,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 550,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79319049",
+    "category": "Шаурма",
+    "name": "Шаурма в лепешке с запеченной говядиной",
+    "slug": "shaurma-v-lepeshke-s-zapechennoy-govyadinoy",
+    "description": "Состав: Тандырная лепешка, Фирменный чесночный соус, Говядина запеченная, Свежие овощи: капуста, помидор, огурец, красный лук, Фирменный чесночный соус.",
+    "unit": "1 ед.",
+    "price": 460,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-v-lepeshke-s-zapechennoy-govyadinoy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/6251e050a3526146c60d04a3372135f8.jpg?v1779086809",
+    "image_url_local": "/assets/products/shaurma/shaurma-v-lepeshke-s-zapechennoy-govyadinoy.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 9,
+    "source_category_url": "shaurma",
+    "source_order": 4,
+    "modifiers": [
+      {
+        "unit": "1 ед.",
+        "price": 460,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79319043",
+    "category": "Шаурма",
+    "name": "Шаурма в лепешке с запеченной свининой",
+    "slug": "shaurma-v-lepeshke-s-zapechennoy-svininoy",
+    "description": "Состав: Тандырная лепешка, Соус фирменный чесночный, Свинина запеченная, Свежие овощи: капуста, помидор, огурец, красный лук.",
+    "unit": "1 ед.",
+    "price": 390,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-v-lepeshke-s-zapechennoy-svininoy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/b723101e23ddb986cf62fbb6991d4d07.jpg?v1779086718",
+    "image_url_local": "/assets/products/shaurma/shaurma-v-lepeshke-s-zapechennoy-svininoy.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 10,
+    "source_category_url": "shaurma",
+    "source_order": 5,
+    "modifiers": [
+      {
+        "unit": "1 ед.",
+        "price": 390,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "79319038",
+    "category": "Шаурма",
+    "name": "Шаурма в лепешке с сочной курочкой",
+    "slug": "shaurma-v-lepeshke-s-sochnoy-kurochkoy",
+    "description": "Состав: Тандырная лепешка, Фирменный чесночный соус, Сочная курочка, Свежие овощи: капуста, помидор, огурец, красный лук",
+    "unit": "1 ед.",
+    "price": 290,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-v-lepeshke-s-sochnoy-kurochkoy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/5c02c063fa144d26adf9c3cf453a2559.jpg?v1779086893",
+    "image_url_local": "/assets/products/shaurma/shaurma-v-lepeshke-s-sochnoy-kurochkoy.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 11,
+    "source_category_url": "shaurma",
+    "source_order": 6,
+    "modifiers": [
+      {
+        "unit": "1 ед.",
+        "price": 290,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "78656137",
+    "category": "Шаурма",
+    "name": "Шаурма с Королевской креветкой в панировке",
+    "slug": "shaurma-s-korolevskoy-krevetkoy-v-panirovke",
+    "description": "Состав: Тандырный лаваш, Соус Цезарь, Королевские креветки, Свежие овощи: капуста, помидор, красный лук",
+    "unit": "300 г.",
+    "price": 410,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-s-korolevskoy-krevetkoy-v-panirovke",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/f4e95711fe5291177ff18b9326973a7e.jpg?v1741321465",
+    "image_url_local": "/assets/products/shaurma/shaurma-s-korolevskoy-krevetkoy-v-panirovke.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 12,
+    "source_category_url": "shaurma",
+    "source_order": 7,
+    "modifiers": [
+      {
+        "unit": "300 г.",
+        "price": 410,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "78517381",
+    "category": "Шаурма",
+    "name": "Шаурма с запеченной говядиной",
+    "slug": "shaurma-s-zapechennoy-govyadinoy",
+    "description": "Состав: Лаваш тандырный, Соус фирменный чесночный, Говядина запеченная, Свежие овощи: капуста, помидор, огурец, красный лук",
+    "unit": "370 г.",
+    "price": 410,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-s-zapechennoy-govyadinoy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/b5b1e8fc0148c9368fcd5df7eb457426.jpg?v1739993876",
+    "image_url_local": "/assets/products/shaurma/shaurma-s-zapechennoy-govyadinoy.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 13,
+    "source_category_url": "shaurma",
+    "source_order": 8,
+    "modifiers": [
+      {
+        "unit": "370 г.",
+        "price": 410,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "78514726",
+    "category": "Шаурма",
+    "name": "Шаурма с запеченной свининой",
+    "slug": "shaurma-s-zapechennoy-svininoy",
+    "description": "Состав: Лаваш тандырный, Соус фирменный чесночный, Свинина запеченная, Свежие овощи: капуста, помидор, огурец, красный лук",
+    "unit": "370 г.",
+    "price": 350,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-s-zapechennoy-svininoy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/00b968dbb7bb8feb688765855b4b68da.jpg?v1737960157",
+    "image_url_local": "/assets/products/shaurma/shaurma-s-zapechennoy-svininoy.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 14,
+    "source_category_url": "shaurma",
+    "source_order": 9,
+    "modifiers": [
+      {
+        "unit": "370 г.",
+        "price": 350,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "78453614",
+    "category": "Шаурма",
+    "name": "Шаурма куриная",
+    "slug": "shaurma-kurinaya",
+    "description": "Состав: Лаваш тандырный, Соус фирменный чесночный, Сочная курочка, Свежие овощи: капуста, помидор, огурец, красный лук",
+    "unit": "1 шт.",
+    "price": 240,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/shaurma/shaurma-kurinaya",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/ff5dafc062f6a1dcf0820c6dcf202d15.jpg?v1739993832",
+    "image_url_local": "/assets/products/shaurma/shaurma-kurinaya.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 15,
+    "source_category_url": "shaurma",
+    "source_order": 10,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 240,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80021482",
+    "category": "Хот-Доги",
+    "name": "Хот-Дог Барбекю",
+    "slug": "hot-dog-barbekyu",
+    "description": "Состав: Пшеничная булочка, Колбаска из свинины, Свежие овощи: лист салата, помидор, Маринованный огурец, Фирменный соус барбекю, Лук фри",
+    "unit": "1 шт.",
+    "price": 260,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/hot-dogi/hot-dog-barbekyu",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/e2a80fe3eeebbefd83ae8f79e9b2cd4a.jpg?v1779087083",
+    "image_url_local": "/assets/products/hotdogs/hot-dog-barbekyu.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 16,
+    "source_category_url": "hot-dogi",
+    "source_order": 0,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 260,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80021477",
+    "category": "Хот-Доги",
+    "name": "Хот-Дог Итали",
+    "slug": "hot-dog-itali",
+    "description": "Состав: Пшеничная булочка, Колбаска из свинины, Лист салата, сыр чеддер, Сырный соус, Лук фри",
+    "unit": "1 шт.",
+    "price": 280,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/hot-dogi/hot-dog-itali",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/0494c43a7d366779677b787e78a606cf.jpg?v1779087207",
+    "image_url_local": "/assets/products/hotdogs/hot-dog-itali.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 17,
+    "source_category_url": "hot-dogi",
+    "source_order": 1,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 280,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80021056",
+    "category": "Хот-Доги",
+    "name": "Хот-Дог Датский",
+    "slug": "hot-dog-datskiy",
+    "description": "Состав: Пшеничная булочка, Колбаска из свинины, Лист салата, маринованный огурец, Соусы: кетчуп, медово-горчичный, Лук фри",
+    "unit": "1 шт.",
+    "price": 250,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/hot-dogi/hot-dog-datskiy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/46613ba3549526a17d12bbb55498b3a1.jpg?v1779086976",
+    "image_url_local": "/assets/products/hotdogs/hot-dog-datskiy.webp",
+    "is_active": true,
+    "source_published": false,
+    "sort_order": 18,
+    "source_category_url": "hot-dogi",
+    "source_order": 2,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 250,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "66434288",
+    "category": "Боксы",
+    "name": "АйдахоБокс",
+    "slug": "aydahoboks",
+    "description": "Состав: Картофель по-деревенски, Сочная курочка, Жареный бекон, Лук фри, Сырный соус",
+    "unit": "1 шт.",
+    "price": 310,
+    "old_price": 349,
+    "product_url": "https://juikaifui.ru/shelkogo/boksy/aydahoboks",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/9db53dd5eac59718485fc9784c193b37.jpg?v1779372549",
+    "image_url_local": "/assets/products/boxes/aydahoboks.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 19,
+    "source_category_url": "boksy",
+    "source_order": 18,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 310,
+        "old_price": 349
+      }
+    ]
+  },
+  {
+    "source_id": "64093070",
+    "category": "Боксы",
+    "name": "БоксФуд",
+    "slug": "boksfud",
+    "description": "Состав: Картофель фри, Сочная курочка, Маринованный огурец, Лук фри, Фирменный чесночный соус",
+    "unit": "1 шт.",
+    "price": 300,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/boksy/boksfud",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/99885ecc96f022479b8afe2e25dcb91f.jpg?v1779372566",
+    "image_url_local": "/assets/products/boxes/boksfud.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 20,
+    "source_category_url": "boksy",
+    "source_order": 19,
+    "modifiers": [
+      {
+        "unit": "1 шт.",
+        "price": 300,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "74383210",
+    "category": "Горячие закуски",
+    "name": "Креветки в панировке (королевские)",
+    "slug": "krevetki-v-panirovke-korolevskie",
+    "description": "Попробуйте наши королевские креветки в панировке! Это идеальный снек для большой компании.",
+    "unit": "6 шт.",
+    "price": 390,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/krevetki-v-panirovke-korolevskie",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/f3399bd47e9bc656af8449aa5cbd0d4d.jpg?v1733066425",
+    "image_url_local": "/assets/products/snacks/krevetki-v-panirovke-korolevskie.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 21,
+    "source_category_url": "sneki",
+    "source_order": 20,
+    "modifiers": [
+      {
+        "unit": "6 шт.",
+        "price": 390,
+        "old_price": null
+      },
+      {
+        "unit": "12 шт.",
+        "price": 730,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "68687107",
+    "category": "Горячие закуски",
+    "name": "Наггетсы",
+    "slug": "naggetsy-6-sht",
+    "description": "Хрустящие кусочки нежного филе в золотистой панировке. Идеальный перекус!",
+    "unit": "6 ед.",
+    "price": 210,
+    "old_price": 239,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/naggetsy-6-sht",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/6effc417f9b4776ec5ed0d1171572c20.jpg?v1726404752",
+    "image_url_local": "/assets/products/snacks/naggetsy-6-sht.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 22,
+    "source_category_url": "sneki",
+    "source_order": 21,
+    "modifiers": [
+      {
+        "unit": "6 ед.",
+        "price": 210,
+        "old_price": 239
+      },
+      {
+        "unit": "12 ед.",
+        "price": 390,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "67094197",
+    "category": "Горячие закуски",
+    "name": "Сырные палочки",
+    "slug": "syrnye-palochki-12-sht",
+    "description": "Сырные палочки — отличный вариант для любителей сыра. Это аппетитный снек из сыра моцарелла. Заказывайте сырные палочки и наслаждайтесь их изысканным вкусом!",
+    "unit": "6 шт.",
+    "price": 320,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/syrnye-palochki-12-sht",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/82702bea78efc2894a655b9181f2bb07.jpg?v1724668586",
+    "image_url_local": "/assets/products/snacks/syrnye-palochki-12-sht.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 23,
+    "source_category_url": "sneki",
+    "source_order": 22,
+    "modifiers": [
+      {
+        "unit": "12 шт.",
+        "price": 590,
+        "old_price": null
+      },
+      {
+        "unit": "6 шт.",
+        "price": 320,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "66433588",
+    "category": "Горячие закуски",
+    "name": "Картофель по деревенски",
+    "slug": "kartofel-po-derevenski",
+    "description": "Хрустящий картофель с мягкой сердцевиной — отличное решение для перекуса. Он подаётся горячим и хорошо сочетается с различными соусами. Это простое, но вкусное блюдо, которое идеально подходит для уютного вечера.",
+    "unit": "150 г.",
+    "price": 260,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/kartofel-po-derevenski",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/6f366cc3f2a488b54e5ba609f5ccc376.jpg?v1723973567",
+    "image_url_local": "/assets/products/snacks/kartofel-po-derevenski.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 24,
+    "source_category_url": "sneki",
+    "source_order": 23,
+    "modifiers": [
+      {
+        "unit": "150 г.",
+        "price": 260,
+        "old_price": null
+      },
+      {
+        "unit": "200 г.",
+        "price": 330,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "64071849",
+    "category": "Горячие закуски",
+    "name": "Картошка фри",
+    "slug": "kartoshka-fri-200-gr",
+    "description": "Картофель фри — идеальный выбор для любителей снеков. Хрустящий и аппетитный, он станет отличным дополнением к вашему заказу.",
+    "unit": "150 г.",
+    "price": 210,
+    "old_price": 239,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/kartoshka-fri-200-gr",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/c505cec547bc5923b46809aba9e32a6e.jpg?v1720706946",
+    "image_url_local": "/assets/products/snacks/kartoshka-fri-200-gr.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 25,
+    "source_category_url": "sneki",
+    "source_order": 24,
+    "modifiers": [
+      {
+        "unit": "150 г.",
+        "price": 210,
+        "old_price": 239
+      },
+      {
+        "unit": "200 г.",
+        "price": 260,
+        "old_price": 279
+      }
+    ]
+  },
+  {
+    "source_id": "64071841",
+    "category": "Горячие закуски",
+    "name": "Крылышки куриные Барбекю",
+    "slug": "krylyshki-barbekyu-16-sht",
+    "description": "Это блюдо придётся по вкусу тем, кто любит мясо птицы, оно отлично подойдёт в качестве закуски., Нежные куриные крылья дополнены фирменным соусом барбекю. Мясо птицы получается сочным и ароматным., Это блюдо порадует вас насыщенным вкусом и станет отличным выбором для компании!",
+    "unit": "8 шт.",
+    "price": 370,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sneki/krylyshki-barbekyu-16-sht",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/454f994b2a68984ca343b608e5578a64.jpg?v1720698310",
+    "image_url_local": "/assets/products/snacks/krylyshki-barbekyu-16-sht.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 26,
+    "source_category_url": "sneki",
+    "source_order": 25,
+    "modifiers": [
+      {
+        "unit": "16 шт.",
+        "price": 650,
+        "old_price": null
+      },
+      {
+        "unit": "8 шт.",
+        "price": 370,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314939",
+    "category": "Напитки",
+    "name": "Добрый Апельсин 1 л",
+    "slug": "dobryy-apelsin-1-l",
+    "description": "Апельсин",
+    "unit": "1 л.",
+    "price": 140,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-apelsin-1-l",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/d5c29642d574f68ba0715855a9ff3ab0.jpg?v1774964312",
+    "image_url_local": "/assets/products/drinks/dobryy-apelsin-1-l.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 27,
+    "source_category_url": "kompot",
+    "source_order": 26,
+    "modifiers": [
+      {
+        "unit": "1 л.",
+        "price": 140,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314937",
+    "category": "Напитки",
+    "name": "Добрый Кола 1 л",
+    "slug": "dobryy-kola-1-l",
+    "description": "Кола",
+    "unit": "1 л.",
+    "price": 140,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-kola-1-l",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/0f4b77a848e550e78ebbb278c3eb0f40.jpg?v1774964111",
+    "image_url_local": "/assets/products/drinks/dobryy-kola-1-l.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 28,
+    "source_category_url": "kompot",
+    "source_order": 27,
+    "modifiers": [
+      {
+        "unit": "1 л.",
+        "price": 140,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314935",
+    "category": "Напитки",
+    "name": "Добрый Кола 1 л без сахара",
+    "slug": "dobryy-kola-1-l-bez-sahara",
+    "description": "Кола без сахара",
+    "unit": "1 л.",
+    "price": 140,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-kola-1-l-bez-sahara",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/620d99356bd5c0a0d358d5e075edb629.jpg?v1774963799",
+    "image_url_local": "/assets/products/drinks/dobryy-kola-1-l-bez-sahara.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 29,
+    "source_category_url": "kompot",
+    "source_order": 28,
+    "modifiers": [
+      {
+        "unit": "1 л.",
+        "price": 140,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314394",
+    "category": "Напитки",
+    "name": "Добрый Кола 0,5 без сахара",
+    "slug": "dobryy-kola-0-5-bez-sahara",
+    "description": "Кола без сахара",
+    "unit": "500 мл.",
+    "price": 100,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-kola-0-5-bez-sahara",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/0671ae4fd6dfe71845a32c4195c6df7a.jpg?v1774963420",
+    "image_url_local": "/assets/products/drinks/dobryy-kola-0-5-bez-sahara.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 30,
+    "source_category_url": "kompot",
+    "source_order": 29,
+    "modifiers": [
+      {
+        "unit": "500 мл.",
+        "price": 100,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314393",
+    "category": "Напитки",
+    "name": "Добрый Кола 0,5",
+    "slug": "dobryy-kola-0-5",
+    "description": "Кола",
+    "unit": "500 мл.",
+    "price": 100,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-kola-0-5",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/361b64a0ced67d0216c8b25ff15563ba.jpg?v1774963297",
+    "image_url_local": "/assets/products/drinks/dobryy-kola-0-5.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 31,
+    "source_category_url": "kompot",
+    "source_order": 30,
+    "modifiers": [
+      {
+        "unit": "500 мл.",
+        "price": 100,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314392",
+    "category": "Напитки",
+    "name": "Добрый Апельсин 0,5",
+    "slug": "dobryy-apelsin-0-5",
+    "description": "Апельсин",
+    "unit": "500 мл.",
+    "price": 100,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-apelsin-0-5",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/31bc4ffb2b022757297376aae14784c4.jpg?v1774963115",
+    "image_url_local": "/assets/products/drinks/dobryy-apelsin-0-5.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 32,
+    "source_category_url": "kompot",
+    "source_order": 31,
+    "modifiers": [
+      {
+        "unit": "500 мл.",
+        "price": 100,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314391",
+    "category": "Напитки",
+    "name": "Добрый Апельсин жб 0,33л",
+    "slug": "dobryy-apelsin-zhb-0-33l",
+    "description": "Апельсин",
+    "unit": "300 мл.",
+    "price": 90,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-apelsin-zhb-0-33l",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/ef9754cad45c616c08c69ab0f11ff638.jpg?v1774962848",
+    "image_url_local": "/assets/products/drinks/dobryy-apelsin-zhb-0-33l.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 33,
+    "source_category_url": "kompot",
+    "source_order": 32,
+    "modifiers": [
+      {
+        "unit": "300 мл.",
+        "price": 90,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "80314369",
+    "category": "Напитки",
+    "name": "Добрый Кола жб 0,33л (без сахара)",
+    "slug": "dobryy-kola-zhb-0-33l-bez-sahara",
+    "description": "Кола без сахара",
+    "unit": "300 мл.",
+    "price": 90,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/kompot/dobryy-kola-zhb-0-33l-bez-sahara",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/cbe5ee80b67b4dbc8be3e46736c05a82.jpg?v1774962514",
+    "image_url_local": "/assets/products/drinks/dobryy-kola-zhb-0-33l-bez-sahara.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 34,
+    "source_category_url": "kompot",
+    "source_order": 33,
+    "modifiers": [
+      {
+        "unit": "300 мл.",
+        "price": 90,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "73095640",
+    "category": "Соусы",
+    "name": "Кетчуп",
+    "slug": "ketchup",
+    "description": "Густой, ароматный, приготовленный из отборных спелых томатов. Этот соус обладает ярким, сладковато-пряным томатным вкусом с лёгкой кислинкой и пикантностью. Он способен сделать любое кулинарное творение более выразительным и запоминающимся. Кетчуп станет отличным дополнением к мясным и рыбным блюдам, пасте, гарнирам и закускам.",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/ketchup",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/2027ed92b0aa8ca657cf49dd48a7ac7d.jpg?v1731558277",
+    "image_url_local": "/assets/products/sauces/ketchup.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 35,
+    "source_category_url": "sousa",
+    "source_order": 34,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "65914380",
+    "category": "Соусы",
+    "name": "Сырный соус",
+    "slug": "syrnyy",
+    "description": "Сырный соус – это настоящая находка для любителей сыра. Нежный и ароматный, он станет идеальным дополнением к любому блюду.",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/syrnyy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/6a1d82e235db3eae0d860bf9b5bc2395.jpg?v1724667036",
+    "image_url_local": "/assets/products/sauces/syrnyy.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 36,
+    "source_category_url": "sousa",
+    "source_order": 35,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "65914379",
+    "category": "Соусы",
+    "name": "Фирменный Чесночный соус",
+    "slug": "chesnochnyy",
+    "description": "Соус – это душа блюда. Он способен придать изысканность и неповторимость даже самым простым продуктам. Наш фирменный соус, приготовленный на основе майонеза с добавлением чеснока, заставит заиграть новыми красками любое блюдо.",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/chesnochnyy",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/6fdef5446a1b2f108f7292be693fd17b.jpg?v1723134152",
+    "image_url_local": "/assets/products/sauces/chesnochnyy.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 37,
+    "source_category_url": "sousa",
+    "source_order": 36,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "65914174",
+    "category": "Соусы",
+    "name": "Соус Медовая Горчица",
+    "slug": "medovaya-gorchica",
+    "description": "Соус с богатым и насыщенным вкусом, в котором сладость переплетается с малой остротой и лёгкой горчинкой. Идеально подходит для мясных блюд и птицы, а также в качестве заправки для салатов.",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/medovaya-gorchica",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/441dfb7626baaeacc80dbe10ea17ec7d.jpg?v1723134030",
+    "image_url_local": "/assets/products/sauces/medovaya-gorchica.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 38,
+    "source_category_url": "sousa",
+    "source_order": 37,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "65914172",
+    "category": "Соусы",
+    "name": "Соус Барбекю фирменный",
+    "slug": "barbekyu",
+    "description": "Наш фирменный соус барбекю - густой, ароматный, пряный, идеально подойдёт к мясу. В его насыщенном вкусе чувствуется приятная сладость и пикантность базилика. Соус станет отличным дополнением к мясным блюдам, придавая им особый вкус и аромат.",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/barbekyu",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/a469ee24d1fc7fada2e0b86a284b4954.jpg?v1723133978",
+    "image_url_local": "/assets/products/sauces/barbekyu.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 39,
+    "source_category_url": "sousa",
+    "source_order": 38,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  },
+  {
+    "source_id": "65914171",
+    "category": "Соусы",
+    "name": "Фирменный соус Тейсти",
+    "slug": "teysti",
+    "description": "Наш фирменный соус тейсти - идеальный баланс сливочности и пикантных трав. Раскроет вкус картошки, наггетсов и бургеров. Попробуйте, чтобы узнать его магию!",
+    "unit": "25 г.",
+    "price": 40,
+    "old_price": null,
+    "product_url": "https://juikaifui.ru/shelkogo/sousa/teysti",
+    "image_url_original": "https://cdn.foodsoul.ru/zones/ru/branches/13028/images/items/large/e76afc36814ca795b6e94723baa7ca1f.jpg?v1723133669",
+    "image_url_local": "/assets/products/sauces/teysti.webp",
+    "is_active": true,
+    "source_published": true,
+    "sort_order": 40,
+    "source_category_url": "sousa",
+    "source_order": 39,
+    "modifiers": [
+      {
+        "unit": "25 г.",
+        "price": 40,
+        "old_price": null
+      }
+    ]
+  }
+]

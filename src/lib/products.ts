@@ -7,8 +7,34 @@ import type { Product } from "./product-types";
 
 export const fallbackProducts: Product[] = demoProducts;
 
-function normalizeProduct(row: Record<string, unknown>): Product {
+const fallbackBySlug = new Map(fallbackProducts.map((product) => [product.slug, product]));
+const fallbackByName = new Map(fallbackProducts.map((product) => [normalizeProductName(product.name), product]));
+
+function normalizeProductName(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function isPlaceholderImage(value: string | null) {
+  return !value || value.includes("/assets/products/placeholder-");
+}
+
+function enrichWithFallback(product: Product): Product {
+  const fallback = fallbackBySlug.get(product.slug) ?? fallbackByName.get(normalizeProductName(product.name));
+
+  if (!fallback) {
+    return product;
+  }
+
   return {
+    ...product,
+    description: product.description || fallback.description,
+    image_url: isPlaceholderImage(product.image_url) ? fallback.image_url : product.image_url,
+    weight: product.weight || fallback.weight || null
+  };
+}
+
+function normalizeProduct(row: Record<string, unknown>): Product {
+  return enrichWithFallback({
     id: String(row.id),
     created_at: typeof row.created_at === "string" ? row.created_at : undefined,
     updated_at: typeof row.updated_at === "string" ? row.updated_at : undefined,
@@ -22,7 +48,7 @@ function normalizeProduct(row: Record<string, unknown>): Product {
     sort_order: Number(row.sort_order ?? 100),
     weight: typeof row.weight === "string" ? row.weight : null,
     tags: Array.isArray(row.tags) ? row.tags.map(String) : null
-  };
+  });
 }
 
 export async function getActiveProducts(limit = 4): Promise<Product[]> {
