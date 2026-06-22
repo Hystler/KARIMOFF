@@ -79,6 +79,15 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
           placeholder="/assets/products/placeholder-burger.svg или https://..."
         />
+        {!product ? (
+          <span className="text-xs leading-5 text-karimoff-muted">
+            Несколько фото можно добавить после создания товара на странице редактирования.
+          </span>
+        ) : (
+          <span className="text-xs leading-5 text-karimoff-muted">
+            Это fallback-изображение. Основная галерея настраивается ниже в блоке “Фотографии товара”.
+          </span>
+        )}
       </label>
 
       <label className="grid gap-2 text-sm font-semibold text-karimoff-black">

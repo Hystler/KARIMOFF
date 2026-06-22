@@ -140,9 +140,10 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                   Food cost временно недоступен: {foodCostsResult.error}
                 </div>
               ) : null}
-              <table className="w-full min-w-[1220px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
+                    <th className="px-4 py-4 font-bold">Фото</th>
                     <th className="px-4 py-4 font-bold">Порядок</th>
                     <th className="px-4 py-4 font-bold">Название</th>
                     <th className="px-4 py-4 font-bold">Категория</th>
@@ -160,6 +161,16 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
 
                     return (
                       <tr key={product.id} className="border-b border-karimoff-line last:border-b-0">
+                        <td className="px-4 py-4">
+                          <div className="flex h-16 w-20 items-center justify-center overflow-hidden rounded-xl border border-karimoff-line bg-[#F8F2EA] p-2">
+                            {product.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
+                            ) : (
+                              <span className="text-[10px] font-semibold text-karimoff-muted">нет фото</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-4 text-karimoff-muted">{product.sort_order}</td>
                         <td className="px-4 py-4">
                           <p className="font-semibold">{product.name}</p>

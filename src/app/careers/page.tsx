@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LeadForm } from "@/components/LeadForm";
+import { PageHero } from "@/components/PageHero";
 import { VacancyApplyButton } from "@/components/VacancyApplyButton";
+import { getSiteSettings } from "@/lib/settings";
 import { formatVacancySalary, getActiveVacancies } from "@/lib/vacancies";
 
 const offers = [
@@ -14,32 +16,21 @@ const offers = [
 ];
 
 export default async function CareersPage() {
-  const { vacancies } = await getActiveVacancies();
+  const [{ vacancies }, settings] = await Promise.all([getActiveVacancies(), getSiteSettings()]);
 
   return (
-    <main className="bg-karimoff-cream pt-28 text-karimoff-black">
-      <section className="container-page pb-12 pt-6 sm:pb-16">
-        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
-          <p className="text-sm font-semibold text-karimoff-orange">Работа в KARIMOFF</p>
-          <div className="mt-4 grid grid-cols-1 gap-7 lg:grid-cols-[1.02fr_0.98fr] lg:items-end">
-            <h1 className="max-w-4xl text-balance text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl">
-              Работа, где важен результат каждого человека
-            </h1>
-            <p className="max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
-              Мы ищем людей, которые готовы соблюдать стандарты, учиться,
-              работать в команде и уважительно относиться к гостям.
-            </p>
-          </div>
-          <Link
-            href="#lead"
-            className="mt-8 inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
-          >
-            Заполнить анкету
-          </Link>
-        </div>
-      </section>
+    <main className="bg-karimoff-cream text-karimoff-black">
+      <PageHero
+        eyebrow="Работа в KARIMOFF"
+        title="Работа, где важен результат каждого человека"
+        subtitle="Мы ищем людей, которые готовы соблюдать стандарты, учиться, работать в команде и уважительно относиться к гостям."
+        ctaHref="#lead"
+        ctaLabel="Заполнить анкету"
+        imageUrl={settings.careers_hero_image_url}
+        objectPosition="center"
+      />
 
-      <section className="container-page pb-12 sm:pb-16">
+      <section className="container-page py-12 sm:py-16">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Команда</p>

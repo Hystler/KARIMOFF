@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { normalizeRussianPhone } from "@/lib/phone";
 
 const ADMIN_COOKIE_NAME = "karimoff_admin_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -51,13 +52,17 @@ export function verifyAdminCredentials(phone: string, password: string) {
     return false;
   }
 
-  return safeCompare(phone.trim(), process.env.ADMIN_PHONE ?? "") && safeCompare(password, process.env.ADMIN_PASSWORD ?? "");
+  return (
+    safeCompare(normalizeRussianPhone(phone), normalizeRussianPhone(process.env.ADMIN_PHONE ?? "")) &&
+    safeCompare(password, process.env.ADMIN_PASSWORD ?? "")
+  );
 }
 
 export async function setAdminSession(phone: string) {
+  const normalizedPhone = normalizeRussianPhone(phone);
   const payload = encode(
     JSON.stringify({
-      phone,
+      phone: normalizedPhone,
       exp: Date.now() + SESSION_TTL_MS
     } satisfies AdminSessionPayload)
   );
@@ -99,7 +104,7 @@ export async function isAdminAuthenticated() {
   try {
     const parsed = JSON.parse(decode(payload)) as AdminSessionPayload;
 
-    return parsed.phone === process.env.ADMIN_PHONE && parsed.exp > Date.now();
+    return parsed.phone === normalizeRussianPhone(process.env.ADMIN_PHONE ?? "") && parsed.exp > Date.now();
   } catch {
     return false;
   }

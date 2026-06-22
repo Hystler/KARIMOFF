@@ -30,6 +30,39 @@ function getMessage(params: Awaited<NonNullable<AdminSettingsPageProps["searchPa
   return null;
 }
 
+const heroBackgroundFields = [
+  {
+    key: "home_hero_image_url",
+    title: "Главная",
+    hint: "Рекомендуемый формат: горизонтальное фото 2400x1200 px или 2:1. Важный объект держать справа/по центру, текст будет поверх."
+  },
+  {
+    key: "menu_hero_image_url",
+    title: "Меню",
+    hint: "Рекомендуемый формат: 2400x1000 px или 12:5. Фото должно выдерживать затемнение overlay."
+  },
+  {
+    key: "business_hero_image_url",
+    title: "Для бизнеса",
+    hint: "Рекомендуемый формат: 2400x1000 px или 12:5. Не используйте фото с мелким текстом."
+  },
+  {
+    key: "careers_hero_image_url",
+    title: "Работа",
+    hint: "Проверяйте кадрирование на 390px. Лицо или продукт не должны быть у самого края."
+  },
+  {
+    key: "franchise_hero_image_url",
+    title: "Франшиза",
+    hint: "Фото должно быть читаемым под тёмным overlay и хорошо смотреться на mobile."
+  },
+  {
+    key: "about_hero_image_url",
+    title: "О нас",
+    hint: "Желательно WebP/AVIF до 500 KB-1 MB. Ключевой объект держите ближе к центру."
+  }
+] as const;
+
 export default async function AdminSettingsPage({ searchParams }: AdminSettingsPageProps) {
   const isAuthed = await isAdminAuthenticated();
 
@@ -80,7 +113,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
         ) : error ? (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">{error}</div>
         ) : (
-          <form action={updateSiteSettingsAction} className="mt-8 grid gap-6 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+          <form action={updateSiteSettingsAction} encType="multipart/form-data" className="mt-8 grid gap-6 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
             <div className="grid gap-5 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
                 Название сайта
@@ -88,7 +121,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Телефон
-                <input name="phone" defaultValue={settings.phone ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="phone" defaultValue={settings.phone ?? "+7"} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
             </div>
 
@@ -140,6 +173,66 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               Hero subtitle
               <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
             </label>
+
+            <section className="rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
+              <div className="max-w-3xl">
+                <p className="text-sm font-semibold text-karimoff-orange">Фоны страниц</p>
+                <h2 className="mt-2 text-2xl font-black">Hero-фото для главной и разделов</h2>
+                <p className="mt-3 text-sm leading-6 text-karimoff-muted">
+                  Загружайте широкие фото, которые выдерживают затемнение поверх изображения.
+                  На мобильной версии 390px проверьте, что лицо, продукт или важный объект не прижаты к краю.
+                  Не используйте фото с мелким текстом: на телефоне он будет нечитаем.
+                </p>
+              </div>
+              <div className="mt-6 grid gap-4">
+                {heroBackgroundFields.map((field) => {
+                  const value = settings[field.key];
+
+                  return (
+                    <div key={field.key} className="grid gap-4 rounded-xl border border-karimoff-line bg-white p-4 lg:grid-cols-[220px_1fr]">
+                      <div className="overflow-hidden rounded-xl border border-karimoff-line bg-karimoff-soft">
+                        {value ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={value} alt={`Фон: ${field.title}`} className="h-36 w-full object-cover" />
+                        ) : (
+                          <div className="flex h-36 items-center justify-center px-4 text-center text-xs font-semibold text-karimoff-muted">
+                            Фон не задан
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <div>
+                          <h3 className="text-lg font-black">{field.title}</h3>
+                          <p className="mt-1 text-xs leading-5 text-karimoff-muted">{field.hint}</p>
+                        </div>
+                        <label className="grid gap-2 text-sm font-semibold">
+                          Загрузить фото
+                          <input
+                            name={`${field.key}_file`}
+                            type="file"
+                            accept="image/*"
+                            className="rounded-xl border border-dashed border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
+                          />
+                        </label>
+                        <label className="grid gap-2 text-sm font-semibold">
+                          URL фона
+                          <input
+                            name={field.key}
+                            defaultValue={value ?? ""}
+                            placeholder="https://... или /assets/hero/..."
+                            className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
+                          />
+                        </label>
+                        <label className="flex items-center gap-3 text-sm font-semibold text-karimoff-muted">
+                          <input name={`clear_${field.key}`} type="checkbox" className="h-5 w-5 accent-karimoff-orange" />
+                          Очистить фон
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             <button
               type="submit"

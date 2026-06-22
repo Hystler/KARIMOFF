@@ -1,3 +1,6 @@
+import { PageHero } from "@/components/PageHero";
+import { getSiteSettings } from "@/lib/settings";
+
 const principles = [
   {
     title: "Честный продукт",
@@ -13,25 +16,20 @@ const principles = [
   }
 ];
 
-export default function AboutPage() {
-  return (
-    <main className="bg-karimoff-cream pt-[5.5rem] text-karimoff-black sm:pt-28">
-      <section className="container-page pb-8 pt-4 sm:pb-16 sm:pt-6">
-        <div className="grid grid-cols-1 gap-5 rounded-[1.35rem] border border-karimoff-line bg-white p-5 shadow-[0_20px_56px_rgba(18,18,20,0.08)] sm:gap-7 sm:rounded-[1.75rem] sm:p-9 lg:grid-cols-[1.02fr_0.98fr] lg:items-end">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-karimoff-orange">О нас</p>
-            <h1 className="mt-3 max-w-3xl text-balance text-[2rem] font-black leading-[1.02] sm:mt-4 sm:text-5xl lg:text-6xl">
-              Почему люди возвращаются в KARIMOFF?
-            </h1>
-          </div>
-          <p className="max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
-            Мы строим бургерную на простом принципе: хороший продукт,
-            стабильный вкус и уважение к каждому гостю.
-          </p>
-        </div>
-      </section>
+export default async function AboutPage() {
+  const settings = await getSiteSettings();
 
-      <section className="container-page pb-10 sm:pb-16">
+  return (
+    <main className="bg-karimoff-cream text-karimoff-black">
+      <PageHero
+        eyebrow="О нас"
+        title="Почему люди возвращаются в KARIMOFF?"
+        subtitle="Мы строим бургерную на простом принципе: хороший продукт, стабильный вкус и уважение к каждому гостю."
+        imageUrl={settings.about_hero_image_url}
+        objectPosition="center"
+      />
+
+      <section className="container-page py-10 sm:py-16">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Почему возвращаются</p>

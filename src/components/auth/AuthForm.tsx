@@ -11,6 +11,7 @@ import {
   requestRegisterCodeAction
 } from "@/app/auth/actions";
 import { initialAuthActionState } from "@/lib/customer-schema";
+import { formatRussianPhoneInput } from "@/lib/phone";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -71,6 +72,9 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             required
             inputMode="tel"
             defaultValue={phone}
+            onBlur={(event) => {
+              event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
+            }}
             className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             placeholder="+7"
           />
@@ -147,7 +151,10 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                   required
                   inputMode="tel"
                   defaultValue={phone}
-                className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                  onBlur={(event) => {
+                    event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
+                  }}
+                  className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
                   placeholder="+7"
                 />
               </label>

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createLeadAction } from "@/app/actions/leads";
 import { initialLeadActionState, type LeadFormInput } from "@/lib/lead-schema";
+import { formatRussianPhoneInput } from "@/lib/phone";
 
 const interests = [
   { value: "b2b", label: "B2B" },
@@ -82,6 +83,9 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               inputMode="tel"
               defaultValue="+7"
               placeholder="+7"
+              onBlur={(event) => {
+                event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
+              }}
               className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>

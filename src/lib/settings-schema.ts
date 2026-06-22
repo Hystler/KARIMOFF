@@ -13,7 +13,13 @@ export const siteSettingsSchema = z.object({
   loyalty_enabled: z.coerce.boolean().default(false),
   loyalty_percent: z.coerce.number().min(0, "Процент не может быть отрицательным").max(100, "Процент слишком высокий"),
   hero_title: z.string().trim().max(160, "Заголовок слишком длинный").optional(),
-  hero_subtitle: z.string().trim().max(240, "Подзаголовок слишком длинный").optional()
+  hero_subtitle: z.string().trim().max(240, "Подзаголовок слишком длинный").optional(),
+  home_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
+  menu_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
+  business_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
+  careers_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
+  franchise_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
+  about_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional()
 });
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>;

@@ -34,12 +34,38 @@ export function normalizeRussianPhone(input: string) {
   return `+${digits}`;
 }
 
-export function formatPhoneInput(input: string) {
-  if (!input.trim()) {
+export function formatRussianPhoneInput(input: string) {
+  const normalized = normalizeRussianPhone(input);
+  const digits = digitsOnly(normalized).slice(1, 11);
+
+  if (!digits) {
     return RUSSIAN_PREFIX;
   }
 
-  return normalizeRussianPhone(input);
+  const parts = [
+    digits.slice(0, 3),
+    digits.slice(3, 6),
+    digits.slice(6, 8),
+    digits.slice(8, 10)
+  ].filter(Boolean);
+
+  if (parts.length === 1) {
+    return `+7 (${parts[0]}`;
+  }
+
+  if (parts.length === 2) {
+    return `+7 (${parts[0]}) ${parts[1]}`;
+  }
+
+  if (parts.length === 3) {
+    return `+7 (${parts[0]}) ${parts[1]}-${parts[2]}`;
+  }
+
+  return `+7 (${parts[0]}) ${parts[1]}-${parts[2]}-${parts[3]}`;
+}
+
+export function formatPhoneInput(input: string) {
+  return formatRussianPhoneInput(input);
 }
 
 export function getPhoneLookupCandidates(input: string) {

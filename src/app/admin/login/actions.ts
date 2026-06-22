@@ -7,6 +7,7 @@ import {
   setAdminSession,
   verifyAdminCredentials
 } from "@/lib/admin-auth";
+import { normalizeRussianPhone } from "@/lib/phone";
 
 export async function loginAction(formData: FormData) {
   const phone = String(formData.get("phone") || "");
@@ -20,7 +21,7 @@ export async function loginAction(formData: FormData) {
     redirect("/admin/login?error=invalid");
   }
 
-  await setAdminSession(phone.trim());
+  await setAdminSession(normalizeRussianPhone(phone));
   redirect("/admin");
 }
 

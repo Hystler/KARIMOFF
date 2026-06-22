@@ -69,7 +69,6 @@ html[data-theme="dark"] .hero-overlay {
     linear-gradient(180deg, rgba(18, 18, 20, 0.04) 0%, rgba(18, 18, 20, 0.34) 100%) !important;
 }
 
-html[data-theme="dark"] .hero-panel,
 html[data-theme="dark"] [class*="bg-white/60"],
 html[data-theme="dark"] [class*="bg-white/64"],
 html[data-theme="dark"] [class*="bg-white/70"],

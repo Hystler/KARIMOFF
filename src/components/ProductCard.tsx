@@ -44,7 +44,7 @@ function ProductImage({ product }: { product: Product }) {
   if (src.endsWith(".svg")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      <img src={src} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]" />
     );
   }
 
@@ -55,14 +55,14 @@ function ProductImage({ product }: { product: Product }) {
         alt={product.name}
         fill
         sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-        className="object-cover transition duration-500 group-hover:scale-105"
+        className="object-contain transition duration-500 group-hover:scale-[1.03]"
       />
     );
   }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+    <img src={src} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]" />
   );
 }
 
@@ -77,9 +77,8 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       transition={{ duration: 0.45, delay: index * 0.05 }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-karimoff-line bg-white shadow-card transition hover:-translate-y-1 hover:border-karimoff-orange/55 hover:shadow-[0_20px_55px_rgba(18,18,20,0.12)]"
     >
-      <div className="relative h-[116px] shrink-0 overflow-hidden bg-karimoff-soft sm:h-[128px] lg:h-[112px]">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[#F8F2EA] p-3 sm:p-4">
         <ProductImage product={product} />
-        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/72 to-transparent" />
       </div>
       <div className="flex flex-1 flex-col p-3.5">
         <h3 className="line-clamp-2 min-h-[42px] text-[18px] font-black leading-tight text-karimoff-black">{product.name}</h3>

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LeadForm } from "@/components/LeadForm";
+import { PageHero } from "@/components/PageHero";
+import { getSiteSettings } from "@/lib/settings";
 
 const partnerGets = [
   { title: "Бизнес-модель", text: "готовую бизнес-модель" },
@@ -42,31 +44,22 @@ function TextBlock({
   );
 }
 
-export default function FranchisePage() {
-  return (
-    <main className="bg-karimoff-cream pt-[5.5rem] text-karimoff-black sm:pt-28">
-      <section className="container-page pb-10 pt-4 sm:pb-16 sm:pt-6">
-        <div className="rounded-[1.35rem] border border-karimoff-line bg-white p-5 shadow-[0_20px_56px_rgba(18,18,20,0.08)] sm:rounded-[1.75rem] sm:p-9">
-          <p className="text-sm font-semibold text-karimoff-orange">Франшиза</p>
-          <div className="mt-3 grid grid-cols-1 gap-5 sm:mt-4 sm:gap-7 lg:grid-cols-[1.02fr_0.98fr] lg:items-end">
-            <h1 className="max-w-4xl text-balance text-[2rem] font-black leading-[1.02] sm:text-5xl lg:text-6xl">
-              Мы ищем единомышленников, а не инвесторов
-            </h1>
-            <p className="max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
-              KARIMOFF подходит тем, кто хочет лично участвовать в развитии
-              бизнеса, соблюдать стандарты и строить сильную точку каждый день.
-            </p>
-          </div>
-          <Link
-            href="#lead"
-            className="mt-6 inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405] sm:mt-8"
-          >
-            Оставить заявку на знакомство
-          </Link>
-        </div>
-      </section>
+export default async function FranchisePage() {
+  const settings = await getSiteSettings();
 
-      <section className="container-page pb-12 sm:pb-16">
+  return (
+    <main className="bg-karimoff-cream text-karimoff-black">
+      <PageHero
+        eyebrow="Франшиза"
+        title="Мы ищем единомышленников, а не инвесторов"
+        subtitle="KARIMOFF подходит тем, кто хочет лично участвовать в развитии бизнеса, соблюдать стандарты и строить сильную точку каждый день."
+        ctaHref="#lead"
+        ctaLabel="Оставить заявку на знакомство"
+        imageUrl={settings.franchise_hero_image_url}
+        objectPosition="center"
+      />
+
+      <section className="container-page py-12 sm:py-16">
         <div className="rounded-[1.75rem] bg-karimoff-black p-6 text-white shadow-[0_24px_70px_rgba(18,18,20,0.16)] sm:p-9">
           <div className="mb-5 h-1.5 w-14 rounded-full bg-karimoff-orange" />
           <p className="max-w-4xl text-balance text-2xl font-black leading-tight sm:text-4xl">

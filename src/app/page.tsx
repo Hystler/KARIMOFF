@@ -1,7 +1,6 @@
 import { BrandSection } from "@/components/BrandSection";
 import { BusinessSection } from "@/components/BusinessSection";
 import { CareersTeaser } from "@/components/CareersTeaser";
-import { Directions } from "@/components/Directions";
 import { FAQ } from "@/components/FAQ";
 import { FranchiseTeaser } from "@/components/FranchiseTeaser";
 import { Hero } from "@/components/Hero";
@@ -15,10 +14,9 @@ export default async function Home() {
 
   return (
     <main>
-      <Hero title={settings.hero_title} subtitle={settings.hero_subtitle} />
+      <Hero title={settings.hero_title} subtitle={settings.hero_subtitle} imageUrl={settings.home_hero_image_url} />
       <PopularMenu products={products} />
       <BrandSection />
-      <Directions />
       <BusinessSection />
       <FranchiseTeaser />
       <CareersTeaser />

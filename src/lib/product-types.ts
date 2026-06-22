@@ -1,3 +1,13 @@
+export type ProductImage = {
+  id: string;
+  product_id: string;
+  created_at?: string;
+  image_url: string;
+  alt: string | null;
+  sort_order: number;
+  is_primary: boolean;
+};
+
 export type Product = {
   id: string;
   created_at?: string;
@@ -12,4 +22,5 @@ export type Product = {
   sort_order: number;
   weight?: string | null;
   tags?: string[] | null;
+  images?: ProductImage[];
 };

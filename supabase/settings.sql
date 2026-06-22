@@ -11,7 +11,13 @@ create table if not exists public.site_settings (
   loyalty_enabled boolean default true,
   loyalty_percent numeric default 5,
   hero_title text,
-  hero_subtitle text
+  hero_subtitle text,
+  home_hero_image_url text,
+  menu_hero_image_url text,
+  business_hero_image_url text,
+  careers_hero_image_url text,
+  franchise_hero_image_url text,
+  about_hero_image_url text
 );
 
 alter table public.site_settings add column if not exists updated_at timestamptz default now();
@@ -26,6 +32,12 @@ alter table public.site_settings add column if not exists loyalty_enabled boolea
 alter table public.site_settings add column if not exists loyalty_percent numeric default 5;
 alter table public.site_settings add column if not exists hero_title text;
 alter table public.site_settings add column if not exists hero_subtitle text;
+alter table public.site_settings add column if not exists home_hero_image_url text;
+alter table public.site_settings add column if not exists menu_hero_image_url text;
+alter table public.site_settings add column if not exists business_hero_image_url text;
+alter table public.site_settings add column if not exists careers_hero_image_url text;
+alter table public.site_settings add column if not exists franchise_hero_image_url text;
+alter table public.site_settings add column if not exists about_hero_image_url text;
 
 insert into public.site_settings (id, site_name, theme, loyalty_enabled, loyalty_percent)
 values ('main', 'KARIMOFF', 'light', true, 5)

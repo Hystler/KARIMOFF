@@ -3,7 +3,7 @@ import "server-only";
 import { demoProducts } from "@/data/products";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Product } from "./product-types";
+import type { Product, ProductImage } from "./product-types";
 
 export const fallbackProducts: Product[] = demoProducts;
 
@@ -51,6 +51,65 @@ function normalizeProduct(row: Record<string, unknown>): Product {
   });
 }
 
+function normalizeProductImage(row: Record<string, unknown>): ProductImage {
+  return {
+    id: String(row.id),
+    product_id: String(row.product_id),
+    created_at: typeof row.created_at === "string" ? row.created_at : undefined,
+    image_url: String(row.image_url ?? ""),
+    alt: typeof row.alt === "string" && row.alt.length > 0 ? row.alt : null,
+    sort_order: Number(row.sort_order ?? 100),
+    is_primary: Boolean(row.is_primary)
+  };
+}
+
+function getPreferredProductImage(product: Product, images: ProductImage[]) {
+  const preferred = images.find((image) => image.is_primary) ?? images[0];
+  return preferred?.image_url || product.image_url;
+}
+
+async function attachProductImages(products: Product[]): Promise<Product[]> {
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase || products.length === 0) {
+    return products;
+  }
+
+  const ids = products.map((product) => product.id);
+  const { data, error } = await supabase
+    .from("product_images")
+    .select("id, product_id, created_at, image_url, alt, sort_order, is_primary")
+    .in("product_id", ids)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !data?.length) {
+    if (error && process.env.NODE_ENV !== "production") {
+      console.warn("Product images fallback is used:", error.message);
+    }
+    return products;
+  }
+
+  const imagesByProduct = new Map<string, ProductImage[]>();
+
+  data.forEach((row) => {
+    const image = normalizeProductImage(row);
+    const current = imagesByProduct.get(image.product_id) ?? [];
+    current.push(image);
+    imagesByProduct.set(image.product_id, current);
+  });
+
+  return products.map((product) => {
+    const images = imagesByProduct.get(product.id) ?? [];
+
+    return {
+      ...product,
+      images,
+      image_url: getPreferredProductImage(product, images)
+    };
+  });
+}
+
 export async function getActiveProducts(limit = 4): Promise<Product[]> {
   const supabase = createSupabaseServerClient();
 
@@ -73,7 +132,7 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
     return fallbackProducts.slice(0, limit);
   }
 
-  return data.map((row) => normalizeProduct(row));
+  return attachProductImages(data.map((row) => normalizeProduct(row)));
 }
 
 export async function getAdminProducts() {
@@ -93,8 +152,10 @@ export async function getAdminProducts() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
+  const products = await attachProductImages((data ?? []).map((row) => normalizeProduct(row)));
+
   return {
-    products: (data ?? []).map((row) => normalizeProduct(row)),
+    products,
     notConfigured: false,
     error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
   };
@@ -117,8 +178,10 @@ export async function getAdminProductById(id: string) {
     .eq("id", id)
     .maybeSingle();
 
+  const products = data ? await attachProductImages([normalizeProduct(data)]) : [];
+
   return {
-    product: data ? normalizeProduct(data) : null,
+    product: products[0] ?? null,
     notConfigured: false,
     error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
   };

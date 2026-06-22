@@ -1,47 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import {
+  initialEconomicsSaveState,
+  saveEconomicsSettingsAction
+} from "@/app/admin/economics/actions";
+import type { EconomicsValues } from "@/lib/economics";
+import { formatNumber, formatRub } from "@/lib/format";
 
-type EconomicsValues = {
-  acquiring_percent: number;
-  average_check: number;
-  equipment: number;
-  food_cost_percent: number;
-  furniture: number;
-  launch_marketing: number;
-  marketing: number;
-  misc_percent: number;
-  orders_per_day: number;
-  other_capex: number;
-  other_expenses: number;
-  payroll: number;
-  renovation: number;
-  rent: number;
-  royalty_percent: number;
-  tax_percent: number;
-  utilities: number;
-  working_days_per_month: number;
-};
-
-const defaults: EconomicsValues = {
-  average_check: 430,
-  orders_per_day: 120,
-  working_days_per_month: 30,
-  food_cost_percent: 35,
-  rent: 180000,
-  payroll: 450000,
-  utilities: 60000,
-  marketing: 80000,
-  other_expenses: 50000,
-  equipment: 2200000,
-  renovation: 1500000,
-  furniture: 500000,
-  launch_marketing: 300000,
-  other_capex: 200000,
-  royalty_percent: 5,
-  acquiring_percent: 2.2,
-  tax_percent: 6,
-  misc_percent: 2
+type EconomicsCalculatorProps = {
+  initialValues: EconomicsValues;
 };
 
 const groups: Array<{
@@ -91,16 +59,13 @@ const groups: Array<{
   }
 ];
 
-function formatRub(value: number) {
-  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value)} ₽`;
-}
-
 function formatMonths(value: number) {
-  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value)} мес.`;
+  return `${formatNumber(value, 1)} мес.`;
 }
 
-export function EconomicsCalculator() {
-  const [values, setValues] = useState<EconomicsValues>(defaults);
+export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps) {
+  const [state, formAction, isPending] = useActionState(saveEconomicsSettingsAction, initialEconomicsSaveState);
+  const [values, setValues] = useState<EconomicsValues>(initialValues);
 
   const results = useMemo(() => {
     const monthlyRevenue = values.average_check * values.orders_per_day * values.working_days_per_month;
@@ -130,7 +95,7 @@ export function EconomicsCalculator() {
   }, [values]);
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.72fr)]">
+    <form action={formAction} className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.72fr)]">
       <section className="grid gap-5">
         {groups.map((group) => (
           <div key={group.title} className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
@@ -144,6 +109,7 @@ export function EconomicsCalculator() {
                       type="number"
                       step={item.suffix === "%" ? "0.1" : "1"}
                       min="0"
+                      name={item.key}
                       value={values[item.key]}
                       onChange={(event) =>
                         setValues((current) => ({
@@ -164,6 +130,20 @@ export function EconomicsCalculator() {
             </div>
           </div>
         ))}
+        <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-65"
+          >
+            {isPending ? "Сохраняем" : "Сохранить вводные"}
+          </button>
+          {state.message ? (
+            <p className={state.status === "success" ? "mt-3 text-sm font-semibold text-karimoff-orange" : "mt-3 text-sm font-semibold text-red-600"}>
+              {state.message}
+            </p>
+          ) : null}
+        </div>
       </section>
 
       <aside className="h-fit rounded-lg border border-karimoff-line bg-white p-5 shadow-card lg:sticky lg:top-8">
@@ -190,7 +170,7 @@ export function EconomicsCalculator() {
           Расчёт демонстрационный, не является гарантией окупаемости.
         </p>
       </aside>
-    </div>
+    </form>
   );
 }
 

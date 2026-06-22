@@ -1,15 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 
 type HeroProps = {
+  imageUrl?: string | null;
   title?: string | null;
   subtitle?: string | null;
 };
 
-export function Hero({ title, subtitle }: HeroProps) {
+export function Hero({ imageUrl, title, subtitle }: HeroProps) {
   const defaultTitle = "Первый фастфуд, приготовленный для вас с любовью";
   const defaultSubtitle = "Ресторанный вкус по цене обычного перекуса";
   const oldTitle = "Ресторанный вкус по цене обычного перекуса";
@@ -21,28 +21,26 @@ export function Hero({ title, subtitle }: HeroProps) {
   return (
     <section className="relative w-full overflow-hidden bg-karimoff-black pt-[68px] sm:pt-[74px]">
       <div className="absolute inset-0 bg-[url('/assets/hero/karimoff-hero-placeholder.svg')] bg-cover bg-center" aria-hidden="true" />
-      <Image
-        src="/assets/hero/rustam-package.jpg"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl || "/assets/hero/rustam-package.jpg"}
         alt="KARIMOFF на кухне"
-        fill
-        sizes="100vw"
-        priority
-        className="object-cover object-[54%_center] sm:object-[55%_center] lg:object-center"
+        className="absolute inset-0 h-full w-full object-cover object-[58%_center] sm:object-[55%_center] lg:object-center"
       />
-      <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.90)_0%,rgba(255,255,255,0.72)_36%,rgba(255,255,255,0.20)_64%,rgba(18,18,20,0.18)_100%),linear-gradient(180deg,rgba(18,18,20,0.10)_0%,rgba(18,18,20,0.32)_100%)]" />
+      <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(18,18,20,0.78)_0%,rgba(18,18,20,0.56)_42%,rgba(18,18,20,0.24)_100%),linear-gradient(180deg,rgba(18,18,20,0.16)_0%,rgba(18,18,20,0.42)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-karimoff-orange/45" />
 
-      <div className="container-page relative flex min-h-[360px] items-center py-5 sm:min-h-[380px] sm:py-7 lg:min-h-[390px]">
+      <div className="container-page relative flex min-h-[340px] items-center py-7 sm:min-h-[370px] sm:py-9 lg:min-h-[390px]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="hero-panel min-w-0 max-w-[560px] rounded-[1.35rem] border border-white/65 bg-white/70 p-5 shadow-[0_24px_70px_rgba(18,18,20,0.16)] backdrop-blur-md sm:p-6 lg:bg-white/64"
+          className="min-w-0 max-w-[560px]"
         >
-          <h1 className="text-balance font-heading text-[clamp(1.9rem,4.1vw,3.6rem)] font-black leading-[0.96] text-karimoff-black">
+          <h1 className="text-balance font-heading text-[clamp(1.85rem,3.8vw,3.25rem)] font-black leading-[0.98] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.28)]">
             {heroTitle}
           </h1>
-          <p className="mt-3 max-w-md text-[15px] font-semibold leading-7 text-karimoff-muted sm:text-base">
+          <p className="mt-3 max-w-md text-[15px] font-semibold leading-7 text-white/82 sm:text-base">
             {heroSubtitle}
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">

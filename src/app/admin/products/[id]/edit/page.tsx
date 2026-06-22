@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { ProductImagesManager } from "@/components/admin/ProductImagesManager";
 import { ProductComposition } from "@/components/admin/ProductComposition";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getProductFoodCost } from "@/lib/ingredients";
@@ -67,6 +68,13 @@ export default async function EditProductPage({ params, searchParams }: EditProd
               </div>
             ) : null}
             <ProductForm action={updateProductAction} product={product} submitLabel="Сохранить товар" />
+            {product ? (
+              <ProductImagesManager
+                productId={product.id}
+                productName={product.name}
+                images={product.images ?? []}
+              />
+            ) : null}
             {composition?.error ? (
               <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">
                 {composition.error}

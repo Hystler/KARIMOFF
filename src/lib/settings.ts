@@ -18,6 +18,12 @@ export type SiteSettings = {
   loyalty_percent: number;
   hero_title: string | null;
   hero_subtitle: string | null;
+  home_hero_image_url: string | null;
+  menu_hero_image_url: string | null;
+  business_hero_image_url: string | null;
+  careers_hero_image_url: string | null;
+  franchise_hero_image_url: string | null;
+  about_hero_image_url: string | null;
 };
 
 export const fallbackSiteSettings: SiteSettings = {
@@ -32,8 +38,18 @@ export const fallbackSiteSettings: SiteSettings = {
   loyalty_enabled: true,
   loyalty_percent: 5,
   hero_title: null,
-  hero_subtitle: null
+  hero_subtitle: null,
+  home_hero_image_url: null,
+  menu_hero_image_url: null,
+  business_hero_image_url: null,
+  careers_hero_image_url: null,
+  franchise_hero_image_url: null,
+  about_hero_image_url: null
 };
+
+function optionalString(row: Record<string, unknown>, key: string) {
+  return typeof row[key] === "string" && row[key].length > 0 ? String(row[key]) : null;
+}
 
 function normalizeSettings(row: Record<string, unknown> | null | undefined): SiteSettings {
   if (!row) {
@@ -51,8 +67,14 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     theme: row.theme === "dark" ? "dark" : "light",
     loyalty_enabled: row.loyalty_enabled !== false,
     loyalty_percent: Number(row.loyalty_percent ?? fallbackSiteSettings.loyalty_percent),
-    hero_title: typeof row.hero_title === "string" && row.hero_title.length > 0 ? row.hero_title : null,
-    hero_subtitle: typeof row.hero_subtitle === "string" && row.hero_subtitle.length > 0 ? row.hero_subtitle : null
+    hero_title: optionalString(row, "hero_title"),
+    hero_subtitle: optionalString(row, "hero_subtitle"),
+    home_hero_image_url: optionalString(row, "home_hero_image_url"),
+    menu_hero_image_url: optionalString(row, "menu_hero_image_url"),
+    business_hero_image_url: optionalString(row, "business_hero_image_url"),
+    careers_hero_image_url: optionalString(row, "careers_hero_image_url"),
+    franchise_hero_image_url: optionalString(row, "franchise_hero_image_url"),
+    about_hero_image_url: optionalString(row, "about_hero_image_url")
   };
 }
 
