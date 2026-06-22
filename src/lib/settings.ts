@@ -24,6 +24,9 @@ export type SiteSettings = {
   careers_hero_image_url: string | null;
   franchise_hero_image_url: string | null;
   about_hero_image_url: string | null;
+  telegram_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
 };
 
 export const fallbackSiteSettings: SiteSettings = {
@@ -44,7 +47,10 @@ export const fallbackSiteSettings: SiteSettings = {
   business_hero_image_url: null,
   careers_hero_image_url: null,
   franchise_hero_image_url: null,
-  about_hero_image_url: null
+  about_hero_image_url: null,
+  telegram_url: "https://t.me/juikaifui",
+  instagram_url: "https://www.instagram.com/_guikaifui_/",
+  tiktok_url: "https://www.tiktok.com/@karimich_11.0"
 };
 
 function optionalString(row: Record<string, unknown>, key: string) {
@@ -74,7 +80,10 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     business_hero_image_url: optionalString(row, "business_hero_image_url"),
     careers_hero_image_url: optionalString(row, "careers_hero_image_url"),
     franchise_hero_image_url: optionalString(row, "franchise_hero_image_url"),
-    about_hero_image_url: optionalString(row, "about_hero_image_url")
+    about_hero_image_url: optionalString(row, "about_hero_image_url"),
+    telegram_url: optionalString(row, "telegram_url"),
+    instagram_url: optionalString(row, "instagram_url"),
+    tiktok_url: optionalString(row, "tiktok_url")
   };
 }
 

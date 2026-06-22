@@ -1,10 +1,10 @@
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
+import { ProductImageUploadForm } from "@/components/admin/ProductImageUploadForm";
 import type { ProductImage } from "@/lib/product-types";
 import {
   deleteProductImageAction,
   setPrimaryProductImageAction,
-  updateProductImageAction,
-  uploadProductImagesAction
+  updateProductImageAction
 } from "@/app/admin/products/actions";
 
 type ProductImagesManagerProps = {
@@ -20,30 +20,12 @@ export function ProductImagesManager({ images, productId, productName }: Product
         <p className="text-sm font-semibold text-karimoff-orange">Фотографии товара</p>
         <h2 className="text-2xl font-black">Галерея SKU</h2>
         <p className="max-w-2xl text-sm leading-6 text-karimoff-muted">
-          Добавьте 1-5 фото товара. Рекомендуемый формат: квадрат или 4:3,
-          WebP/JPG до 3 MB. Продукт должен быть по центру, без текста по краям.
+          Добавьте 1-5 фото товара. Рекомендуемый формат: квадрат 1200×1200 px или 4:3 1600×1200 px.
+          Продукт должен быть по центру, без текста у краёв. Лучше WebP/JPG до 3 MB.
         </p>
       </div>
 
-      <form action={uploadProductImagesAction} className="mt-5 grid gap-3 rounded-xl border border-dashed border-karimoff-line bg-karimoff-cream/70 p-4">
-        <input type="hidden" name="id" value={productId} />
-        <label className="grid gap-2 text-sm font-semibold">
-          Загрузить фото
-          <input
-            name="images"
-            type="file"
-            accept="image/*"
-            multiple
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
-          />
-        </label>
-        <button
-          type="submit"
-          className="w-fit rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
-        >
-          Добавить фото
-        </button>
-      </form>
+      <ProductImageUploadForm productId={productId} />
 
       {images.length === 0 ? (
         <div className="mt-5 rounded-xl border border-karimoff-line bg-karimoff-soft p-5 text-sm leading-6 text-karimoff-muted">
@@ -58,7 +40,7 @@ export function ProductImagesManager({ images, productId, productName }: Product
                 <img
                   src={image.image_url}
                   alt={image.alt ?? productName}
-                  className="h-40 w-full object-contain"
+                  className="aspect-[4/3] h-auto w-full object-contain"
                 />
               </div>
               <div className="grid gap-3">
@@ -128,4 +110,3 @@ export function ProductImagesManager({ images, productId, productName }: Product
     </section>
   );
 }
-

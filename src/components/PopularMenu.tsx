@@ -53,7 +53,7 @@ export function PopularMenu({ products }: { products: Product[] }) {
       </div>
       <div
         ref={scrollerRef}
-        className="scrollbar-hide -mx-5 flex max-w-none snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-5 pb-3 overscroll-x-contain sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10"
+        className="scrollbar-hide -mx-5 flex max-w-none snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overflow-y-hidden px-5 pb-3 sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10"
       >
         {products.map((product, index) => (
           <div key={product.id} className="min-w-0 shrink-0 basis-[82%] snap-start sm:basis-[46%] lg:basis-[23.5%]">

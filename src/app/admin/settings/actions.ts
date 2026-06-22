@@ -89,7 +89,10 @@ export async function updateSiteSettingsAction(formData: FormData) {
     business_hero_image_url: formData.get("business_hero_image_url"),
     careers_hero_image_url: formData.get("careers_hero_image_url"),
     franchise_hero_image_url: formData.get("franchise_hero_image_url"),
-    about_hero_image_url: formData.get("about_hero_image_url")
+    about_hero_image_url: formData.get("about_hero_image_url"),
+    telegram_url: formData.get("telegram_url"),
+    instagram_url: formData.get("instagram_url"),
+    tiktok_url: formData.get("tiktok_url")
   });
 
   if (!parsed.success) {
@@ -113,6 +116,9 @@ export async function updateSiteSettingsAction(formData: FormData) {
       phone: normalizeOptionalPhone(parsed.data.phone),
       address: parsed.data.address || null,
       working_hours: parsed.data.working_hours || null,
+      telegram_url: parsed.data.telegram_url || null,
+      instagram_url: parsed.data.instagram_url || null,
+      tiktok_url: parsed.data.tiktok_url || null,
       hero_title: parsed.data.hero_title || null,
       hero_subtitle: parsed.data.hero_subtitle || null,
       ...heroImageValues
@@ -130,6 +136,7 @@ export async function updateSiteSettingsAction(formData: FormData) {
   revalidatePath("/careers");
   revalidatePath("/franchise");
   revalidatePath("/about");
+  revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");
 }

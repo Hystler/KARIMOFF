@@ -18,7 +18,7 @@ export function Hero({ imageUrl, title, subtitle }: HeroProps) {
   const heroSubtitle = !subtitle || subtitle === oldSubtitle || subtitle === oldSubtitleNoDot ? defaultSubtitle : subtitle;
 
   return (
-    <section className="relative w-full overflow-hidden bg-karimoff-black pt-[68px] sm:pt-[74px]">
+    <section className="relative mt-[68px] w-full overflow-hidden bg-karimoff-black sm:mt-[74px]">
       <div className="absolute inset-0 bg-[url('/assets/hero/karimoff-hero-placeholder.svg')] bg-cover bg-center" aria-hidden="true" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

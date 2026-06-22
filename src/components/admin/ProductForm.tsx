@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/product-types";
+import { adminProductCategoryOptions } from "@/lib/product-categories";
 
 type ProductFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -7,6 +8,11 @@ type ProductFormProps = {
 };
 
 export function ProductForm({ action, product, submitLabel }: ProductFormProps) {
+  const currentCategory = product?.category ?? "Бургеры";
+  const categoryOptions = adminProductCategoryOptions.includes(currentCategory)
+    ? adminProductCategoryOptions
+    : [currentCategory, ...adminProductCategoryOptions];
+
   return (
     <form action={action} className="mt-8 grid gap-5 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
       {product ? <input type="hidden" name="id" value={product.id} /> : null}
@@ -37,13 +43,18 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
       <div className="grid gap-5 md:grid-cols-3">
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Категория
-          <input
+          <select
             name="category"
             required
             defaultValue={product?.category ?? "Бургеры"}
             className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-            placeholder="Бургеры"
-          />
+          >
+            {categoryOptions.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Цена, ₽

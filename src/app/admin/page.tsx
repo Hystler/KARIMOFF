@@ -12,6 +12,7 @@ const cards = [
   { title: "Юнит-экономика", href: "/admin/economics", enabled: true },
   { title: "Лояльность", href: "/admin/loyalty", enabled: true },
   { title: "Настройки", href: "/admin/settings", enabled: true },
+  { title: "Cookies", href: "/admin/cookies", enabled: true },
   { title: "Вакансии", href: "/admin/vacancies", enabled: true },
   { title: "Франшиза", href: "#", enabled: false }
 ];

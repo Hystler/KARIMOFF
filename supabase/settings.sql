@@ -17,7 +17,10 @@ create table if not exists public.site_settings (
   business_hero_image_url text,
   careers_hero_image_url text,
   franchise_hero_image_url text,
-  about_hero_image_url text
+  about_hero_image_url text,
+  telegram_url text,
+  instagram_url text,
+  tiktok_url text
 );
 
 alter table public.site_settings add column if not exists updated_at timestamptz default now();
@@ -38,6 +41,9 @@ alter table public.site_settings add column if not exists business_hero_image_ur
 alter table public.site_settings add column if not exists careers_hero_image_url text;
 alter table public.site_settings add column if not exists franchise_hero_image_url text;
 alter table public.site_settings add column if not exists about_hero_image_url text;
+alter table public.site_settings add column if not exists telegram_url text;
+alter table public.site_settings add column if not exists instagram_url text;
+alter table public.site_settings add column if not exists tiktok_url text;
 
 insert into public.site_settings (id, site_name, theme, loyalty_enabled, loyalty_percent)
 values ('main', 'KARIMOFF', 'light', true, 5)

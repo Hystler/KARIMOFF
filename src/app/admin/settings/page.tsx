@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { HeroBackgroundField } from "@/components/admin/HeroBackgroundField";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getAdminSiteSettings } from "@/lib/settings";
 import { logoutAction } from "../login/actions";
@@ -34,32 +35,32 @@ const heroBackgroundFields = [
   {
     key: "home_hero_image_url",
     title: "Главная",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. Важный объект держите ближе к центру или правой части кадра. Текст будет поверх изображения."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. Важный объект держите ближе к центру или правой части кадра. Текст будет поверх изображения."
   },
   {
     key: "menu_hero_image_url",
     title: "Меню",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. Фото должно выдерживать затемнение overlay."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. Фото должно выдерживать затемнение overlay."
   },
   {
     key: "business_hero_image_url",
     title: "Для бизнеса",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. Не используйте фото с мелким текстом."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. Не используйте фото с мелким текстом."
   },
   {
     key: "careers_hero_image_url",
     title: "Работа",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. На mobile фото будет кадрироваться."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. На mobile фото будет кадрироваться."
   },
   {
     key: "franchise_hero_image_url",
     title: "Франшиза",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. Фото должно быть читаемым под тёмным overlay."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. Фото должно быть читаемым под тёмным overlay."
   },
   {
     key: "about_hero_image_url",
     title: "О нас",
-    hint: "Рекомендуемый формат: 2400x1200 px, горизонтальное фото 2:1. Ключевой объект держите ближе к центру."
+    hint: "Рекомендуемый формат: 2400×1200 px, горизонтальное фото 2:1. Ключевой объект держите ближе к центру."
   }
 ] as const;
 
@@ -179,59 +180,47 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                 <p className="text-sm font-semibold text-karimoff-orange">Фоны страниц</p>
                 <h2 className="mt-2 text-2xl font-black">Hero-фото для главной и разделов</h2>
                 <p className="mt-3 text-sm leading-6 text-karimoff-muted">
-                  Загружайте широкие фото 2400x1200 px в пропорции 2:1, которые выдерживают затемнение поверх изображения.
+                  Загружайте широкие фото 2400×1200 px, пропорция 2:1. Важный объект держите ближе к центру или правой части кадра:
+                  текст будет поверх изображения.
                   На мобильной версии фото будет кадрироваться: не размещайте лицо, продукт или важный объект у самых краёв.
                   Не используйте фото с мелким текстом: на телефоне он будет нечитаем.
                   Желательно WebP/AVIF до 500 KB-1 MB, максимум для hero-фона — 5 MB.
                 </p>
               </div>
               <div className="mt-6 grid gap-4">
-                {heroBackgroundFields.map((field) => {
-                  const value = settings[field.key];
+                {heroBackgroundFields.map((field) => (
+                  <HeroBackgroundField
+                    key={field.key}
+                    fieldKey={field.key}
+                    hint={field.hint}
+                    title={field.title}
+                    value={settings[field.key]}
+                  />
+                ))}
+              </div>
+            </section>
 
-                  return (
-                    <div key={field.key} className="grid gap-4 rounded-xl border border-karimoff-line bg-white p-4 lg:grid-cols-[220px_1fr]">
-                      <div className="overflow-hidden rounded-xl border border-karimoff-line bg-karimoff-soft">
-                        {value ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={value} alt={`Фон: ${field.title}`} className="h-36 w-full object-cover" />
-                        ) : (
-                          <div className="flex h-36 items-center justify-center px-4 text-center text-xs font-semibold text-karimoff-muted">
-                            Фон не задан
-                          </div>
-                        )}
-                      </div>
-                      <div className="grid gap-3">
-                        <div>
-                          <h3 className="text-lg font-black">{field.title}</h3>
-                          <p className="mt-1 text-xs leading-5 text-karimoff-muted">{field.hint}</p>
-                        </div>
-                        <label className="grid gap-2 text-sm font-semibold">
-                          Загрузить фото
-                          <input
-                            name={`${field.key}_file`}
-                            type="file"
-                            accept="image/*"
-                            className="rounded-xl border border-dashed border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
-                          />
-                        </label>
-                        <label className="grid gap-2 text-sm font-semibold">
-                          URL фона
-                          <input
-                            name={field.key}
-                            defaultValue={value ?? ""}
-                            placeholder="https://... или /assets/hero/..."
-                            className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
-                          />
-                        </label>
-                        <label className="flex items-center gap-3 text-sm font-semibold text-karimoff-muted">
-                          <input name={`clear_${field.key}`} type="checkbox" className="h-5 w-5 accent-karimoff-orange" />
-                          Очистить фон
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
+            <section className="rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
+              <div className="max-w-3xl">
+                <p className="text-sm font-semibold text-karimoff-orange">Социальные сети</p>
+                <h2 className="mt-2 text-2xl font-black">Ссылки для сайта</h2>
+                <p className="mt-3 text-sm leading-6 text-karimoff-muted">
+                  Если поле пустое, иконка не показывается. Telegram можно указать как https://t.me/username или tg://resolve?domain=username.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-5 md:grid-cols-3">
+                <label className="grid gap-2 text-sm font-semibold">
+                  Telegram
+                  <input name="telegram_url" defaultValue={settings.telegram_url ?? ""} placeholder="https://t.me/username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold">
+                  Instagram
+                  <input name="instagram_url" defaultValue={settings.instagram_url ?? ""} placeholder="https://instagram.com/username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold">
+                  TikTok
+                  <input name="tiktok_url" defaultValue={settings.tiktok_url ?? ""} placeholder="https://www.tiktok.com/@username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                </label>
               </div>
             </section>
 

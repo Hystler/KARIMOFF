@@ -24,7 +24,7 @@ export function PageHero({
   const src = imageUrl || fallbackImageUrl;
 
   return (
-    <section className="relative isolate w-full overflow-hidden bg-karimoff-black pt-[68px] text-white sm:pt-[74px]">
+    <section className="relative isolate mt-[68px] w-full overflow-hidden bg-karimoff-black text-white sm:mt-[74px]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -56,4 +56,3 @@ export function PageHero({
     </section>
   );
 }
-

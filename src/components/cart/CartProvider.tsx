@@ -113,7 +113,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       return [...current, { product: toCartProduct(product), quantity: 1 }];
     });
-    setIsOpen(true);
   }, []);
 
   const increment = useCallback((productId: string) => {

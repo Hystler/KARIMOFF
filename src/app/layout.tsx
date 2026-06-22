@@ -34,7 +34,7 @@ export default async function RootLayout({
   return (
     <html lang="ru" data-scroll-behavior="smooth" className={`${manrope.variable} ${rubik.variable}`}>
       <body>
-        <SiteChrome defaultTheme={settings.theme}>{children}</SiteChrome>
+        <SiteChrome defaultTheme={settings.theme} settings={settings}>{children}</SiteChrome>
       </body>
     </html>
   );

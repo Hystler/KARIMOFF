@@ -3,12 +3,21 @@
 import { usePathname } from "next/navigation";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
+import { CookieConsentBanner } from "./CookieConsentBanner";
 import { CartDrawer } from "./cart/CartDrawer";
 import { CartProvider } from "./cart/CartProvider";
 import { ThemeProvider } from "./theme/ThemeProvider";
-import type { SiteTheme } from "@/lib/settings";
+import type { SiteSettings, SiteTheme } from "@/lib/settings";
 
-export function SiteChrome({ children, defaultTheme }: { children: React.ReactNode; defaultTheme: SiteTheme }) {
+export function SiteChrome({
+  children,
+  defaultTheme,
+  settings
+}: {
+  children: React.ReactNode;
+  defaultTheme: SiteTheme;
+  settings: SiteSettings;
+}) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
 
@@ -25,8 +34,9 @@ export function SiteChrome({ children, defaultTheme }: { children: React.ReactNo
       <CartProvider>
         <Header />
         {children}
-        <Footer />
+        <Footer settings={settings} />
         <CartDrawer />
+        <CookieConsentBanner />
       </CartProvider>
     </ThemeProvider>
   );
