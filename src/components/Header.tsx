@@ -52,7 +52,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-[15px] font-semibold text-karimoff-black transition hover:text-karimoff-orange"
+              className="rounded-full px-1.5 py-1 text-[15px] font-semibold text-karimoff-black transition hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
             >
               {item.label}
             </Link>
@@ -95,7 +95,7 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className="rounded-lg px-1 py-3 text-base font-semibold text-karimoff-black"
+                className="rounded-lg px-1 py-3 text-base font-semibold text-karimoff-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
               >
                 {item.label}
               </Link>

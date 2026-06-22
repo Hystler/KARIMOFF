@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createLeadAction } from "@/app/actions/leads";
 import { initialLeadActionState, type LeadFormInput } from "@/lib/lead-schema";
-import { CHECKOUT_COMMENT_KEY } from "./cart/CartProvider";
 
 const interests = [
   { value: "b2b", label: "B2B" },
@@ -19,56 +18,35 @@ type LeadFormProps = {
 export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
   const [state, formAction, isPending] = useActionState(createLeadAction, initialLeadActionState);
   const formRef = useRef<HTMLFormElement>(null);
-  const commentRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
-      window.localStorage.removeItem(CHECKOUT_COMMENT_KEY);
-      window.dispatchEvent(new Event("karimoff-lead-success"));
     }
   }, [state.status]);
 
-  useEffect(() => {
-    function applyCheckoutComment(comment: string | null) {
-      if (comment && commentRef.current) {
-        commentRef.current.value = comment;
-      }
-    }
-
-    applyCheckoutComment(window.localStorage.getItem(CHECKOUT_COMMENT_KEY));
-
-    function handleCheckout(event: Event) {
-      const detail = (event as CustomEvent<string>).detail;
-      applyCheckoutComment(detail);
-    }
-
-    window.addEventListener("karimoff-cart-checkout", handleCheckout);
-    return () => window.removeEventListener("karimoff-cart-checkout", handleCheckout);
-  }, []);
-
   return (
-    <section id="lead" className="container-page py-16 sm:py-24">
-      <div className="grid gap-8 rounded-lg border border-karimoff-line bg-karimoff-cream p-6 shadow-card sm:p-10 lg:grid-cols-[0.85fr_1.15fr] lg:p-12">
-        <div>
+    <section id="lead" className="container-page scroll-mt-28 py-14 sm:py-20">
+      <div className="grid grid-cols-1 gap-8 rounded-[1.5rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-8 lg:grid-cols-[0.78fr_1fr] lg:p-10">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-karimoff-orange">Заявка</p>
-          <h2 className="mt-3 text-balance text-4xl font-black leading-none text-karimoff-black sm:text-6xl">
+          <h2 className="mt-3 text-balance text-3xl font-black leading-tight text-karimoff-black sm:text-5xl">
             Связаться с KARIMOFF
           </h2>
-          <p className="mt-6 text-base leading-7 text-karimoff-muted">
+          <p className="mt-5 max-w-md text-base leading-7 text-karimoff-muted">
             Оставьте контакт, и мы вернёмся с ответом по сотрудничеству,
             работе или франшизе.
           </p>
         </div>
 
-        <form ref={formRef} action={formAction} className="grid gap-4">
+        <form ref={formRef} action={formAction} className="grid min-w-0 grid-cols-1 gap-4 rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/70 p-4 sm:p-5">
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
             <input
               name="name"
               required
               placeholder="Ваше имя"
-              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <label className="grid gap-2">
@@ -79,14 +57,14 @@ export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
               inputMode="tel"
               defaultValue="+7"
               placeholder="+7"
-              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Интерес</span>
             <select
               name="interest"
-              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               defaultValue={defaultInterest}
             >
               {interests.map((item) => (
@@ -99,11 +77,10 @@ export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>
             <textarea
-              ref={commentRef}
               name="comment"
               rows={5}
               placeholder="Расскажите, что нужно подготовить"
-              className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
+              className="resize-none rounded-xl border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <button

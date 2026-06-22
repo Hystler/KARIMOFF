@@ -42,7 +42,7 @@ export function Hero({ title, subtitle }: HeroProps) {
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="#brand"
+              href="/about"
               className="inline-flex min-h-[50px] items-center justify-center rounded-full border border-karimoff-black/20 bg-white px-6 py-3 text-sm font-bold text-karimoff-black shadow-[0_12px_28px_rgba(18,18,20,0.08)] transition hover:-translate-y-0.5 hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
             >
               О нас

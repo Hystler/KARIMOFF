@@ -22,7 +22,7 @@ function formatPrice(value: number) {
 }
 
 export function CartDrawer() {
-  const { clearCart, closeCart, decrement, increment, isOpen, lines, removeItem, totalPrice, checkout } = useCart();
+  const { clearCart, closeCart, decrement, increment, isOpen, lines, openCart, removeItem, totalPrice, checkout } = useCart();
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
@@ -57,12 +57,13 @@ export function CartDrawer() {
 
   useEffect(() => {
     function handleCheckoutRequest() {
+      openCart();
       void startCheckout();
     }
 
     window.addEventListener("karimoff-cart-checkout-request", handleCheckoutRequest);
     return () => window.removeEventListener("karimoff-cart-checkout-request", handleCheckoutRequest);
-  }, [startCheckout]);
+  }, [openCart, startCheckout]);
 
   useEffect(() => {
     if (orderState.status === "success") {

@@ -32,7 +32,6 @@ type CartContextValue = {
 };
 
 const STORAGE_KEY = "karimoff_cart";
-const CHECKOUT_COMMENT_KEY = "karimoff_cart_checkout_comment";
 
 const CartContext = createContext<CartContextValue | null>(null);
 
@@ -73,15 +72,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
     }
   }, [isHydrated, lines]);
-
-  useEffect(() => {
-    function handleLeadSuccess() {
-      setLines([]);
-    }
-
-    window.addEventListener("karimoff-lead-success", handleLeadSuccess);
-    return () => window.removeEventListener("karimoff-lead-success", handleLeadSuccess);
-  }, []);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -153,6 +143,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (window.location.pathname !== "/checkout") {
+      window.location.assign("/checkout");
+      return;
+    }
+
     setIsOpen(true);
     window.dispatchEvent(new Event("karimoff-cart-checkout-request"));
   }, [lines]);
@@ -187,5 +182,3 @@ export function useCart() {
 
   return context;
 }
-
-export { CHECKOUT_COMMENT_KEY };

@@ -115,7 +115,14 @@ select {
   }
 
   .text-balance {
-    text-wrap: balance;
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 640px) {
+    .text-balance {
+      text-wrap: balance;
+    }
   }
 
   .line-clamp-2 {

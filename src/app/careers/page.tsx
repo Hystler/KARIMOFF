@@ -13,15 +13,15 @@ const offers = [
 
 export default function CareersPage() {
   return (
-    <main className="bg-karimoff-cream pt-24 text-karimoff-black">
-      <section className="container-page pb-14 pt-8 sm:pb-20 sm:pt-12">
-        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-10">
+    <main className="bg-karimoff-cream pt-28 text-karimoff-black">
+      <section className="container-page pb-12 pt-6 sm:pb-16">
+        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
           <p className="text-sm font-semibold text-karimoff-orange">Работа в KARIMOFF</p>
-          <div className="mt-4 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
-            <h1 className="text-balance text-4xl font-black leading-[0.96] sm:text-6xl">
+          <div className="mt-4 grid grid-cols-1 gap-7 lg:grid-cols-[1.02fr_0.98fr] lg:items-end">
+            <h1 className="max-w-4xl text-balance text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl">
               Работа, где важен результат каждого человека
             </h1>
-            <p className="max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg">
+            <p className="max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
               Мы ищем людей, которые готовы соблюдать стандарты, учиться,
               работать в команде и уважительно относиться к гостям.
             </p>
@@ -35,15 +35,15 @@ export default function CareersPage() {
         </div>
       </section>
 
-      <section className="container-page pb-14 sm:pb-20">
-        <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
+      <section className="container-page pb-12 sm:pb-16">
+        <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Команда</p>
-            <h2 className="mt-3 text-balance text-3xl font-black leading-tight sm:text-5xl">
+            <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
               Хорошая бургерная начинается с людей
             </h2>
           </div>
-          <div className="grid gap-5 text-base leading-8 text-karimoff-muted">
+          <div className="grid min-w-0 max-w-[760px] grid-cols-1 gap-5 text-[17px] leading-8 text-karimoff-muted sm:text-lg">
             <p>
               Хорошая бургерная начинается не с оборудования и не с рецептов.
               Она начинается с людей.
@@ -68,34 +68,34 @@ export default function CareersPage() {
         </div>
       </section>
 
-      <section className="container-page pb-14 sm:pb-20">
-        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-10">
+      <section className="container-page pb-12 sm:pb-16">
+        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold text-karimoff-orange">Что мы предлагаем</p>
-            <h2 className="mt-3 text-balance text-3xl font-black leading-tight sm:text-5xl">
+            <h2 className="mt-3 text-balance text-3xl font-black leading-tight sm:text-4xl">
               Понятные условия и поддержка команды
             </h2>
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
             {offers.map((offer) => (
-              <div key={offer} className="flex gap-3 rounded-xl border border-karimoff-line bg-karimoff-cream p-4">
+              <div key={offer} className="flex gap-3 rounded-xl border border-karimoff-line bg-karimoff-cream p-4 transition hover:border-karimoff-orange/40">
                 <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-karimoff-orange" />
-                <p className="text-sm leading-6 text-karimoff-muted">{offer}</p>
+                <p className="text-sm leading-6 text-karimoff-muted sm:text-[15px]">{offer}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="container-page pb-14 sm:pb-20">
-        <div className="grid gap-8 rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-10 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
+      <section className="container-page pb-12 sm:pb-16">
+        <div className="grid grid-cols-1 gap-7 rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9 lg:grid-cols-[0.72fr_1fr]">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Рост внутри компании</p>
-            <h2 className="mt-3 text-balance text-3xl font-black leading-tight sm:text-5xl">
+            <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
               Развитие через ответственность и стандарты
             </h2>
           </div>
-          <div className="grid gap-5 text-base leading-8 text-karimoff-muted">
+          <div className="grid min-w-0 max-w-[760px] grid-cols-1 gap-5 text-[17px] leading-8 text-karimoff-muted sm:text-lg">
             <p>Мы не рассматриваем сотрудников как временный персонал.</p>
             <p>
               Если человек показывает ответственность, соблюдает стандарты и
@@ -117,9 +117,9 @@ export default function CareersPage() {
       </section>
 
       <section className="container-page pb-8">
-        <div className="rounded-[1.75rem] bg-karimoff-black p-6 text-white shadow-[0_24px_70px_rgba(18,18,20,0.16)] sm:p-10">
-          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-            <p className="max-w-3xl text-balance text-3xl font-black leading-tight sm:text-5xl">
+        <div className="rounded-[1.75rem] bg-karimoff-black p-6 text-white shadow-[0_24px_70px_rgba(18,18,20,0.16)] sm:p-9">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <p className="max-w-3xl text-balance text-2xl font-black leading-tight sm:text-4xl">
               Если вам близки порядок, дисциплина, уважение к гостям и желание
               развиваться в сильной команде — будем рады познакомиться.
             </p>
