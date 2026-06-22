@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createLeadAction } from "@/app/actions/leads";
-import { initialLeadActionState } from "@/lib/lead-schema";
+import { initialLeadActionState, type LeadFormInput } from "@/lib/lead-schema";
 import { CHECKOUT_COMMENT_KEY } from "./cart/CartProvider";
 
 const interests = [
@@ -12,7 +12,11 @@ const interests = [
   { value: "other", label: "Другое" }
 ] as const;
 
-export function LeadForm() {
+type LeadFormProps = {
+  defaultInterest?: LeadFormInput["interest"];
+};
+
+export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
   const [state, formAction, isPending] = useActionState(createLeadAction, initialLeadActionState);
   const formRef = useRef<HTMLFormElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
@@ -83,7 +87,7 @@ export function LeadForm() {
             <select
               name="interest"
               className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-              defaultValue="b2b"
+              defaultValue={defaultInterest}
             >
               {interests.map((item) => (
                 <option key={item.value} value={item.value}>
