@@ -12,18 +12,43 @@ const interests = [
 ] as const;
 
 type LeadFormProps = {
+  defaultComment?: string;
   defaultInterest?: LeadFormInput["interest"];
 };
 
-export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
+type LeadPrefillDetail = {
+  comment?: string;
+  interest?: LeadFormInput["interest"];
+};
+
+export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadFormProps) {
   const [state, formAction, isPending] = useActionState(createLeadAction, initialLeadActionState);
   const formRef = useRef<HTMLFormElement>(null);
+  const commentRef = useRef<HTMLTextAreaElement>(null);
+  const interestRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
     }
   }, [state.status]);
+
+  useEffect(() => {
+    function handlePrefill(event: Event) {
+      const detail = (event as CustomEvent<LeadPrefillDetail>).detail;
+
+      if (detail?.interest && interestRef.current) {
+        interestRef.current.value = detail.interest;
+      }
+
+      if (typeof detail?.comment === "string" && commentRef.current) {
+        commentRef.current.value = detail.comment;
+      }
+    }
+
+    window.addEventListener("karimoff-lead-prefill", handlePrefill);
+    return () => window.removeEventListener("karimoff-lead-prefill", handlePrefill);
+  }, []);
 
   return (
     <section id="lead" className="container-page scroll-mt-28 py-14 sm:py-20">
@@ -63,6 +88,7 @@ export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Интерес</span>
             <select
+              ref={interestRef}
               name="interest"
               className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               defaultValue={defaultInterest}
@@ -77,8 +103,10 @@ export function LeadForm({ defaultInterest = "b2b" }: LeadFormProps) {
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>
             <textarea
+              ref={commentRef}
               name="comment"
               rows={5}
+              defaultValue={defaultComment}
               placeholder="Расскажите, что нужно подготовить"
               className="resize-none rounded-xl border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />

@@ -12,8 +12,8 @@ const cards = [
   { title: "Юнит-экономика", href: "/admin/economics", enabled: true },
   { title: "Лояльность", href: "/admin/loyalty", enabled: true },
   { title: "Настройки", href: "/admin/settings", enabled: true },
-  { title: "Франшиза", href: "#", enabled: false },
-  { title: "Вакансии", href: "#", enabled: false }
+  { title: "Вакансии", href: "/admin/vacancies", enabled: true },
+  { title: "Франшиза", href: "#", enabled: false }
 ];
 
 export const dynamic = "force-dynamic";

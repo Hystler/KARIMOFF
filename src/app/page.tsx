@@ -11,7 +11,7 @@ import { getActiveProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 
 export default async function Home() {
-  const [products, settings] = await Promise.all([getActiveProducts(4), getSiteSettings()]);
+  const [products, settings] = await Promise.all([getActiveProducts(100), getSiteSettings()]);
 
   return (
     <main>

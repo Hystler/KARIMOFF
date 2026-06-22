@@ -18,7 +18,7 @@ export function Hero({ title, subtitle }: HeroProps) {
       <div className="absolute inset-0 bg-[url('/assets/hero/karimoff-hero-placeholder.svg')] bg-cover bg-center" aria-hidden="true" />
       <Image
         src="/assets/hero-karimoff.png"
-        alt="KARIMOFF premium fast food"
+        alt="KARIMOFF бургеры и шаурма"
         fill
         sizes="100vw"
         priority

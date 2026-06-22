@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { LeadForm } from "@/components/LeadForm";
+import { VacancyApplyButton } from "@/components/VacancyApplyButton";
+import { formatVacancySalary, getActiveVacancies } from "@/lib/vacancies";
 
 const offers = [
   "Оплату от 450 рублей в час на стартовом этапе.",
@@ -11,7 +13,9 @@ const offers = [
   "Возможность карьерного роста внутри компании."
 ];
 
-export default function CareersPage() {
+export default async function CareersPage() {
+  const { vacancies } = await getActiveVacancies();
+
   return (
     <main className="bg-karimoff-cream pt-28 text-karimoff-black">
       <section className="container-page pb-12 pt-6 sm:pb-16">
@@ -84,6 +88,62 @@ export default function CareersPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="container-page pb-12 sm:pb-16">
+        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.72fr_1fr]">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-karimoff-orange">Открытые вакансии</p>
+              <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
+                Роли, в которых сейчас нужна команда
+              </h2>
+            </div>
+            <p className="max-w-[720px] text-[17px] leading-8 text-karimoff-muted sm:text-lg">
+              Выберите подходящее направление и оставьте анкету. Мы посмотрим
+              отклик и вернёмся с понятным следующим шагом.
+            </p>
+          </div>
+
+          {vacancies.length === 0 ? (
+            <div className="mt-8 rounded-xl border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
+              Открытых вакансий пока нет. Можно оставить общую анкету ниже, и
+              мы вернёмся, когда появится подходящая роль.
+            </div>
+          ) : (
+            <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {vacancies.map((vacancy) => {
+                const salary = formatVacancySalary(vacancy);
+
+                return (
+                  <article
+                    key={vacancy.id}
+                    className="flex min-h-[320px] flex-col rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream p-5 transition hover:-translate-y-0.5 hover:border-karimoff-orange/45"
+                  >
+                    <div className="flex flex-wrap gap-2 text-xs font-bold text-karimoff-muted">
+                      {vacancy.department ? (
+                        <span className="rounded-full bg-white px-3 py-1">{vacancy.department}</span>
+                      ) : null}
+                      {vacancy.employment_type ? (
+                        <span className="rounded-full bg-white px-3 py-1">{vacancy.employment_type}</span>
+                      ) : null}
+                    </div>
+                    <h3 className="mt-5 text-2xl font-black text-karimoff-black">{vacancy.title}</h3>
+                    <div className="mt-4 grid gap-2 text-sm leading-6 text-karimoff-muted">
+                      {vacancy.schedule ? <p>График: {vacancy.schedule}</p> : null}
+                      {vacancy.location ? <p>Локация: {vacancy.location}</p> : null}
+                      {salary ? <p className="font-black text-karimoff-orange">{salary}</p> : null}
+                    </div>
+                    <p className="mt-4 line-clamp-3 text-sm leading-6 text-karimoff-muted">
+                      {vacancy.description ?? "Роль в команде KARIMOFF с обучением стандартам и поддержкой на старте."}
+                    </p>
+                    <VacancyApplyButton title={vacancy.title} />
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

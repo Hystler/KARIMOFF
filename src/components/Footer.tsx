@@ -16,8 +16,8 @@ export function Footer() {
         <div>
           <Logo compact />
           <p className="mt-4 max-w-sm text-sm leading-6 text-karimoff-muted">
-            Premium fast food бренд с ресторанным вкусом, быстрой выдачей и
-            готовой системой для роста.
+            Бургерная с ресторанным вкусом, быстрой выдачей и готовой системой
+            для роста.
           </p>
         </div>
         <nav className="grid gap-3" aria-label="Навигация в подвале">

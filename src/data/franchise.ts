@@ -6,7 +6,7 @@ export type FranchisePoint = {
 export const franchiseHighlights: FranchisePoint[] = [
   {
     title: "Бренд и визуальная система",
-    description: "Единый premium fast food стиль, стандарты коммуникации и оформление точки."
+    description: "Единый стиль бренда, стандарты коммуникации и оформление точки."
   },
   {
     title: "Меню и операционные стандарты",

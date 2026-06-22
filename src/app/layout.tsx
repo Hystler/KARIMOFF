@@ -5,9 +5,9 @@ import { getSiteSettings } from "@/lib/settings";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KARIMOFF | Premium fast food",
+  title: "KARIMOFF | Бургерная",
   description:
-    "KARIMOFF — premium fast food бренд с ресторанным вкусом по цене обычного перекуса.",
+    "KARIMOFF — бургерная с ресторанным вкусом по цене обычного перекуса.",
   metadataBase: new URL("https://karimoff.vercel.app")
 };
 

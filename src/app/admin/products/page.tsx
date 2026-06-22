@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getProductsFoodCosts } from "@/lib/ingredients";
 import { getAdminProducts } from "@/lib/products";
 import { logoutAction } from "../login/actions";
 import { deleteProductAction, toggleProductActiveAction } from "./actions";
@@ -18,6 +19,38 @@ export const dynamic = "force-dynamic";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
+}
+
+function formatMoney(value: number | null) {
+  if (value === null) {
+    return "не задан";
+  }
+
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value)} ₽`;
+}
+
+function formatPercent(value: number | null) {
+  if (value === null) {
+    return "—";
+  }
+
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value)}%`;
+}
+
+function foodCostTone(value: number | null) {
+  if (value === null) {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  if (value < 30) {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (value < 40) {
+    return "bg-amber-50 text-amber-700";
+  }
+
+  return "bg-red-50 text-red-700";
 }
 
 function getMessage(params: Awaited<NonNullable<AdminProductsPageProps["searchParams"]>>) {
@@ -50,6 +83,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const params = searchParams ? await searchParams : {};
   const message = getMessage(params);
   const { products, notConfigured, error } = await getAdminProducts();
+  const foodCostsResult = error ? null : await getProductsFoodCosts(products);
+  const foodCostsByProduct = new Map(foodCostsResult?.items.map((item) => [item.product.id, item]) ?? []);
 
   return (
     <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
@@ -100,69 +135,91 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             <div className="p-8 text-karimoff-muted">Товаров пока нет. Создайте первую позицию меню.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+              {foodCostsResult?.error ? (
+                <div className="border-b border-karimoff-line px-5 py-4 text-sm font-semibold text-amber-700">
+                  Food cost временно недоступен: {foodCostsResult.error}
+                </div>
+              ) : null}
+              <table className="w-full min-w-[1220px] border-collapse text-left text-sm">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Порядок</th>
                     <th className="px-4 py-4 font-bold">Название</th>
                     <th className="px-4 py-4 font-bold">Категория</th>
                     <th className="px-4 py-4 font-bold">Цена</th>
+                    <th className="px-4 py-4 font-bold">Food cost</th>
+                    <th className="px-4 py-4 font-bold">Food cost %</th>
+                    <th className="px-4 py-4 font-bold">Gross profit</th>
                     <th className="px-4 py-4 font-bold">Статус</th>
                     <th className="px-4 py-4 font-bold">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
-                    <tr key={product.id} className="border-b border-karimoff-line last:border-b-0">
-                      <td className="px-4 py-4 text-karimoff-muted">{product.sort_order}</td>
-                      <td className="px-4 py-4">
-                        <p className="font-semibold">{product.name}</p>
-                        <p className="mt-1 text-xs text-karimoff-muted">{product.slug}</p>
-                      </td>
-                      <td className="px-4 py-4">{product.category}</td>
-                      <td className="px-4 py-4 font-black text-karimoff-orange">{formatPrice(product.price)} ₽</td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                            product.is_active
-                              ? "bg-karimoff-orange/10 text-karimoff-orange"
-                              : "bg-karimoff-black/5 text-karimoff-muted"
-                          }`}
-                        >
-                          {product.is_active ? "Активен" : "Скрыт"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={`/admin/products/${product.id}/edit`}
-                            className="rounded-full border border-karimoff-line px-3 py-2 text-xs font-bold transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                  {products.map((product) => {
+                    const foodCost = foodCostsByProduct.get(product.id);
+
+                    return (
+                      <tr key={product.id} className="border-b border-karimoff-line last:border-b-0">
+                        <td className="px-4 py-4 text-karimoff-muted">{product.sort_order}</td>
+                        <td className="px-4 py-4">
+                          <p className="font-semibold">{product.name}</p>
+                          <p className="mt-1 text-xs text-karimoff-muted">{product.slug}</p>
+                          {foodCost?.food_cost === null ? (
+                            <p className="mt-2 text-xs font-bold text-amber-700">Состав не задан</p>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-4">{product.category}</td>
+                        <td className="px-4 py-4 font-black text-karimoff-orange">{formatPrice(product.price)} ₽</td>
+                        <td className="px-4 py-4 font-bold">{formatMoney(foodCost?.food_cost ?? null)}</td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${foodCostTone(foodCost?.food_cost_percent ?? null)}`}>
+                            {formatPercent(foodCost?.food_cost_percent ?? null)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 font-bold">{formatMoney(foodCost?.gross_profit ?? null)}</td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                              product.is_active
+                                ? "bg-karimoff-orange/10 text-karimoff-orange"
+                                : "bg-karimoff-black/5 text-karimoff-muted"
+                            }`}
                           >
-                            Редактировать
-                          </Link>
-                          <form action={toggleProductActiveAction}>
-                            <input type="hidden" name="id" value={product.id} />
-                            <input type="hidden" name="next_active" value={String(!product.is_active)} />
-                            <button
-                              type="submit"
+                            {product.is_active ? "Активен" : "Скрыт"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/admin/products/${product.id}/edit`}
                               className="rounded-full border border-karimoff-line px-3 py-2 text-xs font-bold transition hover:border-karimoff-orange hover:text-karimoff-orange"
                             >
-                              {product.is_active ? "Скрыть" : "Показать"}
-                            </button>
-                          </form>
-                          <form action={deleteProductAction}>
-                            <input type="hidden" name="id" value={product.id} />
-                            <ConfirmSubmitButton
-                              message={`Удалить товар «${product.name}»?`}
-                              className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
-                            >
-                              Удалить
-                            </ConfirmSubmitButton>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                              Редактировать
+                            </Link>
+                            <form action={toggleProductActiveAction}>
+                              <input type="hidden" name="id" value={product.id} />
+                              <input type="hidden" name="next_active" value={String(!product.is_active)} />
+                              <button
+                                type="submit"
+                                className="rounded-full border border-karimoff-line px-3 py-2 text-xs font-bold transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                              >
+                                {product.is_active ? "Скрыть" : "Показать"}
+                              </button>
+                            </form>
+                            <form action={deleteProductAction}>
+                              <input type="hidden" name="id" value={product.id} />
+                              <ConfirmSubmitButton
+                                message={`Удалить товар «${product.name}»?`}
+                                className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
+                              >
+                                Удалить
+                              </ConfirmSubmitButton>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
