@@ -44,7 +44,7 @@ export function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-karimoff-black/10 bg-[rgba(255,255,255,0.96)] shadow-[0_12px_40px_rgba(18,18,20,0.08)] backdrop-blur-xl">
-      <div className="container-page flex h-[74px] items-center justify-between gap-4">
+      <div className="container-page flex h-[68px] items-center justify-between gap-3 sm:h-[74px] sm:gap-4">
         <Logo />
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="Основная навигация">
@@ -78,7 +78,7 @@ export function Header() {
             aria-label={isOpen ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={isOpen}
             onClick={() => setIsOpen((value) => !value)}
-            className="flex h-12 w-12 flex-col items-center justify-center gap-1.5 rounded-full border border-karimoff-black/15 bg-white shadow-[0_10px_24px_rgba(18,18,20,0.06)]"
+            className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 rounded-full border border-karimoff-black/15 bg-white shadow-[0_10px_24px_rgba(18,18,20,0.06)] sm:h-12 sm:w-12"
           >
             <span className={cn("h-0.5 w-5 rounded-full bg-karimoff-black transition", isOpen && "translate-y-2 rotate-45")} />
             <span className={cn("h-0.5 w-5 rounded-full bg-karimoff-black transition", isOpen && "opacity-0")} />

@@ -2,11 +2,11 @@ import Link from "next/link";
 
 export function BusinessSection() {
   return (
-    <section className="py-16 sm:py-24">
+    <section className="py-14 sm:py-24">
       <div className="container-page">
-        <div className="rounded-lg border border-karimoff-line bg-[linear-gradient(135deg,rgba(251,103,10,0.13),#FFFFFF_42%,#F8F4EE)] p-6 sm:p-10 lg:p-12">
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <h2 className="text-balance text-4xl font-black leading-none text-karimoff-black sm:text-6xl">
+        <div className="business-card relative overflow-hidden rounded-lg border border-karimoff-line bg-[linear-gradient(135deg,rgba(251,103,10,0.14),#FFFFFF_42%,#F8F4EE)] p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-10 lg:p-12">
+          <div className="relative z-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <h2 className="text-balance text-4xl font-black leading-[0.98] text-karimoff-black sm:text-6xl">
               KARIMOFF для бизнеса
             </h2>
             <div>

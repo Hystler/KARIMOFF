@@ -65,12 +65,14 @@ html[data-theme="dark"] header {
 
 html[data-theme="dark"] .hero-overlay {
   background:
-    linear-gradient(90deg, rgba(18, 18, 20, 0.96) 0%, rgba(18, 18, 20, 0.86) 30%, rgba(18, 18, 20, 0.52) 56%, rgba(18, 18, 20, 0.08) 82%),
-    linear-gradient(180deg, rgba(18, 18, 20, 0.06) 0%, rgba(18, 18, 20, 0.28) 100%) !important;
+    linear-gradient(90deg, rgba(18, 18, 20, 0.92) 0%, rgba(18, 18, 20, 0.76) 36%, rgba(18, 18, 20, 0.34) 66%, rgba(18, 18, 20, 0.12) 100%),
+    linear-gradient(180deg, rgba(18, 18, 20, 0.04) 0%, rgba(18, 18, 20, 0.34) 100%) !important;
 }
 
 html[data-theme="dark"] .hero-panel,
 html[data-theme="dark"] [class*="bg-white/60"],
+html[data-theme="dark"] [class*="bg-white/64"],
+html[data-theme="dark"] [class*="bg-white/70"],
 html[data-theme="dark"] [class*="bg-white/74"],
 html[data-theme="dark"] [class*="bg-white/78"],
 html[data-theme="dark"] [class*="bg-white/80"] {
@@ -91,6 +93,23 @@ html[data-theme="dark"] textarea::placeholder {
 
 html[data-theme="dark"] .shadow-card {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] .business-card {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(251, 103, 10, 0.22), transparent 34%),
+    linear-gradient(135deg, #151519 0%, #1b1b1f 52%, #121214 100%) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="dark"] .business-card::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(18, 18, 20, 0.18), rgba(18, 18, 20, 0.62)),
+    linear-gradient(180deg, transparent, rgba(18, 18, 20, 0.42));
 }
 
 button,

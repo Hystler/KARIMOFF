@@ -134,11 +134,11 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
 
             <label className="grid gap-2 text-sm font-semibold">
               Hero title
-              <input name="hero_title" defaultValue={settings.hero_title ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
+              <input name="hero_title" defaultValue={settings.hero_title ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Первый фастфуд, приготовленный для вас с любовью" />
             </label>
             <label className="grid gap-2 text-sm font-semibold">
               Hero subtitle
-              <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Первый фастфуд, приготовленный для вас с любовью." />
+              <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
             </label>
 
             <button
