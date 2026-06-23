@@ -52,7 +52,7 @@ export default async function FranchisePage() {
       <PageHero
         eyebrow="Франшиза"
         title="Мы ищем единомышленников, а не инвесторов"
-        subtitle="KARIMOFF подходит тем, кто хочет лично участвовать в развитии бизнеса, соблюдать стандарты и строить сильную точку каждый день."
+        subtitle="KARIMOFF подходит тем, кто хочет лично участвовать в развитии бизнеса, соблюдать стандарты и строить сильную команду."
         ctaHref="#lead"
         ctaLabel="Оставить заявку на знакомство"
         imageUrl={settings.franchise_hero_image_url}

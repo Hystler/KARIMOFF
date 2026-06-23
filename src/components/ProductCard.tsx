@@ -77,21 +77,21 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       transition={{ duration: 0.45, delay: index * 0.05 }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-karimoff-line bg-white shadow-card transition hover:-translate-y-1 hover:border-karimoff-orange/55 hover:shadow-[0_20px_55px_rgba(18,18,20,0.12)]"
     >
-      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[#F8F2EA] p-3 sm:p-4">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[#F8F2EA] p-2 sm:p-4">
         <ProductImage product={product} />
       </div>
-      <div className="flex flex-1 flex-col p-3.5">
-        <h3 className="line-clamp-2 min-h-[42px] text-[18px] font-black leading-tight text-karimoff-black">{product.name}</h3>
-        <p className="mt-1.5 text-xl font-black leading-none text-karimoff-orange">{formatPrice(product.price)} ₽</p>
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3.5">
+        <h3 className="line-clamp-2 min-h-[38px] text-[15px] font-black leading-tight text-karimoff-black sm:min-h-[42px] sm:text-[18px]">{product.name}</h3>
+        <p className="mt-1.5 text-lg font-black leading-none text-karimoff-orange sm:text-xl">{formatPrice(product.price)} ₽</p>
         {product.description ? (
-          <p className="mt-2.5 line-clamp-2 min-h-[44px] text-[13px] leading-[22px] text-karimoff-muted">{product.description}</p>
+          <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[19px] text-karimoff-muted sm:mt-2.5 sm:min-h-[44px] sm:text-[13px] sm:leading-[22px]">{product.description}</p>
         ) : (
-          <p className="mt-2.5 line-clamp-2 min-h-[44px] text-[13px] leading-[22px] text-karimoff-muted">Фирменная позиция KARIMOFF.</p>
+          <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[19px] text-karimoff-muted sm:mt-2.5 sm:min-h-[44px] sm:text-[13px] sm:leading-[22px]">Фирменная позиция KARIMOFF.</p>
         )}
         <button
           type="button"
           onClick={() => addItem(product)}
-          className="mt-auto w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-4 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
+          className="mt-auto w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2.5 text-xs font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 sm:px-4 sm:text-sm"
         >
           В корзину
         </button>

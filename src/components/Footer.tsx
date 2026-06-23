@@ -18,8 +18,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
         <div>
           <Logo compact />
           <p className="mt-4 max-w-sm text-sm leading-6 text-karimoff-muted">
-            Бургерная с ресторанным вкусом, быстрой выдачей и готовой системой
-            для роста.
+            Первый фастфуд, приготовленный для вас с любовью
           </p>
           <div className="mt-5">
             <SocialLinks settings={settings} />
