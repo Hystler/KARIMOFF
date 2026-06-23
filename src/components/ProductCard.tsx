@@ -74,7 +74,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.45, delay: index * 0.05 }}
+      transition={{ duration: 0.4, delay: Math.min(index * 0.02, 0.16) }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-karimoff-line bg-white shadow-card transition hover:-translate-y-1 hover:border-karimoff-orange/55 hover:shadow-[0_20px_55px_rgba(18,18,20,0.12)]"
     >
       <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[#F8F2EA] p-2 sm:p-4">

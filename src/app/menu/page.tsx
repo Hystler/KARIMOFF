@@ -30,8 +30,8 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
     <main>
       <PageHero
         eyebrow="Меню KARIMOFF"
-        title="Фирменные позиции без ресторанной паузы"
-        subtitle="Бургеры, шаурма, хот-доги, боксы, горячие закуски и напитки. Добавляйте позиции в корзину и оформляйте заказ после входа."
+        title="Попробуй реально вкусный фастфуд"
+        subtitle="Регистрируйтесь, делайте заказ и получайте бонусы от Karimoff"
         imageUrl={settings.menu_hero_image_url}
         objectPosition="center"
       />
