@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { deductInventoryForOrder } from "@/lib/inventory";
 import { awardLoyaltyForCompletedOrder } from "@/lib/loyalty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -43,6 +44,20 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
 
   const { data: currentOrder } = await supabase.from("orders").select("status").eq("id", id).maybeSingle();
+  let inventoryWarning: string | null = null;
+
+  if (status === "completed" && currentOrder?.status !== "completed") {
+    const deduction = await deductInventoryForOrder(id);
+
+    if (!deduction.ok) {
+      redirect(`/admin/orders?error=${encodeURIComponent(deduction.message)}`);
+    }
+
+    if (deduction.warnings.length) {
+      inventoryWarning = deduction.warnings.join(" ");
+    }
+  }
+
   const { error } = await supabase.from("orders").update({ status }).eq("id", id);
 
   if (error) {
@@ -55,7 +70,11 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin/loyalty");
-  redirect("/admin/orders?saved=1");
+  revalidatePath("/admin/inventory");
+  revalidatePath("/admin/inventory/movements");
+  revalidatePath("/admin/ingredients");
+  revalidatePath("/admin/economics");
+  redirect(`/admin/orders?saved=1${inventoryWarning ? `&warning=${encodeURIComponent(inventoryWarning)}` : ""}`);
 }
 
 export async function deleteOrderAction(formData: FormData) {

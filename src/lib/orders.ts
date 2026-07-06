@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type AdminOrderItem = {
   id: string;
   order_id: string;
+  product_id: string | null;
   product_name: string;
   unit_price: number;
   quantity: number;
@@ -47,6 +48,7 @@ function normalizeItem(row: Record<string, unknown>): AdminOrderItem {
   return {
     id: String(row.id),
     order_id: String(row.order_id),
+    product_id: row.product_id ? String(row.product_id) : null,
     product_name: String(row.product_name ?? ""),
     unit_price: Number(row.unit_price ?? 0),
     quantity: Number(row.quantity ?? 0),
@@ -90,7 +92,7 @@ export async function getAdminOrders() {
 
   const { data: itemsData, error: itemsError } = await supabase
     .from("order_items")
-    .select("id, order_id, product_name, unit_price, quantity, line_total")
+    .select("id, order_id, product_id, product_name, unit_price, quantity, line_total")
     .in("order_id", orderIds);
 
   if (itemsError) {

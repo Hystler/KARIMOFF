@@ -5,6 +5,7 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getAdminEconomicsSettings } from "@/lib/economics";
 import { formatPercent, formatRub } from "@/lib/format";
 import { getProductsFoodCosts } from "@/lib/ingredients";
+import { getInventoryStockValue } from "@/lib/inventory";
 import { getAdminProducts } from "@/lib/products";
 import { logoutAction } from "../login/actions";
 
@@ -35,6 +36,7 @@ export default async function AdminEconomicsPage() {
 
   const productsResult = await getAdminProducts();
   const economicsResult = await getAdminEconomicsSettings();
+  const inventoryStock = await getInventoryStockValue();
   const productEconomics = productsResult.error
     ? {
         items: [],
@@ -69,6 +71,19 @@ export default async function AdminEconomicsPage() {
         ) : null}
 
         <EconomicsCalculator initialValues={economicsResult.settings} />
+
+        <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+          <p className="text-sm font-semibold text-karimoff-orange">Склад</p>
+          <h2 className="mt-2 text-3xl font-black">Складская стоимость остатков</h2>
+          {inventoryStock.error ? (
+            <p className="mt-4 text-sm font-semibold text-amber-700">{inventoryStock.error}</p>
+          ) : (
+            <p className="mt-4 text-4xl font-black text-karimoff-orange">{formatRub(inventoryStock.value, 2)}</p>
+          )}
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-karimoff-muted">
+            Остатки считаются по складским карточкам ингредиентов, стоимость — по текущей себестоимости ингредиента.
+          </p>
+        </section>
 
         <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
           <div className="border-b border-karimoff-line p-5">

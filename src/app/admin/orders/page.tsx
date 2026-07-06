@@ -11,6 +11,7 @@ type AdminOrdersPageProps = {
     deleted?: string;
     error?: string;
     saved?: string;
+    warning?: string;
   }>;
 };
 
@@ -102,6 +103,12 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
             }`}
           >
             {message.text}
+          </div>
+        ) : null}
+
+        {params.warning ? (
+          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
+            {decodeURIComponent(params.warning)}
           </div>
         ) : null}
 
