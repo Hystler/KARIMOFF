@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit";
 import { productFormSchema, type ProductFormInput } from "@/lib/product-schema";
 import { removeStoragePublicUrl, slugifyStorageSegment, uploadImageToStorage } from "@/lib/storage-images";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -43,6 +44,12 @@ function parseProductForm(formData: FormData) {
     description: formData.get("description"),
     price: formData.get("price"),
     image_url: formData.get("image_url"),
+    weight: formData.get("weight"),
+    calories: formData.get("calories"),
+    protein: formData.get("protein"),
+    fat: formData.get("fat"),
+    carbs: formData.get("carbs"),
+    allergens: formData.get("allergens"),
     sort_order: formData.get("sort_order") || 100,
     is_active: formData.get("is_active") === "on"
   });
@@ -56,6 +63,14 @@ function toPayload(data: ProductFormInput) {
     description: data.description || null,
     price: data.price,
     image_url: data.image_url || null,
+    weight: data.weight || null,
+    calories: data.calories ?? null,
+    protein: data.protein ?? null,
+    fat: data.fat ?? null,
+    carbs: data.carbs ?? null,
+    allergens: data.allergens
+      ? data.allergens.split(",").map((item) => item.trim()).filter(Boolean)
+      : null,
     sort_order: data.sort_order,
     is_active: data.is_active
   };
@@ -123,6 +138,14 @@ export async function createProductAction(formData: FormData) {
     redirect(`/admin/products/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "product.create",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityType: "product",
+    metadata: { name: parsed.data.name, price: parsed.data.price },
+    sourcePath: "/admin/products/new"
+  });
   revalidateProductViews();
   redirect("/admin/products?saved=1");
 }
@@ -138,12 +161,24 @@ export async function updateProductAction(formData: FormData) {
   }
 
   const supabase = getSupabaseOrRedirect();
+  const { data: previous } = await supabase.from("products").select("price").eq("id", id).maybeSingle();
   const { error } = await supabase.from("products").update(toPayload(parsed.data)).eq("id", id);
 
   if (error) {
     redirect(`/admin/products/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  if (Number(previous?.price) !== parsed.data.price) {
+    await writeAuditLog({
+      action: "product.price_change",
+      actorRefHash: getAdminActorHash(),
+      actorType: "admin",
+      entityId: id,
+      entityType: "product",
+      metadata: { from: Number(previous?.price ?? 0), to: parsed.data.price },
+      sourcePath: `/admin/products/${id}/edit`
+    });
+  }
   revalidateProductViews();
   redirect("/admin/products?saved=1");
 }
@@ -160,6 +195,15 @@ export async function toggleProductActiveAction(formData: FormData) {
     redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "product.status_change",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "product",
+    metadata: { is_active: nextActive },
+    sourcePath: "/admin/products"
+  });
   revalidateProductViews();
   redirect("/admin/products?saved=1");
 }
@@ -175,6 +219,14 @@ export async function deleteProductAction(formData: FormData) {
     redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "product.delete",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "product",
+    sourcePath: "/admin/products"
+  });
   revalidateProductViews();
   redirect("/admin/products?deleted=1");
 }

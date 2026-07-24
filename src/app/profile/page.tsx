@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { RepeatOrderButton } from "@/components/profile/RepeatOrderButton";
 import { getCustomerProfileData } from "@/lib/customer-data";
-import { logoutCustomerAction } from "./actions";
+import { logoutCustomerAction, updateMarketingConsentAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ function formatPrice(value: number) {
 }
 
 export default async function ProfilePage() {
-  const { customer, account, avatar, orders, transactions, error } = await getCustomerProfileData();
+  const { customer, account, avatar, orders, transactions, marketingConsent, error } = await getCustomerProfileData();
 
   if (!customer) {
     redirect("/login");
@@ -160,6 +160,30 @@ export default async function ProfilePage() {
             )}
           </section>
         </div>
+
+        <section className="mt-8 max-w-3xl rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
+          <h2 className="text-2xl font-black">Сообщения KARIMOFF</h2>
+          <p className="mt-2 text-sm leading-6 text-karimoff-muted">
+            Этот выбор не влияет на регистрацию, заказы и бонусы. Отказ фиксируется в журнале согласий.
+          </p>
+          <form action={updateMarketingConsentAction} className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-start gap-3 text-sm font-semibold text-karimoff-muted">
+              <input
+                type="checkbox"
+                name="marketing_consent"
+                defaultChecked={marketingConsent}
+                className="mt-1 h-5 w-5 accent-karimoff-orange"
+              />
+              Хочу получать акции и предложения KARIMOFF
+            </label>
+            <button
+              type="submit"
+              className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white transition hover:bg-[#D95405]"
+            >
+              Сохранить выбор
+            </button>
+          </form>
+        </section>
       </section>
     </main>
   );

@@ -22,6 +22,8 @@ export type AdminOrder = {
   address: string | null;
   comment: string | null;
   status: "new" | "in_progress" | "completed" | "cancelled";
+  payment_status: "not_required" | "pending" | "paid" | "failed" | "cancelled" | "refunded" | "partially_refunded";
+  fiscal_status: "not_required" | "pending" | "issued" | "failed" | "refunded";
   total: number;
   items: AdminOrderItem[];
 };
@@ -39,6 +41,22 @@ function normalizeOrder(row: Record<string, unknown>, items: AdminOrderItem[]): 
       row.status === "in_progress" || row.status === "completed" || row.status === "cancelled"
         ? row.status
         : "new",
+    payment_status:
+      row.payment_status === "pending" ||
+      row.payment_status === "paid" ||
+      row.payment_status === "failed" ||
+      row.payment_status === "cancelled" ||
+      row.payment_status === "refunded" ||
+      row.payment_status === "partially_refunded"
+        ? row.payment_status
+        : "not_required",
+    fiscal_status:
+      row.fiscal_status === "pending" ||
+      row.fiscal_status === "issued" ||
+      row.fiscal_status === "failed" ||
+      row.fiscal_status === "refunded"
+        ? row.fiscal_status
+        : "not_required",
     total: Number(row.total ?? 0),
     items
   };
@@ -69,7 +87,7 @@ export async function getAdminOrders() {
 
   const { data: ordersData, error: ordersError } = await supabase
     .from("orders")
-    .select("id, created_at, customer_name, customer_phone, delivery_type, address, comment, status, total")
+    .select("id, created_at, customer_name, customer_phone, delivery_type, address, comment, status, payment_status, fiscal_status, total")
     .order("created_at", { ascending: false });
 
   if (ordersError) {

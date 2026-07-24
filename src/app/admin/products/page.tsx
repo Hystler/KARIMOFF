@@ -178,6 +178,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                           {foodCost?.food_cost === null ? (
                             <p className="mt-2 text-xs font-bold text-amber-700">Состав не задан</p>
                           ) : null}
+                          {!product.allergens ? (
+                            <p className="mt-1 text-xs font-bold text-amber-700">Не заполнены аллергены</p>
+                          ) : null}
                         </td>
                         <td className="px-4 py-4">{product.category}</td>
                         <td className="px-4 py-4 font-black text-karimoff-orange">{formatPrice(product.price)} ₽</td>

@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
+import { writeAuditLog } from "@/lib/audit";
 import {
   createVerificationCode,
   getVerificationExpiresAt,
@@ -19,6 +21,12 @@ import {
   type AuthActionState
 } from "@/lib/customer-schema";
 import { ensureLoyaltyAccount } from "@/lib/loyalty";
+import {
+  getShortUserAgent,
+  hashPrivacyValue,
+  isChecked,
+  recordLegalConsents
+} from "@/lib/legal-consents";
 import { hashPassword, verifyPassword } from "@/lib/password-auth";
 import { getPhoneLookupCandidates } from "@/lib/phone";
 import { sendVerificationCode } from "@/lib/verification/send-code";
@@ -107,10 +115,28 @@ function getRedirectPath(redirectTo?: string | null, next?: string | null) {
   }
 
   if (next === "checkout") {
-    return "/?checkout=1";
+    return "/checkout";
   }
 
   return "/profile";
+}
+
+async function saveRegistrationConsents(
+  customerId: string,
+  formData: FormData,
+  sourcePath: string
+) {
+  return recordLegalConsents({
+    subjectId: customerId,
+    subjectType: "customer",
+    sourcePath,
+    userAgent: await getShortUserAgent(),
+    consents: [
+      { type: "personal_data", granted: true },
+      { type: "marketing", granted: isChecked(formData.get("marketing_consent")) },
+      { type: "loyalty_rules", granted: isChecked(formData.get("loyalty_consent")) }
+    ]
+  });
 }
 
 async function findCustomerForLogin(phone: string) {
@@ -146,8 +172,19 @@ export async function requestRegisterCodeAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
+  if (!isChecked(formData.get("personal_data_consent"))) {
+    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
+  }
+
   const code = createVerificationCode();
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("send_code", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone, name: parsed.data.name };
+  }
+
+  await recordAuthFailure("send_code", normalizedPhone);
   const saved = await saveVerificationCode(normalizedPhone, code);
 
   if (!saved.ok) {
@@ -181,6 +218,10 @@ export async function registerWithPasswordAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
+  if (!isChecked(formData.get("personal_data_consent"))) {
+    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
+  }
+
   const supabase = createSupabaseServerClient();
 
   if (!supabase) {
@@ -188,6 +229,12 @@ export async function registerWithPasswordAction(
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("customer_register", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone, name: parsed.data.name };
+  }
+
   const { data: existingCustomer } = await supabase
     .from("customers")
     .select("id")
@@ -196,6 +243,7 @@ export async function registerWithPasswordAction(
     .maybeSingle();
 
   if (existingCustomer) {
+    await recordAuthFailure("customer_register", normalizedPhone);
     return {
       status: "error",
       message: "Профиль с таким телефоном уже есть. Войдите или используйте вход по коду.",
@@ -216,11 +264,32 @@ export async function registerWithPasswordAction(
     .single();
 
   if (error || !data) {
+    await recordAuthFailure("customer_register", normalizedPhone);
     return { status: "error", message: "Не удалось создать профиль.", phone: normalizedPhone, name: parsed.data.name };
   }
 
-  await ensureLoyaltyAccount(String(data.id));
-  await setCustomerSession(String(data.id));
+  const customerId = String(data.id);
+  const consents = await saveRegistrationConsents(customerId, formData, "/register");
+
+  if (!consents.ok) {
+    await supabase.from("customers").delete().eq("id", customerId);
+    return { status: "error", message: consents.message, phone: normalizedPhone, name: parsed.data.name };
+  }
+
+  if (isChecked(formData.get("loyalty_consent"))) {
+    await ensureLoyaltyAccount(customerId);
+  }
+  await clearAuthFailures("customer_register", normalizedPhone);
+  await writeAuditLog({
+    action: "customer.register",
+    actorId: customerId,
+    actorRefHash: hashPrivacyValue(normalizedPhone),
+    actorType: "customer",
+    entityId: customerId,
+    entityType: "customer",
+    sourcePath: "/register"
+  });
+  await setCustomerSession(customerId);
   redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
 
@@ -242,10 +311,26 @@ export async function confirmRegisterAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
+  if (!isChecked(formData.get("personal_data_consent"))) {
+    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
+  }
+
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("verify_code", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone, name: parsed.data.name };
+  }
   const verification = await verifyCode(normalizedPhone, parsed.data.code);
 
   if (!verification.ok) {
+    await recordAuthFailure("verify_code", normalizedPhone);
+    await writeAuditLog({
+      action: "customer.register_code_failed",
+      actorRefHash: hashPrivacyValue(normalizedPhone),
+      actorType: "customer",
+      sourcePath: "/register"
+    });
     return { status: "error", message: verification.message, phone: normalizedPhone, name: parsed.data.name };
   }
 
@@ -272,8 +357,27 @@ export async function confirmRegisterAction(
     return { status: "error", message: "Не удалось создать профиль.", phone: normalizedPhone, name: parsed.data.name };
   }
 
-  await ensureLoyaltyAccount(String(data.id));
-  await setCustomerSession(String(data.id));
+  const customerId = String(data.id);
+  const consents = await saveRegistrationConsents(customerId, formData, "/register");
+
+  if (!consents.ok) {
+    return { status: "error", message: consents.message, phone: normalizedPhone, name: parsed.data.name };
+  }
+
+  if (isChecked(formData.get("loyalty_consent"))) {
+    await ensureLoyaltyAccount(customerId);
+  }
+  await clearAuthFailures("verify_code", normalizedPhone);
+  await writeAuditLog({
+    action: "customer.register",
+    actorId: customerId,
+    actorRefHash: hashPrivacyValue(normalizedPhone),
+    actorType: "customer",
+    entityId: customerId,
+    entityType: "customer",
+    sourcePath: "/register"
+  });
+  await setCustomerSession(customerId);
   redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
 
@@ -298,6 +402,11 @@ export async function requestLoginCodeAction(
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("send_code", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone };
+  }
   const { data, error } = await supabase
     .from("customers")
     .select("id")
@@ -310,6 +419,7 @@ export async function requestLoginCodeAction(
   }
 
   const code = createVerificationCode();
+  await recordAuthFailure("send_code", normalizedPhone);
   const saved = await saveVerificationCode(normalizedPhone, code);
 
   if (!saved.ok) {
@@ -347,11 +457,18 @@ export async function loginWithPasswordAction(
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("customer_login", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone };
+  }
   if (error || !data) {
+    await recordAuthFailure("customer_login", normalizedPhone);
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
 
   if (!data.password_hash) {
+    await recordAuthFailure("customer_login", normalizedPhone);
     return {
       status: "error",
       message: "Для входа по паролю зарегистрируйтесь заново или используйте вход по коду.",
@@ -360,11 +477,27 @@ export async function loginWithPasswordAction(
   }
 
   if (!verifyPassword(parsed.data.password, String(data.password_hash))) {
+    await recordAuthFailure("customer_login", normalizedPhone);
+    await writeAuditLog({
+      action: "customer.login_failed",
+      actorRefHash: hashPrivacyValue(normalizedPhone),
+      actorType: "customer",
+      sourcePath: "/login"
+    });
     return { status: "error", message: "Неверный телефон или пароль.", phone: normalizedPhone };
   }
 
+  await clearAuthFailures("customer_login", normalizedPhone);
   await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
-  await ensureLoyaltyAccount(String(data.id));
+  await writeAuditLog({
+    action: "customer.login",
+    actorId: String(data.id),
+    actorRefHash: hashPrivacyValue(normalizedPhone),
+    actorType: "customer",
+    entityId: String(data.id),
+    entityType: "customer",
+    sourcePath: "/login"
+  });
   await setCustomerSession(String(data.id));
   redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }
@@ -387,9 +520,21 @@ export async function confirmLoginAction(
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
+  const limit = await checkAuthRateLimit("verify_code", normalizedPhone);
+
+  if (!limit.allowed) {
+    return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone };
+  }
   const verification = await verifyCode(normalizedPhone, parsed.data.code);
 
   if (!verification.ok) {
+    await recordAuthFailure("verify_code", normalizedPhone);
+    await writeAuditLog({
+      action: "customer.login_code_failed",
+      actorRefHash: hashPrivacyValue(normalizedPhone),
+      actorType: "customer",
+      sourcePath: "/login"
+    });
     return { status: "error", message: verification.message, phone: normalizedPhone };
   }
 
@@ -410,8 +555,17 @@ export async function confirmLoginAction(
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
 
+  await clearAuthFailures("verify_code", normalizedPhone);
   await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
-  await ensureLoyaltyAccount(String(data.id));
+  await writeAuditLog({
+    action: "customer.login",
+    actorId: String(data.id),
+    actorRefHash: hashPrivacyValue(normalizedPhone),
+    actorType: "customer",
+    entityId: String(data.id),
+    entityType: "customer",
+    sourcePath: "/login"
+  });
   await setCustomerSession(String(data.id));
   redirect(getRedirectPath(parsed.data.redirectTo, parsed.data.next));
 }

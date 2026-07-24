@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { createHmac, randomBytes, randomInt } from "node:crypto";
+import { cookies, headers } from "next/headers";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -18,39 +18,21 @@ export type CustomerProfile = {
 };
 
 const CUSTOMER_COOKIE_NAME = "karimoff_customer_session";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 const CODE_TTL_MS = 1000 * 60 * 10;
 
-function encode(value: string) {
-  return Buffer.from(value, "utf8").toString("base64url");
-}
-
-function decode(value: string) {
-  return Buffer.from(value, "base64url").toString("utf8");
-}
-
 function getSecret() {
-  return (
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.ADMIN_PASSWORD ||
-    process.env.SMS_API_KEY ||
-    "karimoff-dev-customer-session"
-  );
-}
+  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function sign(value: string) {
-  return createHmac("sha256", getSecret()).update(value).digest("base64url");
-}
-
-function safeCompare(left: string, right: string) {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
+  if (!secret) {
+    throw new Error("SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY must be configured.");
   }
 
-  return timingSafeEqual(leftBuffer, rightBuffer);
+  return secret;
+}
+
+function hashToken(value: string) {
+  return createHmac("sha256", getSecret()).update(value).digest("hex");
 }
 
 export function normalizePhone(phone: string) {
@@ -70,54 +52,79 @@ export function getVerificationExpiresAt() {
 }
 
 export async function setCustomerSession(customerId: string) {
-  const payload = encode(
-    JSON.stringify({
-      customerId,
-      exp: Date.now() + SESSION_TTL_MS
-    } satisfies CustomerSession)
-  );
-  const value = `${payload}.${sign(payload)}`;
-  const cookieStore = await cookies();
+  const supabase = createSupabaseServerClient();
 
-  cookieStore.set(CUSTOMER_COOKIE_NAME, value, {
+  if (!supabase) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
+  const headerStore = await headers();
+  const { error } = await supabase.from("app_sessions").insert({
+    expires_at: expiresAt.toISOString(),
+    subject_id: customerId,
+    subject_type: "customer",
+    token_hash: hashToken(token),
+    user_agent_short: (headerStore.get("user-agent") ?? "").slice(0, 255) || null
+  });
+
+  if (error) {
+    throw new Error("Customer session could not be created.");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(CUSTOMER_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_TTL_MS / 1000
+    maxAge: SESSION_TTL_SECONDS
   });
 }
 
 export async function clearCustomerSession() {
   const cookieStore = await cookies();
+  const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+  const supabase = createSupabaseServerClient();
+
+  if (token && supabase) {
+    await supabase
+      .from("app_sessions")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("token_hash", hashToken(token))
+      .eq("subject_type", "customer");
+  }
+
   cookieStore.delete(CUSTOMER_COOKIE_NAME);
 }
 
-export async function getCustomerSession() {
+export async function getCustomerSession(): Promise<CustomerSession | null> {
   const cookieStore = await cookies();
-  const session = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+  const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+  const supabase = createSupabaseServerClient();
 
-  if (!session) {
+  if (!token || !supabase) {
     return null;
   }
 
-  const [payload, signature] = session.split(".");
+  const { data, error } = await supabase
+    .from("app_sessions")
+    .select("subject_id, expires_at")
+    .eq("token_hash", hashToken(token))
+    .eq("subject_type", "customer")
+    .is("revoked_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
 
-  if (!payload || !signature || !safeCompare(sign(payload), signature)) {
+  if (error || !data?.subject_id) {
     return null;
   }
 
-  try {
-    const parsed = JSON.parse(decode(payload)) as CustomerSession;
-
-    if (!parsed.customerId || parsed.exp <= Date.now()) {
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    return null;
-  }
+  return {
+    customerId: String(data.subject_id),
+    exp: new Date(String(data.expires_at)).getTime()
+  };
 }
 
 export async function getCurrentCustomer(): Promise<CustomerProfile | null> {

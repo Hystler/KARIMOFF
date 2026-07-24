@@ -31,8 +31,12 @@ export function CartDrawer() {
     pickup_enabled: true
   });
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
+  const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [orderState, orderFormAction, isOrderPending] = useActionState(createOrderAction, initialOrderActionState);
-  const cartPayload = useMemo(() => JSON.stringify(lines), [lines]);
+  const cartPayload = useMemo(
+    () => JSON.stringify(lines.map((line) => ({ product_id: line.product.id, quantity: line.quantity }))),
+    [lines]
+  );
   const isCheckoutDisabled = !checkoutSettings.pickup_enabled && !checkoutSettings.delivery_enabled;
 
   const startCheckout = useCallback(async () => {
@@ -52,6 +56,7 @@ export function CartDrawer() {
     setCheckoutSettings(context.settings);
     setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
     setCustomer(context.customer);
+    setCheckoutRequestId(crypto.randomUUID());
     setMode("checkout");
   }, [lines.length]);
 
@@ -150,6 +155,7 @@ export function CartDrawer() {
           ) : mode === "checkout" && customer ? (
             <form action={orderFormAction} className="grid gap-5">
               <input type="hidden" name="cart" value={cartPayload} />
+              <input type="hidden" name="idempotency_key" value={checkoutRequestId} />
               <section className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
                 <p className="text-sm font-semibold text-karimoff-orange">Ваши данные</p>
                 <div className="mt-3 grid gap-2 text-sm">
@@ -219,6 +225,50 @@ export function CartDrawer() {
                 </label>
               </section>
 
+              <section className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream p-4 text-sm">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="personal_data_consent"
+                    required
+                    className="mt-1 accent-karimoff-orange"
+                  />
+                  <span className="leading-6 text-karimoff-muted">
+                    Я даю согласие на обработку персональных данных.{" "}
+                    <Link href="/legal/personal-data-consent" target="_blank" className="font-bold text-karimoff-orange">
+                      Текст согласия
+                    </Link>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="offer_acceptance"
+                    required
+                    className="mt-1 accent-karimoff-orange"
+                  />
+                  <span className="leading-6 text-karimoff-muted">
+                    Я принимаю условия{" "}
+                    <Link href="/legal/offer" target="_blank" className="font-bold text-karimoff-orange">
+                      публичной оферты
+                    </Link>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="marketing_consent"
+                    className="mt-1 accent-karimoff-orange"
+                  />
+                  <span className="leading-6 text-karimoff-muted">
+                    Хочу получать акции и предложения KARIMOFF.{" "}
+                    <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">
+                      Условия
+                    </Link>
+                  </span>
+                </label>
+              </section>
+
               <section className="rounded-lg border border-karimoff-line bg-white p-4">
                 <p className="text-sm font-bold text-karimoff-black">Состав заказа</p>
                 <div className="mt-3 grid gap-3">
@@ -245,7 +295,7 @@ export function CartDrawer() {
 
               <button
                 type="submit"
-                disabled={isOrderPending || !lines.length || isCheckoutDisabled}
+                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId}
                 className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {isOrderPending ? "Отправляем заказ" : "Отправить заказ"}

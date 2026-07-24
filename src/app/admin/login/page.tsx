@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isAdminTotpConfigured } from "@/lib/admin-auth";
 import { loginAction } from "./actions";
 
 const errorMessages: Record<string, string> = {
@@ -14,7 +15,8 @@ type AdminLoginPageProps = {
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const params = await searchParams;
-  const error = params.error ? errorMessages[params.error] : null;
+  const error = params.error ? errorMessages[params.error] ?? params.error : null;
+  const hasTotp = isAdminTotpConfigured();
 
   return (
     <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
@@ -37,6 +39,21 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
                 className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
               />
             </label>
+            {hasTotp ? (
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-karimoff-muted">Код 2FA</span>
+                <input
+                  name="totp"
+                  type="text"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                />
+              </label>
+            ) : null}
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-karimoff-muted">Пароль</span>
               <input

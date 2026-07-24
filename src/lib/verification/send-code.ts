@@ -11,9 +11,10 @@ export async function sendVerificationCode(phone: string, code?: string): Promis
   }
 
   if (!provider || !apiKey || !sender) {
-    console.warn("Verification provider is not configured. SMS code was not sent.");
     return { ok: false };
   }
 
-  return { ok: true };
+  // No real provider adapter is implemented in this MVP. Production must fail
+  // closed even if placeholders were accidentally filled.
+  return { ok: false };
 }

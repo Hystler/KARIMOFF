@@ -1,6 +1,7 @@
 "use server";
 
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
+import { getShortUserAgent, isChecked, recordLegalConsents } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,13 @@ export async function createLeadAction(
     };
   }
 
+  if (!isChecked(formData.get("personal_data_consent"))) {
+    return {
+      status: "error",
+      message: "Нужно дать отдельное согласие на обработку персональных данных."
+    };
+  }
+
   const supabase = createSupabaseServerClient();
 
   if (!supabase) {
@@ -36,21 +44,40 @@ export async function createLeadAction(
   }
 
   const { name, phone, interest, comment } = parsed.data;
-  const { error } = await supabase.from("leads").insert({
-    name,
-    phone: normalizeRussianPhone(phone),
-    interest,
-    comment: comment || null,
-    source: "site"
-  });
+  const { data, error } = await supabase
+    .from("leads")
+    .insert({
+      name,
+      phone: normalizeRussianPhone(phone),
+      interest,
+      comment: comment || null,
+      source: "site"
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    console.error("Failed to save lead:", error.message);
-
+  if (error || !data) {
     return {
       status: "error",
       message: "Заявка временно не отправлена."
     };
+  }
+
+  const consentType = interest === "career" ? "careers" : interest === "franchise" ? "franchise" : "personal_data";
+  const consents = await recordLegalConsents({
+    subjectId: String(data.id),
+    subjectType: interest === "career" ? "candidate" : "lead",
+    sourcePath: interest === "career" ? "/careers" : interest === "franchise" ? "/franchise" : "/",
+    userAgent: await getShortUserAgent(),
+    consents: [
+      { type: consentType, granted: true },
+      { type: "marketing", granted: isChecked(formData.get("marketing_consent")) }
+    ]
+  });
+
+  if (!consents.ok) {
+    await supabase.from("leads").delete().eq("id", data.id);
+    return { status: "error", message: consents.message };
   }
 
   return {

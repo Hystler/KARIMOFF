@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit";
+import { isAllowedSameOriginRequest } from "@/lib/request-security";
 import { slugifyStorageSegment, uploadImageToStorage } from "@/lib/storage-images";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -45,6 +47,10 @@ async function syncPrimaryProductImage(productId: string) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  if (!isAllowedSameOriginRequest(request)) {
+    return jsonError("Недопустимый источник запроса.", 403);
+  }
+
   const isAuthed = await isAdminAuthenticated();
 
   if (!isAuthed) {
@@ -65,7 +71,7 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (productError || !product) {
-    return jsonError(productError?.message ?? "Товар не найден.", 404);
+    return jsonError("Товар не найден.", 404);
   }
 
   let formData: FormData;
@@ -138,13 +144,22 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     if (error) {
-      return jsonError(error.message, 500, uploadedCount);
+      return jsonError("Не удалось сохранить загруженное фото.", 500, uploadedCount);
     }
 
     uploadedCount += 1;
   }
 
   await syncPrimaryProductImage(productId);
+  await writeAuditLog({
+    action: "product.images_upload",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: productId,
+    entityType: "product",
+    metadata: { uploaded: uploadedCount },
+    sourcePath: `/admin/products/${productId}/edit`
+  });
   revalidatePath("/");
   revalidatePath("/menu");
   revalidatePath("/admin/products");

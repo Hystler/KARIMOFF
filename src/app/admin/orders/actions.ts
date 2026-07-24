@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { deductInventoryForOrder } from "@/lib/inventory";
-import { awardLoyaltyForCompletedOrder } from "@/lib/loyalty";
+import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const allowedStatuses = new Set(["new", "in_progress", "completed", "cancelled"]);
@@ -43,30 +42,20 @@ export async function updateOrderStatusAction(formData: FormData) {
     redirect("/admin/orders?error=supabase");
   }
 
-  const { data: currentOrder } = await supabase.from("orders").select("status").eq("id", id).maybeSingle();
-  let inventoryWarning: string | null = null;
-
-  if (status === "completed" && currentOrder?.status !== "completed") {
-    const deduction = await deductInventoryForOrder(id);
-
-    if (!deduction.ok) {
-      redirect(`/admin/orders?error=${encodeURIComponent(deduction.message)}`);
-    }
-
-    if (deduction.warnings.length) {
-      inventoryWarning = deduction.warnings.join(" ");
-    }
-  }
-
-  const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+  const { data, error } = await supabase.rpc("set_order_status_atomic", {
+    p_actor_ref_hash: getAdminActorHash(),
+    p_order_id: id,
+    p_source_path: "/admin/orders",
+    p_status: status
+  });
 
   if (error) {
-    redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);
+    const message = error.code === "P0001" ? error.message : "Не удалось изменить статус заказа.";
+    redirect(`/admin/orders?error=${encodeURIComponent(message)}`);
   }
 
-  if (status === "completed" && currentOrder?.status !== "completed") {
-    await awardLoyaltyForCompletedOrder(id);
-  }
+  const result = (data ?? {}) as { warnings?: string[] };
+  const inventoryWarning = result.warnings?.filter(Boolean).join(" ") || null;
 
   revalidatePath("/admin/orders");
   revalidatePath("/admin/loyalty");
@@ -93,6 +82,14 @@ export async function deleteOrderAction(formData: FormData) {
     redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "order.delete",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "order",
+    sourcePath: "/admin/orders"
+  });
   revalidatePath("/admin/orders");
   redirect("/admin/orders?deleted=1");
 }

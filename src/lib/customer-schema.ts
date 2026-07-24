@@ -13,7 +13,7 @@ export const verificationCodeSchema = z
 
 export const passwordSchema = z
   .string()
-  .min(6, "Пароль должен быть не короче 6 символов")
+  .min(10, "Пароль должен быть не короче 10 символов")
   .max(120, "Пароль слишком длинный");
 
 export const passwordRegisterSchema = z

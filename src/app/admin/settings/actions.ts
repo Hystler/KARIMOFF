@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { siteSettingsSchema } from "@/lib/settings-schema";
 import { uploadImageToStorage } from "@/lib/storage-images";
@@ -82,6 +83,7 @@ export async function updateSiteSettingsAction(formData: FormData) {
     theme: formData.get("theme"),
     loyalty_enabled: formData.get("loyalty_enabled") === "on",
     loyalty_percent: formData.get("loyalty_percent"),
+    loyalty_redemption_limit_percent: formData.get("loyalty_redemption_limit_percent"),
     hero_title: formData.get("hero_title"),
     hero_subtitle: formData.get("hero_subtitle"),
     home_hero_image_url: formData.get("home_hero_image_url"),
@@ -130,6 +132,21 @@ export async function updateSiteSettingsAction(formData: FormData) {
     redirect(`/admin/settings?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "site_settings.update",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: "main",
+    entityType: "site_settings",
+    metadata: {
+      delivery_enabled: parsed.data.delivery_enabled,
+      loyalty_enabled: parsed.data.loyalty_enabled,
+      loyalty_redemption_limit_percent: parsed.data.loyalty_redemption_limit_percent,
+      pickup_enabled: parsed.data.pickup_enabled,
+      theme: parsed.data.theme
+    },
+    sourcePath: "/admin/settings"
+  });
   revalidatePath("/");
   revalidatePath("/menu");
   revalidatePath("/business");

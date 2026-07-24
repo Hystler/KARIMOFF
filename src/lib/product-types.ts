@@ -22,5 +22,10 @@ export type Product = {
   sort_order: number;
   weight?: string | null;
   tags?: string[] | null;
+  calories?: number | null;
+  protein?: number | null;
+  fat?: number | null;
+  carbs?: number | null;
+  allergens?: string[] | null;
   images?: ProductImage[];
 };

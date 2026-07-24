@@ -41,15 +41,6 @@ export type InventoryMovement = {
   created_by: string;
 };
 
-type DeductionLine = {
-  ingredient_id: string;
-  ingredient_name: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit: "g" | "ml" | "pcs";
-};
-
 function normalizeUnit(value: unknown): "g" | "ml" | "pcs" {
   return value === "ml" || value === "pcs" ? value : "g";
 }
@@ -260,7 +251,6 @@ export async function ensureInventoryItem(ingredientId: string, defaults?: { cur
   const { error } = await supabase.from("inventory_items").upsert(
     {
       ingredient_id: ingredientId,
-      current_quantity: defaults?.currentQuantity ?? 0,
       location: defaults?.location || null,
       min_quantity: defaults?.minQuantity ?? 0,
       unit: normalizeUnit(ingredient.unit)
@@ -270,6 +260,14 @@ export async function ensureInventoryItem(ingredientId: string, defaults?: { cur
 
   if (error) {
     return { ok: false as const, message: inventoryTableError(error.message) ?? error.message };
+  }
+
+  if ((defaults?.currentQuantity ?? 0) > 0) {
+    return correctInventory({
+      comment: "Начальный остаток складской карточки",
+      ingredientId,
+      newQuantity: defaults?.currentQuantity ?? 0
+    });
   }
 
   return { ok: true as const };
@@ -327,10 +325,8 @@ export async function updateInventoryCard(params: {
     return base;
   }
 
-  const currentQuantity = params.currentQuantity ?? base.item?.current_quantity ?? 0;
   const { error } = await base.supabase.from("inventory_items").upsert(
     {
-      current_quantity: currentQuantity,
       ingredient_id: params.ingredientId,
       location: params.location || null,
       min_quantity: params.minQuantity,
@@ -343,6 +339,17 @@ export async function updateInventoryCard(params: {
     return { ok: false as const, message: inventoryTableError(error.message) ?? error.message };
   }
 
+  if (
+    params.currentQuantity !== undefined &&
+    params.currentQuantity !== (base.item?.current_quantity ?? 0)
+  ) {
+    return correctInventory({
+      comment: "Корректировка из складской карточки",
+      ingredientId: params.ingredientId,
+      newQuantity: params.currentQuantity
+    });
+  }
+
   return { ok: true as const };
 }
 
@@ -353,50 +360,26 @@ export async function receiptInventory(params: {
   quantity: number;
   updateCostPerUnit?: boolean;
 }) {
-  const base = await getInventoryOperationBase(params.ingredientId);
-
-  if (!base.ok) {
-    return base;
-  }
-
   if (params.quantity <= 0) {
     return { ok: false as const, message: "Укажите количество прихода больше нуля." };
   }
 
-  if (!base.item) {
-    const created = await ensureInventoryItem(params.ingredientId);
-    if (!created.ok) {
-      return created;
-    }
-  }
-
-  const currentQuantity = base.item?.current_quantity ?? 0;
-  const nextQuantity = currentQuantity + params.quantity;
-  const { error: updateError } = await base.supabase
-    .from("inventory_items")
-    .update({ current_quantity: nextQuantity, unit: base.ingredient.unit })
-    .eq("ingredient_id", params.ingredientId);
-
-  if (updateError) {
-    return { ok: false as const, message: inventoryTableError(updateError.message) ?? updateError.message };
-  }
-
-  if (params.updateCostPerUnit && params.packagePrice && params.quantity > 0) {
-    await base.supabase.from("ingredients").update({ cost_per_unit: params.packagePrice / params.quantity }).eq("id", params.ingredientId);
-  }
-
-  const { error: movementError } = await base.supabase.from("inventory_movements").insert({
-    comment: params.comment || null,
-    created_by: "admin",
-    ingredient_id: params.ingredientId,
-    movement_type: "receipt",
-    quantity: params.quantity,
-    reason: "Приход",
-    unit: base.ingredient.unit
+  const supabase = createSupabaseServerClient();
+  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
+  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+    p_comment: params.comment || null,
+    p_created_by: "admin",
+    p_ingredient_id: params.ingredientId,
+    p_movement_type: "receipt",
+    p_new_quantity: null,
+    p_package_price: params.packagePrice ?? null,
+    p_quantity: params.quantity,
+    p_reason: "Приход",
+    p_update_cost: Boolean(params.updateCostPerUnit)
   });
 
-  if (movementError) {
-    return { ok: false as const, message: inventoryTableError(movementError.message, "inventory_movements") ?? movementError.message };
+  if (error) {
+    return { ok: false as const, message: error.code === "P0001" ? error.message : "Не удалось оформить приход." };
   }
 
   return { ok: true as const };
@@ -408,49 +391,26 @@ export async function writeOffInventory(params: {
   quantity: number;
   reason: string;
 }) {
-  const base = await getInventoryOperationBase(params.ingredientId);
-
-  if (!base.ok) {
-    return base;
-  }
-
-  if (!base.item) {
-    return { ok: false as const, message: "Складская карточка ингредиента не создана." };
-  }
-
   if (params.quantity <= 0) {
     return { ok: false as const, message: "Укажите количество списания больше нуля." };
   }
 
-  if (base.item.current_quantity < params.quantity) {
-    return {
-      ok: false as const,
-      message: `Недостаточно остатка: доступно ${formatInventoryQuantity(base.item.current_quantity, base.item.unit)}.`
-    };
-  }
-
-  const nextQuantity = base.item.current_quantity - params.quantity;
-  const { error: updateError } = await base.supabase
-    .from("inventory_items")
-    .update({ current_quantity: nextQuantity })
-    .eq("ingredient_id", params.ingredientId);
-
-  if (updateError) {
-    return { ok: false as const, message: inventoryTableError(updateError.message) ?? updateError.message };
-  }
-
-  const { error: movementError } = await base.supabase.from("inventory_movements").insert({
-    comment: params.comment || null,
-    created_by: "admin",
-    ingredient_id: params.ingredientId,
-    movement_type: "write_off",
-    quantity: -params.quantity,
-    reason: params.reason || "Списание",
-    unit: base.item.unit
+  const supabase = createSupabaseServerClient();
+  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
+  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+    p_comment: params.comment || null,
+    p_created_by: "admin",
+    p_ingredient_id: params.ingredientId,
+    p_movement_type: "write_off",
+    p_new_quantity: null,
+    p_package_price: null,
+    p_quantity: params.quantity,
+    p_reason: params.reason || "Списание",
+    p_update_cost: false
   });
 
-  if (movementError) {
-    return { ok: false as const, message: inventoryTableError(movementError.message, "inventory_movements") ?? movementError.message };
+  if (error) {
+    return { ok: false as const, message: error.code === "P0001" ? error.message : "Не удалось оформить списание." };
   }
 
   return { ok: true as const };
@@ -461,257 +421,27 @@ export async function correctInventory(params: {
   ingredientId: string;
   newQuantity: number;
 }) {
-  const base = await getInventoryOperationBase(params.ingredientId);
-
-  if (!base.ok) {
-    return base;
-  }
-
   if (params.newQuantity < 0) {
     return { ok: false as const, message: "Остаток не может быть отрицательным." };
   }
 
-  if (!base.item) {
-    const created = await ensureInventoryItem(params.ingredientId, { currentQuantity: 0 });
-    if (!created.ok) {
-      return created;
-    }
-  }
-
-  const currentQuantity = base.item?.current_quantity ?? 0;
-  const difference = params.newQuantity - currentQuantity;
-  const { error: updateError } = await base.supabase
-    .from("inventory_items")
-    .update({ current_quantity: params.newQuantity, unit: base.ingredient.unit })
-    .eq("ingredient_id", params.ingredientId);
-
-  if (updateError) {
-    return { ok: false as const, message: inventoryTableError(updateError.message) ?? updateError.message };
-  }
-
-  const { error: movementError } = await base.supabase.from("inventory_movements").insert({
-    comment: params.comment || null,
-    created_by: "admin",
-    ingredient_id: params.ingredientId,
-    movement_type: "correction",
-    quantity: difference,
-    reason: "Инвентаризация",
-    unit: base.ingredient.unit
+  const supabase = createSupabaseServerClient();
+  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
+  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+    p_comment: params.comment || null,
+    p_created_by: "admin",
+    p_ingredient_id: params.ingredientId,
+    p_movement_type: "correction",
+    p_new_quantity: params.newQuantity,
+    p_package_price: null,
+    p_quantity: null,
+    p_reason: "Инвентаризация",
+    p_update_cost: false
   });
 
-  if (movementError) {
-    return { ok: false as const, message: inventoryTableError(movementError.message, "inventory_movements") ?? movementError.message };
+  if (error) {
+    return { ok: false as const, message: error.code === "P0001" ? error.message : "Не удалось сохранить корректировку." };
   }
 
   return { ok: true as const };
-}
-
-export async function deductInventoryForOrder(orderId: string) {
-  const supabase = createSupabaseServerClient();
-
-  if (!supabase) {
-    return { ok: false as const, message: "Supabase не подключён.", warnings: [] as string[] };
-  }
-
-  const { data: existingDeduction, error: deductionCheckError } = await supabase
-    .from("order_inventory_deductions")
-    .select("id")
-    .eq("order_id", orderId)
-    .maybeSingle();
-
-  if (deductionCheckError) {
-    return {
-      ok: false as const,
-      message: inventoryTableError(deductionCheckError.message, "order_inventory_deductions") ?? deductionCheckError.message,
-      warnings: [] as string[]
-    };
-  }
-
-  if (existingDeduction) {
-    return { ok: true as const, warnings: ["Склад уже списан по этому заказу."] };
-  }
-
-  const { data: orderItems, error: orderItemsError } = await supabase
-    .from("order_items")
-    .select("id, product_id, product_name, quantity")
-    .eq("order_id", orderId);
-
-  if (orderItemsError) {
-    return { ok: false as const, message: orderItemsError.message, warnings: [] as string[] };
-  }
-
-  const productIds = Array.from(
-    new Set((orderItems ?? []).map((item) => (item.product_id ? String(item.product_id) : null)).filter(Boolean) as string[])
-  );
-  const warnings: string[] = [];
-
-  if (!productIds.length) {
-    warnings.push("У товаров заказа нет product_id, склад не списан.");
-    await supabase.from("order_inventory_deductions").insert({ order_id: orderId, status: "deducted" });
-    return { ok: true as const, warnings };
-  }
-
-  const { data: compositionRows, error: compositionError } = await supabase
-    .from("product_ingredients")
-    .select("product_id, ingredient_id, quantity, unit")
-    .in("product_id", productIds);
-
-  if (compositionError) {
-    return {
-      ok: false as const,
-      message: formatMissingTableError(compositionError.message, "product_ingredients", "supabase/ingredients.sql") ?? compositionError.message,
-      warnings
-    };
-  }
-
-  const compositionByProduct = new Map<string, Array<{ ingredient_id: string; quantity: number; unit: "g" | "ml" | "pcs" }>>();
-
-  for (const row of compositionRows ?? []) {
-    const productId = String(row.product_id);
-    compositionByProduct.set(productId, [
-      ...(compositionByProduct.get(productId) ?? []),
-      {
-        ingredient_id: String(row.ingredient_id),
-        quantity: Number(row.quantity ?? 0),
-        unit: normalizeUnit(row.unit)
-      }
-    ]);
-  }
-
-  const deductionLines: DeductionLine[] = [];
-
-  for (const item of orderItems ?? []) {
-    const productId = item.product_id ? String(item.product_id) : null;
-    const productName = String(item.product_name ?? "Товар");
-    const orderQuantity = Number(item.quantity ?? 0);
-
-    if (!productId) {
-      warnings.push(`У товара не задан product_id, склад не списан: ${productName}`);
-      continue;
-    }
-
-    const lines = compositionByProduct.get(productId) ?? [];
-
-    if (!lines.length) {
-      warnings.push(`У товара не задан состав, склад не списан: ${productName}`);
-      continue;
-    }
-
-    for (const line of lines) {
-      deductionLines.push({
-        ingredient_id: line.ingredient_id,
-        ingredient_name: "",
-        product_id: productId,
-        product_name: productName,
-        quantity: line.quantity * orderQuantity,
-        unit: line.unit
-      });
-    }
-  }
-
-  if (!deductionLines.length) {
-    await supabase.from("order_inventory_deductions").insert({ order_id: orderId, status: "deducted" });
-    return { ok: true as const, warnings };
-  }
-
-  const ingredientIds = Array.from(new Set(deductionLines.map((line) => line.ingredient_id)));
-  const { data: ingredientsData, error: ingredientsError } = await supabase
-    .from("ingredients")
-    .select("id, name, unit")
-    .in("id", ingredientIds);
-
-  if (ingredientsError) {
-    return { ok: false as const, message: ingredientsError.message, warnings };
-  }
-
-  const ingredientMeta = new Map(
-    (ingredientsData ?? []).map((ingredient) => [
-      String(ingredient.id),
-      { name: String(ingredient.name ?? "Ингредиент"), unit: normalizeUnit(ingredient.unit) }
-    ])
-  );
-  const { data: inventoryRows, error: inventoryError } = await supabase
-    .from("inventory_items")
-    .select("ingredient_id, current_quantity, unit")
-    .in("ingredient_id", ingredientIds);
-
-  if (inventoryError) {
-    return { ok: false as const, message: inventoryTableError(inventoryError.message) ?? inventoryError.message, warnings };
-  }
-
-  const inventoryByIngredient = new Map(
-    (inventoryRows ?? []).map((row) => [
-      String(row.ingredient_id),
-      { current_quantity: Number(row.current_quantity ?? 0), unit: normalizeUnit(row.unit) }
-    ])
-  );
-  const requiredByIngredient = new Map<string, { quantity: number; unit: "g" | "ml" | "pcs" }>();
-
-  for (const line of deductionLines) {
-    const current = requiredByIngredient.get(line.ingredient_id);
-    requiredByIngredient.set(line.ingredient_id, {
-      quantity: (current?.quantity ?? 0) + line.quantity,
-      unit: ingredientMeta.get(line.ingredient_id)?.unit ?? line.unit
-    });
-  }
-
-  const deficits = Array.from(requiredByIngredient.entries())
-    .map(([ingredientId, requirement]) => {
-      const available = inventoryByIngredient.get(ingredientId)?.current_quantity ?? 0;
-      return { ingredientId, required: requirement.quantity, available, unit: requirement.unit };
-    })
-    .filter((item) => item.required > item.available);
-
-  if (deficits.length) {
-    return {
-      ok: false as const,
-      message: `Недостаточно остатков:\n${deficits
-        .map((item) => {
-          const name = ingredientMeta.get(item.ingredientId)?.name ?? "Ингредиент";
-          return `— ${name}: нужно ${formatInventoryQuantity(item.required, item.unit)}, доступно ${formatInventoryQuantity(item.available, item.unit)}`;
-        })
-        .join("\n")}`,
-      warnings
-    };
-  }
-
-  for (const [ingredientId, requirement] of requiredByIngredient.entries()) {
-    const current = inventoryByIngredient.get(ingredientId)?.current_quantity ?? 0;
-    const { error } = await supabase
-      .from("inventory_items")
-      .update({ current_quantity: current - requirement.quantity })
-      .eq("ingredient_id", ingredientId);
-
-    if (error) {
-      return { ok: false as const, message: error.message, warnings };
-    }
-  }
-
-  const movementRows = deductionLines.map((line) => ({
-    comment: `Автосписание по заказу: ${line.product_name}`,
-    created_by: "system",
-    ingredient_id: line.ingredient_id,
-    movement_type: "sale",
-    order_id: orderId,
-    product_id: line.product_id,
-    quantity: -line.quantity,
-    reason: "Автосписание по заказу",
-    unit: ingredientMeta.get(line.ingredient_id)?.unit ?? line.unit
-  }));
-  const { error: movementsError } = await supabase.from("inventory_movements").insert(movementRows);
-
-  if (movementsError) {
-    return { ok: false as const, message: movementsError.message, warnings };
-  }
-
-  const { error: deductionError } = await supabase.from("order_inventory_deductions").insert({
-    order_id: orderId,
-    status: "deducted"
-  });
-
-  if (deductionError) {
-    return { ok: false as const, message: deductionError.message, warnings };
-  }
-
-  return { ok: true as const, warnings };
 }

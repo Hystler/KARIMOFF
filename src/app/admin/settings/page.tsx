@@ -151,6 +151,23 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               </label>
             </div>
 
+            <label className="grid max-w-xl gap-2 text-sm font-semibold">
+              Максимальная доля оплаты бонусами, %
+              <input
+                name="loyalty_redemption_limit_percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                defaultValue={settings.loyalty_redemption_limit_percent ?? ""}
+                placeholder="Не подтверждено"
+                className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange"
+              />
+              <span className="text-xs font-normal leading-5 text-karimoff-muted">
+                Оставьте поле пустым, пока правило списания бонусов не утверждено. Пустое значение не публикуется и не применяется.
+              </span>
+            </label>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex items-center gap-3 text-sm font-semibold">
                 <input name="delivery_enabled" type="checkbox" defaultChecked={settings.delivery_enabled} className="h-5 w-5 accent-karimoff-orange" />

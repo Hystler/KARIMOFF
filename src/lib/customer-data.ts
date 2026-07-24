@@ -78,6 +78,7 @@ export async function getCustomerProfileData() {
       avatar: defaultAvatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
+      marketingConsent: false,
       error: null as string | null
     };
   }
@@ -91,12 +92,23 @@ export async function getCustomerProfileData() {
       avatar: defaultAvatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
+      marketingConsent: false,
       error: "Supabase не подключён."
     };
   }
 
   const account = await ensureLoyaltyAccount(customer.id);
   const avatarResult = await getCustomerAvatar(customer.id);
+  const { data: marketingConsentData } = await supabase
+    .from("legal_consents")
+    .select("granted")
+    .eq("subject_type", "customer")
+    .eq("subject_id", customer.id)
+    .eq("consent_type", "marketing")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const marketingConsent = marketingConsentData?.granted === true;
 
   const { data: ordersData, error: ordersError } = await supabase
     .from("orders")
@@ -111,6 +123,7 @@ export async function getCustomerProfileData() {
       avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
+      marketingConsent,
       error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
     };
   }
@@ -130,6 +143,7 @@ export async function getCustomerProfileData() {
       avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
+      marketingConsent,
       error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
     };
   }
@@ -148,6 +162,7 @@ export async function getCustomerProfileData() {
       avatar: avatarResult.avatar,
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
+      marketingConsent,
       error: formatMissingTableError(transactionsError.message, "loyalty_transactions", "supabase/loyalty.sql")
     };
   }
@@ -158,6 +173,7 @@ export async function getCustomerProfileData() {
     customer,
     account,
     avatar: avatarResult.avatar as AvatarConfig,
+    marketingConsent,
     orders: (ordersData ?? []).map((order) =>
       normalizeOrder(
         order,

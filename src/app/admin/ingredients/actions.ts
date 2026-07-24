@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit";
 import { ingredientFormSchema } from "@/lib/ingredient-schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -92,6 +93,14 @@ export async function createIngredientAction(formData: FormData) {
     redirect(`/admin/ingredients/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "ingredient.create",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityType: "ingredient",
+    metadata: { name: parsed.payload.name, unit: parsed.payload.unit },
+    sourcePath: "/admin/ingredients/new"
+  });
   revalidateIngredientViews();
   redirect("/admin/ingredients?saved=1");
 }
@@ -113,6 +122,15 @@ export async function updateIngredientAction(formData: FormData) {
     redirect(`/admin/ingredients/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "ingredient.update",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "ingredient",
+    metadata: { cost_per_unit: parsed.payload.cost_per_unit, unit: parsed.payload.unit },
+    sourcePath: `/admin/ingredients/${id}/edit`
+  });
   revalidateIngredientViews();
   redirect("/admin/ingredients?saved=1");
 }
@@ -129,6 +147,15 @@ export async function toggleIngredientActiveAction(formData: FormData) {
     redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "ingredient.status_change",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "ingredient",
+    metadata: { is_active: nextActive },
+    sourcePath: "/admin/ingredients"
+  });
   revalidateIngredientViews();
   redirect("/admin/ingredients?saved=1");
 }
@@ -144,6 +171,14 @@ export async function deleteIngredientAction(formData: FormData) {
     redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
   }
 
+  await writeAuditLog({
+    action: "ingredient.delete",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: id,
+    entityType: "ingredient",
+    sourcePath: "/admin/ingredients"
+  });
   revalidateIngredientViews();
   redirect("/admin/ingredients?deleted=1");
 }

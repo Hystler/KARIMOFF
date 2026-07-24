@@ -101,6 +101,54 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
         )}
       </label>
 
+      <div className="grid gap-5 md:grid-cols-2">
+        <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
+          Вес / объём порции
+          <input
+            name="weight"
+            defaultValue={product?.weight ?? ""}
+            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            placeholder="Например, 320 г"
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
+          Аллергены
+          <input
+            name="allergens"
+            defaultValue={product?.allergens?.join(", ") ?? ""}
+            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            placeholder="Заполняйте только подтверждённые сведения"
+          />
+          <span className="text-xs font-medium leading-5 text-amber-700">
+            Если точный перечень не подтверждён, оставьте поле пустым. Не генерируйте аллергены автоматически.
+          </span>
+        </label>
+      </div>
+
+      <fieldset className="grid gap-4 rounded-xl border border-karimoff-line p-4">
+        <legend className="px-2 text-sm font-bold text-karimoff-black">КБЖУ на порцию</legend>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            ["calories", "Ккал", product?.calories],
+            ["protein", "Белки, г", product?.protein],
+            ["fat", "Жиры, г", product?.fat],
+            ["carbs", "Углеводы, г", product?.carbs]
+          ].map(([name, label, value]) => (
+            <label key={String(name)} className="grid gap-2 text-sm font-semibold text-karimoff-black">
+              {String(label)}
+              <input
+                name={String(name)}
+                type="number"
+                min="0"
+                step="0.1"
+                defaultValue={value ?? ""}
+                className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+              />
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
         Описание
         <textarea

@@ -27,6 +27,24 @@ const deliveryLabels: Record<AdminOrder["delivery_type"], string> = {
   delivery: "Доставка"
 };
 
+const paymentLabels: Record<AdminOrder["payment_status"], string> = {
+  not_required: "Без онлайн-оплаты",
+  pending: "Ожидает оплаты",
+  paid: "Оплачен",
+  failed: "Ошибка оплаты",
+  cancelled: "Оплата отменена",
+  refunded: "Возврат",
+  partially_refunded: "Частичный возврат"
+};
+
+const fiscalLabels: Record<AdminOrder["fiscal_status"], string> = {
+  not_required: "Чек не требуется",
+  pending: "Чек ожидается",
+  issued: "Чек выдан",
+  failed: "Ошибка чека",
+  refunded: "Возвратный чек"
+};
+
 export const dynamic = "force-dynamic";
 
 function formatDate(date: string) {
@@ -121,7 +139,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
             <div className="p-8 text-karimoff-muted">Заказов пока нет.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[1260px] border-collapse text-left text-sm">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Дата</th>
@@ -130,6 +148,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                     <th className="px-4 py-4 font-bold">Состав</th>
                     <th className="px-4 py-4 font-bold">Сумма</th>
                     <th className="px-4 py-4 font-bold">Статус</th>
+                    <th className="px-4 py-4 font-bold">Оплата / чек</th>
                     <th className="px-4 py-4 font-bold">Действия</th>
                   </tr>
                 </thead>
@@ -160,6 +179,10 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                         <span className="inline-flex rounded-full bg-karimoff-orange/10 px-3 py-1 text-xs font-bold text-karimoff-orange">
                           {statusLabels[order.status]}
                         </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="text-xs font-semibold">{paymentLabels[order.payment_status]}</p>
+                        <p className="mt-1 text-xs text-karimoff-muted">{fiscalLabels[order.fiscal_status]}</p>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-2">

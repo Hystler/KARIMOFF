@@ -47,7 +47,12 @@ function normalizeProduct(row: Record<string, unknown>): Product {
     is_active: Boolean(row.is_active),
     sort_order: Number(row.sort_order ?? 100),
     weight: typeof row.weight === "string" ? row.weight : null,
-    tags: Array.isArray(row.tags) ? row.tags.map(String) : null
+    tags: Array.isArray(row.tags) ? row.tags.map(String) : null,
+    calories: row.calories === null || row.calories === undefined ? null : Number(row.calories),
+    protein: row.protein === null || row.protein === undefined ? null : Number(row.protein),
+    fat: row.fat === null || row.fat === undefined ? null : Number(row.fat),
+    carbs: row.carbs === null || row.carbs === undefined ? null : Number(row.carbs),
+    allergens: Array.isArray(row.allergens) ? row.allergens.map(String) : null
   });
 }
 
@@ -119,7 +124,7 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags")
+    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
@@ -148,7 +153,7 @@ export async function getAdminProducts() {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags")
+    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -174,7 +179,7 @@ export async function getAdminProductById(id: string) {
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags")
+    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .eq("id", id)
     .maybeSingle();
 

@@ -16,6 +16,8 @@ export type SiteSettings = {
   theme: SiteTheme;
   loyalty_enabled: boolean;
   loyalty_percent: number;
+  loyalty_redemption_limit_percent: number | null;
+  payments_enabled: boolean;
   hero_title: string | null;
   hero_subtitle: string | null;
   home_hero_image_url: string | null;
@@ -39,7 +41,9 @@ export const fallbackSiteSettings: SiteSettings = {
   pickup_enabled: true,
   theme: "light",
   loyalty_enabled: true,
-  loyalty_percent: 5,
+  loyalty_percent: 10,
+  loyalty_redemption_limit_percent: null,
+  payments_enabled: false,
   hero_title: null,
   hero_subtitle: null,
   home_hero_image_url: null,
@@ -73,6 +77,11 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     theme: row.theme === "dark" ? "dark" : "light",
     loyalty_enabled: row.loyalty_enabled !== false,
     loyalty_percent: Number(row.loyalty_percent ?? fallbackSiteSettings.loyalty_percent),
+    loyalty_redemption_limit_percent:
+      row.loyalty_redemption_limit_percent === null || row.loyalty_redemption_limit_percent === undefined
+        ? null
+        : Number(row.loyalty_redemption_limit_percent),
+    payments_enabled: false,
     hero_title: optionalString(row, "hero_title"),
     hero_subtitle: optionalString(row, "hero_subtitle"),
     home_hero_image_url: optionalString(row, "home_hero_image_url"),

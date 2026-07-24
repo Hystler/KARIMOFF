@@ -1,14 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
-import { ensureLoyaltyAccount } from "@/lib/loyalty";
+import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
+import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
 import { getSiteSettings } from "@/lib/settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -66,6 +64,20 @@ export async function createOrderAction(
     };
   }
 
+  if (!isChecked(formData.get("personal_data_consent"))) {
+    return {
+      status: "error",
+      message: "Нужно дать согласие на обработку персональных данных."
+    };
+  }
+
+  if (!isChecked(formData.get("offer_acceptance"))) {
+    return {
+      status: "error",
+      message: "Нужно принять условия публичной оферты."
+    };
+  }
+
   if (parsed.data.delivery_type === "delivery" && !parsed.data.address) {
     return {
       status: "error",
@@ -98,54 +110,37 @@ export async function createOrderAction(
     };
   }
 
-  const total = parsed.data.cart.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-  await ensureLoyaltyAccount(customer.id);
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      customer_id: customer.id,
-      customer_name: customer.name,
-      customer_phone: customer.phone,
-      delivery_type: parsed.data.delivery_type,
-      address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
-      comment: parsed.data.comment || null,
-      status: "new",
-      total,
-      source: "site"
-    })
-    .select("id")
-    .single();
+  const rawIdempotencyKey = String(formData.get("idempotency_key") || "");
+  const idempotencyKey = /^[0-9a-f-]{36}$/i.test(rawIdempotencyKey)
+    ? rawIdempotencyKey
+    : randomUUID();
+  const { data, error } = await supabase.rpc("create_site_order", {
+    p_address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
+    p_comment: parsed.data.comment || null,
+    p_customer_id: customer.id,
+    p_delivery_type: parsed.data.delivery_type,
+    p_document_version: LEGAL_VERSION,
+    p_idempotency_key: idempotencyKey,
+    p_items: parsed.data.cart,
+    p_marketing_granted: isChecked(formData.get("marketing_consent")),
+    p_offer_accepted: true,
+    p_personal_data_granted: true,
+    p_source_path: "/checkout",
+    p_user_agent_short: await getShortUserAgent()
+  });
 
-  if (orderError || !order) {
+  const order = Array.isArray(data) ? data[0] : null;
+
+  if (error || !order?.order_id) {
     return {
       status: "error",
-      message: "Не удалось создать заказ."
-    };
-  }
-
-  const orderId = String(order.id);
-  const items = parsed.data.cart.map((line) => ({
-    order_id: orderId,
-    product_id: isUuid(line.product.id) ? line.product.id : null,
-    product_name: line.product.name,
-    unit_price: line.product.price,
-    quantity: line.quantity,
-    line_total: line.product.price * line.quantity
-  }));
-
-  const { error: itemsError } = await supabase.from("order_items").insert(items);
-
-  if (itemsError) {
-    await supabase.from("orders").delete().eq("id", orderId);
-    return {
-      status: "error",
-      message: "Не удалось сохранить состав заказа."
+      message: error?.code === "P0001" ? error.message : "Не удалось создать заказ."
     };
   }
 
   return {
     status: "success",
     message: "Заказ отправлен. Мы свяжемся с вами для подтверждения.",
-    orderId
+    orderId: String(order.order_id)
   };
 }

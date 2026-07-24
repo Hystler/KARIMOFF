@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getSiteSettings } from "@/lib/settings";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -70,70 +69,6 @@ export async function ensureLoyaltyAccount(customerId: string) {
     .maybeSingle();
 
   return normalizeAccount(data, customerId);
-}
-
-export async function awardLoyaltyForCompletedOrder(orderId: string) {
-  const supabase = createSupabaseServerClient();
-
-  if (!supabase) {
-    return;
-  }
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id, customer_id, total")
-    .eq("id", orderId)
-    .maybeSingle();
-
-  if (orderError || !order?.customer_id) {
-    return;
-  }
-
-  const settings = await getSiteSettings();
-
-  if (!settings.loyalty_enabled) {
-    return;
-  }
-
-  const points = Math.max(0, Math.round(Number(order.total ?? 0) * settings.loyalty_percent) / 100);
-
-  if (points <= 0) {
-    return;
-  }
-
-  const customerId = String(order.customer_id);
-  const { data: existingTransaction } = await supabase
-    .from("loyalty_transactions")
-    .select("id")
-    .eq("order_id", orderId)
-    .eq("type", "earn")
-    .maybeSingle();
-
-  if (existingTransaction) {
-    return;
-  }
-
-  const account = await ensureLoyaltyAccount(customerId);
-
-  const { error: transactionError } = await supabase.from("loyalty_transactions").insert({
-    customer_id: customerId,
-    order_id: orderId,
-    type: "earn",
-    points,
-    description: `Начисление за заказ ${orderId}`
-  });
-
-  if (transactionError) {
-    return;
-  }
-
-  await supabase
-    .from("loyalty_accounts")
-    .update({
-      points_balance: (account?.points_balance ?? 0) + points,
-      total_earned: (account?.total_earned ?? 0) + points
-    })
-    .eq("customer_id", customerId);
 }
 
 export async function getAdminLoyalty() {

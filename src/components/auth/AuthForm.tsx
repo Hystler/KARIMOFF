@@ -22,6 +22,9 @@ type AuthFormProps = {
 export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
+  const [personalDataConsent, setPersonalDataConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [loyaltyConsent, setLoyaltyConsent] = useState(false);
   const [passwordState, passwordAction, isPasswordPending] = useActionState(
     isRegister ? registerWithPasswordAction : loginWithPasswordAction,
     initialAuthActionState
@@ -85,9 +88,9 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             name="password"
             required
             type="password"
-            minLength={6}
+            minLength={10}
             className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
-            placeholder="Минимум 6 символов"
+            placeholder="Минимум 10 символов"
           />
         </label>
         {isRegister ? (
@@ -97,11 +100,61 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
               name="password_confirm"
               required
               type="password"
-              minLength={6}
+              minLength={10}
               className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
-              placeholder="Ещё раз"
+              placeholder="Ещё раз, минимум 10 символов"
             />
           </label>
+        ) : null}
+        {isRegister ? (
+          <div className="grid gap-3 rounded-xl border border-karimoff-line bg-karimoff-soft/70 p-4 text-sm">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="personal_data_consent"
+                required
+                checked={personalDataConsent}
+                onChange={(event) => setPersonalDataConsent(event.target.checked)}
+                className="mt-1 accent-karimoff-orange"
+              />
+              <span className="leading-6 text-karimoff-muted">
+                Я даю согласие на обработку персональных данных.{" "}
+                <Link href="/legal/personal-data-consent" target="_blank" className="font-bold text-karimoff-orange">
+                  Текст согласия
+                </Link>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="loyalty_consent"
+                checked={loyaltyConsent}
+                onChange={(event) => setLoyaltyConsent(event.target.checked)}
+                className="mt-1 accent-karimoff-orange"
+              />
+              <span className="leading-6 text-karimoff-muted">
+                Хочу участвовать в KARIMOFF Bonus и принимаю{" "}
+                <Link href="/legal/loyalty" target="_blank" className="font-bold text-karimoff-orange">
+                  правила программы
+                </Link>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="marketing_consent"
+                checked={marketingConsent}
+                onChange={(event) => setMarketingConsent(event.target.checked)}
+                className="mt-1 accent-karimoff-orange"
+              />
+              <span className="leading-6 text-karimoff-muted">
+                Хочу получать акции и предложения KARIMOFF.{" "}
+                <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">
+                  Условия
+                </Link>
+              </span>
+            </label>
+          </div>
         ) : null}
         <input type="hidden" name="next" value={next ?? ""} />
         <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
@@ -133,16 +186,63 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
           <div className="mt-4 grid gap-4">
             <form action={requestAction} className="grid gap-4">
               {isRegister ? (
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
-                  <input
-                    name="name"
-                    required
-                    defaultValue={name}
-                    className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-                    placeholder="Ваше имя"
-                  />
-                </label>
+                <>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
+                    <input
+                      name="name"
+                      required
+                      defaultValue={name}
+                      className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                      placeholder="Ваше имя"
+                    />
+                  </label>
+                  <div className="grid gap-3 text-sm">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="personal_data_consent"
+                        required
+                        checked={personalDataConsent}
+                        onChange={(event) => setPersonalDataConsent(event.target.checked)}
+                        className="mt-1 accent-karimoff-orange"
+                      />
+                      <span className="leading-6 text-karimoff-muted">
+                        Согласие на{" "}
+                        <Link href="/legal/personal-data-consent" target="_blank" className="font-bold text-karimoff-orange">
+                          обработку персональных данных
+                        </Link>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="loyalty_consent"
+                        checked={loyaltyConsent}
+                        onChange={(event) => setLoyaltyConsent(event.target.checked)}
+                        className="mt-1 accent-karimoff-orange"
+                      />
+                      <span className="leading-6 text-karimoff-muted">
+                        Участвовать в{" "}
+                        <Link href="/legal/loyalty" target="_blank" className="font-bold text-karimoff-orange">
+                          KARIMOFF Bonus
+                        </Link>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="marketing_consent"
+                        checked={marketingConsent}
+                        onChange={(event) => setMarketingConsent(event.target.checked)}
+                        className="mt-1 accent-karimoff-orange"
+                      />
+                      <span className="leading-6 text-karimoff-muted">
+                        Получать акции и предложения
+                      </span>
+                    </label>
+                  </div>
+                </>
               ) : null}
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
@@ -170,6 +270,13 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             {shouldShowConfirmCode ? (
               <form action={confirmAction} className="grid gap-4 border-t border-karimoff-line pt-4">
                 {isRegister ? <input type="hidden" name="name" value={name} /> : null}
+                {isRegister ? (
+                  <>
+                    <input type="hidden" name="personal_data_consent" value={personalDataConsent ? "on" : ""} />
+                    <input type="hidden" name="marketing_consent" value={marketingConsent ? "on" : ""} />
+                    <input type="hidden" name="loyalty_consent" value={loyaltyConsent ? "on" : ""} />
+                  </>
+                ) : null}
                 <input type="hidden" name="phone" value={phone} />
                 <input type="hidden" name="next" value={next ?? ""} />
                 <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />

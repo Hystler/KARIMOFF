@@ -54,7 +54,7 @@ function ProductImage({ product }: { product: Product }) {
         src={src}
         alt={product.name}
         fill
-        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+        sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 34vw, 50vw"
         className="object-contain transition duration-500 group-hover:scale-[1.03]"
       />
     );
@@ -88,6 +88,22 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         ) : (
           <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[19px] text-karimoff-muted sm:mt-2.5 sm:min-h-[44px] sm:text-[13px] sm:leading-[22px]">Фирменная позиция KARIMOFF.</p>
         )}
+        {product.weight ? (
+          <p className="mt-2 text-[11px] font-bold text-karimoff-muted sm:text-xs">{product.weight}</p>
+        ) : null}
+        {product.calories !== null && product.calories !== undefined ? (
+          <p className="mt-1 text-[10px] leading-4 text-karimoff-muted sm:text-[11px]">
+            {product.calories} ккал
+            {product.protein !== null && product.protein !== undefined ? ` · Б ${product.protein}` : ""}
+            {product.fat !== null && product.fat !== undefined ? ` · Ж ${product.fat}` : ""}
+            {product.carbs !== null && product.carbs !== undefined ? ` · У ${product.carbs}` : ""}
+          </p>
+        ) : null}
+        {product.allergens?.length ? (
+          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-karimoff-muted">
+            Аллергены: {product.allergens.join(", ")}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => addItem(product)}

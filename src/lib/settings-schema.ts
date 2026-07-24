@@ -12,6 +12,10 @@ export const siteSettingsSchema = z.object({
   theme: siteThemeSchema,
   loyalty_enabled: z.coerce.boolean().default(false),
   loyalty_percent: z.coerce.number().min(0, "Процент не может быть отрицательным").max(100, "Процент слишком высокий"),
+  loyalty_redemption_limit_percent: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? null : value),
+    z.coerce.number().min(0, "Лимит не может быть отрицательным").max(100, "Лимит не может быть больше 100%").nullable()
+  ),
   hero_title: z.string().trim().max(160, "Заголовок слишком длинный").optional(),
   hero_subtitle: z.string().trim().max(240, "Подзаголовок слишком длинный").optional(),
   home_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),

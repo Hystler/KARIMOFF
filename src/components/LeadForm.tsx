@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createLeadAction } from "@/app/actions/leads";
 import { initialLeadActionState, type LeadFormInput } from "@/lib/lead-schema";
 import { formatRussianPhoneInput } from "@/lib/phone";
@@ -27,6 +28,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
   const formRef = useRef<HTMLFormElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
   const interestRef = useRef<HTMLSelectElement>(null);
+  const [selectedInterest, setSelectedInterest] = useState(defaultInterest);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -40,6 +42,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
 
       if (detail?.interest && interestRef.current) {
         interestRef.current.value = detail.interest;
+        setSelectedInterest(detail.interest);
       }
 
       if (typeof detail?.comment === "string" && commentRef.current) {
@@ -96,6 +99,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               name="interest"
               className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               defaultValue={defaultInterest}
+              onChange={(event) => setSelectedInterest(event.target.value as LeadFormInput["interest"])}
             >
               {interests.map((item) => (
                 <option key={item.value} value={item.value}>
@@ -104,6 +108,51 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               ))}
             </select>
           </label>
+          <div className="grid gap-3 rounded-xl border border-karimoff-line bg-white p-4 text-sm">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="personal_data_consent"
+                required
+                className="mt-1 accent-karimoff-orange"
+              />
+              <span className="leading-6 text-karimoff-muted">
+                Я даю согласие на обработку персональных данных для{" "}
+                {selectedInterest === "career"
+                  ? "рассмотрения отклика на вакансию"
+                  : selectedInterest === "franchise"
+                    ? "рассмотрения заявки на франшизу"
+                    : "рассмотрения обращения"}
+                .{" "}
+                <Link
+                  href={
+                    selectedInterest === "career"
+                      ? "/legal/careers-consent"
+                      : selectedInterest === "franchise"
+                        ? "/legal/franchise-consent"
+                        : "/legal/personal-data-consent"
+                  }
+                  target="_blank"
+                  className="font-bold text-karimoff-orange"
+                >
+                  Текст согласия
+                </Link>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                name="marketing_consent"
+                className="mt-1 accent-karimoff-orange"
+              />
+              <span className="leading-6 text-karimoff-muted">
+                Хочу получать акции и предложения KARIMOFF.{" "}
+                <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">
+                  Условия
+                </Link>
+              </span>
+            </label>
+          </div>
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>
             <textarea

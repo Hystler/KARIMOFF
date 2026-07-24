@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { SiteSettings } from "@/lib/settings";
 import { Logo } from "./Logo";
 import { SocialLinks } from "./SocialLinks";
+import { CookieSettingsButton } from "./CookieSettingsButton";
+import { LEGAL_CONTACTS } from "@/lib/legal";
 
 const footerMenu = [
   { label: "Меню", href: "/menu" },
@@ -9,6 +11,16 @@ const footerMenu = [
   { label: "Работа", href: "/careers" },
   { label: "Франшиза", href: "/franchise" },
   { label: "О бренде", href: "/about" }
+];
+
+const legalMenu = [
+  { label: "Оферта", href: "/legal/offer" },
+  { label: "Политика ПД", href: "/legal/privacy" },
+  { label: "Согласие на обработку ПД", href: "/legal/personal-data-consent" },
+  { label: "Cookies", href: "/legal/cookies" },
+  { label: "Доставка и возврат", href: "/legal/delivery" },
+  { label: "Правила лояльности", href: "/legal/loyalty" },
+  { label: "Реквизиты", href: "/legal/requisites" }
 ];
 
 export function Footer({ settings }: { settings: SiteSettings }) {
@@ -42,9 +54,23 @@ export function Footer({ settings }: { settings: SiteSettings }) {
         </div>
       </div>
       <div className="border-t border-karimoff-line">
-        <div className="container-page flex flex-col gap-2 py-5 text-xs text-karimoff-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 {settings.site_name}. Все права защищены.</p>
-          <p>Информация на сайте не является публичной офертой.</p>
+        <div className="container-page grid gap-5 py-6 text-xs text-karimoff-muted">
+          <nav className="flex flex-wrap gap-x-5 gap-y-3" aria-label="Юридическая информация">
+            {legalMenu.map((item) => (
+              <Link key={item.href} href={item.href} className="font-semibold transition hover:text-karimoff-orange">
+                {item.label}
+              </Link>
+            ))}
+            <CookieSettingsButton />
+          </nav>
+          <div className="grid gap-1 leading-5 sm:grid-cols-[1fr_auto] sm:items-end sm:gap-8">
+            <div>
+              <p className="font-bold text-karimoff-black">{LEGAL_CONTACTS.operator}</p>
+              <p>ИНН {LEGAL_CONTACTS.inn} · ОГРНИП {LEGAL_CONTACTS.ogrnip}</p>
+              <p>{LEGAL_CONTACTS.supportPhone} · {LEGAL_CONTACTS.supportEmail}</p>
+            </div>
+            <p>© 2026 {settings.site_name}. Все права защищены.</p>
+          </div>
         </div>
       </div>
     </footer>
