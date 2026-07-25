@@ -13,11 +13,11 @@ export default function CheckoutPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-karimoff-cream pt-28 text-karimoff-black">
+    <main className="min-h-screen bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
       <section className="container-page pb-16">
-        <div className="rounded-[1.5rem] border border-karimoff-line bg-white p-7 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
-          <p className="text-sm font-semibold text-karimoff-orange">Checkout</p>
-          <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">Оформление заказа</h1>
+        <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+          <p className="text-sm font-semibold text-karimoff-orange">Заказ</p>
+          <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Оформление заказа</h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-karimoff-muted">
             Открываем корзину. Если она пуста, вернитесь в меню и добавьте позиции.
           </p>

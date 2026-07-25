@@ -27,10 +27,10 @@ export default function NotFound() {
   return (
     <main className="min-h-screen bg-karimoff-cream pt-28 text-karimoff-black">
       <section className="container-page pb-16 pt-8">
-        <div className="grid min-h-[calc(100vh-11rem)] grid-cols-1 items-center gap-8 rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-10 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="grid min-h-[calc(100vh-11rem)] grid-cols-1 items-center gap-7 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-9 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="order-2 min-w-0 lg:order-1">
             <p className="text-sm font-semibold text-karimoff-orange">Страница не найдена</p>
-            <h1 className="mt-4 max-w-2xl text-balance text-4xl font-black leading-[1.02] sm:text-6xl">
+            <h1 className="mt-4 max-w-2xl text-balance text-3xl font-black leading-[1.08] sm:text-5xl">
               404. Бургер потерялся
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">

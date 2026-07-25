@@ -30,14 +30,14 @@ export default async function AdminLoyaltyPage() {
   const { customers, transactions, notConfigured, error } = await getAdminLoyalty();
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-7xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Лояльность</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Лояльность</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -65,7 +65,7 @@ export default async function AdminLoyaltyPage() {
                 <div className="p-6 text-karimoff-muted">Клиентов пока нет.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-left text-sm">
+                  <table className="admin-table min-w-[760px]">
                     <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                       <tr>
                         <th className="px-4 py-4 font-bold">Клиент</th>

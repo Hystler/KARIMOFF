@@ -55,8 +55,8 @@ export function HeroBackgroundField({ fieldKey, hint, title, value }: HeroBackgr
   }
 
   return (
-    <div className="grid gap-4 rounded-xl border border-karimoff-line bg-white p-4 lg:grid-cols-[240px_1fr]">
-      <div className="overflow-hidden rounded-xl border border-karimoff-line bg-karimoff-soft">
+    <div className="grid gap-4 rounded-lg border border-karimoff-line bg-white p-4 lg:grid-cols-[240px_1fr]">
+      <div className="overflow-hidden rounded-lg border border-karimoff-line bg-karimoff-soft">
         <div className="aspect-[2/1] w-full">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -80,11 +80,11 @@ export function HeroBackgroundField({ fieldKey, hint, title, value }: HeroBackgr
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="rounded-xl border border-dashed border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
+            className="rounded-lg border border-dashed border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
           />
         </label>
         {warning ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800">
             {warning}
           </div>
         ) : null}
@@ -94,7 +94,7 @@ export function HeroBackgroundField({ fieldKey, hint, title, value }: HeroBackgr
             name={fieldKey}
             defaultValue={value ?? ""}
             placeholder="https://... или /assets/hero/..."
-            className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
           />
         </label>
         <label className="flex items-center gap-3 text-sm font-semibold text-karimoff-muted">

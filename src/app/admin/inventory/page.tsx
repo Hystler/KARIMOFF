@@ -66,14 +66,14 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
   const stockValue = cards.reduce((sum, card) => sum + card.stock_value, 0);
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-7xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Склад</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Склад</h1>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/admin/inventory/movements" className="rounded-full border border-karimoff-line bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">
@@ -120,7 +120,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
                   <>
                     <NumberField name="quantity" label="Количество" />
                     <NumberField name="package_price" label="Сумма закупки, ₽" required={false} step="0.01" />
-                    <label className="flex items-center gap-3 rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm font-semibold">
+                    <label className="flex items-center gap-3 rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm font-semibold">
                       <input name="update_cost_per_unit" type="checkbox" className="h-5 w-5 accent-karimoff-orange" />
                       Обновить себестоимость по закупке
                     </label>
@@ -139,7 +139,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
                     <NumberField name="quantity" label="Количество" />
                     <label className="grid gap-2 text-sm font-semibold">
                       Причина
-                      <select name="reason" className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange">
+                      <select name="reason" className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange">
                         {writeOffReasons.map((reason) => (
                           <option key={reason} value={reason}>
                             {reason}
@@ -161,7 +161,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
               />
             </section>
 
-            <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+            <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
               <div className="border-b border-karimoff-line p-5">
                 <p className="text-sm font-semibold text-karimoff-orange">Остатки</p>
                 <h2 className="mt-2 text-3xl font-black">Складские карточки ингредиентов</h2>
@@ -170,7 +170,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
                 <div className="p-8 text-karimoff-muted">Ингредиентов пока нет.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+                  <table className="admin-table min-w-[1180px]">
                     <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                       <tr>
                         <th className="px-4 py-4 font-bold">Ингредиент</th>
@@ -242,7 +242,7 @@ export default async function AdminInventoryPage({ searchParams }: AdminInventor
 
 function StatCard({ label, value, tone = "normal" }: { label: string; value: string; tone?: "normal" | "warning" }) {
   return (
-    <div className="rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-card">
+    <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
       <p className="text-sm font-semibold text-karimoff-muted">{label}</p>
       <p className={`mt-2 text-3xl font-black ${tone === "warning" ? "text-amber-700" : "text-karimoff-orange"}`}>{value}</p>
     </div>
@@ -269,7 +269,7 @@ function NumberField({
         type="number"
         min="0"
         step={step}
-        className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
+        className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
       />
     </label>
   );
@@ -295,14 +295,14 @@ function InventoryOperationForm({
   const availableCards = cards.filter((card) => card.item);
 
   return (
-    <form id={id} action={action} className="grid gap-4 rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-card">
+    <form id={id} action={action} className="grid gap-4 rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
       <div>
         <h2 className="text-2xl font-black">{title}</h2>
         <p className="mt-2 text-sm leading-6 text-karimoff-muted">{description}</p>
       </div>
       <label className="grid gap-2 text-sm font-semibold">
         Ингредиент
-        <select name="ingredient_id" required className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange">
+        <select name="ingredient_id" required className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange">
           <option value="">Выберите ингредиент</option>
           {availableCards.map((card) => (
             <option key={card.ingredient.id} value={card.ingredient.id}>
@@ -314,7 +314,7 @@ function InventoryOperationForm({
       {fields}
       <label className="grid gap-2 text-sm font-semibold">
         Комментарий
-        <textarea name="comment" rows={3} className="resize-none rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange" />
+        <textarea name="comment" rows={3} className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange" />
       </label>
       <button type="submit" className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405]">
         {submitLabel}

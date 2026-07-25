@@ -24,8 +24,8 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             name="name"
             required
             defaultValue={product?.name ?? ""}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-            placeholder="Обама"
+            className="min-h-12 rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            placeholder="Название позиции"
           />
         </label>
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
@@ -34,8 +34,8 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             name="slug"
             required
             defaultValue={product?.slug ?? ""}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-            placeholder="obama"
+            className="min-h-12 rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            placeholder="nazvanie-pozitsii"
           />
         </label>
       </div>
@@ -47,7 +47,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             name="category"
             required
             defaultValue={product?.category ?? "Бургеры"}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
           >
             {categoryOptions.map((category) => (
               <option key={category} value={category}>
@@ -65,7 +65,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             min="0"
             step="1"
             defaultValue={product?.price ?? 0}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
           />
         </label>
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
@@ -77,7 +77,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             min="0"
             step="1"
             defaultValue={product?.sort_order ?? 100}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
           />
         </label>
       </div>
@@ -87,7 +87,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
         <input
           name="image_url"
           defaultValue={product?.image_url ?? ""}
-          className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+          className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
           placeholder="/assets/products/placeholder-burger.svg или https://..."
         />
         {!product ? (
@@ -107,7 +107,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           <input
             name="weight"
             defaultValue={product?.weight ?? ""}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
             placeholder="Например, 320 г"
           />
         </label>
@@ -116,7 +116,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           <input
             name="allergens"
             defaultValue={product?.allergens?.join(", ") ?? ""}
-            className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+            className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
             placeholder="Заполняйте только подтверждённые сведения"
           />
           <span className="text-xs font-medium leading-5 text-amber-700">
@@ -125,7 +125,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
         </label>
       </div>
 
-      <fieldset className="grid gap-4 rounded-xl border border-karimoff-line p-4">
+      <fieldset className="grid gap-4 rounded-lg border border-karimoff-line p-4">
         <legend className="px-2 text-sm font-bold text-karimoff-black">КБЖУ на порцию</legend>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
@@ -142,7 +142,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
                 min="0"
                 step="0.1"
                 defaultValue={value ?? ""}
-                className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
+                className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
               />
             </label>
           ))}
@@ -155,7 +155,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
           name="description"
           rows={5}
           defaultValue={product?.description ?? ""}
-          className="resize-none rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-karimoff-orange"
+          className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-karimoff-orange"
           placeholder="Короткое описание позиции"
         />
       </label>
@@ -173,7 +173,7 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="submit"
-          className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
+          className="min-h-12 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 sm:w-auto"
         >
           {submitLabel}
         </button>

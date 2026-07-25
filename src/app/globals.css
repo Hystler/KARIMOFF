@@ -20,13 +20,19 @@ html[data-theme="dark"] {
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 96px;
 }
 
 body {
   margin: 0;
+  min-width: 320px;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html[data-theme="dark"] body {
@@ -111,11 +117,67 @@ html[data-theme="dark"] .business-card::after {
     linear-gradient(180deg, transparent, rgba(18, 18, 20, 0.42));
 }
 
+.admin-root .overflow-x-auto {
+  scrollbar-color: rgba(251, 103, 10, 0.55) rgba(18, 18, 20, 0.06);
+  scrollbar-width: thin;
+}
+
+.admin-root .overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+}
+
+.admin-root .overflow-x-auto::-webkit-scrollbar-track {
+  background: rgba(18, 18, 20, 0.05);
+}
+
+.admin-root .overflow-x-auto::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(251, 103, 10, 0.55);
+}
+
+.admin-root form,
+.admin-root fieldset,
+.admin-root label,
+.admin-root article,
+.admin-root [class~="grid"] {
+  min-width: 0;
+}
+
+.admin-root input,
+.admin-root select,
+.admin-root textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-table a,
+.admin-table button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
 button,
 input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid #fb670a;
+  outline-offset: 3px;
 }
 
 ::selection {
@@ -130,6 +192,46 @@ select {
 
   .matte-card {
     @apply border border-karimoff-line bg-white shadow-card;
+  }
+
+  .admin-page {
+    @apply min-h-screen bg-karimoff-cream px-4 py-6 text-karimoff-black sm:px-6 sm:py-8 lg:px-8;
+  }
+
+  .admin-shell {
+    @apply mx-auto w-full max-w-[1480px];
+  }
+
+  .admin-page-title {
+    @apply mt-2 text-3xl font-black leading-tight sm:text-4xl;
+  }
+
+  .admin-panel {
+    @apply rounded-lg border border-karimoff-line bg-white shadow-card;
+  }
+
+  .admin-table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+
+  .admin-table thead {
+    @apply border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted;
+  }
+
+  .admin-table th {
+    @apply px-4 py-3.5 font-bold;
+  }
+
+  .admin-table td {
+    @apply px-4 py-3.5 align-middle;
+  }
+
+  .admin-table tbody tr {
+    @apply border-b border-karimoff-line transition-colors last:border-b-0 hover:bg-karimoff-cream/55;
+  }
+
+  .admin-number {
+    font-variant-numeric: tabular-nums;
   }
 
   .text-balance {
@@ -175,5 +277,20 @@ select {
   h5,
   h6 {
     @apply font-heading;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -21,14 +21,14 @@ export default async function NewVacancyPage({ searchParams }: NewVacancyPagePro
   const params = searchParams ? await searchParams : {};
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-5xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin/vacancies" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Вакансии
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Новая вакансия</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Новая вакансия</h1>
           </div>
           <form action={logoutAction}>
             <button type="submit" className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">

@@ -71,6 +71,29 @@ export function CartDrawer() {
   }, [openCart, startCheckout]);
 
   useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMode("cart");
+        closeCart();
+      }
+    }
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [closeCart, isOpen]);
+
+  useEffect(() => {
     if (orderState.status === "success") {
       const timeoutId = window.setTimeout(() => {
         clearCart();
@@ -95,11 +118,16 @@ export function CartDrawer() {
         className="absolute inset-0 bg-karimoff-black/24 backdrop-blur-[2px]"
         onClick={closeCart}
       />
-      <aside className="absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col bg-white shadow-2xl sm:rounded-l-[2rem]">
-        <div className="flex items-center justify-between border-b border-karimoff-line p-5">
+      <aside
+        className="absolute bottom-0 right-0 top-0 flex w-full max-w-md flex-col bg-white shadow-2xl sm:rounded-l-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-drawer-title"
+      >
+        <div className="flex items-center justify-between border-b border-karimoff-line p-4 sm:p-5">
           <div>
             <p className="text-sm font-semibold text-karimoff-orange">Корзина</p>
-            <h2 className="mt-1 text-3xl font-black text-karimoff-black">
+            <h2 id="cart-drawer-title" className="mt-1 text-2xl font-black leading-tight text-karimoff-black">
               {mode === "checkout" ? "Оформление" : mode === "success" ? "Готово" : "Ваш заказ"}
             </h2>
           </div>
@@ -116,7 +144,7 @@ export function CartDrawer() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
           {mode === "success" ? (
             <div className="rounded-lg border border-karimoff-orange/25 bg-karimoff-orange/10 p-6">
               <p className="text-lg font-black text-karimoff-black">Заказ отправлен.</p>
@@ -231,7 +259,7 @@ export function CartDrawer() {
                     type="checkbox"
                     name="personal_data_consent"
                     required
-                    className="mt-1 accent-karimoff-orange"
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                   />
                   <span className="leading-6 text-karimoff-muted">
                     Я даю согласие на обработку персональных данных.{" "}
@@ -245,7 +273,7 @@ export function CartDrawer() {
                     type="checkbox"
                     name="offer_acceptance"
                     required
-                    className="mt-1 accent-karimoff-orange"
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                   />
                   <span className="leading-6 text-karimoff-muted">
                     Я принимаю условия{" "}
@@ -258,7 +286,7 @@ export function CartDrawer() {
                   <input
                     type="checkbox"
                     name="marketing_consent"
-                    className="mt-1 accent-karimoff-orange"
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                   />
                   <span className="leading-6 text-karimoff-muted">
                     Хочу получать акции и предложения KARIMOFF.{" "}
@@ -313,7 +341,7 @@ export function CartDrawer() {
                     <button
                       type="button"
                       onClick={() => removeItem(line.product.id)}
-                      className="text-sm font-semibold text-karimoff-muted transition hover:text-red-600"
+                      className="-mr-2 min-h-11 rounded-md px-2 text-sm font-semibold text-karimoff-muted transition hover:bg-red-50 hover:text-red-600"
                     >
                       Удалить
                     </button>
@@ -323,7 +351,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => decrement(line.product.id)}
-                        className="h-9 w-10 text-lg font-bold transition hover:text-karimoff-orange"
+                        className="h-11 w-11 text-lg font-bold transition hover:text-karimoff-orange"
                         aria-label="Уменьшить количество"
                       >
                         −
@@ -332,7 +360,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => increment(line.product.id)}
-                        className="h-9 w-10 text-lg font-bold transition hover:text-karimoff-orange"
+                        className="h-11 w-11 text-lg font-bold transition hover:text-karimoff-orange"
                         aria-label="Увеличить количество"
                       >
                         +
@@ -349,7 +377,7 @@ export function CartDrawer() {
         </div>
 
         {mode !== "success" ? (
-        <div className="border-t border-karimoff-line p-5">
+        <div className="border-t border-karimoff-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
           <div className="mb-4 flex items-center justify-between text-lg font-black">
             <span>Итого</span>
             <span className="text-karimoff-orange">{formatPrice(totalPrice)} ₽</span>

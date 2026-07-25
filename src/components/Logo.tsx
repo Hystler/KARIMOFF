@@ -37,7 +37,7 @@ function PandaMark() {
 
 export function Logo({ compact = false }: LogoProps) {
   return (
-    <Link href="/" className="group inline-flex items-center gap-3" aria-label="KARIMOFF Бургерная">
+    <Link href="/" className="group inline-flex min-h-11 items-center gap-3" aria-label="KARIMOFF Бургерная">
       <span className="flex items-center font-heading text-[1.05rem] font-black text-karimoff-black sm:text-xl">
         KARIM
         <PandaMark />

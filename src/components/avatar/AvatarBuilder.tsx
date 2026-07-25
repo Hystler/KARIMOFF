@@ -27,8 +27,8 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-      <section className="rounded-[1.5rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)]">
-        <p className="text-sm font-semibold text-karimoff-orange">Preview</p>
+      <section className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-6">
+        <p className="text-sm font-semibold text-karimoff-orange">Предпросмотр</p>
         <div className="mt-6 flex justify-center">
           <AvatarPreview avatar={avatar} size="lg" />
         </div>
@@ -37,7 +37,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
         </p>
       </section>
 
-      <form action={saveAvatarAction} className="rounded-[1.5rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)]">
+      <form action={saveAvatarAction} className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-6">
         <div className="grid gap-5">
           {sections.map((section) => {
             const currentValue = avatar[section.key];
@@ -52,7 +52,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                   name={section.key}
                   value={currentValue}
                   onChange={(event) => setAvatar((current) => ({ ...current, [section.key]: event.target.value }))}
-                  className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+                  className="min-h-12 rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
                 >
                   {sectionOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -73,7 +73,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
 
         <button
           type="submit"
-          className="mt-6 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+          className="mt-6 min-h-12 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 sm:w-auto"
         >
           Сохранить аватар
         </button>

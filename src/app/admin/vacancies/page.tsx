@@ -44,14 +44,14 @@ export default async function AdminVacanciesPage({ searchParams }: AdminVacancie
   const { vacancies, notConfigured, error } = await getAdminVacancies();
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-7xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Вакансии</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Вакансии</h1>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/admin/vacancies/new" className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]">
@@ -71,7 +71,7 @@ export default async function AdminVacanciesPage({ searchParams }: AdminVacancie
           </div>
         ) : null}
 
-        <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+        <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
           {notConfigured ? (
             <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
           ) : error ? (
@@ -80,7 +80,7 @@ export default async function AdminVacanciesPage({ searchParams }: AdminVacancie
             <div className="p-8 text-karimoff-muted">Вакансий пока нет. Создайте первую вакансию.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
+              <table className="admin-table min-w-[1120px]">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Вакансия</th>

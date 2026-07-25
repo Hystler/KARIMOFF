@@ -45,8 +45,8 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const shouldShowConfirmCode = requestState.status === "code_sent" || confirmState.status !== "idle";
 
   return (
-    <section className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
-      <h1 className="text-4xl font-black leading-none text-karimoff-black">
+    <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
+      <h1 className="text-3xl font-black leading-tight text-karimoff-black">
         {isRegister ? "Регистрация" : "Вход"}
       </h1>
       <p className="mt-4 text-sm leading-6 text-karimoff-muted">
@@ -63,7 +63,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
               name="name"
               required
               defaultValue={name}
-              className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               placeholder="Ваше имя"
             />
           </label>
@@ -78,7 +78,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             onBlur={(event) => {
               event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
             }}
-            className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+            className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             placeholder="+7"
           />
         </label>
@@ -89,7 +89,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             required
             type="password"
             minLength={10}
-            className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+            className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             placeholder="Минимум 10 символов"
           />
         </label>
@@ -101,13 +101,13 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
               required
               type="password"
               minLength={10}
-              className="h-[52px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               placeholder="Ещё раз, минимум 10 символов"
             />
           </label>
         ) : null}
         {isRegister ? (
-          <div className="grid gap-3 rounded-xl border border-karimoff-line bg-karimoff-soft/70 p-4 text-sm">
+          <div className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4 text-sm">
             <label className="flex items-start gap-3">
               <input
                 type="checkbox"
@@ -115,7 +115,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                 required
                 checked={personalDataConsent}
                 onChange={(event) => setPersonalDataConsent(event.target.checked)}
-                className="mt-1 accent-karimoff-orange"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
               />
               <span className="leading-6 text-karimoff-muted">
                 Я даю согласие на обработку персональных данных.{" "}
@@ -130,7 +130,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                 name="loyalty_consent"
                 checked={loyaltyConsent}
                 onChange={(event) => setLoyaltyConsent(event.target.checked)}
-                className="mt-1 accent-karimoff-orange"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
               />
               <span className="leading-6 text-karimoff-muted">
                 Хочу участвовать в KARIMOFF Bonus и принимаю{" "}
@@ -145,7 +145,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                 name="marketing_consent"
                 checked={marketingConsent}
                 onChange={(event) => setMarketingConsent(event.target.checked)}
-                className="mt-1 accent-karimoff-orange"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
               />
               <span className="leading-6 text-karimoff-muted">
                 Хочу получать акции и предложения KARIMOFF.{" "}
@@ -173,7 +173,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
         </p>
       ) : null}
 
-      <div className="mt-6 rounded-xl border border-karimoff-line bg-karimoff-soft/70 p-4">
+      <div className="mt-6 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4">
         <button
           type="button"
           onClick={() => setCodeMode((value) => !value)}
@@ -193,7 +193,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                       name="name"
                       required
                       defaultValue={name}
-                      className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                      className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
                       placeholder="Ваше имя"
                     />
                   </label>
@@ -205,7 +205,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                         required
                         checked={personalDataConsent}
                         onChange={(event) => setPersonalDataConsent(event.target.checked)}
-                        className="mt-1 accent-karimoff-orange"
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                       />
                       <span className="leading-6 text-karimoff-muted">
                         Согласие на{" "}
@@ -220,7 +220,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                         name="loyalty_consent"
                         checked={loyaltyConsent}
                         onChange={(event) => setLoyaltyConsent(event.target.checked)}
-                        className="mt-1 accent-karimoff-orange"
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                       />
                       <span className="leading-6 text-karimoff-muted">
                         Участвовать в{" "}
@@ -235,7 +235,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                         name="marketing_consent"
                         checked={marketingConsent}
                         onChange={(event) => setMarketingConsent(event.target.checked)}
-                        className="mt-1 accent-karimoff-orange"
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
                       />
                       <span className="leading-6 text-karimoff-muted">
                         Получать акции и предложения
@@ -254,7 +254,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                   onBlur={(event) => {
                     event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
                   }}
-                  className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                  className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
                   placeholder="+7"
                 />
               </label>
@@ -286,7 +286,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                     name="code"
                     required
                     inputMode="numeric"
-                    className="h-[48px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                    className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
                     placeholder="6 цифр"
                   />
                 </label>

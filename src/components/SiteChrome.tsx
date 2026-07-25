@@ -24,7 +24,7 @@ export function SiteChrome({
   if (isAdmin) {
     return (
       <ThemeProvider defaultTheme="light" forceTheme="light">
-        {children}
+        <div className="admin-root min-h-screen">{children}</div>
       </ThemeProvider>
     );
   }

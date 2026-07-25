@@ -1,7 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
-
 type HeroProps = {
   imageUrl?: string | null;
   title?: string | null;
@@ -30,19 +26,14 @@ export function Hero({ imageUrl, title, subtitle }: HeroProps) {
       <div className="absolute inset-x-0 bottom-0 h-px bg-karimoff-orange/45" />
 
       <div className="container-page relative flex min-h-[340px] items-center py-7 sm:min-h-[370px] sm:py-9 lg:min-h-[390px]">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="min-w-0 max-w-[560px]"
-        >
-          <h1 className="text-balance font-heading text-[clamp(1.85rem,3.8vw,3.25rem)] font-black leading-[0.98] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.28)]">
+        <div className="min-w-0 max-w-[560px]">
+          <h1 className="text-balance font-heading text-[clamp(1.85rem,3.8vw,3.25rem)] font-black leading-[1.04] text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.28)] sm:leading-[1.02]">
             {heroTitle}
           </h1>
-          <p className="mt-4 max-w-md text-[15px] font-bold leading-7 text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.28)] sm:text-base">
+          <p className="mt-4 max-w-md text-base font-bold leading-7 text-white drop-shadow-[0_2px_14px_rgba(0,0,0,0.28)]">
             {heroSubtitle}
           </p>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

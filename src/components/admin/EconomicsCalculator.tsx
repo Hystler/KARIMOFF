@@ -26,7 +26,7 @@ const groups: Array<{
   },
   {
     title: "Себестоимость",
-    items: [{ key: "food_cost_percent", label: "Food cost", suffix: "%" }]
+    items: [{ key: "food_cost_percent", label: "Себестоимость продуктов", suffix: "%" }]
   },
   {
     title: "OPEX",
@@ -104,7 +104,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
               {group.items.map((item) => (
                 <label key={item.key} className="grid gap-2 text-sm font-semibold text-karimoff-black">
                   {item.label}
-                  <div className="flex overflow-hidden rounded-xl border border-karimoff-line bg-white focus-within:border-karimoff-orange">
+                  <div className="flex overflow-hidden rounded-lg border border-karimoff-line bg-white focus-within:border-karimoff-orange">
                     <input
                       type="number"
                       step={item.suffix === "%" ? "0.1" : "1"}
@@ -148,7 +148,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
 
       <aside className="h-fit rounded-lg border border-karimoff-line bg-white p-5 shadow-card lg:sticky lg:top-8">
         <p className="text-sm font-semibold text-karimoff-orange">Результаты</p>
-        <h2 className="mt-2 text-3xl font-black">Финмодель MVP</h2>
+        <h2 className="mt-2 text-2xl font-black leading-tight">Расчёт точки</h2>
         <div className="mt-6 grid gap-3">
           <ResultLine label="Месячная выручка" value={formatRub(results.monthlyRevenue)} strong />
           <ResultLine label="Себестоимость" value={formatRub(results.cogs)} />
@@ -161,7 +161,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
           <ResultLine label="CAPEX" value={formatRub(results.totalCapex)} />
         </div>
         <div className="mt-5 rounded-lg bg-karimoff-orange/10 p-4">
-          <p className="text-sm font-semibold text-karimoff-muted">Payback</p>
+          <p className="text-sm font-semibold text-karimoff-muted">Расчётная окупаемость</p>
           <p className="mt-1 text-2xl font-black text-karimoff-orange">
             {results.paybackMonths ? formatMonths(results.paybackMonths) : "Не окупается при текущих вводных"}
           </p>

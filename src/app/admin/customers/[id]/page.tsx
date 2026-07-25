@@ -55,14 +55,14 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
   }
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-6xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin/customers" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Пользователи
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Карточка клиента</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Карточка клиента</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -83,12 +83,12 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
         ) : customer ? (
           <>
             <section className="mt-8 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
-              <article className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+              <article className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                   <AvatarPreview avatar={customer.avatar} size="md" />
                   <div>
                     <p className="text-sm font-semibold text-karimoff-orange">Клиент</p>
-                    <h2 className="mt-2 text-4xl font-black leading-none">{customer.name}</h2>
+                    <h2 className="mt-2 text-3xl font-black leading-tight">{customer.name}</h2>
                     <p className="mt-4 text-sm font-semibold text-karimoff-muted">{customer.phone}</p>
                     <p className="mt-2 text-xs text-karimoff-muted">Регистрация: {formatDate(customer.created_at)}</p>
                     <p className="mt-1 text-xs text-karimoff-muted">Последний вход: {formatDate(customer.last_login_at)}</p>
@@ -96,15 +96,15 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+              <article className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
                 <p className="text-sm font-semibold text-karimoff-muted">Баланс баллов</p>
                 <p className="mt-3 text-5xl font-black text-karimoff-orange">{formatNumber(customer.points_balance)}</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-karimoff-soft p-4">
+                  <div className="rounded-lg bg-karimoff-soft p-4">
                     <p className="font-semibold text-karimoff-muted">Заказов</p>
                     <p className="mt-2 text-2xl font-black">{customer.order_count}</p>
                   </div>
-                  <div className="rounded-xl bg-karimoff-soft p-4">
+                  <div className="rounded-lg bg-karimoff-soft p-4">
                     <p className="font-semibold text-karimoff-muted">Сумма</p>
                     <p className="mt-2 text-2xl font-black">{formatPrice(customer.order_total)} ₽</p>
                   </div>
@@ -112,7 +112,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
               </article>
             </section>
 
-            <section className="mt-6 rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+            <section className="mt-6 rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
               <h2 className="text-2xl font-black">Настройки аватара</h2>
               <div className="mt-4 grid gap-2 text-sm text-karimoff-muted sm:grid-cols-3">
                 <p>Глаза: {customer.avatar_settings.eyes}</p>
@@ -124,14 +124,14 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
             </section>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-              <section className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+              <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
                 <h2 className="text-2xl font-black">История заказов</h2>
                 {customer.orders.length === 0 ? (
                   <p className="mt-5 text-sm text-karimoff-muted">Заказов пока нет.</p>
                 ) : (
                   <div className="mt-5 grid gap-4">
                     {customer.orders.map((order) => (
-                      <article key={order.id} className="rounded-xl border border-karimoff-line p-4">
+                      <article key={order.id} className="rounded-lg border border-karimoff-line p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <p className="font-black">{formatDate(order.created_at)}</p>
@@ -152,14 +152,14 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                 )}
               </section>
 
-              <section className="rounded-[1.25rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+              <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
                 <h2 className="text-2xl font-black">Лояльность</h2>
                 {customer.transactions.length === 0 ? (
                   <p className="mt-5 text-sm text-karimoff-muted">Операций пока нет.</p>
                 ) : (
                   <div className="mt-5 grid gap-3">
                     {customer.transactions.map((transaction) => (
-                      <article key={transaction.id} className="rounded-xl border border-karimoff-line p-4">
+                      <article key={transaction.id} className="rounded-lg border border-karimoff-line p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <p className="text-sm font-black">{transaction.type}</p>

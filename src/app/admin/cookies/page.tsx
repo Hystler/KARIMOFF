@@ -52,14 +52,14 @@ export default async function AdminCookiesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-6xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Cookie-согласия</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Cookie-согласия</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -93,7 +93,7 @@ export default async function AdminCookiesPage() {
             <div className="p-8 text-karimoff-muted">Согласий пока нет.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+              <table className="admin-table min-w-[900px]">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Дата</th>

@@ -28,14 +28,14 @@ export function ProductImagesManager({ images, productId, productName }: Product
       <ProductImageUploadForm productId={productId} />
 
       {images.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-karimoff-line bg-karimoff-soft p-5 text-sm leading-6 text-karimoff-muted">
+        <div className="mt-5 rounded-lg border border-karimoff-line bg-karimoff-soft p-5 text-sm leading-6 text-karimoff-muted">
           Фото пока нет. На сайте будет использоваться старое поле “Фото URL” или placeholder.
         </div>
       ) : (
         <div className="mt-5 grid gap-4">
           {images.map((image) => (
-            <article key={image.id} className="grid gap-4 rounded-xl border border-karimoff-line bg-karimoff-cream/70 p-4 md:grid-cols-[180px_1fr]">
-              <div className="overflow-hidden rounded-xl border border-karimoff-line bg-white p-3">
+            <article key={image.id} className="grid gap-4 rounded-lg border border-karimoff-line bg-karimoff-cream/70 p-4 md:grid-cols-[180px_1fr]">
+              <div className="overflow-hidden rounded-lg border border-karimoff-line bg-white p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image.image_url}
@@ -70,7 +70,7 @@ export function ProductImagesManager({ images, productId, productName }: Product
                     <input
                       name="alt"
                       defaultValue={image.alt ?? ""}
-                      className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
+                      className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
                       placeholder={productName}
                     />
                   </label>
@@ -81,7 +81,7 @@ export function ProductImagesManager({ images, productId, productName }: Product
                       type="number"
                       step="1"
                       defaultValue={image.sort_order}
-                      className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
+                      className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none focus:border-karimoff-orange"
                     />
                   </label>
                   <button

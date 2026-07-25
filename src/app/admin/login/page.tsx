@@ -19,14 +19,14 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
   const hasTotp = isAdminTotpConfigured();
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
-        <Link href="/" className="mb-8 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
+        <Link href="/" className="mb-5 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
           На сайт KARIMOFF
         </Link>
         <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card sm:p-8">
-          <h1 className="text-4xl font-black leading-none">Вход</h1>
-          <form action={loginAction} className="mt-8 grid gap-4">
+          <h1 className="text-3xl font-black leading-tight">Вход</h1>
+          <form action={loginAction} className="mt-6 grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
               <input
@@ -67,7 +67,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
             {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
             <button
               type="submit"
-              className="mt-2 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
+              className="mt-1 min-h-12 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0"
             >
               Войти
             </button>

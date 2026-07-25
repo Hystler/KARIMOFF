@@ -40,15 +40,15 @@ export default async function ProfilePage() {
   }
 
   return (
-    <main className="bg-karimoff-cream pt-28 text-karimoff-black">
+    <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
       <section className="container-page pb-16">
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
-          <div className="rounded-[1.5rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-7">
+          <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <AvatarPreview avatar={avatar} size="md" />
               <div>
                 <p className="text-sm font-semibold text-karimoff-orange">Профиль</p>
-                <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">{customer.name}</h1>
+                <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">{customer.name}</h1>
                 <p className="mt-4 text-base font-semibold text-karimoff-muted">{customer.phone}</p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link
@@ -84,18 +84,18 @@ export default async function ProfilePage() {
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-karimoff-muted">Баланс баллов</p>
-            <p className="mt-3 text-5xl font-black text-karimoff-orange">{formatNumber(account?.points_balance ?? 0)}</p>
+            <p className="admin-number mt-3 text-4xl font-black text-karimoff-orange">{formatNumber(account?.points_balance ?? 0)}</p>
             <p className="mt-3 text-sm leading-6 text-karimoff-muted">
               Баллы пока можно копить. Списание добавим отдельной итерацией.
             </p>
           </article>
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-karimoff-muted">Всего начислено</p>
-            <p className="mt-3 text-4xl font-black text-karimoff-black">{formatNumber(account?.total_earned ?? 0)}</p>
+            <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{formatNumber(account?.total_earned ?? 0)}</p>
           </article>
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-karimoff-muted">Заказов</p>
-            <p className="mt-3 text-4xl font-black text-karimoff-black">{orders.length}</p>
+            <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{orders.length}</p>
           </article>
         </div>
 

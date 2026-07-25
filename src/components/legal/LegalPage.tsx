@@ -6,7 +6,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
       <header className="container-page">
         <div className="max-w-[820px] border-b border-karimoff-line pb-9">
           <p className="text-sm font-bold text-karimoff-orange">KARIMOFF · юридическая информация</p>
-          <h1 className="mt-4 text-balance text-4xl font-black leading-[1.04] sm:text-6xl">
+          <h1 className="mt-4 text-balance text-3xl font-black leading-[1.1] sm:text-5xl sm:leading-[1.05]">
             {document.title}
           </h1>
           <p className="mt-5 max-w-[720px] text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
@@ -22,7 +22,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
             key={section.title}
             className="rounded-lg border border-karimoff-line bg-white p-5 shadow-[0_16px_48px_rgba(18,18,20,0.05)] sm:p-8"
           >
-            <h2 className="text-2xl font-black leading-tight sm:text-3xl">{section.title}</h2>
+            <h2 className="text-xl font-black leading-[1.2] sm:text-2xl">{section.title}</h2>
             {section.paragraphs?.map((paragraph) => (
               <p key={paragraph} className="mt-4 max-w-[780px] text-[15px] leading-7 text-karimoff-muted sm:text-base">
                 {paragraph}

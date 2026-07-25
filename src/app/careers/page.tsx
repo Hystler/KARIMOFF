@@ -34,7 +34,7 @@ export default async function CareersPage() {
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Команда</p>
-            <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
+            <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Хорошая бургерная начинается с людей
             </h2>
           </div>
@@ -64,16 +64,16 @@ export default async function CareersPage() {
       </section>
 
       <section className="container-page pb-12 sm:pb-16">
-        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
+        <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold text-karimoff-orange">Что мы предлагаем</p>
-            <h2 className="mt-3 text-balance text-3xl font-black leading-tight sm:text-4xl">
+            <h2 className="mt-3 text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Понятные условия и поддержка команды
             </h2>
           </div>
           <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
             {offers.map((offer) => (
-              <div key={offer} className="flex gap-3 rounded-xl border border-karimoff-line bg-karimoff-cream p-4 transition hover:border-karimoff-orange/40">
+              <div key={offer} className="flex gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream p-4 transition hover:border-karimoff-orange/40">
                 <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-karimoff-orange" />
                 <p className="text-sm leading-6 text-karimoff-muted sm:text-[15px]">{offer}</p>
               </div>
@@ -83,11 +83,11 @@ export default async function CareersPage() {
       </section>
 
       <section className="container-page pb-12 sm:pb-16">
-        <div className="rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9">
+        <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.72fr_1fr]">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-karimoff-orange">Открытые вакансии</p>
-              <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
+              <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
                 Роли, в которых сейчас нужна команда
               </h2>
             </div>
@@ -98,7 +98,7 @@ export default async function CareersPage() {
           </div>
 
           {vacancies.length === 0 ? (
-            <div className="mt-8 rounded-xl border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
+            <div className="mt-8 rounded-lg border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
               Открытых вакансий пока нет. Можно оставить общую анкету ниже, и
               мы вернёмся, когда появится подходящая роль.
             </div>
@@ -110,7 +110,7 @@ export default async function CareersPage() {
                 return (
                   <article
                     key={vacancy.id}
-                    className="flex min-h-[320px] flex-col rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream p-5 transition hover:-translate-y-0.5 hover:border-karimoff-orange/45"
+                    className="flex min-h-[300px] flex-col rounded-lg border border-karimoff-line bg-karimoff-cream p-5 transition hover:-translate-y-0.5 hover:border-karimoff-orange/45"
                   >
                     <div className="flex flex-wrap gap-2 text-xs font-bold text-karimoff-muted">
                       {vacancy.department ? (
@@ -139,10 +139,10 @@ export default async function CareersPage() {
       </section>
 
       <section className="container-page pb-12 sm:pb-16">
-        <div className="grid grid-cols-1 gap-7 rounded-[1.75rem] border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-9 lg:grid-cols-[0.72fr_1fr]">
+        <div className="grid grid-cols-1 gap-7 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-karimoff-orange">Рост внутри компании</p>
-            <h2 className="mt-3 max-w-xl text-balance text-3xl font-black leading-tight sm:text-4xl">
+            <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Развитие через ответственность и стандарты
             </h2>
           </div>
@@ -168,9 +168,9 @@ export default async function CareersPage() {
       </section>
 
       <section className="container-page pb-8">
-        <div className="rounded-[1.75rem] bg-karimoff-black p-6 text-white shadow-[0_24px_70px_rgba(18,18,20,0.16)] sm:p-9">
+        <div className="rounded-lg bg-karimoff-black p-5 text-white shadow-[0_20px_56px_rgba(18,18,20,0.16)] sm:p-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-            <p className="max-w-3xl text-balance text-2xl font-black leading-tight sm:text-4xl">
+            <p className="max-w-3xl text-balance text-xl font-black leading-[1.28] sm:text-3xl">
               Если вам близки порядок, дисциплина, уважение к гостям и желание
               развиваться в сильной команде — будем рады познакомиться.
             </p>

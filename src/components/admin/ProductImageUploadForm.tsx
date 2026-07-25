@@ -121,7 +121,7 @@ export function ProductImageUploadForm({ productId }: ProductImageUploadFormProp
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-5 grid gap-3 rounded-xl border border-dashed border-karimoff-line bg-karimoff-cream/70 p-4">
+    <form onSubmit={handleSubmit} className="mt-5 grid gap-3 rounded-lg border border-dashed border-karimoff-line bg-karimoff-cream/70 p-4">
       <label className="grid gap-2 text-sm font-semibold">
         Загрузить фото
         <input
@@ -131,18 +131,18 @@ export function ProductImageUploadForm({ productId }: ProductImageUploadFormProp
           accept="image/*"
           multiple
           onChange={handleFileChange}
-          className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
+          className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
         />
       </label>
       {warnings.length ? (
-        <div className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800">
+        <div className="grid gap-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800">
           {warnings.map((warning) => (
             <p key={warning}>{warning}</p>
           ))}
         </div>
       ) : null}
       {message ? (
-        <div className="rounded-xl border border-karimoff-line bg-white px-4 py-3 text-sm font-semibold text-karimoff-muted">
+        <div className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm font-semibold text-karimoff-muted">
           {message}
         </div>
       ) : null}

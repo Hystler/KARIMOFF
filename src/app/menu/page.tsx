@@ -35,7 +35,7 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
         imageUrl={settings.menu_hero_image_url}
         objectPosition="center"
       />
-      <section className="container-page py-12 sm:py-16">
+      <section className="container-page py-8 sm:py-12">
         <div className="scrollbar-hide -mx-5 mb-7 flex gap-2 overflow-x-auto overflow-y-hidden px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {menuCategoryFilters.map((filter) => {
             const isActive = activeCategory === filter.value;
@@ -57,12 +57,12 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
           })}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-          {visibleProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
+          {visibleProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
         {visibleProducts.length === 0 ? (
-          <div className="rounded-xl border border-karimoff-line bg-white p-8 text-center text-sm font-semibold text-karimoff-muted">
+          <div className="rounded-lg border border-karimoff-line bg-white p-8 text-center text-sm font-semibold text-karimoff-muted">
             В этом разделе пока нет активных позиций.
           </div>
         ) : null}

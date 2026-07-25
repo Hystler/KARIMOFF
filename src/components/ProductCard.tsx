@@ -1,13 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Image from "next/image";
 import { useCart } from "@/components/cart/CartProvider";
 import type { Product } from "@/lib/product-types";
 
 type ProductCardProps = {
   product: Product;
-  index?: number;
 };
 
 function formatPrice(value: number) {
@@ -66,33 +64,38 @@ function ProductImage({ product }: { product: Product }) {
   );
 }
 
-export function ProductCard({ product, index = 0 }: ProductCardProps) {
+export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.02, 0.16) }}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-karimoff-line bg-white shadow-card transition hover:-translate-y-1 hover:border-karimoff-orange/55 hover:shadow-[0_20px_55px_rgba(18,18,20,0.12)]"
+    <article
+      className="group flex h-full flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-karimoff-orange/55 hover:shadow-[0_18px_44px_rgba(18,18,20,0.12)]"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "430px" }}
     >
-      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[#F8F2EA] p-2 sm:p-4">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden border-b border-karimoff-line/70 bg-[#F8F2EA] p-2.5 sm:p-4">
         <ProductImage product={product} />
       </div>
-      <div className="flex flex-1 flex-col p-2.5 sm:p-3.5">
-        <h3 className="line-clamp-2 min-h-[38px] text-[15px] font-black leading-tight text-karimoff-black sm:min-h-[42px] sm:text-[18px]">{product.name}</h3>
-        <p className="mt-1.5 text-lg font-black leading-none text-karimoff-orange sm:text-xl">{formatPrice(product.price)} ₽</p>
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <h3 className="line-clamp-2 min-h-10 text-base font-black leading-5 text-karimoff-black sm:min-h-11 sm:text-lg sm:leading-[22px]">
+          {product.name}
+        </h3>
+        <p className="admin-number mt-2 text-lg font-black leading-none text-karimoff-orange sm:text-xl">
+          {formatPrice(product.price)} ₽
+        </p>
         {product.description ? (
-          <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[19px] text-karimoff-muted sm:mt-2.5 sm:min-h-[44px] sm:text-[13px] sm:leading-[22px]">{product.description}</p>
+          <p className="mt-2.5 line-clamp-2 min-h-10 text-[13px] leading-5 text-karimoff-muted sm:min-h-11 sm:text-sm sm:leading-[22px]">
+            {product.description}
+          </p>
         ) : (
-          <p className="mt-2 line-clamp-2 min-h-[38px] text-[12px] leading-[19px] text-karimoff-muted sm:mt-2.5 sm:min-h-[44px] sm:text-[13px] sm:leading-[22px]">Фирменная позиция KARIMOFF.</p>
+          <p className="mt-2.5 line-clamp-2 min-h-10 text-[13px] leading-5 text-karimoff-muted sm:min-h-11 sm:text-sm sm:leading-[22px]">
+            Фирменная позиция KARIMOFF.
+          </p>
         )}
-        {product.weight ? (
-          <p className="mt-2 text-[11px] font-bold text-karimoff-muted sm:text-xs">{product.weight}</p>
-        ) : null}
+        <p className="mt-2 min-h-[18px] text-xs font-bold leading-[18px] text-karimoff-muted">
+          {product.weight || "\u00a0"}
+        </p>
         {product.calories !== null && product.calories !== undefined ? (
-          <p className="mt-1 text-[10px] leading-4 text-karimoff-muted sm:text-[11px]">
+          <p className="mt-1 text-xs leading-[18px] text-karimoff-muted">
             {product.calories} ккал
             {product.protein !== null && product.protein !== undefined ? ` · Б ${product.protein}` : ""}
             {product.fat !== null && product.fat !== undefined ? ` · Ж ${product.fat}` : ""}
@@ -100,18 +103,18 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           </p>
         ) : null}
         {product.allergens?.length ? (
-          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-karimoff-muted">
+          <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-karimoff-muted sm:text-xs">
             Аллергены: {product.allergens.join(", ")}
           </p>
         ) : null}
         <button
           type="button"
           onClick={() => addItem(product)}
-          className="mt-auto w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2.5 text-xs font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 sm:px-4 sm:text-sm"
+          className="mt-auto min-h-11 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2.5 text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 sm:px-4 sm:text-sm"
         >
           В корзину
         </button>
       </div>
-    </motion.article>
+    </article>
   );
 }

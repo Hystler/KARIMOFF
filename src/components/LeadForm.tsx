@@ -55,27 +55,31 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
   }, []);
 
   return (
-    <section id="lead" className="container-page scroll-mt-28 py-14 sm:py-20">
-      <div className="grid grid-cols-1 gap-8 rounded-[1.5rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-8 lg:grid-cols-[0.78fr_1fr] lg:p-10">
+    <section id="lead" className="container-page scroll-mt-28 py-12 sm:py-16">
+      <div className="grid grid-cols-1 gap-7 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7 lg:grid-cols-[0.72fr_1fr] lg:gap-10 lg:p-9">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-karimoff-orange">Заявка</p>
-          <h2 className="mt-3 text-balance text-3xl font-black leading-tight text-karimoff-black sm:text-5xl">
+          <h2 className="mt-3 text-balance text-3xl font-black leading-[1.12] text-karimoff-black sm:text-4xl">
             Связаться с KARIMOFF
           </h2>
-          <p className="mt-5 max-w-md text-base leading-7 text-karimoff-muted">
+          <p className="mt-4 max-w-md text-base leading-7 text-karimoff-muted">
             Оставьте контакт, и мы вернёмся с ответом по сотрудничеству,
             работе или франшизе.
           </p>
         </div>
 
-        <form ref={formRef} action={formAction} className="grid min-w-0 grid-cols-1 gap-4 rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/70 p-4 sm:p-5">
+        <form
+          ref={formRef}
+          action={formAction}
+          className="grid min-w-0 grid-cols-1 gap-4 border-t border-karimoff-line pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0"
+        >
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
             <input
               name="name"
               required
               placeholder="Ваше имя"
-              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <label className="grid gap-2">
@@ -89,7 +93,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               onBlur={(event) => {
                 event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
               }}
-              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <label className="grid gap-2">
@@ -97,7 +101,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             <select
               ref={interestRef}
               name="interest"
-              className="h-[50px] rounded-xl border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
               defaultValue={defaultInterest}
               onChange={(event) => setSelectedInterest(event.target.value as LeadFormInput["interest"])}
             >
@@ -108,13 +112,13 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               ))}
             </select>
           </label>
-          <div className="grid gap-3 rounded-xl border border-karimoff-line bg-white p-4 text-sm">
+          <div className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/70 p-4 text-sm">
             <label className="flex items-start gap-3">
               <input
                 type="checkbox"
                 name="personal_data_consent"
                 required
-                className="mt-1 accent-karimoff-orange"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
               />
               <span className="leading-6 text-karimoff-muted">
                 Я даю согласие на обработку персональных данных для{" "}
@@ -143,7 +147,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               <input
                 type="checkbox"
                 name="marketing_consent"
-                className="mt-1 accent-karimoff-orange"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
               />
               <span className="leading-6 text-karimoff-muted">
                 Хочу получать акции и предложения KARIMOFF.{" "}
@@ -158,16 +162,16 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             <textarea
               ref={commentRef}
               name="comment"
-              rows={5}
+              rows={4}
               defaultValue={defaultComment}
               placeholder="Расскажите, что нужно подготовить"
-              className="resize-none rounded-xl border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
             />
           </label>
           <button
             type="submit"
             disabled={isPending}
-            className="mt-2 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+            className="mt-1 min-h-12 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isPending ? "Отправляем" : "Отправить заявку"}
           </button>

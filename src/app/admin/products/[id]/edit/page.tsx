@@ -33,14 +33,14 @@ export default async function EditProductPage({ params, searchParams }: EditProd
   }
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-4xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin/products" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Меню
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Редактировать товар</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Редактировать товар</h1>
           </div>
           <form action={logoutAction}>
             <button

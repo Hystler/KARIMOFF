@@ -24,6 +24,8 @@ const legalMenu = [
 ];
 
 export function Footer({ settings }: { settings: SiteSettings }) {
+  const phoneHref = settings.phone ? `tel:${settings.phone.replace(/[^\d+]/g, "")}` : null;
+
   return (
     <footer className="border-t border-karimoff-line bg-white text-karimoff-black">
       <div className="container-page grid gap-8 py-10 sm:grid-cols-[1.1fr_0.9fr_1fr]">
@@ -38,14 +40,21 @@ export function Footer({ settings }: { settings: SiteSettings }) {
         </div>
         <nav className="grid gap-3" aria-label="Навигация в подвале">
           {footerMenu.map((item) => (
-            <Link key={item.href} href={item.href} className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
+            <Link key={item.href} href={item.href} className="inline-flex min-h-10 items-center text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               {item.label}
             </Link>
           ))}
         </nav>
         <div className="text-sm leading-7 text-karimoff-muted">
           <p className="font-black text-karimoff-black">Контакты</p>
-          {settings.phone ? <p>Телефон: {settings.phone}</p> : null}
+          {settings.phone && phoneHref ? (
+            <p>
+              Телефон:{" "}
+              <a href={phoneHref} className="font-semibold transition hover:text-karimoff-orange">
+                {settings.phone}
+              </a>
+            </p>
+          ) : null}
           {settings.address ? <p>Адрес: {settings.address}</p> : null}
           {settings.working_hours ? <p>Часы работы: {settings.working_hours}</p> : null}
           {!settings.phone && !settings.address && !settings.working_hours ? (

@@ -76,14 +76,14 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
   const { settings, notConfigured, error } = await getAdminSiteSettings();
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-5xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Настройки</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Настройки</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -114,40 +114,40 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
         ) : error ? (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">{error}</div>
         ) : (
-          <form action={updateSiteSettingsAction} encType="multipart/form-data" className="mt-8 grid gap-6 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+          <form action={updateSiteSettingsAction} className="mt-8 grid gap-6 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
             <div className="grid gap-5 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
                 Название сайта
-                <input name="site_name" required defaultValue={settings.site_name} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="site_name" required defaultValue={settings.site_name} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Телефон
-                <input name="phone" defaultValue={settings.phone ?? "+7"} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="phone" defaultValue={settings.phone ?? "+7"} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
                 Адрес
-                <input name="address" defaultValue={settings.address ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="address" defaultValue={settings.address ?? ""} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Часы работы
-                <input name="working_hours" defaultValue={settings.working_hours ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="working_hours" defaultValue={settings.working_hours ?? ""} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
                 Тема по умолчанию
-                <select name="theme" defaultValue={settings.theme} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange">
+                <select name="theme" defaultValue={settings.theme} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange">
                   <option value="light">Дневная</option>
                   <option value="dark">Ночная</option>
                 </select>
               </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Процент лояльности
-                <input name="loyalty_percent" type="number" min="0" max="100" step="0.1" defaultValue={settings.loyalty_percent} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
+                <input name="loyalty_percent" type="number" min="0" max="100" step="0.1" defaultValue={settings.loyalty_percent} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" />
               </label>
             </div>
 
@@ -161,7 +161,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                 step="0.1"
                 defaultValue={settings.loyalty_redemption_limit_percent ?? ""}
                 placeholder="Не подтверждено"
-                className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange"
+                className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange"
               />
               <span className="text-xs font-normal leading-5 text-karimoff-muted">
                 Оставьте поле пустым, пока правило списания бонусов не утверждено. Пустое значение не публикуется и не применяется.
@@ -184,15 +184,15 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             </div>
 
             <label className="grid gap-2 text-sm font-semibold">
-              Hero title
-              <input name="hero_title" defaultValue={settings.hero_title ?? ""} className="rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Первый фастфуд, приготовленный для вас с любовью" />
+              Заголовок главного экрана
+              <input name="hero_title" defaultValue={settings.hero_title ?? ""} className="rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Первый фастфуд, приготовленный для вас с любовью" />
             </label>
             <label className="grid gap-2 text-sm font-semibold">
-              Hero subtitle
-              <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-xl border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
+              Подзаголовок главного экрана
+              <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
             </label>
 
-            <section className="rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
+            <section className="rounded-lg border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
               <div className="max-w-3xl">
                 <p className="text-sm font-semibold text-karimoff-orange">Фоны страниц</p>
                 <h2 className="mt-2 text-2xl font-black">Hero-фото для главной и разделов</h2>
@@ -217,7 +217,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               </div>
             </section>
 
-            <section className="rounded-[1.25rem] border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
+            <section className="rounded-lg border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
               <div className="max-w-3xl">
                 <p className="text-sm font-semibold text-karimoff-orange">Социальные сети</p>
                 <h2 className="mt-2 text-2xl font-black">Ссылки для сайта</h2>
@@ -228,15 +228,15 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               <div className="mt-5 grid gap-5 md:grid-cols-3">
                 <label className="grid gap-2 text-sm font-semibold">
                   Telegram
-                  <input name="telegram_url" defaultValue={settings.telegram_url ?? ""} placeholder="https://t.me/username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                  <input name="telegram_url" defaultValue={settings.telegram_url ?? ""} placeholder="https://t.me/username" className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
                 </label>
                 <label className="grid gap-2 text-sm font-semibold">
                   Instagram
-                  <input name="instagram_url" defaultValue={settings.instagram_url ?? ""} placeholder="https://instagram.com/username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                  <input name="instagram_url" defaultValue={settings.instagram_url ?? ""} placeholder="https://instagram.com/username" className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
                 </label>
                 <label className="grid gap-2 text-sm font-semibold">
                   TikTok
-                  <input name="tiktok_url" defaultValue={settings.tiktok_url ?? ""} placeholder="https://www.tiktok.com/@username" className="rounded-xl border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
+                  <input name="tiktok_url" defaultValue={settings.tiktok_url ?? ""} placeholder="https://www.tiktok.com/@username" className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
                 </label>
               </div>
             </section>

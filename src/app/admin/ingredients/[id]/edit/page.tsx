@@ -33,14 +33,14 @@ export default async function EditIngredientPage({ params, searchParams }: EditI
   }
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-4xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin/ingredients" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Ингредиенты
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Редактировать ингредиент</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Редактировать ингредиент</h1>
           </div>
           <form action={logoutAction}>
             <button type="submit" className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">
@@ -57,7 +57,7 @@ export default async function EditIngredientPage({ params, searchParams }: EditI
             {currentSearchParams.error ? <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">{decodeURIComponent(currentSearchParams.error)}</div> : null}
             <IngredientForm action={updateIngredientAction} ingredient={ingredient} submitLabel="Сохранить ингредиент" />
             {ingredient ? (
-              <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+              <section className="mt-8 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
                 <div>
                   <p className="text-sm font-semibold text-karimoff-orange">Складская карточка</p>
                   <h2 className="mt-2 text-2xl font-black">Остатки ингредиента</h2>
@@ -81,7 +81,7 @@ export default async function EditIngredientPage({ params, searchParams }: EditI
                         min="0"
                         step="0.001"
                         defaultValue={inventoryItem?.current_quantity ?? 0}
-                        className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
+                        className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
                       />
                     </label>
                     <label className="grid gap-2 text-sm font-semibold">
@@ -92,7 +92,7 @@ export default async function EditIngredientPage({ params, searchParams }: EditI
                         min="0"
                         step="0.001"
                         defaultValue={inventoryItem?.min_quantity ?? 0}
-                        className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
+                        className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
                       />
                     </label>
                     <label className="grid gap-2 text-sm font-semibold md:col-span-2">
@@ -101,7 +101,7 @@ export default async function EditIngredientPage({ params, searchParams }: EditI
                         name="location"
                         defaultValue={inventoryItem?.location ?? ""}
                         placeholder="Например: основной склад / холодильник / кухня"
-                        className="rounded-xl border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
+                        className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none focus:border-karimoff-orange"
                       />
                     </label>
                     <div className="md:col-span-2">

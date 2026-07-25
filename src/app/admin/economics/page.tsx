@@ -45,14 +45,14 @@ export default async function AdminEconomicsPage() {
     : await getProductsFoodCosts(productsResult.products);
 
   return (
-    <main className="min-h-screen bg-karimoff-cream px-5 py-8 text-karimoff-black">
+    <main className="admin-page">
       <div className="mx-auto w-full max-w-6xl">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl">Юнит-экономика</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Юнит-экономика</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -72,7 +72,7 @@ export default async function AdminEconomicsPage() {
 
         <EconomicsCalculator initialValues={economicsResult.settings} />
 
-        <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+        <section className="mt-8 rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
           <p className="text-sm font-semibold text-karimoff-orange">Склад</p>
           <h2 className="mt-2 text-3xl font-black">Складская стоимость остатков</h2>
           {inventoryStock.error ? (
@@ -85,9 +85,9 @@ export default async function AdminEconomicsPage() {
           </p>
         </section>
 
-        <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.08)]">
+        <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
           <div className="border-b border-karimoff-line p-5">
-            <p className="text-sm font-semibold text-karimoff-orange">Food cost</p>
+            <p className="text-sm font-semibold text-karimoff-orange">Себестоимость</p>
             <h2 className="mt-2 text-3xl font-black">Юнит-экономика товаров</h2>
           </div>
           {productEconomics.error ? (
@@ -96,15 +96,15 @@ export default async function AdminEconomicsPage() {
             <div className="p-6 text-sm text-karimoff-muted">Товары пока не загружены.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left text-sm">
+              <table className="admin-table min-w-[920px]">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Товар</th>
                     <th className="px-4 py-4 font-bold">Цена</th>
-                    <th className="px-4 py-4 font-bold">Food cost</th>
-                    <th className="px-4 py-4 font-bold">Food cost %</th>
-                    <th className="px-4 py-4 font-bold">Gross profit</th>
-                    <th className="px-4 py-4 font-bold">Gross margin</th>
+                    <th className="px-4 py-4 font-bold">Себестоимость</th>
+                    <th className="px-4 py-4 font-bold">Доля в цене</th>
+                    <th className="px-4 py-4 font-bold">Валовая прибыль</th>
+                    <th className="px-4 py-4 font-bold">Маржинальность</th>
                     <th className="px-4 py-4 font-bold">Статус</th>
                   </tr>
                 </thead>

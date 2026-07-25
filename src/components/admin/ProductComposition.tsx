@@ -33,27 +33,27 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
   const activeIngredients = ingredients.filter((ingredient) => ingredient.is_active);
 
   return (
-    <section className="mt-8 rounded-[1.25rem] border border-karimoff-line bg-white p-5 shadow-[0_24px_70px_rgba(18,18,20,0.08)] sm:p-7">
+    <section className="mt-8 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-karimoff-orange">Состав</p>
-          <h2 className="mt-2 text-3xl font-black text-karimoff-black">Состав и food cost</h2>
+          <h2 className="mt-2 text-2xl font-black leading-tight text-karimoff-black">Состав и себестоимость</h2>
         </div>
-        <div className="grid gap-1 rounded-xl bg-karimoff-soft px-4 py-3 text-sm">
-          <span className="font-semibold text-karimoff-muted">Итого food cost</span>
-          <span className="text-xl font-black text-karimoff-orange">{formatMoney(foodCost.food_cost)}</span>
+        <div className="grid gap-1 rounded-lg bg-karimoff-soft px-4 py-3 text-sm">
+          <span className="font-semibold text-karimoff-muted">Себестоимость блюда</span>
+          <span className="admin-number text-xl font-black text-karimoff-orange">{formatMoney(foodCost.food_cost)}</span>
           <span className="font-bold text-karimoff-black">{formatPercent(foodCost.food_cost_percent)} от цены {formatMoney(productPrice)}</span>
         </div>
       </div>
 
       {foodCost.lines.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
+        <div className="mt-6 rounded-lg border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
           Состав не задан. Добавьте ингредиенты, чтобы увидеть себестоимость товара.
         </div>
       ) : (
         <div className="mt-6 grid gap-3">
           {foodCost.lines.map((line) => (
-            <form key={line.id} action={updateProductIngredientAction} className="grid gap-3 rounded-xl border border-karimoff-line p-4 lg:grid-cols-[1.2fr_0.45fr_0.35fr_0.35fr_auto] lg:items-end">
+            <form key={line.id} action={updateProductIngredientAction} className="grid gap-3 rounded-lg border border-karimoff-line p-4 lg:grid-cols-[1.2fr_0.45fr_0.35fr_0.35fr_auto] lg:items-end">
               <input type="hidden" name="id" value={line.id} />
               <input type="hidden" name="product_id" value={productId} />
               <label className="grid gap-2 text-xs font-bold text-karimoff-muted">
@@ -73,9 +73,9 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
               <label className="grid gap-2 text-xs font-bold text-karimoff-muted">
                 Ед.
                 <select name="unit" defaultValue={line.unit} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black outline-none focus:border-karimoff-orange">
-                  <option value="g">g</option>
-                  <option value="ml">ml</option>
-                  <option value="pcs">pcs</option>
+                  <option value="g">г</option>
+                  <option value="ml">мл</option>
+                  <option value="pcs">шт.</option>
                 </select>
               </label>
               <label className="grid gap-2 text-xs font-bold text-karimoff-muted">
@@ -102,7 +102,7 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
         </div>
       )}
 
-      <form action={addProductIngredientAction} className="mt-6 grid gap-3 rounded-xl border border-karimoff-orange/20 bg-karimoff-orange/5 p-4 lg:grid-cols-[1.2fr_0.45fr_0.35fr_0.35fr_auto] lg:items-end">
+      <form action={addProductIngredientAction} className="mt-6 grid gap-3 rounded-lg border border-karimoff-orange/20 bg-karimoff-orange/5 p-4 lg:grid-cols-[1.2fr_0.45fr_0.35fr_0.35fr_auto] lg:items-end">
         <input type="hidden" name="product_id" value={productId} />
         <label className="grid gap-2 text-xs font-bold text-karimoff-muted">
           Добавить ингредиент
@@ -122,9 +122,9 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
         <label className="grid gap-2 text-xs font-bold text-karimoff-muted">
           Ед.
           <select name="unit" defaultValue="g" className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black outline-none focus:border-karimoff-orange">
-            <option value="g">g</option>
-            <option value="ml">ml</option>
-            <option value="pcs">pcs</option>
+            <option value="g">г</option>
+            <option value="ml">мл</option>
+            <option value="pcs">шт.</option>
           </select>
         </label>
         <label className="grid gap-2 text-xs font-bold text-karimoff-muted">

@@ -22,12 +22,12 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
   const message = params.error === "supabase" ? "Supabase не подключён." : params.error ? decodeURIComponent(params.error) : error ?? assetsResult.error;
 
   return (
-    <main className="bg-karimoff-cream pt-28 text-karimoff-black">
+    <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
       <section className="container-page pb-16">
         <Link href="/profile" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
           Профиль
         </Link>
-        <h1 className="mt-3 text-4xl font-black leading-none sm:text-6xl">Настроить аватар</h1>
+        <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Настроить аватар</h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-karimoff-muted">
           Соберите KARIMOFF-персонажа для личного кабинета. Слои сохраняются в профиле клиента.
         </p>
