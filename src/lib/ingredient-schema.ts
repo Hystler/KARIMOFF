@@ -18,7 +18,12 @@ export const productIngredientFormSchema = z.object({
   ingredient_id: z.string().uuid("Выберите ингредиент"),
   quantity: z.coerce.number().min(0.001, "Укажите количество"),
   unit: ingredientUnitSchema,
-  sort_order: z.coerce.number().int().min(0, "Порядок не может быть отрицательным").default(100)
+  sort_order: z.coerce.number().int().min(0, "Порядок не может быть отрицательным").default(100),
+  is_removable: z.coerce.boolean().default(false),
+  is_extra_available: z.coerce.boolean().default(false),
+  extra_quantity: z.coerce.number().min(0, "Порция добавки не может быть отрицательной").default(0),
+  extra_price: z.coerce.number().min(0, "Доплата не может быть отрицательной").default(0),
+  max_extra_quantity: z.coerce.number().int().min(1).max(10).default(1)
 });
 
 export type IngredientFormInput = z.infer<typeof ingredientFormSchema>;

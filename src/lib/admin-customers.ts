@@ -62,6 +62,8 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
       row.status === "in_progress" || row.status === "completed" || row.status === "cancelled"
         ? row.status
         : "new",
+    fulfillment_mode: row.fulfillment_mode === "scheduled" ? "scheduled" : "asap",
+    requested_at: typeof row.requested_at === "string" ? row.requested_at : null,
     total: Number(row.total ?? 0),
     items
   };
@@ -75,7 +77,8 @@ function normalizeOrderItem(row: Record<string, unknown>): CustomerOrderItem {
     product_name: String(row.product_name ?? ""),
     unit_price: Number(row.unit_price ?? 0),
     quantity: Number(row.quantity ?? 0),
-    line_total: Number(row.line_total ?? 0)
+    line_total: Number(row.line_total ?? 0),
+    modifiers: []
   };
 }
 
@@ -231,7 +234,7 @@ export async function getAdminCustomerById(id: string) {
       supabase.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").eq("customer_id", id).maybeSingle(),
       supabase
         .from("orders")
-        .select("id, created_at, delivery_type, address, comment, status, total")
+        .select("id, created_at, delivery_type, address, comment, status, fulfillment_mode, requested_at, total")
         .eq("customer_id", id)
         .order("created_at", { ascending: false }),
       supabase

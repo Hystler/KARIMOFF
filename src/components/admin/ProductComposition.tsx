@@ -97,6 +97,29 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
                   Удалить
                 </ConfirmSubmitButton>
               </div>
+              <fieldset className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/60 p-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-5">
+                <legend className="px-2 text-xs font-black text-karimoff-black">Настройка для гостя</legend>
+                <label className="flex items-center gap-2 text-xs font-bold text-karimoff-muted">
+                  <input type="checkbox" name="is_removable" defaultChecked={line.is_removable} className="h-5 w-5 accent-karimoff-orange" />
+                  Можно убрать
+                </label>
+                <label className="flex items-center gap-2 text-xs font-bold text-karimoff-muted">
+                  <input type="checkbox" name="is_extra_available" defaultChecked={line.is_extra_available} className="h-5 w-5 accent-karimoff-orange" />
+                  Можно добавить
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+                  Порция добавки
+                  <input name="extra_quantity" type="number" min="0" step="0.001" defaultValue={line.extra_quantity} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+                  Доплата, ₽
+                  <input name="extra_price" type="number" min="0" step="1" defaultValue={line.extra_price} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+                  Максимум порций
+                  <input name="max_extra_quantity" type="number" min="1" max="10" step="1" defaultValue={line.max_extra_quantity} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+                </label>
+              </fieldset>
             </form>
           ))}
         </div>
@@ -134,6 +157,29 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
         <button type="submit" className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405]">
           Добавить
         </button>
+        <fieldset className="grid gap-3 rounded-lg border border-karimoff-orange/20 bg-white p-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-5">
+          <legend className="px-2 text-xs font-black text-karimoff-black">Настройка для гостя</legend>
+          <label className="flex items-center gap-2 text-xs font-bold text-karimoff-muted">
+            <input type="checkbox" name="is_removable" className="h-5 w-5 accent-karimoff-orange" />
+            Можно убрать
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold text-karimoff-muted">
+            <input type="checkbox" name="is_extra_available" className="h-5 w-5 accent-karimoff-orange" />
+            Можно добавить
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+            Порция добавки
+            <input name="extra_quantity" type="number" min="0" step="0.001" defaultValue={0} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+            Доплата, ₽
+            <input name="extra_price" type="number" min="0" step="1" defaultValue={0} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
+            Максимум порций
+            <input name="max_extra_quantity" type="number" min="1" max="10" step="1" defaultValue={1} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+          </label>
+        </fieldset>
       </form>
     </section>
   );

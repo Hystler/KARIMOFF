@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function writeAuditLog(params: {
   action: string;
-  actorType?: "admin" | "customer" | "system";
+  actorType?: "admin" | "customer" | "staff" | "system";
   actorId?: string | null;
   actorRefHash?: string | null;
   entityType?: string | null;

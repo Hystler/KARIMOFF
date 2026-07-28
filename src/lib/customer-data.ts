@@ -15,6 +15,11 @@ export type CustomerOrderItem = {
   unit_price: number;
   quantity: number;
   line_total: number;
+  modifiers: Array<{
+    id: string;
+    modifier_type: "remove" | "add";
+    ingredient_name: string;
+  }>;
 };
 
 export type CustomerOrder = {
@@ -24,6 +29,8 @@ export type CustomerOrder = {
   address: string | null;
   comment: string | null;
   status: "new" | "in_progress" | "completed" | "cancelled";
+  fulfillment_mode: "asap" | "scheduled";
+  requested_at: string | null;
   total: number;
   items: CustomerOrderItem[];
 };
@@ -39,12 +46,17 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
       row.status === "in_progress" || row.status === "completed" || row.status === "cancelled"
         ? row.status
         : "new",
+    fulfillment_mode: row.fulfillment_mode === "scheduled" ? "scheduled" : "asap",
+    requested_at: typeof row.requested_at === "string" ? row.requested_at : null,
     total: Number(row.total ?? 0),
     items
   };
 }
 
-function normalizeOrderItem(row: Record<string, unknown>): CustomerOrderItem {
+function normalizeOrderItem(
+  row: Record<string, unknown>,
+  modifiers: CustomerOrderItem["modifiers"]
+): CustomerOrderItem {
   return {
     id: String(row.id),
     order_id: String(row.order_id),
@@ -52,7 +64,8 @@ function normalizeOrderItem(row: Record<string, unknown>): CustomerOrderItem {
     product_name: String(row.product_name ?? ""),
     unit_price: Number(row.unit_price ?? 0),
     quantity: Number(row.quantity ?? 0),
-    line_total: Number(row.line_total ?? 0)
+    line_total: Number(row.line_total ?? 0),
+    modifiers
   };
 }
 
@@ -112,7 +125,7 @@ export async function getCustomerProfileData() {
 
   const { data: ordersData, error: ordersError } = await supabase
     .from("orders")
-    .select("id, created_at, delivery_type, address, comment, status, total")
+    .select("id, created_at, delivery_type, address, comment, status, fulfillment_mode, requested_at, total")
     .eq("customer_id", customer.id)
     .order("created_at", { ascending: false });
 
@@ -148,6 +161,14 @@ export async function getCustomerProfileData() {
     };
   }
 
+  const itemIds = (itemsData ?? []).map((item) => String(item.id));
+  const { data: modifiersData } = itemIds.length
+    ? await supabase
+        .from("order_item_modifiers")
+        .select("id, order_item_id, modifier_type, ingredient_name")
+        .in("order_item_id", itemIds)
+    : { data: [] };
+
   const { data: transactionsData, error: transactionsError } = await supabase
     .from("loyalty_transactions")
     .select("id, created_at, customer_id, order_id, type, points, description")
@@ -167,7 +188,17 @@ export async function getCustomerProfileData() {
     };
   }
 
-  const items = (itemsData ?? []).map((item) => normalizeOrderItem(item));
+  const items = (itemsData ?? []).map((item) => {
+    const itemId = String(item.id);
+    const modifiers = (modifiersData ?? [])
+      .filter((modifier) => String(modifier.order_item_id) === itemId)
+      .map((modifier) => ({
+        id: String(modifier.id),
+        modifier_type: modifier.modifier_type === "add" ? "add" as const : "remove" as const,
+        ingredient_name: String(modifier.ingredient_name ?? "")
+      }));
+    return normalizeOrderItem(item, modifiers);
+  });
 
   return {
     customer,

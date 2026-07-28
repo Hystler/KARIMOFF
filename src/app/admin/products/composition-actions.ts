@@ -37,7 +37,12 @@ export async function addProductIngredientAction(formData: FormData) {
     ingredient_id: formData.get("ingredient_id"),
     quantity: formData.get("quantity"),
     unit: formData.get("unit"),
-    sort_order: formData.get("sort_order") || 100
+    sort_order: formData.get("sort_order") || 100,
+    is_removable: formData.get("is_removable") === "on",
+    is_extra_available: formData.get("is_extra_available") === "on",
+    extra_quantity: formData.get("extra_quantity") || 0,
+    extra_price: formData.get("extra_price") || 0,
+    max_extra_quantity: formData.get("max_extra_quantity") || 1
   });
 
   const productId = String(formData.get("product_id") || "");
@@ -67,7 +72,12 @@ export async function updateProductIngredientAction(formData: FormData) {
     ingredient_id: formData.get("ingredient_id"),
     quantity: formData.get("quantity"),
     unit: formData.get("unit"),
-    sort_order: formData.get("sort_order") || 100
+    sort_order: formData.get("sort_order") || 100,
+    is_removable: formData.get("is_removable") === "on",
+    is_extra_available: formData.get("is_extra_available") === "on",
+    extra_quantity: formData.get("extra_quantity") || 0,
+    extra_price: formData.get("extra_price") || 0,
+    max_extra_quantity: formData.get("max_extra_quantity") || 1
   });
 
   if (!id || !parsed.success) {
@@ -81,7 +91,12 @@ export async function updateProductIngredientAction(formData: FormData) {
       ingredient_id: parsed.data.ingredient_id,
       quantity: parsed.data.quantity,
       unit: parsed.data.unit,
-      sort_order: parsed.data.sort_order
+      sort_order: parsed.data.sort_order,
+      is_removable: parsed.data.is_removable,
+      is_extra_available: parsed.data.is_extra_available,
+      extra_quantity: parsed.data.extra_quantity,
+      extra_price: parsed.data.extra_price,
+      max_extra_quantity: parsed.data.max_extra_quantity
     })
     .eq("id", id);
 

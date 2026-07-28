@@ -52,6 +52,8 @@ export async function createOrderAction(
 
   const parsed = createOrderSchema.safeParse({
     delivery_type: formData.get("delivery_type"),
+    fulfillment_mode: formData.get("fulfillment_mode"),
+    requested_at: formData.get("requested_at"),
     address: formData.get("address"),
     comment: formData.get("comment"),
     cart: parsedCart
@@ -83,6 +85,23 @@ export async function createOrderAction(
       status: "error",
       message: "Укажите адрес доставки."
     };
+  }
+
+  if (parsed.data.fulfillment_mode === "scheduled") {
+    const requestedAt = parsed.data.requested_at ? new Date(parsed.data.requested_at) : null;
+    const minimum = Date.now() + 15 * 60 * 1000;
+    const maximum = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+    if (!requestedAt || Number.isNaN(requestedAt.getTime())) {
+      return { status: "error", message: "Выберите время получения заказа." };
+    }
+
+    if (requestedAt.getTime() < minimum || requestedAt.getTime() > maximum) {
+      return {
+        status: "error",
+        message: "Выберите время не раньше чем через 15 минут и не позже чем через 7 дней."
+      };
+    }
   }
 
   const settings = await getSiteSettings();
@@ -122,6 +141,9 @@ export async function createOrderAction(
     p_document_version: LEGAL_VERSION,
     p_idempotency_key: idempotencyKey,
     p_items: parsed.data.cart,
+    p_fulfillment_mode: parsed.data.fulfillment_mode,
+    p_requested_at:
+      parsed.data.fulfillment_mode === "scheduled" ? parsed.data.requested_at || null : null,
     p_marketing_granted: isChecked(formData.get("marketing_consent")),
     p_offer_accepted: true,
     p_personal_data_granted: true,

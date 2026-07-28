@@ -269,6 +269,243 @@ button:not(:disabled),
   }
 }
 
+@layer components {
+  .product-cta {
+    @apply mt-auto inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-3 py-2.5 text-[13px] font-black text-white shadow-[0_12px_28px_rgba(251,103,10,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#D95405] hover:shadow-[0_16px_34px_rgba(251,103,10,0.28)] active:translate-y-0 sm:px-4 sm:text-sm;
+  }
+
+  .admin-workspace {
+    @apply min-h-screen bg-[#F5F3EF] text-karimoff-black lg:grid lg:grid-cols-[244px_minmax(0,1fr)];
+  }
+
+  .admin-sidebar {
+    @apply fixed inset-y-0 left-0 z-[90] flex w-[min(86vw,280px)] -translate-x-full flex-col bg-[#161618] text-white shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none;
+  }
+
+  .admin-sidebar-open {
+    @apply translate-x-0;
+  }
+
+  .admin-sidebar-overlay {
+    @apply fixed inset-0 z-[80] bg-black/50 backdrop-blur-[2px] lg:hidden;
+  }
+
+  .admin-sidebar-close {
+    @apply flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden;
+  }
+
+  .admin-nav {
+    @apply grid gap-1 overflow-y-auto px-3 py-4;
+  }
+
+  .admin-nav-link {
+    @apply flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white;
+  }
+
+  .admin-nav-link-active {
+    @apply bg-karimoff-orange text-white shadow-[0_10px_24px_rgba(251,103,10,0.22)] hover:bg-karimoff-orange;
+  }
+
+  .admin-logout {
+    @apply flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white;
+  }
+
+  .admin-main {
+    @apply min-w-0;
+  }
+
+  .admin-mobile-header {
+    @apply sticky top-0 z-40 flex h-[64px] items-center gap-3 border-b border-karimoff-line bg-white/95 px-4 backdrop-blur-xl lg:hidden;
+  }
+
+  .admin-mobile-menu {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-karimoff-line bg-white text-karimoff-black shadow-sm;
+  }
+
+  .admin-content {
+    @apply mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-9;
+  }
+
+  .admin-content-wide {
+    @apply max-w-[1640px];
+  }
+
+  .admin-heading {
+    @apply mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .admin-heading h1 {
+    @apply mt-1 text-3xl font-black leading-[1.08] sm:text-4xl;
+  }
+
+  .admin-heading p:not(.admin-eyebrow) {
+    @apply mt-2 max-w-2xl text-sm leading-6 text-karimoff-muted;
+  }
+
+  .admin-eyebrow {
+    @apply text-xs font-black uppercase text-karimoff-orange;
+  }
+
+  .admin-card {
+    @apply min-w-0 rounded-lg border border-black/[0.08] bg-white shadow-[0_14px_38px_rgba(18,18,20,0.055)];
+  }
+
+  .admin-primary-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-5 py-2.5 text-sm font-black text-white shadow-[0_12px_26px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .admin-secondary-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-karimoff-line bg-white px-5 py-2.5 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange;
+  }
+
+  .admin-danger-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50;
+  }
+
+  .admin-control,
+  .admin-field input,
+  .admin-field select,
+  .admin-field textarea {
+    @apply min-h-11 w-full rounded-lg border border-karimoff-line bg-white px-3.5 py-2 text-sm text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)];
+  }
+
+  .admin-field {
+    @apply grid min-w-0 gap-2 text-xs font-black text-karimoff-muted;
+  }
+
+  .admin-status {
+    @apply inline-flex min-h-8 items-center rounded-full bg-karimoff-orange/10 px-3 text-xs font-black text-karimoff-orange;
+  }
+
+  .admin-status-muted {
+    @apply bg-black/5 text-karimoff-muted;
+  }
+
+  .admin-alert {
+    @apply mb-5 rounded-lg border px-4 py-3 text-sm font-bold;
+  }
+
+  .admin-alert-success {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  }
+
+  .admin-alert-error {
+    @apply border-red-200 bg-red-50 text-red-700;
+  }
+
+  .admin-alert-warning {
+    @apply border-amber-200 bg-amber-50 text-amber-800;
+  }
+
+  .admin-empty {
+    @apply rounded-lg border border-dashed border-karimoff-line bg-white p-7 text-sm text-karimoff-muted;
+  }
+
+  .admin-metrics {
+    @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .admin-metrics article {
+    @apply admin-card flex min-h-[116px] flex-col justify-between p-5;
+  }
+
+  .admin-metrics span {
+    @apply text-xs font-bold text-karimoff-muted;
+  }
+
+  .admin-metrics strong {
+    @apply mt-3 text-2xl font-black tabular-nums;
+  }
+
+  .admin-dashboard-card {
+    @apply admin-card flex min-h-[190px] flex-col p-5 transition hover:-translate-y-0.5 hover:border-karimoff-orange/50 hover:shadow-[0_18px_45px_rgba(18,18,20,0.09)];
+  }
+
+  .admin-dashboard-icon {
+    @apply flex h-11 w-11 items-center justify-center rounded-lg bg-karimoff-orange/10 text-karimoff-orange;
+  }
+
+  .admin-dashboard-card h2 {
+    @apply mt-5 text-xl font-black;
+  }
+
+  .admin-dashboard-card p {
+    @apply mt-2 text-sm leading-6 text-karimoff-muted;
+  }
+
+  .admin-order-card {
+    @apply admin-card grid min-w-0 overflow-hidden xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1.25fr)_220px];
+  }
+
+  .admin-order-main,
+  .admin-order-items,
+  .admin-order-actions {
+    @apply min-w-0 p-5 sm:p-6;
+  }
+
+  .admin-order-items,
+  .admin-order-actions {
+    @apply border-t border-karimoff-line xl:border-l xl:border-t-0;
+  }
+
+  .admin-order-actions {
+    @apply grid content-start gap-4 bg-karimoff-cream/55;
+  }
+
+  .admin-order-status {
+    @apply inline-flex min-h-8 items-center rounded-full px-3 text-xs font-black;
+  }
+
+  .admin-order-status-new {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .admin-order-status-in_progress {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .admin-order-status-completed {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .admin-order-status-cancelled {
+    @apply bg-red-100 text-red-700;
+  }
+
+  .kitchen-ticket {
+    @apply min-w-0 rounded-lg border border-black/10 bg-white p-5 shadow-[0_14px_40px_rgba(18,18,20,0.07)] sm:p-6;
+  }
+
+  .kitchen-ticket-active {
+    @apply border-karimoff-orange/45 shadow-[0_18px_46px_rgba(251,103,10,0.12)];
+  }
+
+  .kitchen-badge {
+    @apply inline-flex min-h-8 items-center rounded-full bg-blue-100 px-3 text-xs font-black text-blue-800;
+  }
+
+  .kitchen-badge-new {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .kitchen-action {
+    @apply inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-5 text-base font-black text-white shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] active:scale-[0.99];
+  }
+
+  .kitchen-count {
+    @apply inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-black text-blue-800;
+  }
+
+  .kitchen-count-orange {
+    @apply bg-orange-100 text-orange-800;
+  }
+}
+
+.admin-workspace .admin-page {
+  min-height: auto;
+  background: transparent;
+}
+
 @layer base {
   h1,
   h2,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhoneInput } from "@/components/forms/PhoneInput";
 import { isAdminTotpConfigured } from "@/lib/admin-auth";
 import { loginAction } from "./actions";
 
@@ -29,28 +30,25 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
           <form action={loginAction} className="mt-6 grid gap-4">
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
-              <input
+              <PhoneInput
                 name="phone"
-                type="tel"
                 required
                 autoComplete="username"
-                defaultValue="+7"
-                placeholder="+7"
                 className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange"
               />
             </label>
             {hasTotp ? (
               <label className="grid gap-2">
-                <span className="text-sm font-semibold text-karimoff-muted">Код 2FA</span>
+                <span className="text-sm font-semibold text-karimoff-muted">Код 2FA владельца</span>
                 <input
                   name="totp"
                   type="text"
-                  required
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   pattern="[0-9]{6}"
                   maxLength={6}
                   className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                  placeholder="Сотрудникам не нужен"
                 />
               </label>
             ) : null}

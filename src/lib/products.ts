@@ -3,7 +3,7 @@ import "server-only";
 import { demoProducts } from "@/data/products";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Product, ProductImage } from "./product-types";
+import type { Product, ProductImage, ProductModifierOption } from "./product-types";
 
 export const fallbackProducts: Product[] = demoProducts;
 
@@ -115,6 +115,73 @@ async function attachProductImages(products: Product[]): Promise<Product[]> {
   });
 }
 
+async function attachProductModifiers(products: Product[]): Promise<Product[]> {
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase || products.length === 0) {
+    return products;
+  }
+
+  const productIds = products.map((product) => product.id);
+  const { data: lines, error } = await supabase
+    .from("product_ingredients")
+    .select("product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
+    .in("product_id", productIds)
+    .or("is_removable.eq.true,is_extra_available.eq.true")
+    .order("sort_order", { ascending: true });
+
+  if (error || !lines?.length) {
+    return products;
+  }
+
+  const ingredientIds = Array.from(new Set(lines.map((line) => String(line.ingredient_id))));
+  const { data: ingredientRows, error: ingredientError } = await supabase
+    .from("ingredients")
+    .select("id, name")
+    .in("id", ingredientIds);
+
+  if (ingredientError || !ingredientRows) {
+    return products;
+  }
+
+  const names = new Map(ingredientRows.map((ingredient) => [String(ingredient.id), String(ingredient.name)]));
+  const byProduct = new Map<string, ProductModifierOption[]>();
+
+  for (const line of lines) {
+    const productId = String(line.product_id);
+    const ingredientId = String(line.ingredient_id);
+    const name = names.get(ingredientId);
+
+    if (!name) {
+      continue;
+    }
+
+    const option: ProductModifierOption = {
+      ingredient_id: ingredientId,
+      name,
+      unit: line.unit === "ml" || line.unit === "pcs" ? line.unit : "g",
+      base_quantity: Number(line.quantity ?? 0),
+      is_removable: Boolean(line.is_removable),
+      is_extra_available: Boolean(line.is_extra_available),
+      extra_quantity: Number(line.extra_quantity ?? 0),
+      extra_price: Number(line.extra_price ?? 0),
+      max_extra_quantity: Math.max(1, Number(line.max_extra_quantity ?? 1)),
+      sort_order: Number(line.sort_order ?? 100)
+    };
+
+    byProduct.set(productId, [...(byProduct.get(productId) ?? []), option]);
+  }
+
+  return products.map((product) => ({
+    ...product,
+    modifier_options: byProduct.get(product.id) ?? []
+  }));
+}
+
+async function attachProductDetails(products: Product[]) {
+  return attachProductModifiers(await attachProductImages(products));
+}
+
 export async function getActiveProducts(limit = 4): Promise<Product[]> {
   const supabase = createSupabaseServerClient();
 
@@ -137,7 +204,7 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
     return fallbackProducts.slice(0, limit);
   }
 
-  return attachProductImages(data.map((row) => normalizeProduct(row)));
+  return attachProductDetails(data.map((row) => normalizeProduct(row)));
 }
 
 export async function getAdminProducts() {
@@ -157,7 +224,7 @@ export async function getAdminProducts() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
-  const products = await attachProductImages((data ?? []).map((row) => normalizeProduct(row)));
+  const products = await attachProductDetails((data ?? []).map((row) => normalizeProduct(row)));
 
   return {
     products,
@@ -183,7 +250,7 @@ export async function getAdminProductById(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  const products = data ? await attachProductImages([normalizeProduct(data)]) : [];
+  const products = data ? await attachProductDetails([normalizeProduct(data)]) : [];
 
   return {
     product: products[0] ?? null,

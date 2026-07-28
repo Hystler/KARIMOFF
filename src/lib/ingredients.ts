@@ -30,6 +30,11 @@ export type ProductIngredientLine = {
   cost_per_unit: number;
   line_cost: number;
   sort_order: number;
+  is_removable: boolean;
+  is_extra_available: boolean;
+  extra_quantity: number;
+  extra_price: number;
+  max_extra_quantity: number;
 };
 
 export type ProductFoodCost = {
@@ -152,7 +157,7 @@ export async function getProductFoodCost(product: Product) {
     getAdminIngredients(),
     supabase
       .from("product_ingredients")
-      .select("id, product_id, ingredient_id, quantity, unit, sort_order")
+      .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
       .eq("product_id", product.id)
       .order("sort_order", { ascending: true })
   ]);
@@ -198,7 +203,12 @@ export async function getProductFoodCost(product: Product) {
         unit: normalizeUnit(line.unit),
         cost_per_unit: costPerUnit,
         line_cost: quantity * costPerUnit,
-        sort_order: Number(line.sort_order ?? 100)
+        sort_order: Number(line.sort_order ?? 100),
+        is_removable: Boolean(line.is_removable),
+        is_extra_available: Boolean(line.is_extra_available),
+        extra_quantity: Number(line.extra_quantity ?? 0),
+        extra_price: Number(line.extra_price ?? 0),
+        max_extra_quantity: Number(line.max_extra_quantity ?? 1)
       } satisfies ProductIngredientLine;
     })
     .filter((line): line is ProductIngredientLine => Boolean(line));
@@ -235,7 +245,7 @@ export async function getProductsFoodCosts(products: Product[]) {
 
   const { data: lineRows, error: linesError } = await supabase
     .from("product_ingredients")
-    .select("id, product_id, ingredient_id, quantity, unit, sort_order")
+    .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
     .in("product_id", productIds)
     .order("sort_order", { ascending: true });
 
@@ -270,7 +280,12 @@ export async function getProductsFoodCosts(products: Product[]) {
       unit: normalizeUnit(line.unit),
       cost_per_unit: ingredient.cost_per_unit,
       line_cost: quantity * ingredient.cost_per_unit,
-      sort_order: Number(line.sort_order ?? 100)
+      sort_order: Number(line.sort_order ?? 100),
+      is_removable: Boolean(line.is_removable),
+      is_extra_available: Boolean(line.is_extra_available),
+      extra_quantity: Number(line.extra_quantity ?? 0),
+      extra_price: Number(line.extra_price ?? 0),
+      max_extra_quantity: Number(line.max_extra_quantity ?? 1)
     };
 
     linesByProduct.set(productId, [...(linesByProduct.get(productId) ?? []), row]);

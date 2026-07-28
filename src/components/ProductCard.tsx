@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCart } from "@/components/cart/CartProvider";
+import { ProductCustomizer } from "@/components/products/ProductCustomizer";
 import type { Product } from "@/lib/product-types";
 
 type ProductCardProps = {
@@ -65,8 +65,6 @@ function ProductImage({ product }: { product: Product }) {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addItem } = useCart();
-
   return (
     <article
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-karimoff-orange/55 hover:shadow-[0_18px_44px_rgba(18,18,20,0.12)]"
@@ -107,13 +105,7 @@ export function ProductCard({ product }: ProductCardProps) {
             Аллергены: {product.allergens.join(", ")}
           </p>
         ) : null}
-        <button
-          type="button"
-          onClick={() => addItem(product)}
-          className="mt-auto min-h-11 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2.5 text-[13px] font-bold text-white shadow-[0_10px_24px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 sm:px-4 sm:text-sm"
-        >
-          В корзину
-        </button>
+        <ProductCustomizer product={product} />
       </div>
     </article>
   );

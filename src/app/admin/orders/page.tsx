@@ -1,19 +1,9 @@
-import Link from "next/link";
+import { CalendarClock, MapPin, PackageCheck, Phone, ShoppingBag } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders, type AdminOrder } from "@/lib/orders";
-import { logoutAction } from "../login/actions";
 import { deleteOrderAction, updateOrderStatusAction } from "./actions";
-
-type AdminOrdersPageProps = {
-  searchParams?: Promise<{
-    deleted?: string;
-    error?: string;
-    saved?: string;
-    warning?: string;
-  }>;
-};
 
 const statusLabels: Record<AdminOrder["status"], string> = {
   new: "Новый",
@@ -22,36 +12,10 @@ const statusLabels: Record<AdminOrder["status"], string> = {
   cancelled: "Отменён"
 };
 
-const deliveryLabels: Record<AdminOrder["delivery_type"], string> = {
-  pickup: "Самовывоз",
-  delivery: "Доставка"
-};
-
-const paymentLabels: Record<AdminOrder["payment_status"], string> = {
-  not_required: "Без онлайн-оплаты",
-  pending: "Ожидает оплаты",
-  paid: "Оплачен",
-  failed: "Ошибка оплаты",
-  cancelled: "Оплата отменена",
-  refunded: "Возврат",
-  partially_refunded: "Частичный возврат"
-};
-
-const fiscalLabels: Record<AdminOrder["fiscal_status"], string> = {
-  not_required: "Чек не требуется",
-  pending: "Чек ожидается",
-  issued: "Чек выдан",
-  failed: "Ошибка чека",
-  refunded: "Возвратный чек"
-};
-
-export const dynamic = "force-dynamic";
-
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(date));
@@ -61,170 +25,116 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
-function getMessage(params: Awaited<NonNullable<AdminOrdersPageProps["searchParams"]>>) {
-  if (params.saved) {
-    return { tone: "success", text: "Статус заказа обновлён." };
-  }
+export const dynamic = "force-dynamic";
 
-  if (params.deleted) {
-    return { tone: "success", text: "Заказ удалён." };
-  }
+export default async function AdminOrdersPage({
+  searchParams
+}: {
+  searchParams: Promise<{ deleted?: string; error?: string; saved?: string; warning?: string }>;
+}) {
+  const staff = await getCurrentStaff();
+  if (!staff) redirect("/admin/login");
+  if (staff.role === "cook") redirect("/admin/kitchen");
 
-  if (params.error === "supabase") {
-    return { tone: "error", text: "Supabase не подключён. Заполните переменные окружения." };
-  }
-
-  if (params.error) {
-    return { tone: "error", text: `Ошибка: ${decodeURIComponent(params.error)}` };
-  }
-
-  return null;
-}
-
-export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
-  const isAuthed = await isAdminAuthenticated();
-
-  if (!isAuthed) {
-    redirect("/admin/login");
-  }
-
-  const params = searchParams ? await searchParams : {};
-  const message = getMessage(params);
+  const params = await searchParams;
   const { orders, notConfigured, error } = await getAdminOrders();
 
   return (
-    <main className="admin-page">
-      <div className="mx-auto w-full max-w-7xl">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-              Админка
-            </Link>
-            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Заказы</h1>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
-            >
-              Выйти
-            </button>
-          </form>
-        </header>
+    <main className="admin-content admin-content-wide">
+      <header className="admin-heading">
+        <div>
+          <p className="admin-eyebrow">Продажи</p>
+          <h1>Заказы</h1>
+          <p>Время получения, пожелания гостя, оплата и путь заказа до кухни.</p>
+        </div>
+        <div className="admin-status">{orders.length} всего</div>
+      </header>
 
-        {message ? (
-          <div
-            className={`mt-6 rounded-lg border px-5 py-4 text-sm font-semibold ${
-              message.tone === "success"
-                ? "border-karimoff-orange/25 bg-karimoff-orange/10 text-karimoff-orange"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
-          >
-            {message.text}
-          </div>
-        ) : null}
+      {params.saved ? <div className="admin-alert admin-alert-success">Статус заказа обновлён.</div> : null}
+      {params.deleted ? <div className="admin-alert admin-alert-success">Заказ удалён.</div> : null}
+      {params.error || error ? <div className="admin-alert admin-alert-error">{decodeURIComponent(params.error || error || "")}</div> : null}
+      {params.warning ? <div className="admin-alert admin-alert-warning">{decodeURIComponent(params.warning)}</div> : null}
 
-        {params.warning ? (
-          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
-            {decodeURIComponent(params.warning)}
-          </div>
-        ) : null}
+      {notConfigured ? (
+        <div className="admin-empty">Supabase не подключён.</div>
+      ) : orders.length === 0 ? (
+        <div className="admin-empty">Заказов пока нет.</div>
+      ) : (
+        <section className="grid gap-4">
+          {orders.map((order) => (
+            <article key={order.id} className="admin-order-card">
+              <div className="admin-order-main">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase text-karimoff-orange">#{order.id.slice(0, 8)} · {formatDate(order.created_at)}</p>
+                    <h2 className="mt-2 text-xl font-black">{order.customer_name}</h2>
+                    <a href={`tel:${order.customer_phone}`} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-karimoff-muted">
+                      <Phone size={15} /> {order.customer_phone}
+                    </a>
+                  </div>
+                  <span className={`admin-order-status admin-order-status-${order.status}`}>{statusLabels[order.status]}</span>
+                </div>
 
-        <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
-          {notConfigured ? (
-            <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
-          ) : error ? (
-            <div className="p-8 text-red-600">Не удалось загрузить заказы: {error}</div>
-          ) : orders.length === 0 ? (
-            <div className="p-8 text-karimoff-muted">Заказов пока нет.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-[1260px]">
-                <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
-                  <tr>
-                    <th className="px-4 py-4 font-bold">Дата</th>
-                    <th className="px-4 py-4 font-bold">Клиент</th>
-                    <th className="px-4 py-4 font-bold">Получение</th>
-                    <th className="px-4 py-4 font-bold">Состав</th>
-                    <th className="px-4 py-4 font-bold">Сумма</th>
-                    <th className="px-4 py-4 font-bold">Статус</th>
-                    <th className="px-4 py-4 font-bold">Оплата / чек</th>
-                    <th className="px-4 py-4 font-bold">Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id} className="border-b border-karimoff-line align-top last:border-b-0">
-                      <td className="px-4 py-4 text-karimoff-muted">{formatDate(order.created_at)}</td>
-                      <td className="px-4 py-4">
-                        <p className="font-semibold">{order.customer_name}</p>
-                        <p className="mt-1 text-xs text-karimoff-muted">{order.customer_phone}</p>
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="font-semibold">{deliveryLabels[order.delivery_type]}</p>
-                        {order.address ? <p className="mt-1 max-w-48 text-xs text-karimoff-muted">{order.address}</p> : null}
-                        {order.comment ? <p className="mt-2 max-w-48 text-xs text-karimoff-muted">Комментарий: {order.comment}</p> : null}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="grid gap-2">
-                          {order.items.map((item) => (
-                            <p key={item.id} className="text-xs leading-5 text-karimoff-muted">
-                              {item.product_name} × {item.quantity} — {formatPrice(item.line_total)} ₽
-                            </p>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 font-black text-karimoff-orange">{formatPrice(order.total)} ₽</td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-karimoff-orange/10 px-3 py-1 text-xs font-bold text-karimoff-orange">
-                          {statusLabels[order.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <p className="text-xs font-semibold">{paymentLabels[order.payment_status]}</p>
-                        <p className="mt-1 text-xs text-karimoff-muted">{fiscalLabels[order.fiscal_status]}</p>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <form action={updateOrderStatusAction} className="flex gap-2">
-                            <input type="hidden" name="id" value={order.id} />
-                            <select
-                              name="status"
-                              defaultValue={order.status}
-                              className="rounded-full border border-karimoff-line bg-white px-3 py-2 text-xs font-bold outline-none focus:border-karimoff-orange"
-                            >
-                              {Object.entries(statusLabels).map(([value, label]) => (
-                                <option key={value} value={value}>
-                                  {label}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="submit"
-                              className="rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2 text-xs font-bold text-white transition hover:bg-[#D95405]"
-                            >
-                              Сохранить
-                            </button>
-                          </form>
-                          <form action={deleteOrderAction}>
-                            <input type="hidden" name="id" value={order.id} />
-                            <ConfirmSubmitButton
-                              message={`Удалить заказ ${order.id}?`}
-                              className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
-                            >
-                              Удалить
-                            </ConfirmSubmitButton>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
+                <div className="mt-4 grid gap-2 rounded-lg bg-karimoff-cream p-4 text-sm sm:grid-cols-2">
+                  <p className="flex items-center gap-2 font-bold">
+                    <CalendarClock size={17} className="text-karimoff-orange" />
+                    {order.fulfillment_mode === "scheduled" && order.requested_at
+                      ? `К ${formatDate(order.requested_at)}`
+                      : "Как можно скорее"}
+                  </p>
+                  <p className="flex items-center gap-2 text-karimoff-muted">
+                    {order.delivery_type === "pickup" ? <PackageCheck size={17} /> : <MapPin size={17} />}
+                    {order.delivery_type === "pickup" ? "Самовывоз" : order.address || "Доставка"}
+                  </p>
+                </div>
+
+                {order.comment ? <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Комментарий: {order.comment}</p> : null}
+              </div>
+
+              <div className="admin-order-items">
+                <h3 className="flex items-center gap-2 text-sm font-black"><ShoppingBag size={17} /> Состав</h3>
+                <div className="mt-3 grid gap-3">
+                  {order.items.map((item) => (
+                    <div key={item.id} className="border-b border-karimoff-line pb-3 last:border-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-3 text-sm">
+                        <strong>{item.product_name} × {item.quantity}</strong>
+                        <strong className="shrink-0 text-karimoff-orange">{formatPrice(item.line_total)} ₽</strong>
+                      </div>
+                      {item.modifiers.map((modifier) => (
+                        <p key={modifier.id} className={`mt-1 text-xs font-bold ${modifier.modifier_type === "remove" ? "text-amber-700" : "text-karimoff-orange"}`}>
+                          {modifier.modifier_type === "remove" ? "Без" : "Добавить"}: {modifier.ingredient_name}
+                        </p>
+                      ))}
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+                <div className="mt-4 flex justify-between border-t border-karimoff-line pt-4 text-lg font-black">
+                  <span>Итого</span><span className="text-karimoff-orange">{formatPrice(order.total)} ₽</span>
+                </div>
+              </div>
+
+              <div className="admin-order-actions">
+                <form action={updateOrderStatusAction} className="grid gap-2">
+                  <input type="hidden" name="id" value={order.id} />
+                  <select name="status" defaultValue={order.status} className="admin-control">
+                    {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <button type="submit" className="admin-primary-button">Сохранить статус</button>
+                </form>
+                <p className="text-xs leading-5 text-karimoff-muted">
+                  Исполнитель: {order.assigned_staff_name || "не назначен"}
+                </p>
+                <form action={deleteOrderAction}>
+                  <input type="hidden" name="id" value={order.id} />
+                  <ConfirmSubmitButton message={`Удалить заказ ${order.id}?`} className="admin-danger-button w-full">
+                    Удалить заказ
+                  </ConfirmSubmitButton>
+                </form>
+              </div>
+            </article>
+          ))}
         </section>
-      </div>
+      )}
     </main>
   );
 }

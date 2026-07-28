@@ -11,9 +11,28 @@ import {
 } from "react";
 import type { Product } from "@/lib/product-types";
 
+export type CartRemovedIngredient = {
+  ingredient_id: string;
+  name: string;
+};
+
+export type CartExtra = {
+  ingredient_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+};
+
+export type CartCustomization = {
+  removed: CartRemovedIngredient[];
+  extras: CartExtra[];
+};
+
 export type CartLine = {
+  lineId: string;
   product: Pick<Product, "id" | "name" | "slug" | "price" | "image_url">;
   quantity: number;
+  customization: CartCustomization;
 };
 
 type CartContextValue = {
@@ -21,10 +40,10 @@ type CartContextValue = {
   isOpen: boolean;
   totalItems: number;
   totalPrice: number;
-  addItem: (product: Product) => void;
-  increment: (productId: string) => void;
-  decrement: (productId: string) => void;
-  removeItem: (productId: string) => void;
+  addItem: (product: Product, customization?: CartCustomization) => void;
+  increment: (lineId: string) => void;
+  decrement: (lineId: string) => void;
+  removeItem: (lineId: string) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -32,7 +51,7 @@ type CartContextValue = {
 };
 
 const STORAGE_KEY = "karimoff_cart";
-
+const EMPTY_CUSTOMIZATION: CartCustomization = { removed: [], extras: [] };
 const CartContext = createContext<CartContextValue | null>(null);
 
 function toCartProduct(product: Product): CartLine["product"] {
@@ -45,6 +64,53 @@ function toCartProduct(product: Product): CartLine["product"] {
   };
 }
 
+function customizationKey(customization: CartCustomization) {
+  const removed = customization.removed.map((item) => item.ingredient_id).sort().join(",");
+  const extras = customization.extras
+    .map((item) => `${item.ingredient_id}:${item.quantity}`)
+    .sort()
+    .join(",");
+
+  return `${removed}|${extras}`;
+}
+
+function makeLineId(productId: string, customization: CartCustomization) {
+  return `${productId}:${customizationKey(customization)}`;
+}
+
+export function getCartLineUnitPrice(line: CartLine) {
+  const extras = line.customization.extras.reduce(
+    (sum, extra) => sum + extra.unit_price * extra.quantity,
+    0
+  );
+
+  return line.product.price + extras;
+}
+
+function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
+  if (!line.product?.id || !line.product.name || !line.product.slug) {
+    return null;
+  }
+
+  const customization: CartCustomization = {
+    removed: Array.isArray(line.customization?.removed) ? line.customization.removed : [],
+    extras: Array.isArray(line.customization?.extras) ? line.customization.extras : []
+  };
+
+  return {
+    lineId: line.lineId || makeLineId(line.product.id, customization),
+    product: {
+      id: line.product.id,
+      name: line.product.name,
+      slug: line.product.slug,
+      price: Number(line.product.price ?? 0),
+      image_url: line.product.image_url ?? null
+    },
+    quantity: Math.max(1, Number(line.quantity ?? 1)),
+    customization
+  };
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -54,9 +120,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const timeoutId = window.setTimeout(() => {
       try {
         const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          setLines(JSON.parse(saved) as CartLine[]);
-        }
+        const parsed = saved ? (JSON.parse(saved) as Partial<CartLine>[]) : [];
+        setLines(parsed.map(normalizeStoredLine).filter((line): line is CartLine => Boolean(line)));
       } catch {
         setLines([]);
       } finally {
@@ -89,53 +154,64 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const nextSearch = searchParams.toString();
       const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
       window.history.replaceState(null, "", nextUrl);
-
       return () => window.clearTimeout(timeoutId);
     }
-
-    return undefined;
   }, [isHydrated]);
 
   const totalItems = useMemo(() => lines.reduce((sum, line) => sum + line.quantity, 0), [lines]);
   const totalPrice = useMemo(
-    () => lines.reduce((sum, line) => sum + line.quantity * line.product.price, 0),
+    () => lines.reduce((sum, line) => sum + line.quantity * getCartLineUnitPrice(line), 0),
     [lines]
   );
 
-  const addItem = useCallback((product: Product) => {
+  const addItem = useCallback((product: Product, customization = EMPTY_CUSTOMIZATION) => {
+    const normalizedCustomization: CartCustomization = {
+      removed: [...customization.removed],
+      extras: customization.extras.filter((extra) => extra.quantity > 0)
+    };
+    const lineId = makeLineId(product.id, normalizedCustomization);
+
     setLines((current) => {
-      const existing = current.find((line) => line.product.id === product.id);
+      const existing = current.find((line) => line.lineId === lineId);
       if (existing) {
         return current.map((line) =>
-          line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line
+          line.lineId === lineId ? { ...line, quantity: Math.min(20, line.quantity + 1) } : line
         );
       }
 
-      return [...current, { product: toCartProduct(product), quantity: 1 }];
+      return [
+        ...current,
+        {
+          lineId,
+          product: toCartProduct(product),
+          quantity: 1,
+          customization: normalizedCustomization
+        }
+      ];
     });
   }, []);
 
-  const increment = useCallback((productId: string) => {
+  const increment = useCallback((lineId: string) => {
     setLines((current) =>
-      current.map((line) => (line.product.id === productId ? { ...line, quantity: line.quantity + 1 } : line))
+      current.map((line) =>
+        line.lineId === lineId ? { ...line, quantity: Math.min(20, line.quantity + 1) } : line
+      )
     );
   }, []);
 
-  const decrement = useCallback((productId: string) => {
+  const decrement = useCallback((lineId: string) => {
     setLines((current) =>
       current
-        .map((line) => (line.product.id === productId ? { ...line, quantity: line.quantity - 1 } : line))
+        .map((line) => (line.lineId === lineId ? { ...line, quantity: line.quantity - 1 } : line))
         .filter((line) => line.quantity > 0)
     );
   }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setLines((current) => current.filter((line) => line.product.id !== productId));
+  const removeItem = useCallback((lineId: string) => {
+    setLines((current) => current.filter((line) => line.lineId !== lineId));
   }, []);
 
-  const clearCart = useCallback(() => {
-    setLines([]);
-  }, []);
+  const clearCart = useCallback(() => setLines([]), []);
 
   const checkout = useCallback(() => {
     if (!lines.length) {

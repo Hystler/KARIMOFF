@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
 import { initialOrderActionState } from "@/lib/order-schema";
-import { useCart } from "./CartProvider";
+import { getCartLineUnitPrice, useCart } from "./CartProvider";
 
 type CustomerProfile = {
   id: string;
@@ -26,6 +26,8 @@ export function CartDrawer() {
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
+  const [fulfillmentMode, setFulfillmentMode] = useState<"asap" | "scheduled">("asap");
+  const [requestedLocal, setRequestedLocal] = useState("");
   const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings>({
     delivery_enabled: true,
     pickup_enabled: true
@@ -34,7 +36,18 @@ export function CartDrawer() {
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [orderState, orderFormAction, isOrderPending] = useActionState(createOrderAction, initialOrderActionState);
   const cartPayload = useMemo(
-    () => JSON.stringify(lines.map((line) => ({ product_id: line.product.id, quantity: line.quantity }))),
+    () =>
+      JSON.stringify(
+        lines.map((line) => ({
+          product_id: line.product.id,
+          quantity: line.quantity,
+          removed_ingredient_ids: line.customization.removed.map((item) => item.ingredient_id),
+          extras: line.customization.extras.map((item) => ({
+            ingredient_id: item.ingredient_id,
+            quantity: item.quantity
+          }))
+        }))
+      ),
     [lines]
   );
   const isCheckoutDisabled = !checkoutSettings.pickup_enabled && !checkoutSettings.delivery_enabled;
@@ -184,6 +197,12 @@ export function CartDrawer() {
             <form action={orderFormAction} className="grid gap-5">
               <input type="hidden" name="cart" value={cartPayload} />
               <input type="hidden" name="idempotency_key" value={checkoutRequestId} />
+              <input type="hidden" name="fulfillment_mode" value={fulfillmentMode} />
+              <input
+                type="hidden"
+                name="requested_at"
+                value={requestedLocal ? new Date(requestedLocal).toISOString() : ""}
+              />
               <section className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
                 <p className="text-sm font-semibold text-karimoff-orange">Ваши данные</p>
                 <div className="mt-3 grid gap-2 text-sm">
@@ -242,6 +261,48 @@ export function CartDrawer() {
                     />
                   </label>
                 ) : null}
+                <div className="mt-5 border-t border-karimoff-line pt-5">
+                  <p className="text-sm font-bold text-karimoff-black">Когда приготовить</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFulfillmentMode("asap")}
+                      className={`min-h-12 rounded-lg border px-3 text-sm font-bold transition ${
+                        fulfillmentMode === "asap"
+                          ? "border-karimoff-orange bg-karimoff-orange text-white"
+                          : "border-karimoff-line bg-white text-karimoff-black hover:border-karimoff-orange"
+                      }`}
+                    >
+                      Как можно скорее
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFulfillmentMode("scheduled")}
+                      className={`min-h-12 rounded-lg border px-3 text-sm font-bold transition ${
+                        fulfillmentMode === "scheduled"
+                          ? "border-karimoff-orange bg-karimoff-orange text-white"
+                          : "border-karimoff-line bg-white text-karimoff-black hover:border-karimoff-orange"
+                      }`}
+                    >
+                      Ко времени
+                    </button>
+                  </div>
+                  {fulfillmentMode === "scheduled" ? (
+                    <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Дата и время
+                      <input
+                        type="datetime-local"
+                        required
+                        value={requestedLocal}
+                        onChange={(event) => setRequestedLocal(event.target.value)}
+                        className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                      />
+                      <span className="text-xs font-normal leading-5">
+                        Минимум через 15 минут, максимум на 7 дней вперёд.
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
                 <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
                   Комментарий
                   <textarea
@@ -301,12 +362,24 @@ export function CartDrawer() {
                 <p className="text-sm font-bold text-karimoff-black">Состав заказа</p>
                 <div className="mt-3 grid gap-3">
                   {lines.map((line) => (
-                    <div key={line.product.id} className="flex items-start justify-between gap-3 text-sm">
-                      <span className="text-karimoff-muted">
-                        {line.product.name} × {line.quantity}
-                      </span>
-                      <span className="font-black text-karimoff-black">
-                        {formatPrice(line.product.price * line.quantity)} ₽
+                    <div key={line.lineId} className="flex items-start justify-between gap-3 text-sm">
+                      <div>
+                        <span className="text-karimoff-muted">
+                          {line.product.name} × {line.quantity}
+                        </span>
+                        {line.customization.removed.length ? (
+                          <p className="mt-1 text-xs font-semibold text-amber-700">
+                            Без: {line.customization.removed.map((item) => item.name).join(", ")}
+                          </p>
+                        ) : null}
+                        {line.customization.extras.length ? (
+                          <p className="mt-1 text-xs font-semibold text-karimoff-orange">
+                            Добавить: {line.customization.extras.map((item) => `${item.name} × ${item.quantity}`).join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 font-black text-karimoff-black">
+                        {formatPrice(getCartLineUnitPrice(line) * line.quantity)} ₽
                       </span>
                     </div>
                   ))}
@@ -332,15 +405,25 @@ export function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {lines.map((line) => (
-                <article key={line.product.id} className="rounded-lg border border-karimoff-line bg-white p-4">
+                <article key={line.lineId} className="rounded-lg border border-karimoff-line bg-white p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-black text-karimoff-black">{line.product.name}</h3>
-                      <p className="mt-1 text-sm font-bold text-karimoff-orange">{formatPrice(line.product.price)} ₽</p>
+                      <p className="mt-1 text-sm font-bold text-karimoff-orange">{formatPrice(getCartLineUnitPrice(line))} ₽</p>
+                      {line.customization.removed.length ? (
+                        <p className="mt-2 text-xs font-semibold leading-5 text-amber-700">
+                          Без: {line.customization.removed.map((item) => item.name).join(", ")}
+                        </p>
+                      ) : null}
+                      {line.customization.extras.length ? (
+                        <p className="mt-1 text-xs font-semibold leading-5 text-karimoff-orange">
+                          Добавить: {line.customization.extras.map((item) => `${item.name} × ${item.quantity}`).join(", ")}
+                        </p>
+                      ) : null}
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeItem(line.product.id)}
+                      onClick={() => removeItem(line.lineId)}
                       className="-mr-2 min-h-11 rounded-md px-2 text-sm font-semibold text-karimoff-muted transition hover:bg-red-50 hover:text-red-600"
                     >
                       Удалить
@@ -350,7 +433,7 @@ export function CartDrawer() {
                     <div className="inline-flex items-center rounded-full border border-karimoff-line">
                       <button
                         type="button"
-                        onClick={() => decrement(line.product.id)}
+                        onClick={() => decrement(line.lineId)}
                         className="h-11 w-11 text-lg font-bold transition hover:text-karimoff-orange"
                         aria-label="Уменьшить количество"
                       >
@@ -359,7 +442,7 @@ export function CartDrawer() {
                       <span className="min-w-8 text-center text-sm font-bold">{line.quantity}</span>
                       <button
                         type="button"
-                        onClick={() => increment(line.product.id)}
+                        onClick={() => increment(line.lineId)}
                         className="h-11 w-11 text-lg font-bold transition hover:text-karimoff-orange"
                         aria-label="Увеличить количество"
                       >
@@ -367,7 +450,7 @@ export function CartDrawer() {
                       </button>
                     </div>
                     <p className="text-base font-black text-karimoff-black">
-                      {formatPrice(line.quantity * line.product.price)} ₽
+                      {formatPrice(line.quantity * getCartLineUnitPrice(line))} ₽
                     </p>
                   </div>
                 </article>

@@ -117,6 +117,11 @@ export default async function ProfilePage() {
                       <div>
                         <p className="text-sm font-black text-karimoff-black">{formatDate(order.created_at)}</p>
                         <p className="mt-1 text-xs font-semibold text-karimoff-orange">{statusLabels[order.status]}</p>
+                        <p className="mt-1 text-xs font-semibold text-karimoff-muted">
+                          {order.fulfillment_mode === "scheduled" && order.requested_at
+                            ? `К ${formatDate(order.requested_at)}`
+                            : "Как можно скорее"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-black text-karimoff-orange">{formatPrice(order.total)} ₽</p>
@@ -125,9 +130,16 @@ export default async function ProfilePage() {
                     </div>
                     <div className="mt-4 grid gap-2">
                       {order.items.map((item) => (
-                        <p key={item.id} className="text-sm leading-6 text-karimoff-muted">
-                          {item.product_name} × {item.quantity} — {formatPrice(item.line_total)} ₽
-                        </p>
+                        <div key={item.id}>
+                          <p className="text-sm leading-6 text-karimoff-muted">
+                            {item.product_name} × {item.quantity} — {formatPrice(item.line_total)} ₽
+                          </p>
+                          {item.modifiers.map((modifier) => (
+                            <p key={modifier.id} className="text-xs font-semibold text-karimoff-orange">
+                              {modifier.modifier_type === "remove" ? "Без" : "Добавить"}: {modifier.ingredient_name}
+                            </p>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   </article>

@@ -10,8 +10,8 @@ import {
   requestLoginCodeAction,
   requestRegisterCodeAction
 } from "@/app/auth/actions";
+import { PhoneInput } from "@/components/forms/PhoneInput";
 import { initialAuthActionState } from "@/lib/customer-schema";
-import { formatRussianPhoneInput } from "@/lib/phone";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -21,7 +21,7 @@ type AuthFormProps = {
 
 export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const isRegister = mode === "register";
-  const [codeMode, setCodeMode] = useState(false);
+  const [codeMode, setCodeMode] = useState(!isRegister);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loyaltyConsent, setLoyaltyConsent] = useState(false);
@@ -38,7 +38,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
     initialAuthActionState
   );
 
-  const phone = confirmState.phone || requestState.phone || passwordState.phone || "+7";
+  const phone = confirmState.phone || requestState.phone || passwordState.phone || "";
   const name = confirmState.name || requestState.name || passwordState.name || "";
   const codeMessage = confirmState.message || requestState.message;
   const codeStatus = confirmState.status !== "idle" ? confirmState.status : requestState.status;
@@ -51,10 +51,13 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
       </h1>
       <p className="mt-4 text-sm leading-6 text-karimoff-muted">
         {isRegister
-          ? "Создайте профиль с паролем, чтобы быстро оформлять заказы и копить баллы."
-          : "Войдите по телефону и паролю, чтобы продолжить заказ."}
+          ? "Создайте профиль, чтобы быстро оформлять заказы и копить баллы."
+          : codeMode
+            ? "Получите одноразовый код по SMS и войдите без пароля."
+            : "Войдите по телефону и постоянному паролю."}
       </p>
 
+      {!codeMode ? (
       <form action={passwordAction} className="mt-7 grid gap-4">
         {isRegister ? (
           <label className="grid gap-2">
@@ -70,16 +73,11 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
         ) : null}
         <label className="grid gap-2">
           <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
-          <input
+          <PhoneInput
             name="phone"
             required
-            inputMode="tel"
             defaultValue={phone}
-            onBlur={(event) => {
-              event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
-            }}
             className="h-[52px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
-            placeholder="+7"
           />
         </label>
         <label className="grid gap-2">
@@ -167,19 +165,27 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
         </button>
       </form>
 
-      {passwordState.message ? (
+      ) : null}
+
+      {!codeMode && passwordState.message ? (
         <p className={passwordState.status === "error" ? "mt-5 text-sm font-semibold text-red-600" : "mt-5 text-sm font-semibold text-karimoff-orange"}>
           {passwordState.message}
         </p>
       ) : null}
 
-      <div className="mt-6 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4">
+      <div className={`${codeMode ? "mt-7" : "mt-6"} rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4`}>
         <button
           type="button"
           onClick={() => setCodeMode((value) => !value)}
           className="text-sm font-bold text-karimoff-orange transition hover:text-[#D95405]"
         >
-          {codeMode ? "Скрыть вход по коду" : isRegister ? "Зарегистрироваться по коду" : "Войти по коду"}
+          {codeMode
+            ? isRegister
+              ? "Создать профиль с паролем"
+              : "Войти по паролю"
+            : isRegister
+              ? "Зарегистрироваться по коду из SMS"
+              : "Войти по коду из SMS"}
         </button>
 
         {codeMode ? (
@@ -246,16 +252,11 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
               ) : null}
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
-                <input
+                <PhoneInput
                   name="phone"
                   required
-                  inputMode="tel"
                   defaultValue={phone}
-                  onBlur={(event) => {
-                    event.currentTarget.value = formatRussianPhoneInput(event.currentTarget.value);
-                  }}
                   className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-                  placeholder="+7"
                 />
               </label>
               <button
@@ -263,7 +264,7 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
                 disabled={isRequestPending}
                 className="rounded-full border border-karimoff-orange bg-white px-5 py-3 text-sm font-bold text-karimoff-orange transition hover:bg-karimoff-orange hover:text-white disabled:opacity-60"
               >
-                {isRequestPending ? "Отправляем код" : "Получить код"}
+                {isRequestPending ? "Отправляем код" : "Получить код по SMS"}
               </button>
             </form>
 

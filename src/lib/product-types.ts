@@ -8,6 +8,19 @@ export type ProductImage = {
   is_primary: boolean;
 };
 
+export type ProductModifierOption = {
+  ingredient_id: string;
+  name: string;
+  unit: "g" | "ml" | "pcs";
+  base_quantity: number;
+  is_removable: boolean;
+  is_extra_available: boolean;
+  extra_quantity: number;
+  extra_price: number;
+  max_extra_quantity: number;
+  sort_order: number;
+};
+
 export type Product = {
   id: string;
   created_at?: string;
@@ -28,4 +41,5 @@ export type Product = {
   carbs?: number | null;
   allergens?: string[] | null;
   images?: ProductImage[];
+  modifier_options?: ProductModifierOption[];
 };

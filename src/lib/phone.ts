@@ -9,29 +9,29 @@ function basicPhone(input: string) {
 }
 
 export function normalizeRussianPhone(input: string) {
-  const digits = digitsOnly(input);
+  const digits = digitsOnly(input).slice(0, 11);
 
   if (!digits) {
-    return RUSSIAN_PREFIX;
+    return "";
   }
 
   if (digits.length === 10) {
     return `+7${digits}`;
   }
 
-  if (digits.startsWith("8") && digits.length >= 11) {
+  if (digits.startsWith("8")) {
     return `+7${digits.slice(1, 11)}`;
   }
 
-  if (digits.startsWith("7") && digits.length >= 11) {
-    return `+${digits.slice(0, 11)}`;
+  if (digits.startsWith("7")) {
+    return `+7${digits.slice(1, 11)}`;
   }
 
   if (digits.startsWith("9")) {
     return `+7${digits.slice(0, 10)}`;
   }
 
-  return `+${digits}`;
+  return `+7${digits.slice(0, 10)}`;
 }
 
 export function formatRussianPhoneInput(input: string) {
@@ -39,7 +39,7 @@ export function formatRussianPhoneInput(input: string) {
   const digits = digitsOnly(normalized).slice(1, 11);
 
   if (!digits) {
-    return RUSSIAN_PREFIX;
+    return input.includes("7") ? RUSSIAN_PREFIX : "";
   }
 
   const parts = [
@@ -71,7 +71,10 @@ export function formatPhoneInput(input: string) {
 export function getPhoneLookupCandidates(input: string) {
   const normalized = normalizeRussianPhone(input);
   const basic = basicPhone(input);
-  const candidates = [normalized, basic];
+  const normalizedDigits = digitsOnly(normalized);
+  const legacyEight = normalizedDigits.length === 11 ? `8${normalizedDigits.slice(1)}` : "";
+  const legacyTen = normalizedDigits.length === 11 ? normalizedDigits.slice(1) : "";
+  const candidates = [normalized, basic, legacyEight, legacyTen];
 
   return Array.from(new Set(candidates.filter(Boolean)));
 }

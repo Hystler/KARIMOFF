@@ -19,10 +19,9 @@ const smsSender = read("src/lib/verification/send-code.ts");
 
 test("browser order payload cannot supply a trusted price", () => {
   assert.doesNotMatch(orderSchema, /\bprice\s*:/);
-  assert.match(
-    cartDrawer,
-    /JSON\.stringify\(lines\.map\(\(line\) => \(\{ product_id: line\.product\.id, quantity: line\.quantity \}\)\)\)/
-  );
+  assert.match(cartDrawer, /product_id: line\.product\.id/);
+  assert.match(cartDrawer, /quantity: line\.quantity/);
+  assert.doesNotMatch(cartDrawer, /p_(unit_)?price|trusted_price/);
   assert.match(migration, /join public\.products p on p\.id = r\.product_id and p\.is_active = true/);
   assert.match(migration, /p\.price \* r\.quantity/);
   assert.doesNotMatch(orderAction, /\.from\(["']orders["']\)\.insert/);
