@@ -27,9 +27,9 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
         <Link href="/profile" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
           Профиль
         </Link>
-        <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Настроить аватар</h1>
+        <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Создать 3D-персонажа</h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-karimoff-muted">
-          Соберите KARIMOFF-персонажа для личного кабинета. Слои сохраняются в профиле клиента.
+          Выберите типаж, характер и образ. Персонажа можно вращать, приближать и сохранить в личном кабинете.
         </p>
 
         <div className="mt-8">

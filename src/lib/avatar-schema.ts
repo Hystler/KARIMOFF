@@ -24,49 +24,48 @@ export type AvatarConfig = z.infer<typeof avatarSchema>;
 
 export const avatarOptions: AvatarOptions = {
   base: [
-    { value: "panda", label: "Панда" },
-    { value: "panda_round", label: "Круглая панда" },
-    { value: "panda_strict", label: "Строгая панда" }
+    { value: "panda_core", label: "Классик" },
+    { value: "panda_rookie", label: "Руки" },
+    { value: "panda_titan", label: "Титан" }
   ],
   eyes: [
-    { value: "default", label: "Классика" },
-    { value: "happy", label: "Весёлые" },
-    { value: "serious", label: "Серьёзные" },
-    { value: "sleepy", label: "Сонные" }
+    { value: "bright", label: "Живые" },
+    { value: "happy", label: "Улыбчивые" },
+    { value: "focused", label: "Собранные" },
+    { value: "sleepy", label: "Спокойные" }
   ],
   mouth: [
     { value: "smile", label: "Улыбка" },
-    { value: "neutral", label: "Нейтрально" },
-    { value: "grin", label: "Грин" }
+    { value: "smirk", label: "Ухмылка" },
+    { value: "grin", label: "Широкая улыбка" },
+    { value: "neutral", label: "Спокойно" }
   ],
   accessory: [
     { value: "none", label: "Без аксессуара" },
     { value: "orange_cap", label: "Оранжевая кепка" },
-    { value: "black_cap", label: "Чёрная кепка" },
-    { value: "sunglasses", label: "Очки" },
-    { value: "burger_pin", label: "Пин-бургер" }
+    { value: "headphones", label: "Наушники" },
+    { value: "sunglasses", label: "Тёмные очки" },
+    { value: "orange_visor", label: "Оранжевый визор" }
   ],
   clothes: [
-    { value: "none", label: "Без одежды" },
-    { value: "black_hoodie", label: "Чёрное худи" },
-    { value: "orange_apron", label: "Оранжевый фартук" },
-    { value: "black_apron", label: "Чёрный фартук" }
+    { value: "varsity_orange", label: "Куртка KARIMOFF" },
+    { value: "black_hoodie", label: "Графитовое худи" },
+    { value: "chef_jacket", label: "Китель шефа" },
+    { value: "utility_black", label: "Чёрный utility" }
   ],
   background: [
-    { value: "orange", label: "Оранжевый" },
-    { value: "black", label: "Чёрный" },
-    { value: "grill", label: "Гриль" },
-    { value: "clean", label: "Чистый" },
-    { value: "neon", label: "Неон" }
+    { value: "studio_orange", label: "Orange studio" },
+    { value: "night_city", label: "Ночной город" },
+    { value: "kitchen_line", label: "Открытая кухня" },
+    { value: "clean", label: "Светлая студия" }
   ]
 };
 
 export const defaultAvatar: AvatarConfig = {
-  base: "panda",
-  eyes: "default",
+  base: "panda_core",
+  eyes: "bright",
   mouth: "smile",
   accessory: "none",
-  clothes: "none",
-  background: "orange"
+  clothes: "varsity_orange",
+  background: "studio_orange"
 };
-

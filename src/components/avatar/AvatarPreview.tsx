@@ -12,6 +12,9 @@ const sizeClasses = {
 };
 
 const backgroundClasses: Record<string, string> = {
+  studio_orange: "bg-[#E85A05]",
+  night_city: "bg-[#101012]",
+  kitchen_line: "bg-[#242427]",
   orange: "bg-[radial-gradient(circle_at_28%_22%,#FFD7BE_0%,#FB670A_55%,#D95405_100%)]",
   black: "bg-[radial-gradient(circle_at_30%_20%,#34343A_0%,#121214_68%)]",
   grill: "bg-[linear-gradient(135deg,#121214_0_18%,#FB670A_18%_20%,#1B1B1F_20%_48%,#FB670A_48%_50%,#121214_50%_100%)]",
@@ -22,19 +25,42 @@ const backgroundClasses: Record<string, string> = {
 export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
   const isSmall = size === "sm";
   const backgroundClass = backgroundClasses[avatar.background] ?? backgroundClasses.orange;
-  const isRoundBase = avatar.base === "panda_round";
-  const isStrictBase = avatar.base === "panda_strict";
+  const isRoundBase = avatar.base === "panda_round" || avatar.base === "panda_rookie";
+  const isStrictBase = avatar.base === "panda_strict" || avatar.base === "panda_titan";
+  const isChef = avatar.clothes === "chef_jacket";
+  const isVarsity = avatar.clothes === "varsity_orange";
+  const isUtility = avatar.clothes === "utility_black";
 
   return (
     <div className={`${sizeClasses[size]} relative overflow-hidden rounded-[28%] border border-karimoff-line ${backgroundClass} shadow-[0_24px_70px_rgba(18,18,20,0.16)]`}>
       <svg viewBox="0 0 220 220" className="absolute inset-0 h-full w-full" aria-hidden="true">
-        {avatar.background === "grill" || avatar.background === "neon" ? (
+        {avatar.background === "grill" || avatar.background === "neon" || avatar.background === "kitchen_line" || avatar.background === "night_city" ? (
           <g opacity="0.18" stroke="#fff" strokeWidth="3">
             <path d="M34 168h152M42 150h136M52 132h116" />
           </g>
         ) : null}
 
-        {avatar.clothes === "hoodie_black" || avatar.clothes === "black_hoodie" ? (
+        {isVarsity ? (
+          <g>
+            <path d="M52 194c8-42 31-61 58-61s50 19 58 61H52Z" fill="#FB670A" stroke="#0C0C0D" strokeWidth="7" />
+            <path d="M108 136v57" stroke="#fff" strokeWidth="5" />
+            <circle cx="84" cy="158" r="10" fill="none" stroke="#fff" strokeWidth="4" />
+          </g>
+        ) : isChef ? (
+          <g>
+            <path d="M52 194c8-42 31-61 58-61s50 19 58 61H52Z" fill="#F7F5F1" stroke="#0C0C0D" strokeWidth="7" />
+            <path d="M110 137v56" stroke="#FB670A" strokeWidth="4" />
+            <circle cx="93" cy="157" r="3.5" fill="#FB670A" />
+            <circle cx="93" cy="174" r="3.5" fill="#FB670A" />
+            <circle cx="127" cy="157" r="3.5" fill="#FB670A" />
+            <circle cx="127" cy="174" r="3.5" fill="#FB670A" />
+          </g>
+        ) : isUtility ? (
+          <g>
+            <path d="M52 194c8-42 31-61 58-61s50 19 58 61H52Z" fill="#171719" stroke="#050506" strokeWidth="7" />
+            <path d="M78 137l14 57M142 137l-14 57" stroke="#FB670A" strokeWidth="7" />
+          </g>
+        ) : avatar.clothes === "hoodie_black" || avatar.clothes === "black_hoodie" ? (
           <path d="M55 190c9-38 32-55 55-55s46 17 55 55H55Z" fill="#121214" />
         ) : avatar.clothes === "apron_orange" || avatar.clothes === "orange_apron" ? (
           <path d="M62 192c8-39 28-58 48-58s40 19 48 58H62Z" fill="#FB670A" />
@@ -57,7 +83,7 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
             <path d="M73 94c10-3 22-3 32 0" />
             <path d="M115 94c10-3 22-3 32 0" />
           </g>
-        ) : avatar.eyes === "serious" ? (
+        ) : avatar.eyes === "serious" || avatar.eyes === "focused" ? (
           <g fill="#09090A">
             <ellipse cx="88" cy="93" rx="16" ry="22" transform="rotate(-12 88 93)" />
             <ellipse cx="132" cy="93" rx="16" ry="22" transform="rotate(12 132 93)" />
@@ -75,6 +101,8 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
           <path d="M91 132c12 15 40 15 52 0" fill="none" stroke="#09090A" strokeLinecap="round" strokeWidth="7" />
         ) : avatar.mouth === "grin" ? (
           <path d="M92 132c12 20 39 20 51 0" fill="#FFFFFF" stroke="#09090A" strokeLinecap="round" strokeLinejoin="round" strokeWidth="6" />
+        ) : avatar.mouth === "smirk" ? (
+          <path d="M105 137c14 3 25-1 34-10" fill="none" stroke="#09090A" strokeLinecap="round" strokeWidth="7" />
         ) : (
           <path d="M98 136h38" fill="none" stroke="#09090A" strokeLinecap="round" strokeWidth="7" />
         )}
@@ -90,6 +118,19 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
             <rect x="67" y="83" width="41" height="24" rx="9" />
             <rect x="112" y="83" width="41" height="24" rx="9" />
             <path d="M105 93h10v6h-10z" />
+          </g>
+        ) : null}
+        {avatar.accessory === "headphones" ? (
+          <g fill="none" stroke="#FB670A" strokeWidth="8">
+            <path d="M58 93c0-55 104-55 104 0" />
+            <rect x="50" y="88" width="18" height="42" rx="8" fill="#121214" />
+            <rect x="152" y="88" width="18" height="42" rx="8" fill="#121214" />
+          </g>
+        ) : null}
+        {avatar.accessory === "orange_visor" ? (
+          <g>
+            <rect x="66" y="82" width="88" height="34" rx="10" fill="#FB670A" opacity="0.78" stroke="#09090A" strokeWidth="5" />
+            <path d="M76 90h44" stroke="#fff" strokeLinecap="round" strokeWidth="4" opacity="0.55" />
           </g>
         ) : null}
         {avatar.accessory === "burger" || avatar.accessory === "burger_pin" ? (
