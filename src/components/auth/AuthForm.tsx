@@ -21,7 +21,7 @@ type AuthFormProps = {
 
 export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const isRegister = mode === "register";
-  const [codeMode, setCodeMode] = useState(!isRegister);
+  const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loyaltyConsent, setLoyaltyConsent] = useState(false);
