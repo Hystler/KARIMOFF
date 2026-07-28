@@ -1,6 +1,7 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { removeS3Object, s3KeyFromPublicUrl, uploadS3Object } from "@/lib/s3/server";
 
 type UploadImageParams = {
   bucket: "products" | "hero" | "brand";
@@ -66,12 +67,6 @@ async function prepareImage(file: File) {
 }
 
 export async function uploadImageToStorage({ bucket, file, path, upsert = false }: UploadImageParams) {
-  const supabase = createSupabaseServerClient();
-
-  if (!supabase) {
-    return { url: null as string | null, error: "Supabase не подключён." };
-  }
-
   if (!(file instanceof File) || file.size === 0) {
     return { url: null as string | null, error: "Файл не выбран." };
   }
@@ -87,6 +82,16 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
 
   const prepared = await prepareImage(file);
   const normalizedPath = path.replace(/\.[a-z0-9]+$/i, `.${prepared.extension}`);
+
+  if (process.env.STORAGE_PROVIDER === "s3") {
+    return uploadS3Object(`${bucket}/${normalizedPath}`, prepared.buffer, prepared.contentType);
+  }
+
+  const supabase = createSupabaseServiceClient();
+  if (!supabase) {
+    return { url: null as string | null, error: "Supabase не подключён." };
+  }
+
   const { error } = await supabase.storage.from(bucket).upload(normalizedPath, prepared.buffer, {
     cacheControl: "31536000",
     contentType: prepared.contentType,
@@ -103,7 +108,13 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
 }
 
 export async function removeStoragePublicUrl(bucket: "products" | "hero" | "brand", imageUrl: string) {
-  const supabase = createSupabaseServerClient();
+  if (process.env.STORAGE_PROVIDER === "s3") {
+    const key = s3KeyFromPublicUrl(imageUrl);
+    if (key) await removeS3Object(key);
+    return;
+  }
+
+  const supabase = createSupabaseServiceClient();
 
   if (!supabase || !imageUrl) {
     return;

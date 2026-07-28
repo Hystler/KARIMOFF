@@ -8,7 +8,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co",
+  "img-src 'self' data: blob: https://*.supabase.co https://s3.twcstorage.ru",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "media-src 'self' https://*.supabase.co",
@@ -32,6 +32,10 @@ const nextConfig = {
     remotePatterns: [
       {
         hostname: "*.supabase.co",
+        protocol: "https"
+      },
+      {
+        hostname: "s3.twcstorage.ru",
         protocol: "https"
       }
     ]
