@@ -66,8 +66,6 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
       ? options[activeSection]
       : [{ value: currentValue, label: `Текущий вариант` }, ...options[activeSection]];
   }, [activeSection, avatar, options]);
-  const activeLabel = options.base.find((option) => option.value === avatar.base)?.label ?? "KARIMOFF";
-
   function shuffleAvatar() {
     setAvatar(
       sections.reduce((next, section) => {
@@ -82,16 +80,9 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
 
   return (
     <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-black/10 bg-karimoff-black">
-      <div className="grid min-h-[680px] lg:grid-cols-[minmax(0,1fr)_430px]">
-        <section className="relative min-h-[520px] lg:min-h-[680px]">
+      <div className="grid min-h-[620px] lg:grid-cols-[minmax(0,1fr)_430px]">
+        <section className="relative min-h-[480px] lg:min-h-[620px]">
           <Avatar3DStudio avatar={avatar} />
-          <div className="pointer-events-none absolute left-5 top-5 z-10 max-w-[75%] text-white sm:left-8 sm:top-8">
-            <p className="text-xs font-black uppercase text-karimoff-orange">KARIMOFF Avatar 2.0</p>
-            <h2 className="mt-2 text-2xl font-black leading-tight sm:text-4xl">{activeLabel}</h2>
-            <p className="mt-2 hidden max-w-md text-sm leading-6 text-white/68 sm:block">
-              Живой 3D-персонаж. Поверните его и рассмотрите образ со всех сторон.
-            </p>
-          </div>
         </section>
 
         <form action={saveAvatarAction} className="flex min-w-0 flex-col bg-[#F7F4EF] text-karimoff-black">
@@ -128,8 +119,8 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
             </div>
           </div>
 
-          <div className="overflow-x-auto border-b border-karimoff-line px-3 py-3">
-            <div className="flex min-w-max gap-1">
+          <div className="border-b border-karimoff-line p-3">
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
               {sections.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.key;
@@ -138,7 +129,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                     key={section.key}
                     type="button"
                     onClick={() => setActiveSection(section.key)}
-                    className={`flex min-h-12 items-center gap-2 rounded-md px-3 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange ${
+                    className={`flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange ${
                       isActive ? "bg-karimoff-black text-white" : "text-karimoff-muted hover:bg-white hover:text-karimoff-black"
                     }`}
                   >

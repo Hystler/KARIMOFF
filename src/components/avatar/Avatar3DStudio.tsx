@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Move3d, Pause, Play, RotateCcw } from "lucide-react";
+import { Pause, Play, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { AvatarConfig } from "@/lib/avatar-schema";
@@ -13,8 +13,8 @@ type Avatar3DStudioProps = {
 type AvatarRig = {
   root: THREE.Group;
   head: THREE.Group;
-  leftArm: THREE.Mesh;
-  rightArm: THREE.Mesh;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
   eyes: THREE.Mesh[];
 };
 
@@ -25,23 +25,23 @@ type StudioRuntime = {
 };
 
 const stageClasses: Record<string, string> = {
-  studio_orange: "bg-[#D95405]",
+  studio_orange: "bg-[#171719]",
   night_city: "bg-[#09090B]",
   kitchen_line: "bg-[#171719]",
   clean: "bg-[#EDE8E1]",
-  orange: "bg-[#D95405]",
+  orange: "bg-[#171719]",
   black: "bg-[#09090B]",
   grill: "bg-[#171719]",
   neon: "bg-[#09090B]"
 };
 
 const bodyShapes: Record<string, { bodyLength: number; bodyRadius: number; headY: number; headScale: [number, number, number]; shoulder: number }> = {
-  panda_rookie: { bodyLength: 0.96, bodyRadius: 0.78, headY: 3.18, headScale: [1.08, 1.04, 0.94], shoulder: 0.88 },
-  panda_titan: { bodyLength: 1.42, bodyRadius: 0.82, headY: 3.62, headScale: [0.98, 1.04, 0.9], shoulder: 1.05 },
-  panda_core: { bodyLength: 1.18, bodyRadius: 0.74, headY: 3.4, headScale: [1, 1, 0.92], shoulder: 0.94 },
-  panda_round: { bodyLength: 0.96, bodyRadius: 0.78, headY: 3.18, headScale: [1.08, 1.04, 0.94], shoulder: 0.88 },
-  panda_strict: { bodyLength: 1.42, bodyRadius: 0.82, headY: 3.62, headScale: [0.98, 1.04, 0.9], shoulder: 1.05 },
-  panda: { bodyLength: 1.18, bodyRadius: 0.74, headY: 3.4, headScale: [1, 1, 0.92], shoulder: 0.94 }
+  panda_rookie: { bodyLength: 1.02, bodyRadius: 0.7, headY: 3.08, headScale: [1.04, 1.02, 0.88], shoulder: 0.76 },
+  panda_titan: { bodyLength: 1.28, bodyRadius: 0.82, headY: 3.46, headScale: [0.98, 1.02, 0.86], shoulder: 0.92 },
+  panda_core: { bodyLength: 1.15, bodyRadius: 0.75, headY: 3.28, headScale: [1, 1, 0.87], shoulder: 0.84 },
+  panda_round: { bodyLength: 1.02, bodyRadius: 0.7, headY: 3.08, headScale: [1.04, 1.02, 0.88], shoulder: 0.76 },
+  panda_strict: { bodyLength: 1.28, bodyRadius: 0.82, headY: 3.46, headScale: [0.98, 1.02, 0.86], shoulder: 0.92 },
+  panda: { bodyLength: 1.15, bodyRadius: 0.75, headY: 3.28, headScale: [1, 1, 0.87], shoulder: 0.84 }
 };
 
 function disposeObject(object: THREE.Object3D) {
@@ -77,7 +77,7 @@ function createStage(background: string) {
   const steel = new THREE.MeshStandardMaterial({ color: 0x67676c, roughness: 0.3, metalness: 0.72 });
   const cream = new THREE.MeshStandardMaterial({ color: 0xeee8df, roughness: 0.72 });
 
-  const platform = createMesh(new THREE.CylinderGeometry(1.75, 1.9, 0.18, 48), dark, [0, 0.02, 0]);
+  const platform = createMesh(new THREE.CylinderGeometry(1.58, 1.72, 0.14, 64), dark, [0, 0.02, 0]);
   stage.add(platform);
 
   if (background === "night_city" || background === "black" || background === "neon") {
@@ -109,10 +109,11 @@ function createStage(background: string) {
       );
     });
   } else {
-    const ring = createMesh(new THREE.TorusGeometry(2.2, 0.06, 12, 96), background === "clean" ? orange : cream, [0, 2.45, -2.4]);
+    const ringMaterial = background === "clean" ? dark : background === "studio_orange" || background === "orange" ? orange : cream;
+    const ring = createMesh(new THREE.TorusGeometry(2.05, 0.045, 12, 96), ringMaterial, [0, 2.32, -2.5]);
     stage.add(ring);
-    [-2.7, 2.7].forEach((x) => {
-      stage.add(createMesh(new THREE.BoxGeometry(0.11, 3.4, 0.12), background === "clean" ? dark : cream, [x, 2.1, -2.5]));
+    [-2.55, 2.55].forEach((x) => {
+      stage.add(createMesh(new THREE.BoxGeometry(0.07, 3.15, 0.08), ringMaterial, [x, 2.05, -2.55]));
     });
   }
 
@@ -122,11 +123,11 @@ function createStage(background: string) {
 function createAvatarRig(avatar: AvatarConfig): AvatarRig {
   const root = new THREE.Group();
   const shape = bodyShapes[avatar.base] ?? bodyShapes.panda_core;
-  const white = new THREE.MeshStandardMaterial({ color: 0xf7f5f1, roughness: 0.62 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.48 });
-  const graphite = new THREE.MeshStandardMaterial({ color: 0x242427, roughness: 0.7 });
-  const orange = new THREE.MeshStandardMaterial({ color: 0xfb670a, roughness: 0.52 });
-  const softOrange = new THREE.MeshStandardMaterial({ color: 0xffa060, roughness: 0.5 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xf2eee8, roughness: 0.78 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x101012, roughness: 0.68 });
+  const graphite = new THREE.MeshStandardMaterial({ color: 0x26262a, roughness: 0.76 });
+  const orange = new THREE.MeshStandardMaterial({ color: 0xfb670a, roughness: 0.66 });
+  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf8f4ed, roughness: 0.5 });
   const silver = new THREE.MeshStandardMaterial({ color: 0xbfc0c4, roughness: 0.24, metalness: 0.74 });
   const clothes = avatar.clothes;
   const torsoMaterial =
@@ -137,45 +138,54 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
         : graphite;
 
   const torsoY = shape.headY - 1.56;
-  const torso = createMesh(
-    new THREE.CapsuleGeometry(shape.bodyRadius, shape.bodyLength, 10, 24),
-    torsoMaterial,
-    [0, torsoY, 0]
-  );
+  const torsoFront = shape.bodyRadius * 0.84;
+  const torso = createMesh(new THREE.SphereGeometry(1, 40, 32), torsoMaterial, [0, torsoY, 0], [
+    shape.bodyRadius * 1.12,
+    shape.bodyLength,
+    shape.bodyRadius * 0.84
+  ]);
   root.add(torso);
 
-  const leftLeg = createMesh(new THREE.CapsuleGeometry(0.25, 0.72, 8, 16), black, [-0.43, 0.72, 0]);
-  const rightLeg = createMesh(new THREE.CapsuleGeometry(0.25, 0.72, 8, 16), black, [0.43, 0.72, 0]);
-  const leftShoe = createMesh(new THREE.SphereGeometry(0.34, 20, 14), graphite, [-0.43, 0.28, 0.16], [1.12, 0.62, 1.42]);
-  const rightShoe = createMesh(new THREE.SphereGeometry(0.34, 20, 14), graphite, [0.43, 0.28, 0.16], [1.12, 0.62, 1.42]);
+  const leftLeg = createMesh(new THREE.CapsuleGeometry(0.21, 0.48, 10, 20), black, [-0.36, 0.68, 0]);
+  const rightLeg = createMesh(new THREE.CapsuleGeometry(0.21, 0.48, 10, 20), black, [0.36, 0.68, 0]);
+  const leftShoe = createMesh(new THREE.SphereGeometry(0.3, 24, 18), graphite, [-0.36, 0.3, 0.15], [1.18, 0.58, 1.42]);
+  const rightShoe = createMesh(new THREE.SphereGeometry(0.3, 24, 18), graphite, [0.36, 0.3, 0.15], [1.18, 0.58, 1.42]);
   root.add(leftLeg, rightLeg, leftShoe, rightShoe);
 
   const sleeveMaterial = clothes === "chef_jacket" ? white : clothes === "varsity_orange" ? black : torsoMaterial;
-  const leftArm = createMesh(new THREE.CapsuleGeometry(0.24, 0.98, 8, 16), sleeveMaterial, [-shape.shoulder, torsoY + 0.02, 0]);
-  const rightArm = createMesh(new THREE.CapsuleGeometry(0.24, 0.98, 8, 16), sleeveMaterial, [shape.shoulder, torsoY + 0.02, 0]);
+  const leftArm = new THREE.Group();
+  const rightArm = new THREE.Group();
+  leftArm.position.set(-shape.shoulder, torsoY + 0.42, 0);
+  rightArm.position.set(shape.shoulder, torsoY + 0.42, 0);
+  leftArm.add(
+    createMesh(new THREE.CapsuleGeometry(0.2, 0.68, 10, 20), sleeveMaterial, [0, -0.46, 0]),
+    createMesh(new THREE.SphereGeometry(0.245, 22, 16), black, [-0.04, -0.98, 0.04])
+  );
+  rightArm.add(
+    createMesh(new THREE.CapsuleGeometry(0.2, 0.68, 10, 20), sleeveMaterial, [0, -0.46, 0]),
+    createMesh(new THREE.SphereGeometry(0.245, 22, 16), black, [0.04, -0.98, 0.04])
+  );
   leftArm.rotation.z = 0.13;
   rightArm.rotation.z = -0.13;
-  const leftPaw = createMesh(new THREE.SphereGeometry(0.28, 18, 14), black, [-shape.shoulder - 0.13, torsoY - 0.68, 0.03]);
-  const rightPaw = createMesh(new THREE.SphereGeometry(0.28, 18, 14), black, [shape.shoulder + 0.13, torsoY - 0.68, 0.03]);
-  root.add(leftArm, rightArm, leftPaw, rightPaw);
+  root.add(leftArm, rightArm);
 
   if (clothes === "varsity_orange") {
     root.add(
-      createMesh(new THREE.BoxGeometry(0.08, 1.45, 0.08), white, [0, torsoY + 0.05, shape.bodyRadius + 0.05]),
-      createMesh(new THREE.TorusGeometry(0.18, 0.045, 8, 32), white, [-0.3, torsoY + 0.28, shape.bodyRadius + 0.06])
+      createMesh(new THREE.BoxGeometry(0.06, 1.3, 0.045), white, [0, torsoY + 0.05, torsoFront + 0.025]),
+      createMesh(new THREE.TorusGeometry(0.15, 0.035, 8, 32), white, [-0.27, torsoY + 0.26, torsoFront + 0.035])
     );
   } else if (clothes === "chef_jacket" || clothes === "orange_apron") {
     [-0.2, 0.2].forEach((x) => {
       [torsoY + 0.36, torsoY + 0.02, torsoY - 0.32].forEach((y) => {
-        root.add(createMesh(new THREE.SphereGeometry(0.045, 12, 8), orange, [x, y, shape.bodyRadius + 0.08]));
+        root.add(createMesh(new THREE.SphereGeometry(0.04, 16, 12), orange, [x, y, torsoFront + 0.035]));
       });
     });
-    const scarf = createMesh(new THREE.ConeGeometry(0.25, 0.32, 3), orange, [0, torsoY + 0.78, shape.bodyRadius + 0.04]);
+    const scarf = createMesh(new THREE.ConeGeometry(0.21, 0.28, 3), orange, [0, torsoY + 0.76, torsoFront + 0.02]);
     scarf.rotation.z = Math.PI;
     root.add(scarf);
   } else if (clothes === "utility_black" || clothes === "black_apron") {
-    const leftStrap = createMesh(new THREE.BoxGeometry(0.11, 1.38, 0.07), orange, [-0.34, torsoY + 0.05, shape.bodyRadius + 0.07]);
-    const rightStrap = createMesh(new THREE.BoxGeometry(0.11, 1.38, 0.07), orange, [0.34, torsoY + 0.05, shape.bodyRadius + 0.07]);
+    const leftStrap = createMesh(new THREE.BoxGeometry(0.09, 1.25, 0.045), orange, [-0.31, torsoY + 0.05, torsoFront + 0.03]);
+    const rightStrap = createMesh(new THREE.BoxGeometry(0.09, 1.25, 0.045), orange, [0.31, torsoY + 0.05, torsoFront + 0.03]);
     leftStrap.rotation.z = -0.18;
     rightStrap.rotation.z = 0.18;
     root.add(leftStrap, rightStrap);
@@ -185,25 +195,25 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
 
   const head = new THREE.Group();
   head.position.y = shape.headY;
-  const headMesh = createMesh(new THREE.SphereGeometry(0.92, 36, 28), white, [0, 0, 0], shape.headScale);
-  const leftEar = createMesh(new THREE.SphereGeometry(0.3, 20, 16), black, [-0.66, 0.66, -0.05]);
-  const rightEar = createMesh(new THREE.SphereGeometry(0.3, 20, 16), black, [0.66, 0.66, -0.05]);
+  const headMesh = createMesh(new THREE.SphereGeometry(0.88, 48, 36), white, [0, 0, 0], shape.headScale);
+  const leftEar = createMesh(new THREE.SphereGeometry(0.27, 28, 20), black, [-0.61, 0.62, -0.07]);
+  const rightEar = createMesh(new THREE.SphereGeometry(0.27, 28, 20), black, [0.61, 0.62, -0.07]);
   head.add(headMesh, leftEar, rightEar);
 
-  const eyeY = 0.18;
-  const eyeZ = 0.77;
+  const eyeY = 0.17;
+  const eyeZ = 0.72;
   const eyes: THREE.Mesh[] = [];
   [-0.31, 0.31].forEach((x, index) => {
-    const patch = createMesh(new THREE.SphereGeometry(0.27, 24, 18), black, [x, eyeY, eyeZ], [0.82, 1.12, 0.24]);
+    const patch = createMesh(new THREE.SphereGeometry(0.25, 32, 24), black, [x, eyeY, eyeZ], [0.78, 1.14, 0.11]);
     patch.rotation.z = index === 0 ? -0.14 : 0.14;
     const eye = createMesh(
-      new THREE.SphereGeometry(0.09, 18, 14),
-      avatar.eyes === "happy" ? softOrange : white,
-      [x, eyeY + 0.01, eyeZ + 0.18],
-      [1, avatar.eyes === "sleepy" ? 0.3 : avatar.eyes === "happy" ? 0.58 : 1, 0.35]
+      new THREE.SphereGeometry(0.095, 28, 20),
+      eyeWhite,
+      [x, eyeY + 0.01, eyeZ + 0.065],
+      [1, avatar.eyes === "sleepy" ? 0.34 : avatar.eyes === "happy" ? 0.76 : 0.92, 0.16]
     );
     eye.userData.baseScaleY = eye.scale.y;
-    const pupil = createMesh(new THREE.SphereGeometry(0.038, 14, 10), black, [x, eyeY + 0.01, eyeZ + 0.255], [1, 1, 0.45]);
+    const pupil = createMesh(new THREE.SphereGeometry(0.032, 20, 14), black, [x, eyeY + 0.005, eyeZ + 0.105], [1, 1, 0.18]);
     pupil.userData.baseScaleY = pupil.scale.y;
     eyes.push(eye, pupil);
     head.add(patch, eye, pupil);
@@ -211,26 +221,27 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
 
   if (avatar.eyes === "focused" || avatar.eyes === "serious") {
     [-0.31, 0.31].forEach((x, index) => {
-      const brow = createMesh(new THREE.BoxGeometry(0.32, 0.055, 0.06), black, [x, 0.48, 0.83]);
+      const brow = createMesh(new THREE.CapsuleGeometry(0.026, 0.22, 6, 12), black, [x, 0.44, 0.76]);
+      brow.rotation.x = Math.PI / 2;
       brow.rotation.z = index === 0 ? -0.18 : 0.18;
       head.add(brow);
     });
   }
 
-  const muzzle = createMesh(new THREE.SphereGeometry(0.34, 24, 18), white, [0, -0.26, 0.82], [1.15, 0.72, 0.34]);
-  const nose = createMesh(new THREE.SphereGeometry(0.11, 18, 12), black, [0, -0.18, 1.0], [1.08, 0.72, 0.45]);
+  const muzzle = createMesh(new THREE.SphereGeometry(0.3, 32, 24), white, [0, -0.25, 0.72], [1.18, 0.72, 0.15]);
+  const nose = createMesh(new THREE.SphereGeometry(0.095, 24, 18), black, [0, -0.17, 0.79], [1.1, 0.72, 0.35]);
   head.add(muzzle, nose);
 
   if (avatar.mouth === "grin") {
-    const grin = createMesh(new THREE.SphereGeometry(0.2, 20, 14), white, [0, -0.43, 1.0], [1.45, 0.58, 0.2]);
-    const grinOutline = createMesh(new THREE.TorusGeometry(0.2, 0.025, 8, 32, Math.PI), black, [0, -0.38, 1.04], [1.35, 0.8, 1]);
+    const grin = createMesh(new THREE.SphereGeometry(0.17, 24, 18), eyeWhite, [0, -0.39, 0.79], [1.45, 0.54, 0.1]);
+    const grinOutline = createMesh(new THREE.TorusGeometry(0.17, 0.018, 8, 36, Math.PI), black, [0, -0.35, 0.81], [1.35, 0.8, 1]);
     grinOutline.rotation.z = Math.PI;
     head.add(grin, grinOutline);
   } else {
     const mouth = createMesh(
-      new THREE.TorusGeometry(avatar.mouth === "smirk" ? 0.16 : 0.18, 0.025, 8, 28, avatar.mouth === "neutral" ? Math.PI * 0.35 : Math.PI),
+      new THREE.TorusGeometry(avatar.mouth === "smirk" ? 0.14 : 0.16, 0.018, 8, 36, avatar.mouth === "neutral" ? Math.PI * 0.35 : Math.PI),
       black,
-      [avatar.mouth === "smirk" ? 0.08 : 0, -0.39, 1.02],
+      [avatar.mouth === "smirk" ? 0.07 : 0, -0.38, 0.81],
       [1.2, avatar.mouth === "neutral" ? 0.08 : 0.72, 1]
     );
     mouth.rotation.z = avatar.mouth === "smirk" ? Math.PI * 1.08 : Math.PI;
@@ -246,7 +257,7 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
       [0, 0.68, 0],
       [1, 0.58, 1]
     );
-    const brim = createMesh(new THREE.BoxGeometry(0.86, 0.08, 0.42), capMaterial, [0.32, 0.62, 0.62]);
+    const brim = createMesh(new THREE.BoxGeometry(0.8, 0.07, 0.34), capMaterial, [0.28, 0.59, 0.55]);
     brim.rotation.y = -0.08;
     head.add(crown, brim);
   } else if (accessory === "headphones") {
@@ -262,11 +273,11 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
         createMesh(
           new THREE.BoxGeometry(0.42, 0.22, 0.055),
           new THREE.MeshPhysicalMaterial({ color: 0x080809, roughness: 0.08, metalness: 0.35, transmission: 0.08 }),
-          [x, eyeY + 0.01, 1.01]
+          [x, eyeY + 0.01, 0.82]
         )
       );
     });
-    head.add(createMesh(new THREE.BoxGeometry(0.2, 0.045, 0.045), black, [0, eyeY + 0.02, 1.01]));
+    head.add(createMesh(new THREE.BoxGeometry(0.2, 0.04, 0.035), black, [0, eyeY + 0.02, 0.82]));
   } else if (accessory === "orange_visor") {
     head.add(
       createMesh(
@@ -279,17 +290,17 @@ function createAvatarRig(avatar: AvatarConfig): AvatarRig {
           metalness: 0.18,
           transmission: 0.12
         }),
-        [0, eyeY + 0.02, 1.02]
+        [0, eyeY + 0.02, 0.83]
       )
     );
   }
 
-  const collar = createMesh(new THREE.TorusGeometry(0.46, 0.055, 10, 36), clothes === "chef_jacket" ? orange : silver, [0, -0.82, 0]);
+  const collar = createMesh(new THREE.TorusGeometry(0.42, 0.045, 10, 40), clothes === "chef_jacket" ? orange : silver, [0, -0.78, 0]);
   collar.rotation.x = Math.PI / 2;
   head.add(collar);
   root.add(head);
 
-  root.rotation.y = -0.08;
+  root.rotation.y = 0;
   return { root, head, leftArm, rightArm, eyes };
 }
 
@@ -308,9 +319,6 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
 
   useEffect(() => {
     pausedRef.current = paused;
-    if (runtimeRef.current) {
-      runtimeRef.current.controls.autoRotate = !paused;
-    }
   }, [paused]);
 
   useEffect(() => {
@@ -320,8 +328,8 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
     }
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-    camera.position.set(0, 2.35, 8.65);
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0.14, 2.16, 9.6);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.shadowMap.enabled = true;
@@ -334,15 +342,15 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
     renderer.domElement.style.touchAction = "pan-y";
     mount.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xfff4e8, 0x171719, 2.15));
-    const key = new THREE.DirectionalLight(0xffffff, 4.2);
-    key.position.set(3.8, 6.5, 5.2);
+    scene.add(new THREE.HemisphereLight(0xfff6ed, 0x171719, 2.35));
+    const key = new THREE.DirectionalLight(0xffffff, 3.6);
+    key.position.set(3.4, 6.2, 5.4);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
     key.shadow.camera.near = 0.5;
     key.shadow.camera.far = 16;
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xfb670a, 3.1);
+    const rim = new THREE.DirectionalLight(0xfb670a, 2.3);
     rim.position.set(-4.5, 3.2, -2.4);
     scene.add(rim);
 
@@ -350,13 +358,14 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.065;
     controls.enablePan = false;
-    controls.minDistance = 6.25;
-    controls.maxDistance = 10.5;
-    controls.minPolarAngle = Math.PI * 0.31;
-    controls.maxPolarAngle = Math.PI * 0.61;
-    controls.target.set(0, 2.05, 0);
-    controls.autoRotate = !pausedRef.current;
-    controls.autoRotateSpeed = 0.72;
+    controls.minDistance = 8.4;
+    controls.maxDistance = 10.8;
+    controls.minPolarAngle = Math.PI * 0.43;
+    controls.maxPolarAngle = Math.PI * 0.55;
+    controls.minAzimuthAngle = -0.4;
+    controls.maxAzimuthAngle = 0.4;
+    controls.target.set(0, 1.95, 0);
+    controls.autoRotate = false;
 
     let rig: AvatarRig | null = null;
     let stage: THREE.Group | null = null;
@@ -429,8 +438,8 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
   function resetView() {
     const runtime = runtimeRef.current;
     if (!runtime) return;
-    runtime.camera.position.set(0, 2.35, 8.65);
-    runtime.controls.target.set(0, 2.05, 0);
+    runtime.camera.position.set(0.14, 2.16, 9.6);
+    runtime.controls.target.set(0, 1.95, 0);
     runtime.controls.update();
   }
 
@@ -457,10 +466,6 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
         >
           <RotateCcw size={18} />
         </button>
-      </div>
-      <div className="pointer-events-none absolute bottom-5 right-5 hidden items-center gap-2 text-xs font-semibold text-white/72 sm:flex">
-        <Move3d size={16} />
-        Тяните, чтобы вращать
       </div>
     </div>
   );
