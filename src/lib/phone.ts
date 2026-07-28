@@ -8,38 +8,44 @@ function basicPhone(input: string) {
   return input.trim().replace(/[^\d+]/g, "");
 }
 
-export function normalizeRussianPhone(input: string) {
-  const digits = digitsOnly(input).slice(0, 11);
+function getRussianNationalDigits(input: string) {
+  const raw = input.trim();
+  const digits = digitsOnly(raw).slice(0, 11);
 
   if (!digits) {
     return "";
   }
 
-  if (digits.length === 10) {
-    return `+7${digits}`;
+  if (raw.startsWith("+7")) {
+    return digits.slice(1, 11);
   }
 
   if (digits.startsWith("8")) {
-    return `+7${digits.slice(1, 11)}`;
+    return digits.slice(1, 11);
   }
 
-  if (digits.startsWith("7")) {
-    return `+7${digits.slice(1, 11)}`;
+  if (digits === "7" || (digits.length === 11 && digits.startsWith("7"))) {
+    return digits.slice(1, 11);
   }
 
-  if (digits.startsWith("9")) {
-    return `+7${digits.slice(0, 10)}`;
+  return digits.slice(0, 10);
+}
+
+export function normalizeRussianPhone(input: string) {
+  const digits = getRussianNationalDigits(input);
+
+  if (!digits) {
+    return "";
   }
 
-  return `+7${digits.slice(0, 10)}`;
+  return `+7${digits}`;
 }
 
 export function formatRussianPhoneInput(input: string) {
-  const normalized = normalizeRussianPhone(input);
-  const digits = digitsOnly(normalized).slice(1, 11);
+  const digits = getRussianNationalDigits(input);
 
   if (!digits) {
-    return input.includes("7") ? RUSSIAN_PREFIX : "";
+    return digitsOnly(input) ? RUSSIAN_PREFIX : "";
   }
 
   const parts = [
