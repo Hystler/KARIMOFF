@@ -325,7 +325,7 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
@@ -389,12 +389,12 @@ export function Avatar3DStudio({ avatar }: Avatar3DStudioProps) {
     resizeObserver.observe(mount);
     resize();
 
-    const clock = new THREE.Clock();
+    const animationStartedAt = performance.now();
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let animationFrame = 0;
     const animate = () => {
       animationFrame = window.requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const elapsed = (performance.now() - animationStartedAt) / 1000;
 
       if (rig && !pausedRef.current && !reducedMotion) {
         rig.root.position.y = Math.sin(elapsed * 1.45) * 0.025;
