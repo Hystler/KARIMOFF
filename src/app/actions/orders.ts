@@ -53,9 +53,9 @@ export async function createOrderAction(
   const parsed = createOrderSchema.safeParse({
     delivery_type: formData.get("delivery_type"),
     fulfillment_mode: formData.get("fulfillment_mode"),
-    requested_at: formData.get("requested_at"),
-    address: formData.get("address"),
-    comment: formData.get("comment"),
+    requested_at: String(formData.get("requested_at") || ""),
+    address: String(formData.get("address") || ""),
+    comment: String(formData.get("comment") || ""),
     cart: parsedCart
   });
 

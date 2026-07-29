@@ -17,6 +17,8 @@ test("modifier price is authoritative and effective ingredients are snapshotted"
   assert.match(migration, /insert into public\.order_item_ingredient_usage/);
   assert.match(migration, /pi\.is_removable = true/);
   assert.match(migration, /pi\.is_extra_available = true/);
+  assert.match(orderAction, /address:\s*String\(formData\.get\("address"\) \|\| ""\)/);
+  assert.match(orderAction, /comment:\s*String\(formData\.get\("comment"\) \|\| ""\)/);
   assert.doesNotMatch(orderAction, /unit_price|line_total|extra_price/);
 });
 

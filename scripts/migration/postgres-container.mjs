@@ -170,6 +170,117 @@ if (command === "schema") {
   );
 }
 
+if (command === "data") {
+  const outputPath = resolve(commandArgs[0] || "");
+  if (!commandArgs[0]) {
+    console.error("Usage: postgres-container.mjs data <output.sql>");
+    process.exit(2);
+  }
+  mkdirSync(dirname(outputPath), { recursive: true });
+  process.exit(
+    runDocker({
+      databaseUrl,
+      mounts: [{ host: dirname(outputPath), container: "/backup" }],
+      args: [
+        "pg_dump",
+        "--data-only",
+        "--schema=public",
+        "--no-owner",
+        "--no-privileges",
+        "--file",
+        `/backup/${basename(outputPath)}`
+      ]
+    })
+  );
+}
+
+if (command === "objects") {
+  const inputPath = resolve(commandArgs[0] || "");
+  const outputPath = resolve(commandArgs[1] || "");
+  if (!commandArgs[0] || !commandArgs[1]) {
+    console.error("Usage: postgres-container.mjs objects <input.dump> <output.txt>");
+    process.exit(2);
+  }
+  mkdirSync(dirname(outputPath), { recursive: true });
+  const result = spawnSync(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "-v",
+      `${dirname(inputPath)}:/backup:ro`,
+      "postgres:17-alpine",
+      "pg_restore",
+      "--list",
+      `/backup/${basename(inputPath)}`
+    ],
+    { encoding: "utf8" }
+  );
+  if (result.status === 0) {
+    writeFileSync(outputPath, result.stdout, { mode: 0o600 });
+  } else if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+  process.exit(result.status ?? 1);
+}
+
+if (command === "replace-data") {
+  const inputPath = resolve(commandArgs[0] || "");
+  if (!commandArgs[0]) {
+    console.error("Usage: postgres-container.mjs replace-data <input-data.sql>");
+    process.exit(2);
+  }
+
+  const transactionName = `.karimoff-replace-${process.pid}-${Date.now()}.sql`;
+  const transactionPath = resolve(dirname(inputPath), transactionName);
+  const sourceData = readFileSync(inputPath, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => !line.startsWith("\\restrict ") && !line.startsWith("\\unrestrict "))
+    .join("\n");
+  const transactionSql = `\\set ON_ERROR_STOP on
+BEGIN;
+DO $do$
+DECLARE
+  statement text;
+BEGIN
+  SELECT
+    'TRUNCATE TABLE ' ||
+    string_agg(format('%I.%I', schemaname, tablename), ', ' ORDER BY tablename) ||
+    ' RESTART IDENTITY CASCADE'
+  INTO statement
+  FROM pg_tables
+  WHERE schemaname = 'public';
+
+  IF statement IS NOT NULL THEN
+    EXECUTE statement;
+  END IF;
+END
+$do$;
+${sourceData}
+COMMIT;
+`;
+  writeFileSync(transactionPath, transactionSql, { mode: 0o600 });
+
+  try {
+    const targetDatabase = new URL(databaseUrl).pathname.replace(/^\//, "") || "postgres";
+    process.exitCode = runDocker({
+      databaseUrl,
+      mounts: [{ host: dirname(inputPath), container: "/backup:ro" }],
+      args: [
+        "psql",
+        "-X",
+        "--dbname",
+        targetDatabase,
+        "--file",
+        `/backup/${transactionName}`
+      ]
+    });
+  } finally {
+    rmSync(transactionPath, { force: true });
+  }
+  process.exit(process.exitCode);
+}
+
 if (command === "restore") {
   const inputPath = resolve(commandArgs[0] || "");
   if (!commandArgs[0]) {
@@ -232,5 +343,5 @@ if (command === "restore") {
   process.exit(process.exitCode);
 }
 
-console.error("Commands: query, query-file, dump, schema, restore");
+console.error("Commands: query, query-file, dump, schema, data, objects, replace-data, restore");
 process.exit(2);
