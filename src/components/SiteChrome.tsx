@@ -6,16 +6,19 @@ import { Header } from "./Header";
 import { CookieConsentBanner } from "./CookieConsentBanner";
 import { CartDrawer } from "./cart/CartDrawer";
 import { CartProvider } from "./cart/CartProvider";
+import { MaintenanceBanner } from "./MaintenanceBanner";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import type { SiteSettings, SiteTheme } from "@/lib/settings";
 
 export function SiteChrome({
   children,
   defaultTheme,
+  maintenanceMode,
   settings
 }: {
   children: React.ReactNode;
   defaultTheme: SiteTheme;
+  maintenanceMode: boolean;
   settings: SiteSettings;
 }) {
   const pathname = usePathname();
@@ -25,6 +28,7 @@ export function SiteChrome({
     return (
       <ThemeProvider defaultTheme="light" forceTheme="light">
         <div className="admin-root min-h-screen">{children}</div>
+        {maintenanceMode ? <MaintenanceBanner /> : null}
       </ThemeProvider>
     );
   }
@@ -37,6 +41,7 @@ export function SiteChrome({
         <Footer settings={settings} />
         <CartDrawer />
         <CookieConsentBanner />
+        {maintenanceMode ? <MaintenanceBanner /> : null}
       </CartProvider>
     </ThemeProvider>
   );
