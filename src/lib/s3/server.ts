@@ -10,13 +10,14 @@ function s3Config() {
   const bucket = process.env.S3_BUCKET;
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  const originPublicBaseUrl = process.env.S3_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  const publicBaseUrl = process.env.S3_CDN_BASE_URL?.replace(/\/$/, "") || originPublicBaseUrl;
 
-  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey || !publicBaseUrl) {
+  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey || !originPublicBaseUrl || !publicBaseUrl) {
     return null;
   }
 
-  return { accessKeyId, bucket, endpoint, publicBaseUrl, region, secretAccessKey };
+  return { accessKeyId, bucket, endpoint, originPublicBaseUrl, publicBaseUrl, region, secretAccessKey };
 }
 
 function client() {
@@ -73,9 +74,16 @@ export async function removeS3Object(key: string) {
 
 export function s3KeyFromPublicUrl(imageUrl: string) {
   const config = s3Config();
-  if (!config || !imageUrl.startsWith(`${config.publicBaseUrl}/`)) return null;
+  if (!config) return null;
+
+  const matchingBaseUrl = [config.publicBaseUrl, config.originPublicBaseUrl].find((baseUrl) =>
+    imageUrl.startsWith(`${baseUrl}/`)
+  );
+
+  if (!matchingBaseUrl) return null;
+
   return imageUrl
-    .slice(config.publicBaseUrl.length + 1)
+    .slice(matchingBaseUrl.length + 1)
     .split("/")
     .map(decodeURIComponent)
     .join("/");

@@ -15,7 +15,7 @@ export function PageHero({
   ctaHref,
   ctaLabel,
   eyebrow,
-  fallbackImageUrl = "/assets/hero/rustam-package.jpg",
+  fallbackImageUrl = "/assets/hero/rustam-package.webp?v=09b580ad0927",
   imageUrl,
   objectPosition = "center",
   subtitle,
@@ -30,6 +30,11 @@ export function PageHero({
         src={src}
         alt=""
         aria-hidden="true"
+        width={2400}
+        height={1200}
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
         className="absolute inset-0 -z-20 h-full w-full object-cover"
         style={{ objectPosition }}
       />

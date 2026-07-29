@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { removeS3Object, s3KeyFromPublicUrl, uploadS3Object } from "@/lib/s3/server";
 
@@ -82,9 +83,14 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
 
   const prepared = await prepareImage(file);
   const normalizedPath = path.replace(/\.[a-z0-9]+$/i, `.${prepared.extension}`);
+  const contentHash = createHash("sha256").update(prepared.buffer).digest("hex").slice(0, 12);
+  const versionedPath = normalizedPath.replace(
+    new RegExp(`\\.${prepared.extension}$`, "i"),
+    `-${contentHash}.${prepared.extension}`
+  );
 
   if (process.env.STORAGE_PROVIDER === "s3") {
-    return uploadS3Object(`${bucket}/${normalizedPath}`, prepared.buffer, prepared.contentType);
+    return uploadS3Object(`${bucket}/${versionedPath}`, prepared.buffer, prepared.contentType);
   }
 
   const supabase = createSupabaseServiceClient();
@@ -92,7 +98,7 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
     return { url: null as string | null, error: "Supabase не подключён." };
   }
 
-  const { error } = await supabase.storage.from(bucket).upload(normalizedPath, prepared.buffer, {
+  const { error } = await supabase.storage.from(bucket).upload(versionedPath, prepared.buffer, {
     cacheControl: "31536000",
     contentType: prepared.contentType,
     upsert
@@ -102,7 +108,7 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
     return { url: null as string | null, error: error.message };
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(versionedPath);
 
   return { url: data.publicUrl, error: null as string | null };
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -84,12 +85,12 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     payments_enabled: false,
     hero_title: optionalString(row, "hero_title"),
     hero_subtitle: optionalString(row, "hero_subtitle"),
-    home_hero_image_url: optionalString(row, "home_hero_image_url"),
-    menu_hero_image_url: optionalString(row, "menu_hero_image_url"),
-    business_hero_image_url: optionalString(row, "business_hero_image_url"),
-    careers_hero_image_url: optionalString(row, "careers_hero_image_url"),
-    franchise_hero_image_url: optionalString(row, "franchise_hero_image_url"),
-    about_hero_image_url: optionalString(row, "about_hero_image_url"),
+    home_hero_image_url: resolvePublicMediaUrl(optionalString(row, "home_hero_image_url")),
+    menu_hero_image_url: resolvePublicMediaUrl(optionalString(row, "menu_hero_image_url")),
+    business_hero_image_url: resolvePublicMediaUrl(optionalString(row, "business_hero_image_url")),
+    careers_hero_image_url: resolvePublicMediaUrl(optionalString(row, "careers_hero_image_url")),
+    franchise_hero_image_url: resolvePublicMediaUrl(optionalString(row, "franchise_hero_image_url")),
+    about_hero_image_url: resolvePublicMediaUrl(optionalString(row, "about_hero_image_url")),
     telegram_url: optionalString(row, "telegram_url"),
     instagram_url: optionalString(row, "instagram_url"),
     tiktok_url: optionalString(row, "tiktok_url")

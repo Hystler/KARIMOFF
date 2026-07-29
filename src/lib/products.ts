@@ -1,6 +1,7 @@
 import "server-only";
 
 import { demoProducts } from "@/data/products";
+import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Product, ProductImage, ProductModifierOption } from "./product-types";
@@ -43,7 +44,10 @@ function normalizeProduct(row: Record<string, unknown>): Product {
     category: String(row.category ?? ""),
     description: typeof row.description === "string" ? row.description : null,
     price: Number(row.price ?? 0),
-    image_url: typeof row.image_url === "string" && row.image_url.length > 0 ? row.image_url : null,
+    image_url:
+      typeof row.image_url === "string" && row.image_url.length > 0
+        ? resolvePublicMediaUrl(row.image_url)
+        : null,
     is_active: Boolean(row.is_active),
     sort_order: Number(row.sort_order ?? 100),
     weight: typeof row.weight === "string" ? row.weight : null,
@@ -61,7 +65,7 @@ function normalizeProductImage(row: Record<string, unknown>): ProductImage {
     id: String(row.id),
     product_id: String(row.product_id),
     created_at: typeof row.created_at === "string" ? row.created_at : undefined,
-    image_url: String(row.image_url ?? ""),
+    image_url: resolvePublicMediaUrl(String(row.image_url ?? "")) ?? "",
     alt: typeof row.alt === "string" && row.alt.length > 0 ? row.alt : null,
     sort_order: Number(row.sort_order ?? 100),
     is_primary: Boolean(row.is_primary)

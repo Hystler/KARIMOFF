@@ -42,7 +42,14 @@ function ProductImage({ product }: { product: Product }) {
   if (src.endsWith(".svg")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]" />
+      <img
+        src={src}
+        alt={product.name}
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
+        className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]"
+      />
     );
   }
 
@@ -52,7 +59,9 @@ function ProductImage({ product }: { product: Product }) {
         src={src}
         alt={product.name}
         fill
-        sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 34vw, 50vw"
+        sizes="(min-width: 1280px) 220px, (min-width: 1024px) calc((100vw - 7rem) / 4), (min-width: 640px) calc((100vw - 4rem) / 3), calc((100vw - 3.25rem) / 2)"
+        loading="lazy"
+        fetchPriority="low"
         className="object-contain transition duration-500 group-hover:scale-[1.03]"
       />
     );
@@ -60,7 +69,14 @@ function ProductImage({ product }: { product: Product }) {
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={product.name} className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]" />
+    <img
+      src={src}
+      alt={product.name}
+      loading="lazy"
+      decoding="async"
+      fetchPriority="low"
+      className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]"
+    />
   );
 }
 

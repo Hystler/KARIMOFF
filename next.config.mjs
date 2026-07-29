@@ -4,11 +4,36 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
 
+function httpsMediaPattern(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+
+    return {
+      hostname: url.hostname,
+      pathname: `${url.pathname.replace(/\/+$/, "") || ""}/**`,
+      port: url.port,
+      protocol: "https"
+    };
+  } catch {
+    return null;
+  }
+}
+
+const cdnPattern = httpsMediaPattern(process.env.S3_CDN_BASE_URL);
+const mediaOrigins = [
+  "https://*.supabase.co",
+  "https://s3.twcstorage.ru",
+  cdnPattern ? `https://${cdnPattern.hostname}${cdnPattern.port ? `:${cdnPattern.port}` : ""}` : null
+].filter(Boolean);
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co https://s3.twcstorage.ru",
+  `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "media-src 'self' https://*.supabase.co",
@@ -28,7 +53,9 @@ const nextConfig = {
     }
   },
   images: {
-    formats: ["image/avif", "image/webp"],
+    formats: ["image/webp"],
+    imageSizes: [128, 192, 256, 320, 384, 480, 512],
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         hostname: "*.supabase.co",
@@ -37,7 +64,8 @@ const nextConfig = {
       {
         hostname: "s3.twcstorage.ru",
         protocol: "https"
-      }
+      },
+      ...(cdnPattern ? [cdnPattern] : [])
     ]
   },
   outputFileTracingRoot: __dirname,
@@ -59,7 +87,13 @@ const nextConfig = {
       });
     }
 
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      {
+        source: "/assets/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }]
+      },
+      { source: "/(.*)", headers: securityHeaders }
+    ];
   }
 };
 

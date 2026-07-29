@@ -15,11 +15,15 @@ export function Hero({ imageUrl, title, subtitle }: HeroProps) {
 
   return (
     <section className="relative mt-[68px] w-full overflow-hidden bg-karimoff-black sm:mt-[74px]">
-      <div className="absolute inset-0 bg-[url('/assets/hero/karimoff-hero-placeholder.svg')] bg-cover bg-center" aria-hidden="true" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={imageUrl || "/assets/hero/rustam-package.jpg"}
+        src={imageUrl || "/assets/hero/rustam-package.webp?v=09b580ad0927"}
         alt="KARIMOFF на кухне"
+        width={2400}
+        height={1200}
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
         className="absolute inset-0 h-full w-full object-cover object-[58%_center] sm:object-[55%_center] lg:object-center"
       />
       <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(18,18,20,0.78)_0%,rgba(18,18,20,0.56)_42%,rgba(18,18,20,0.24)_100%),linear-gradient(180deg,rgba(18,18,20,0.16)_0%,rgba(18,18,20,0.42)_100%)]" />

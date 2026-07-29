@@ -8,6 +8,7 @@ import {
   type AvatarConfig,
   type AvatarOptions
 } from "@/lib/avatar-schema";
+import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -87,7 +88,7 @@ export async function getAvatarAssets() {
     }
 
     options[type as keyof AvatarOptions].push({
-      image_url: typeof asset.image_url === "string" ? asset.image_url : null,
+      image_url: typeof asset.image_url === "string" ? resolvePublicMediaUrl(asset.image_url) : null,
       label: String(asset.name ?? asset.value),
       value: String(asset.value)
     });
