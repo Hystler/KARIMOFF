@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://karimoff.vercel.app")
 };
 
+export const dynamic = "force-dynamic";
+
 const manrope = Manrope({
   subsets: ["cyrillic", "latin"],
   variable: "--font-manrope",
