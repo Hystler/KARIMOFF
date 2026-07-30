@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHmac } from "node:crypto";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 type RateLimitResult = {
   allowed?: boolean;
@@ -19,10 +19,7 @@ const presets = {
 export type RateLimitBucket = keyof typeof presets;
 
 function keyHash(identifier: string) {
-  const secret =
-    process.env.AUTH_RATE_LIMIT_SECRET ||
-    process.env.SESSION_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.AUTH_RATE_LIMIT_SECRET || process.env.SESSION_SECRET;
 
   if (!secret) {
     throw new Error("Auth rate-limit secret is not configured.");
@@ -32,15 +29,15 @@ function keyHash(identifier: string) {
 }
 
 export async function checkAuthRateLimit(bucket: RateLimitBucket, identifier: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return { allowed: false, message: "Сервис авторизации временно недоступен." };
   }
 
   const preset = presets[bucket];
   const hash = keyHash(identifier);
-  const { data, error } = await supabase.rpc("auth_rate_limit_check", {
+  const { data, error } = await database.rpc("auth_rate_limit_check", {
     p_bucket: bucket,
     p_key_hash: hash,
     p_window_seconds: preset.windowSeconds
@@ -59,14 +56,14 @@ export async function checkAuthRateLimit(bucket: RateLimitBucket, identifier: st
 }
 
 export async function recordAuthFailure(bucket: RateLimitBucket, identifier: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return;
   }
 
   const preset = presets[bucket];
-  await supabase.rpc("auth_rate_limit_failure", {
+  await database.rpc("auth_rate_limit_failure", {
     p_bucket: bucket,
     p_key_hash: keyHash(identifier),
     p_lock_seconds: preset.lockSeconds,
@@ -76,13 +73,13 @@ export async function recordAuthFailure(bucket: RateLimitBucket, identifier: str
 }
 
 export async function clearAuthFailures(bucket: RateLimitBucket, identifier: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return;
   }
 
-  await supabase.rpc("auth_rate_limit_clear", {
+  await database.rpc("auth_rate_limit_clear", {
     p_bucket: bucket,
     p_key_hash: keyHash(identifier)
   });

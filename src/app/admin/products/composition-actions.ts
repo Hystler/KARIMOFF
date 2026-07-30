@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { productIngredientFormSchema } from "@/lib/ingredient-schema";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
   const isAuthed = await isAdminAuthenticated();
@@ -14,14 +14,14 @@ async function requireAdmin() {
   }
 }
 
-function getSupabaseOrRedirect(productId: string) {
-  const supabase = createSupabaseServerClient();
+function getDatabaseOrRedirect(productId: string) {
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect(`/admin/products/${productId}/edit?error=supabase`);
+  if (!database) {
+    redirect(`/admin/products/${productId}/edit?error=database`);
   }
 
-  return supabase;
+  return database;
 }
 
 function revalidateProductComposition(productId: string) {
@@ -51,8 +51,8 @@ export async function addProductIngredientAction(formData: FormData) {
     redirect(`/admin/products/${productId}/edit?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте состав")}`);
   }
 
-  const supabase = getSupabaseOrRedirect(parsed.data.product_id);
-  const { error } = await supabase.from("product_ingredients").insert(parsed.data);
+  const database = getDatabaseOrRedirect(parsed.data.product_id);
+  const { error } = await database.from("product_ingredients").insert(parsed.data);
 
   if (error) {
     redirect(`/admin/products/${parsed.data.product_id}/edit?error=${encodeURIComponent(error.message)}`);
@@ -84,8 +84,8 @@ export async function updateProductIngredientAction(formData: FormData) {
     redirect(`/admin/products/${productId}/edit?error=${encodeURIComponent(parsed.success ? "Не найдена строка состава" : parsed.error.issues[0]?.message ?? "Проверьте состав")}`);
   }
 
-  const supabase = getSupabaseOrRedirect(parsed.data.product_id);
-  const { error } = await supabase
+  const database = getDatabaseOrRedirect(parsed.data.product_id);
+  const { error } = await database
     .from("product_ingredients")
     .update({
       ingredient_id: parsed.data.ingredient_id,
@@ -118,8 +118,8 @@ export async function deleteProductIngredientAction(formData: FormData) {
     redirect(`/admin/products/${productId}/edit?error=missing_composition_id`);
   }
 
-  const supabase = getSupabaseOrRedirect(productId);
-  const { error } = await supabase.from("product_ingredients").delete().eq("id", id);
+  const database = getDatabaseOrRedirect(productId);
+  const { error } = await database.from("product_ingredients").delete().eq("id", id);
 
   if (error) {
     redirect(`/admin/products/${productId}/edit?error=${encodeURIComponent(error.message)}`);

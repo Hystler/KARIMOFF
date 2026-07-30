@@ -30,17 +30,17 @@ import {
 import { hashPassword, verifyPassword } from "@/lib/password-auth";
 import { getPhoneLookupCandidates } from "@/lib/phone";
 import { sendVerificationCode } from "@/lib/verification/send-code";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function saveVerificationCode(phone: string, code: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { ok: false, message: "Supabase не подключён." };
+  if (!database) {
+    return { ok: false, message: "База данных не подключена." };
   }
 
   const normalizedPhone = normalizePhone(phone);
-  const { error } = await supabase.from("verification_codes").insert({
+  const { error } = await database.from("verification_codes").insert({
     phone: normalizedPhone,
     code_hash: hashVerificationCode(normalizedPhone, code),
     expires_at: getVerificationExpiresAt()
@@ -60,14 +60,14 @@ async function saveVerificationCode(phone: string, code: string) {
 }
 
 async function verifyCode(phone: string, code: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { ok: false, message: "Supabase не подключён." };
+  if (!database) {
+    return { ok: false, message: "База данных не подключена." };
   }
 
   const normalizedPhone = normalizePhone(phone);
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("verification_codes")
     .select("id, code_hash, expires_at, used_at")
     .eq("phone", normalizedPhone)
@@ -87,7 +87,7 @@ async function verifyCode(phone: string, code: string) {
     return { ok: false, message: "Неверный код подтверждения." };
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("verification_codes")
     .update({ used_at: new Date().toISOString() })
     .eq("id", data.id);
@@ -140,21 +140,21 @@ async function saveRegistrationConsents(
 }
 
 async function findCustomerForLogin(phone: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { supabase, data: null, error: null };
+  if (!database) {
+    return { database, data: null, error: null };
   }
 
   const candidates = getPhoneLookupCandidates(phone);
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .select("id, phone, password_hash")
     .in("phone", candidates)
     .limit(1)
     .maybeSingle();
 
-  return { supabase, data, error };
+  return { database, data, error };
 }
 
 export async function requestRegisterCodeAction(
@@ -222,10 +222,10 @@ export async function registerWithPasswordAction(
     return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён." };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена." };
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
@@ -235,7 +235,7 @@ export async function registerWithPasswordAction(
     return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone, name: parsed.data.name };
   }
 
-  const { data: existingCustomer } = await supabase
+  const { data: existingCustomer } = await database
     .from("customers")
     .select("id")
     .in("phone", getPhoneLookupCandidates(parsed.data.phone))
@@ -252,7 +252,7 @@ export async function registerWithPasswordAction(
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .insert({
       name: parsed.data.name,
@@ -272,7 +272,7 @@ export async function registerWithPasswordAction(
   const consents = await saveRegistrationConsents(customerId, formData, "/register");
 
   if (!consents.ok) {
-    await supabase.from("customers").delete().eq("id", customerId);
+    await database.from("customers").delete().eq("id", customerId);
     return { status: "error", message: consents.message, phone: normalizedPhone, name: parsed.data.name };
   }
 
@@ -334,13 +334,13 @@ export async function confirmRegisterAction(
     return { status: "error", message: verification.message, phone: normalizedPhone, name: parsed.data.name };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён.", phone: normalizedPhone, name: parsed.data.name };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена.", phone: normalizedPhone, name: parsed.data.name };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .upsert(
       {
@@ -395,10 +395,10 @@ export async function requestLoginCodeAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте телефон." };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён." };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена." };
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
@@ -407,7 +407,7 @@ export async function requestLoginCodeAction(
   if (!limit.allowed) {
     return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone };
   }
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .select("id")
     .in("phone", getPhoneLookupCandidates(parsed.data.phone))
@@ -450,10 +450,10 @@ export async function loginWithPasswordAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
-  const { supabase, data, error } = await findCustomerForLogin(parsed.data.phone);
+  const { database, data, error } = await findCustomerForLogin(parsed.data.phone);
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён." };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена." };
   }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
@@ -488,7 +488,7 @@ export async function loginWithPasswordAction(
   }
 
   await clearAuthFailures("customer_login", normalizedPhone);
-  await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await database.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
   await writeAuditLog({
     action: "customer.login",
     actorId: String(data.id),
@@ -538,13 +538,13 @@ export async function confirmLoginAction(
     return { status: "error", message: verification.message, phone: normalizedPhone };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён.", phone: normalizedPhone };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена.", phone: normalizedPhone };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .select("id")
     .in("phone", getPhoneLookupCandidates(parsed.data.phone))
@@ -556,7 +556,7 @@ export async function confirmLoginAction(
   }
 
   await clearAuthFailures("verify_code", normalizedPhone);
-  await supabase.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await database.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
   await writeAuditLog({
     action: "customer.login",
     actorId: String(data.id),

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { avatarSchema } from "@/lib/avatar-schema";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function saveAvatarAction(formData: FormData) {
   const customer = await getCurrentCustomer();
@@ -25,13 +25,13 @@ export async function saveAvatarAction(formData: FormData) {
     redirect(`/profile/avatar?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте аватар")}`);
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/profile/avatar?error=supabase");
+  if (!database) {
+    redirect("/profile/avatar?error=database");
   }
 
-  const { error } = await supabase.from("customer_avatars").upsert(
+  const { error } = await database.from("customer_avatars").upsert(
     {
       customer_id: customer.id,
       ...parsed.data

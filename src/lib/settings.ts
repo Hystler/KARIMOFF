@@ -1,8 +1,8 @@
 import "server-only";
 
 import { resolvePublicMediaUrl } from "@/lib/media-url";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type SiteTheme = "light" | "dark";
 
@@ -98,13 +98,13 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return fallbackSiteSettings;
   }
 
-  const { data, error } = await supabase.from("site_settings").select("*").eq("id", "main").maybeSingle();
+  const { data, error } = await database.from("site_settings").select("*").eq("id", "main").maybeSingle();
 
   if (error || !data) {
     if (error && process.env.NODE_ENV !== "production") {
@@ -117,9 +117,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 }
 
 export async function getAdminSiteSettings() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       settings: fallbackSiteSettings,
       notConfigured: true,
@@ -127,11 +127,11 @@ export async function getAdminSiteSettings() {
     };
   }
 
-  const { data, error } = await supabase.from("site_settings").select("*").eq("id", "main").maybeSingle();
+  const { data, error } = await database.from("site_settings").select("*").eq("id", "main").maybeSingle();
 
   return {
     settings: normalizeSettings(data),
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "site_settings", "supabase/settings.sql")
+    error: formatMissingTableError(error?.message, "site_settings")
   };
 }

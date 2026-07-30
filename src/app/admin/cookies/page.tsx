@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import { logoutAction } from "../login/actions";
 
 type CookieConsentRow = {
@@ -31,16 +31,16 @@ export default async function AdminCookiesPage() {
     redirect("/admin/login");
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
   let rows: CookieConsentRow[] = [];
   let count = 0;
   let error: string | null = null;
   let notConfigured = false;
 
-  if (!supabase) {
+  if (!database) {
     notConfigured = true;
   } else {
-    const result = await supabase
+    const result = await database
       .from("cookie_consents")
       .select("id, created_at, consent_id, customer_id, accepted, categories, page_url", { count: "exact" })
       .order("created_at", { ascending: false })
@@ -48,7 +48,7 @@ export default async function AdminCookiesPage() {
 
     rows = (result.data ?? []) as CookieConsentRow[];
     count = result.count ?? rows.length;
-    error = formatMissingTableError(result.error?.message, "cookie_consents", "supabase/cookie-consents.sql");
+    error = formatMissingTableError(result.error?.message, "cookie_consents");
   }
 
   return (
@@ -86,7 +86,7 @@ export default async function AdminCookiesPage() {
 
         <section className="mt-6 rounded-lg border border-karimoff-line bg-white shadow-card">
           {notConfigured ? (
-            <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
+            <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (
             <div className="p-8 text-red-600">{error}</div>
           ) : rows.length === 0 ? (

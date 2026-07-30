@@ -6,7 +6,7 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
 import { hashPassword } from "@/lib/password-auth";
 import { normalizeRussianPhone } from "@/lib/phone";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireOwnerAdmin() {
   const staff = await getCurrentStaff();
@@ -25,9 +25,9 @@ export async function createStaffAction(formData: FormData) {
     redirect("/admin/staff?error=Проверьте имя, телефон, роль и пароль от 10 символов");
   }
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) redirect("/admin/staff?error=supabase");
-  const { data, error } = await supabase.from("staff_users").insert({
+  const database = createDatabaseServerClient();
+  if (!database) redirect("/admin/staff?error=database");
+  const { data, error } = await database.from("staff_users").insert({
     name,
     phone,
     password_hash: hashPassword(password),
@@ -55,13 +55,13 @@ export async function toggleStaffAction(formData: FormData) {
   const isActive = formData.get("is_active") === "true";
   if (!id || id === actor.id) redirect("/admin/staff?error=Нельзя отключить собственную учётную запись");
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) redirect("/admin/staff?error=supabase");
-  const { error } = await supabase.from("staff_users").update({ is_active: isActive, updated_at: new Date().toISOString() }).eq("id", id);
+  const database = createDatabaseServerClient();
+  if (!database) redirect("/admin/staff?error=database");
+  const { error } = await database.from("staff_users").update({ is_active: isActive, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) redirect(`/admin/staff?error=${encodeURIComponent(error.message)}`);
 
   if (!isActive) {
-    await supabase.from("app_sessions").update({ revoked_at: new Date().toISOString() }).eq("subject_type", "staff").eq("subject_id", id);
+    await database.from("app_sessions").update({ revoked_at: new Date().toISOString() }).eq("subject_type", "staff").eq("subject_id", id);
   }
   await writeAuditLog({
     action: "staff.status_change",

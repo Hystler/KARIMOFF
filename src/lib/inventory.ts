@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import { getAdminIngredients, type Ingredient } from "./ingredients";
 
 export type InventoryMovementType = "receipt" | "sale" | "write_off" | "correction" | "return";
@@ -96,7 +96,7 @@ function getCardStatus(item: InventoryItem | null): InventoryCard["status"] {
 }
 
 function inventoryTableError(message: string | null | undefined, table = "inventory_items") {
-  return formatMissingTableError(message, table, "supabase/inventory.sql");
+  return formatMissingTableError(message, table);
 }
 
 export function formatInventoryQuantity(value: number | null | undefined, unit: string | null | undefined) {
@@ -108,17 +108,17 @@ export function formatInventoryQuantity(value: number | null | undefined, unit: 
 }
 
 export async function getInventoryByIngredientIds(ingredientIds: string[]) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase || !ingredientIds.length) {
+  if (!database || !ingredientIds.length) {
     return {
       itemsByIngredient: new Map<string, InventoryItem>(),
       error: null as string | null,
-      notConfigured: !supabase
+      notConfigured: !database
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("inventory_items")
     .select("id, created_at, updated_at, ingredient_id, current_quantity, reserved_quantity, min_quantity, unit, location, is_active")
     .in("ingredient_id", ingredientIds);
@@ -150,13 +150,13 @@ export async function getInventoryCards() {
   }
 
   const inventoryResult = await getInventoryByIngredientIds(ingredientsResult.ingredients.map((ingredient) => ingredient.id));
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
   let movementsToday = 0;
 
-  if (supabase && !inventoryResult.error) {
+  if (database && !inventoryResult.error) {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const { count } = await supabase
+    const { count } = await database
       .from("inventory_movements")
       .select("id", { count: "exact", head: true })
       .gte("created_at", startOfDay.toISOString());
@@ -194,9 +194,9 @@ export async function getInventoryStockValue() {
 }
 
 export async function getInventoryMovements(filters?: { ingredientId?: string; movementType?: string }) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       movements: [] as InventoryMovement[],
       ingredients: [] as Ingredient[],
@@ -207,7 +207,7 @@ export async function getInventoryMovements(filters?: { ingredientId?: string; m
 
   const ingredientsResult = await getAdminIngredients();
   const ingredientNames = new Map(ingredientsResult.ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
-  let query = supabase
+  let query = database
     .from("inventory_movements")
     .select("id, created_at, ingredient_id, order_id, product_id, movement_type, quantity, unit, reason, comment, created_by")
     .order("created_at", { ascending: false })
@@ -232,13 +232,13 @@ export async function getInventoryMovements(filters?: { ingredientId?: string; m
 }
 
 export async function ensureInventoryItem(ingredientId: string, defaults?: { currentQuantity?: number; location?: string | null; minQuantity?: number }) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { ok: false as const, message: "Supabase не подключён." };
+  if (!database) {
+    return { ok: false as const, message: "База данных не подключена." };
   }
 
-  const { data: ingredient, error: ingredientError } = await supabase
+  const { data: ingredient, error: ingredientError } = await database
     .from("ingredients")
     .select("id, unit")
     .eq("id", ingredientId)
@@ -248,7 +248,7 @@ export async function ensureInventoryItem(ingredientId: string, defaults?: { cur
     return { ok: false as const, message: ingredientError?.message ?? "Ингредиент не найден." };
   }
 
-  const { error } = await supabase.from("inventory_items").upsert(
+  const { error } = await database.from("inventory_items").upsert(
     {
       ingredient_id: ingredientId,
       location: defaults?.location || null,
@@ -274,13 +274,13 @@ export async function ensureInventoryItem(ingredientId: string, defaults?: { cur
 }
 
 async function getInventoryOperationBase(ingredientId: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { ok: false as const, message: "Supabase не подключён." };
+  if (!database) {
+    return { ok: false as const, message: "База данных не подключена." };
   }
 
-  const { data: ingredient, error: ingredientError } = await supabase
+  const { data: ingredient, error: ingredientError } = await database
     .from("ingredients")
     .select("id, name, unit, cost_per_unit")
     .eq("id", ingredientId)
@@ -290,7 +290,7 @@ async function getInventoryOperationBase(ingredientId: string) {
     return { ok: false as const, message: ingredientError?.message ?? "Ингредиент не найден." };
   }
 
-  const { data: item, error: itemError } = await supabase
+  const { data: item, error: itemError } = await database
     .from("inventory_items")
     .select("id, ingredient_id, current_quantity, reserved_quantity, min_quantity, unit, location, is_active")
     .eq("ingredient_id", ingredientId)
@@ -309,7 +309,7 @@ async function getInventoryOperationBase(ingredientId: string) {
       cost_per_unit: Number(ingredient.cost_per_unit ?? 0)
     },
     item: item ? normalizeInventoryItem({ ...item, created_at: "", updated_at: null }) : null,
-    supabase
+    database
   };
 }
 
@@ -325,7 +325,7 @@ export async function updateInventoryCard(params: {
     return base;
   }
 
-  const { error } = await base.supabase.from("inventory_items").upsert(
+  const { error } = await base.database.from("inventory_items").upsert(
     {
       ingredient_id: params.ingredientId,
       location: params.location || null,
@@ -364,9 +364,9 @@ export async function receiptInventory(params: {
     return { ok: false as const, message: "Укажите количество прихода больше нуля." };
   }
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
-  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+  const database = createDatabaseServerClient();
+  if (!database) return { ok: false as const, message: "База данных не подключена." };
+  const { error } = await database.rpc("apply_inventory_movement_atomic", {
     p_comment: params.comment || null,
     p_created_by: "admin",
     p_ingredient_id: params.ingredientId,
@@ -395,9 +395,9 @@ export async function writeOffInventory(params: {
     return { ok: false as const, message: "Укажите количество списания больше нуля." };
   }
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
-  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+  const database = createDatabaseServerClient();
+  if (!database) return { ok: false as const, message: "База данных не подключена." };
+  const { error } = await database.rpc("apply_inventory_movement_atomic", {
     p_comment: params.comment || null,
     p_created_by: "admin",
     p_ingredient_id: params.ingredientId,
@@ -425,9 +425,9 @@ export async function correctInventory(params: {
     return { ok: false as const, message: "Остаток не может быть отрицательным." };
   }
 
-  const supabase = createSupabaseServerClient();
-  if (!supabase) return { ok: false as const, message: "Supabase не подключён." };
-  const { error } = await supabase.rpc("apply_inventory_movement_atomic", {
+  const database = createDatabaseServerClient();
+  if (!database) return { ok: false as const, message: "База данных не подключена." };
+  const { error } = await database.rpc("apply_inventory_movement_atomic", {
     p_comment: params.comment || null,
     p_created_by: "admin",
     p_ingredient_id: params.ingredientId,

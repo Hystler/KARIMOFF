@@ -56,7 +56,7 @@ export default async function AdminOrdersPage({
       {params.warning ? <div className="admin-alert admin-alert-warning">{decodeURIComponent(params.warning)}</div> : null}
 
       {notConfigured ? (
-        <div className="admin-empty">Supabase не подключён.</div>
+        <div className="admin-empty">База данных не подключена.</div>
       ) : orders.length === 0 ? (
         <div className="admin-empty">Заказов пока нет.</div>
       ) : (

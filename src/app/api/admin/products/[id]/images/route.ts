@@ -4,7 +4,7 @@ import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
 import { isAllowedSameOriginRequest } from "@/lib/request-security";
 import { slugifyStorageSegment, uploadImageToStorage } from "@/lib/storage-images";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export const runtime = "nodejs";
 
@@ -23,13 +23,13 @@ function jsonError(message: string, status = 400, uploaded = 0) {
 }
 
 async function syncPrimaryProductImage(productId: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return;
   }
 
-  const { data } = await supabase
+  const { data } = await database
     .from("product_images")
     .select("id, image_url")
     .eq("product_id", productId)
@@ -40,10 +40,10 @@ async function syncPrimaryProductImage(productId: string) {
     .maybeSingle();
 
   if (data) {
-    await supabase.from("product_images").update({ is_primary: true }).eq("id", data.id);
+    await database.from("product_images").update({ is_primary: true }).eq("id", data.id);
   }
 
-  await supabase.from("products").update({ image_url: data?.image_url ?? null }).eq("id", productId);
+  await database.from("products").update({ image_url: data?.image_url ?? null }).eq("id", productId);
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -58,13 +58,13 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const { id: productId } = await context.params;
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return jsonError("Supabase не подключён.", 500);
+  if (!database) {
+    return jsonError("База данных не подключена.", 500);
   }
 
-  const { data: product, error: productError } = await supabase
+  const { data: product, error: productError } = await database
     .from("products")
     .select("id, slug, category")
     .eq("id", productId)
@@ -108,12 +108,12 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const { count } = await supabase
+  const { count } = await database
     .from("product_images")
     .select("id", { count: "exact", head: true })
     .eq("product_id", productId);
   const currentCount = count ?? 0;
-  const { data: primaryImage } = await supabase
+  const { data: primaryImage } = await database
     .from("product_images")
     .select("id")
     .eq("product_id", productId)
@@ -135,7 +135,7 @@ export async function POST(request: Request, context: RouteContext) {
       return jsonError(uploaded.error ?? "Не удалось загрузить фото.", 500, uploadedCount);
     }
 
-    const { error } = await supabase.from("product_images").insert({
+    const { error } = await database.from("product_images").insert({
       alt: slug,
       image_url: uploaded.url,
       is_primary: !primaryImage && currentCount === 0 && index === 0,

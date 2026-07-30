@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { economicsKeys, normalizeEconomicsRow } from "@/lib/economics";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type EconomicsSaveState = {
   message: string | null;
@@ -30,10 +30,10 @@ export async function saveEconomicsSettingsAction(
 ): Promise<EconomicsSaveState> {
   await requireAdmin();
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    return { status: "error", message: "Supabase не подключён." };
+  if (!database) {
+    return { status: "error", message: "База данных не подключена." };
   }
 
   const values = normalizeEconomicsRow(
@@ -45,7 +45,7 @@ export async function saveEconomicsSettingsAction(
     )
   );
 
-  const { error } = await supabase.from("economics_settings").upsert(
+  const { error } = await database.from("economics_settings").upsert(
     {
       id: "main",
       ...values

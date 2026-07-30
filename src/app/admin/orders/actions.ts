@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, getCurrentStaff } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 const allowedStatuses = new Set(["new", "in_progress", "completed", "cancelled"]);
 
@@ -35,13 +35,13 @@ export async function updateOrderStatusAction(formData: FormData) {
     redirect("/admin/orders?error=bad_status");
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/orders?error=supabase");
+  if (!database) {
+    redirect("/admin/orders?error=database");
   }
 
-  const { data, error } = await supabase.rpc("set_order_status_staff_atomic", {
+  const { data, error } = await database.rpc("set_order_status_staff_atomic", {
     p_actor_id: staff.id,
     p_actor_role: staff.role,
     p_order_id: id,
@@ -72,13 +72,13 @@ export async function deleteOrderAction(formData: FormData) {
   if (staff.role === "cook") redirect("/admin/kitchen");
 
   const id = getOrderId(formData);
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/orders?error=supabase");
+  if (!database) {
+    redirect("/admin/orders?error=database");
   }
 
-  const { error } = await supabase.from("orders").delete().eq("id", id);
+  const { error } = await database.from("orders").delete().eq("id", id);
 
   if (error) {
     redirect(`/admin/orders?error=${encodeURIComponent(error.message)}`);

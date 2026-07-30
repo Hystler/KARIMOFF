@@ -6,7 +6,7 @@ import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
 import { productFormSchema, type ProductFormInput } from "@/lib/product-schema";
 import { removeStoragePublicUrl, slugifyStorageSegment, uploadImageToStorage } from "@/lib/storage-images";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
   const isAuthed = await isAdminAuthenticated();
@@ -16,14 +16,14 @@ async function requireAdmin() {
   }
 }
 
-function getSupabaseOrRedirect() {
-  const supabase = createSupabaseServerClient();
+function getDatabaseOrRedirect() {
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/products?error=supabase");
+  if (!database) {
+    redirect("/admin/products?error=database");
   }
 
-  return supabase;
+  return database;
 }
 
 function getProductId(formData: FormData) {
@@ -83,8 +83,8 @@ function revalidateProductViews() {
 }
 
 async function getProductForImages(productId: string) {
-  const supabase = getSupabaseOrRedirect();
-  const { data, error } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { data, error } = await database
     .from("products")
     .select("id, slug, category, image_url")
     .eq("id", productId)
@@ -98,8 +98,8 @@ async function getProductForImages(productId: string) {
 }
 
 async function syncPrimaryProductImage(productId: string) {
-  const supabase = getSupabaseOrRedirect();
-  const { data } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { data } = await database
     .from("product_images")
     .select("id, image_url")
     .eq("product_id", productId)
@@ -110,10 +110,10 @@ async function syncPrimaryProductImage(productId: string) {
     .maybeSingle();
 
   if (data) {
-    await supabase.from("product_images").update({ is_primary: true }).eq("id", data.id);
+    await database.from("product_images").update({ is_primary: true }).eq("id", data.id);
   }
 
-  await supabase.from("products").update({ image_url: data?.image_url ?? null }).eq("id", productId);
+  await database.from("products").update({ image_url: data?.image_url ?? null }).eq("id", productId);
 }
 
 function redirectToProductEdit(productId: string, search = "saved=1") {
@@ -131,8 +131,8 @@ export async function createProductAction(formData: FormData) {
     redirect(`/admin/products/new?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("products").insert(toPayload(parsed.data));
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("products").insert(toPayload(parsed.data));
 
   if (error) {
     redirect(`/admin/products/new?error=${encodeURIComponent(error.message)}`);
@@ -160,9 +160,9 @@ export async function updateProductAction(formData: FormData) {
     redirect(`/admin/products/${id}/edit?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { data: previous } = await supabase.from("products").select("price").eq("id", id).maybeSingle();
-  const { error } = await supabase.from("products").update(toPayload(parsed.data)).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { data: previous } = await database.from("products").select("price").eq("id", id).maybeSingle();
+  const { error } = await database.from("products").update(toPayload(parsed.data)).eq("id", id);
 
   if (error) {
     redirect(`/admin/products/${id}/edit?error=${encodeURIComponent(error.message)}`);
@@ -188,8 +188,8 @@ export async function toggleProductActiveAction(formData: FormData) {
 
   const id = getProductId(formData);
   const nextActive = String(formData.get("next_active") || "") === "true";
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("products").update({ is_active: nextActive }).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("products").update({ is_active: nextActive }).eq("id", id);
 
   if (error) {
     redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
@@ -212,8 +212,8 @@ export async function deleteProductAction(formData: FormData) {
   await requireAdmin();
 
   const id = getProductId(formData);
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("products").delete().eq("id", id);
 
   if (error) {
     redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
@@ -242,8 +242,8 @@ export async function uploadProductImagesAction(formData: FormData) {
     redirectToProductEdit(productId, "error=no_files");
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { count } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { count } = await database
     .from("product_images")
     .select("id", { count: "exact", head: true })
     .eq("product_id", productId);
@@ -263,7 +263,7 @@ export async function uploadProductImagesAction(formData: FormData) {
       redirectToProductEdit(productId, `error=${encodeURIComponent(uploaded.error ?? "Не удалось загрузить фото")}`);
     }
 
-    const { error } = await supabase.from("product_images").insert({
+    const { error } = await database.from("product_images").insert({
       product_id: productId,
       image_url: uploaded.url,
       alt: String(formData.get("alt") || product.slug || productId),
@@ -292,8 +292,8 @@ export async function updateProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, "error=missing_image_id");
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { error } = await database
     .from("product_images")
     .update({ alt, sort_order: sortOrder })
     .eq("id", imageId)
@@ -317,8 +317,8 @@ export async function setPrimaryProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, "error=missing_image_id");
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { data, error } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { data, error } = await database
     .from("product_images")
     .select("image_url")
     .eq("id", imageId)
@@ -329,9 +329,9 @@ export async function setPrimaryProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, `error=${encodeURIComponent(error?.message ?? "Фото не найдено")}`);
   }
 
-  const imageUrl = String((data as { image_url: string }).image_url);
-  await supabase.from("product_images").update({ is_primary: false }).eq("product_id", productId);
-  const { error: updateError } = await supabase
+  const imageUrl = String(data!.image_url);
+  await database.from("product_images").update({ is_primary: false }).eq("product_id", productId);
+  const { error: updateError } = await database
     .from("product_images")
     .update({ is_primary: true })
     .eq("id", imageId)
@@ -341,7 +341,7 @@ export async function setPrimaryProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, `error=${encodeURIComponent(updateError.message)}`);
   }
 
-  await supabase.from("products").update({ image_url: imageUrl }).eq("id", productId);
+  await database.from("products").update({ image_url: imageUrl }).eq("id", productId);
   redirectToProductEdit(productId);
 }
 
@@ -355,8 +355,8 @@ export async function deleteProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, "error=missing_image_id");
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { data, error } = await supabase
+  const database = getDatabaseOrRedirect();
+  const { data, error } = await database
     .from("product_images")
     .select("image_url")
     .eq("id", imageId)
@@ -367,8 +367,8 @@ export async function deleteProductImageAction(formData: FormData) {
     redirectToProductEdit(productId, `error=${encodeURIComponent(error?.message ?? "Фото не найдено")}`);
   }
 
-  const imageUrl = String((data as { image_url: string }).image_url);
-  const { error: deleteError } = await supabase
+  const imageUrl = String(data!.image_url);
+  const { error: deleteError } = await database
     .from("product_images")
     .delete()
     .eq("id", imageId)

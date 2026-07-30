@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
 import { ingredientFormSchema } from "@/lib/ingredient-schema";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
   const isAuthed = await isAdminAuthenticated();
@@ -15,14 +15,14 @@ async function requireAdmin() {
   }
 }
 
-function getSupabaseOrRedirect() {
-  const supabase = createSupabaseServerClient();
+function getDatabaseOrRedirect() {
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/ingredients?error=supabase");
+  if (!database) {
+    redirect("/admin/ingredients?error=database");
   }
 
-  return supabase;
+  return database;
 }
 
 function getIngredientId(formData: FormData) {
@@ -86,8 +86,8 @@ export async function createIngredientAction(formData: FormData) {
     redirect(`/admin/ingredients/new?error=${encodeURIComponent(parsed.message)}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("ingredients").insert(parsed.payload);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("ingredients").insert(parsed.payload);
 
   if (error) {
     redirect(`/admin/ingredients/new?error=${encodeURIComponent(error.message)}`);
@@ -115,8 +115,8 @@ export async function updateIngredientAction(formData: FormData) {
     redirect(`/admin/ingredients/${id}/edit?error=${encodeURIComponent(parsed.message)}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("ingredients").update(parsed.payload).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("ingredients").update(parsed.payload).eq("id", id);
 
   if (error) {
     redirect(`/admin/ingredients/${id}/edit?error=${encodeURIComponent(error.message)}`);
@@ -140,8 +140,8 @@ export async function toggleIngredientActiveAction(formData: FormData) {
 
   const id = getIngredientId(formData);
   const nextActive = String(formData.get("next_active") || "") === "true";
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("ingredients").update({ is_active: nextActive }).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("ingredients").update({ is_active: nextActive }).eq("id", id);
 
   if (error) {
     redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
@@ -164,8 +164,8 @@ export async function deleteIngredientAction(formData: FormData) {
   await requireAdmin();
 
   const id = getIngredientId(formData);
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("ingredients").delete().eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("ingredients").delete().eq("id", id);
 
   if (error) {
     redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);

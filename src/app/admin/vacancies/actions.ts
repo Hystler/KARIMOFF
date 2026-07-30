@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import { vacancyFormSchema, type VacancyFormInput } from "@/lib/vacancy-schema";
 
 async function requireAdmin() {
@@ -14,14 +14,14 @@ async function requireAdmin() {
   }
 }
 
-function getSupabaseOrRedirect() {
-  const supabase = createSupabaseServerClient();
+function getDatabaseOrRedirect() {
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/vacancies?error=supabase");
+  if (!database) {
+    redirect("/admin/vacancies?error=database");
   }
 
-  return supabase;
+  return database;
 }
 
 function getVacancyId(formData: FormData) {
@@ -97,8 +97,8 @@ export async function createVacancyAction(formData: FormData) {
     redirect(`/admin/vacancies/new?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("vacancies").insert(toPayload(parsed.data));
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("vacancies").insert(toPayload(parsed.data));
 
   if (error) {
     redirect(`/admin/vacancies/new?error=${encodeURIComponent("Не удалось сохранить вакансию. Проверьте SQL и уникальность slug.")}`);
@@ -118,8 +118,8 @@ export async function updateVacancyAction(formData: FormData) {
     redirect(`/admin/vacancies/${id}/edit?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("vacancies").update(toPayload(parsed.data)).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("vacancies").update(toPayload(parsed.data)).eq("id", id);
 
   if (error) {
     redirect(`/admin/vacancies/${id}/edit?error=${encodeURIComponent("Не удалось сохранить вакансию. Проверьте SQL и уникальность slug.")}`);
@@ -134,8 +134,8 @@ export async function toggleVacancyActiveAction(formData: FormData) {
 
   const id = getVacancyId(formData);
   const nextActive = String(formData.get("next_active") || "") === "true";
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("vacancies").update({ is_active: nextActive }).eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("vacancies").update({ is_active: nextActive }).eq("id", id);
 
   if (error) {
     redirect("/admin/vacancies?error=save_failed");
@@ -149,8 +149,8 @@ export async function deleteVacancyAction(formData: FormData) {
   await requireAdmin();
 
   const id = getVacancyId(formData);
-  const supabase = getSupabaseOrRedirect();
-  const { error } = await supabase.from("vacancies").delete().eq("id", id);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database.from("vacancies").delete().eq("id", id);
 
   if (error) {
     redirect("/admin/vacancies?error=delete_failed");

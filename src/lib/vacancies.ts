@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type Vacancy = {
   id: string;
@@ -119,9 +119,9 @@ function normalizeVacancy(row: Record<string, unknown>): Vacancy {
 }
 
 export async function getActiveVacancies() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       vacancies: fallbackVacancies,
       notConfigured: true,
@@ -129,7 +129,7 @@ export async function getActiveVacancies() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("vacancies")
     .select(
       "id, created_at, updated_at, title, slug, department, employment_type, salary_from, salary_to, salary_unit, location, schedule, description, requirements, responsibilities, benefits, is_active, sort_order"
@@ -146,7 +146,7 @@ export async function getActiveVacancies() {
     return {
       vacancies: fallbackVacancies,
       notConfigured: false,
-      error: formatMissingTableError(error.message, "vacancies", "supabase/vacancies.sql")
+      error: formatMissingTableError(error.message, "vacancies")
     };
   }
 
@@ -158,9 +158,9 @@ export async function getActiveVacancies() {
 }
 
 export async function getAdminVacancies() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       vacancies: [] as Vacancy[],
       notConfigured: true,
@@ -168,7 +168,7 @@ export async function getAdminVacancies() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("vacancies")
     .select(
       "id, created_at, updated_at, title, slug, department, employment_type, salary_from, salary_to, salary_unit, location, schedule, description, requirements, responsibilities, benefits, is_active, sort_order"
@@ -179,14 +179,14 @@ export async function getAdminVacancies() {
   return {
     vacancies: (data ?? []).map((row) => normalizeVacancy(row)),
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "vacancies", "supabase/vacancies.sql")
+    error: formatMissingTableError(error?.message, "vacancies")
   };
 }
 
 export async function getAdminVacancyById(id: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       vacancy: null as Vacancy | null,
       notConfigured: true,
@@ -194,7 +194,7 @@ export async function getAdminVacancyById(id: string) {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("vacancies")
     .select(
       "id, created_at, updated_at, title, slug, department, employment_type, salary_from, salary_to, salary_unit, location, schedule, description, requirements, responsibilities, benefits, is_active, sort_order"
@@ -205,7 +205,7 @@ export async function getAdminVacancyById(id: string) {
   return {
     vacancy: data ? normalizeVacancy(data) : null,
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "vacancies", "supabase/vacancies.sql")
+    error: formatMissingTableError(error?.message, "vacancies")
   };
 }
 

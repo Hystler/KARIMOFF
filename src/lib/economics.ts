@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type EconomicsValues = {
   acquiring_percent: number;
@@ -59,9 +59,9 @@ export function normalizeEconomicsRow(row: Record<string, unknown> | null | unde
 }
 
 export async function getAdminEconomicsSettings() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       settings: defaultEconomicsValues,
       notConfigured: true,
@@ -69,12 +69,12 @@ export async function getAdminEconomicsSettings() {
     };
   }
 
-  const { data, error } = await supabase.from("economics_settings").select("*").eq("id", "main").maybeSingle();
+  const { data, error } = await database.from("economics_settings").select("*").eq("id", "main").maybeSingle();
 
   return {
     settings: normalizeEconomicsRow(data),
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "economics_settings", "supabase/economics-settings.sql")
+    error: formatMissingTableError(error?.message, "economics_settings")
   };
 }
 

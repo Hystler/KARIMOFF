@@ -19,7 +19,7 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
 
   const params = searchParams ? await searchParams : {};
   const [{ avatar, error }, assetsResult] = await Promise.all([getCustomerAvatar(customer.id), getAvatarAssets()]);
-  const message = params.error === "supabase" ? "Supabase не подключён." : params.error ? decodeURIComponent(params.error) : error ?? assetsResult.error;
+  const message = params.error === "database" ? "База данных не подключена." : params.error ? decodeURIComponent(params.error) : error ?? assetsResult.error;
 
   return (
     <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">

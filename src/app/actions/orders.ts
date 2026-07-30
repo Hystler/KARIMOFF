@@ -6,7 +6,7 @@ import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
 import { getSiteSettings } from "@/lib/settings";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -120,12 +120,12 @@ export async function createOrderAction(
     };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       status: "error",
-      message: "Supabase не подключён."
+      message: "База данных не подключена."
     };
   }
 
@@ -133,7 +133,7 @@ export async function createOrderAction(
   const idempotencyKey = /^[0-9a-f-]{36}$/i.test(rawIdempotencyKey)
     ? rawIdempotencyKey
     : randomUUID();
-  const { data, error } = await supabase.rpc("create_site_order", {
+  const { data, error } = await database.rpc("create_site_order", {
     p_address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
     p_comment: parsed.data.comment || null,
     p_customer_id: customer.id,

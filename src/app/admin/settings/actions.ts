@@ -7,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { siteSettingsSchema } from "@/lib/settings-schema";
 import { uploadImageToStorage } from "@/lib/storage-images";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
   const isAuthed = await isAdminAuthenticated();
@@ -101,17 +101,17 @@ export async function updateSiteSettingsAction(formData: FormData) {
     redirect(`/admin/settings?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/settings?error=supabase");
+  if (!database) {
+    redirect("/admin/settings?error=database");
   }
 
   const heroImageValues = Object.fromEntries(
     await Promise.all(heroImageKeys.map(async (key) => [key, await resolveHeroImageValue(formData, key)]))
   );
 
-  const { error } = await supabase.from("site_settings").upsert(
+  const { error } = await database.from("site_settings").upsert(
     {
       id: "main",
       ...parsed.data,

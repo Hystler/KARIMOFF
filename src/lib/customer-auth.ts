@@ -3,7 +3,7 @@ import "server-only";
 import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { normalizeRussianPhone } from "@/lib/phone";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type CustomerSession = {
   customerId: string;
@@ -22,10 +22,10 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 const CODE_TTL_MS = 1000 * 60 * 10;
 
 function getSecret() {
-  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.SESSION_SECRET;
 
   if (!secret) {
-    throw new Error("SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY must be configured.");
+    throw new Error("SESSION_SECRET must be configured.");
   }
 
   return secret;
@@ -52,16 +52,16 @@ export function getVerificationExpiresAt() {
 }
 
 export async function setCustomerSession(customerId: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    throw new Error("Supabase is not configured.");
+  if (!database) {
+    throw new Error("Database is not configured.");
   }
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
   const headerStore = await headers();
-  const { error } = await supabase.from("app_sessions").insert({
+  const { error } = await database.from("app_sessions").insert({
     expires_at: expiresAt.toISOString(),
     subject_id: customerId,
     subject_type: "customer",
@@ -86,10 +86,10 @@ export async function setCustomerSession(customerId: string) {
 export async function clearCustomerSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (token && supabase) {
-    await supabase
+  if (token && database) {
+    await database
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("token_hash", hashToken(token))
@@ -102,13 +102,13 @@ export async function clearCustomerSession() {
 export async function getCustomerSession(): Promise<CustomerSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!token || !supabase) {
+  if (!token || !database) {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("app_sessions")
     .select("subject_id, expires_at")
     .eq("token_hash", hashToken(token))
@@ -134,13 +134,13 @@ export async function getCurrentCustomer(): Promise<CustomerProfile | null> {
     return null;
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customers")
     .select("id, name, phone, birthday")
     .eq("id", session.customerId)

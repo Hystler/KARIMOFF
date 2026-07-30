@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { getCurrentStaff } from "@/lib/admin-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import { createStaffAction, toggleStaffAction } from "./actions";
 
 const roleLabels = { admin: "Администратор", manager: "Управляющий", cook: "Повар" } as const;
@@ -14,9 +14,9 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   if (actor.role !== "admin") redirect("/admin");
 
   const params = await searchParams;
-  const supabase = createSupabaseServerClient();
-  const { data } = supabase
-    ? await supabase.from("staff_users").select("id, name, phone, role, is_active, last_login_at, created_at").order("created_at")
+  const database = createDatabaseServerClient();
+  const { data } = database
+    ? await database.from("staff_users").select("id, name, phone, role, is_active, last_login_at, created_at").order("created_at")
     : { data: [] };
 
   return (

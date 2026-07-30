@@ -20,8 +20,8 @@ function getMessage(params: Awaited<NonNullable<AdminSettingsPageProps["searchPa
     return { tone: "success", text: "Настройки сохранены." };
   }
 
-  if (params.error === "supabase") {
-    return { tone: "error", text: "Supabase не подключён. Заполните переменные окружения." };
+  if (params.error === "database") {
+    return { tone: "error", text: "База данных не подключена. Заполните переменные окружения." };
   }
 
   if (params.error) {
@@ -109,7 +109,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
 
         {notConfigured ? (
           <div className="mt-8 rounded-lg border border-karimoff-line bg-white p-8 text-karimoff-muted shadow-card">
-            Supabase не подключён. Заполните переменные окружения.
+            База данных не подключена. Заполните переменные окружения.
           </div>
         ) : error ? (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">{error}</div>

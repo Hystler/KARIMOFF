@@ -3,11 +3,19 @@ import "server-only";
 import postgres, { type Sql } from "postgres";
 
 type Row = Record<string, unknown>;
+// Query projections are dynamic by design, matching the fluent data API used by the app.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CompatRow = Record<string, any>;
+type CompatData = CompatRow & CompatRow[];
 type QueryResult = {
   count: number | null;
-  data: unknown;
+  data: CompatData | null;
   error: { code?: string; message: string } | null;
 };
+
+function compatData(value: unknown) {
+  return value as CompatData;
+}
 
 const identifierPattern = /^[a-z_][a-z0-9_]*$/;
 const allowedTables = new Set([
@@ -330,15 +338,15 @@ class PostgresQueryBuilder implements PromiseLike<QueryResult> {
       if (rows.length !== 1) {
         return { count, data: null, error: { code: "PGRST116", message: "Expected one row." } };
       }
-      return { count, data: rows[0], error: null };
+      return { count, data: compatData(rows[0]), error: null };
     }
     if (this.resultMode === "maybeSingle") {
       if (rows.length > 1) {
         return { count, data: null, error: { code: "PGRST116", message: "Expected at most one row." } };
       }
-      return { count, data: rows[0] ?? null, error: null };
+      return { count, data: rows[0] ? compatData(rows[0]) : null, error: null };
     }
-    return { count, data: rows, error: null };
+    return { count, data: compatData(rows), error: null };
   }
 }
 
@@ -366,10 +374,10 @@ export class PostgresCompatClient {
       if (rows.length === 1) {
         const keys = Object.keys(rows[0]);
         if (keys.length === 1 && keys[0] === name) {
-          return { count: null, data: rows[0][name], error: null };
+          return { count: null, data: compatData(rows[0][name]), error: null };
         }
       }
-      return { count: null, data: rows, error: null };
+      return { count: null, data: compatData(rows), error: null };
     } catch (error) {
       return { count: null, data: null, error: databaseError(error) };
     }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { createSupabaseServerClient, type LeadRow } from "@/lib/supabase/server";
+import { createDatabaseServerClient, type LeadRow } from "@/lib/database/server";
 import { logoutAction } from "../login/actions";
 import { deleteLeadAction } from "./actions";
 
@@ -40,9 +40,9 @@ function formatDate(date: string) {
 }
 
 async function getLeads() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       leads: [] as LeadRow[],
       notConfigured: true,
@@ -50,7 +50,7 @@ async function getLeads() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("leads")
     .select("id, created_at, name, phone, interest, comment, status, source")
     .order("created_at", { ascending: false });
@@ -67,8 +67,8 @@ function getMessage(params: Awaited<NonNullable<AdminLeadsPageProps["searchParam
     return { tone: "success", text: "Заявка удалена." };
   }
 
-  if (params.error === "supabase") {
-    return { tone: "error", text: "Supabase не подключён. Заполните переменные окружения." };
+  if (params.error === "database") {
+    return { tone: "error", text: "База данных не подключена. Заполните переменные окружения." };
   }
 
   if (params.error) {
@@ -123,7 +123,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
 
         <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
           {notConfigured ? (
-            <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
+            <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (
             <div className="p-8 text-red-600">Не удалось загрузить заявки: {error}</div>
           ) : leads.length === 0 ? (

@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import type { Product } from "./product-types";
 
 export type Ingredient = {
@@ -94,9 +94,9 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
 }
 
 export async function getAdminIngredients() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       ingredients: [] as Ingredient[],
       notConfigured: true,
@@ -104,7 +104,7 @@ export async function getAdminIngredients() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("ingredients")
     .select("id, created_at, updated_at, name, category, unit, cost_per_unit, package_size, package_price, is_active, sort_order")
     .order("sort_order", { ascending: true })
@@ -113,14 +113,14 @@ export async function getAdminIngredients() {
   return {
     ingredients: (data ?? []).map((row) => normalizeIngredient(row)),
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "ingredients", "supabase/ingredients.sql")
+    error: formatMissingTableError(error?.message, "ingredients")
   };
 }
 
 export async function getAdminIngredientById(id: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       ingredient: null as Ingredient | null,
       notConfigured: true,
@@ -128,7 +128,7 @@ export async function getAdminIngredientById(id: string) {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("ingredients")
     .select("id, created_at, updated_at, name, category, unit, cost_per_unit, package_size, package_price, is_active, sort_order")
     .eq("id", id)
@@ -137,14 +137,14 @@ export async function getAdminIngredientById(id: string) {
   return {
     ingredient: data ? normalizeIngredient(data) : null,
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "ingredients", "supabase/ingredients.sql")
+    error: formatMissingTableError(error?.message, "ingredients")
   };
 }
 
 export async function getProductFoodCost(product: Product) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       foodCost: calculateMetrics(product, []),
       ingredients: [] as Ingredient[],
@@ -155,7 +155,7 @@ export async function getProductFoodCost(product: Product) {
 
   const [{ ingredients, error: ingredientsError }, { data: lineRows, error: linesError }] = await Promise.all([
     getAdminIngredients(),
-    supabase
+    database
       .from("product_ingredients")
       .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
       .eq("product_id", product.id)
@@ -176,7 +176,7 @@ export async function getProductFoodCost(product: Product) {
       foodCost: calculateMetrics(product, []),
       ingredients,
       notConfigured: false,
-      error: formatMissingTableError(linesError.message, "product_ingredients", "supabase/ingredients.sql")
+      error: formatMissingTableError(linesError.message, "product_ingredients")
     };
   }
 
@@ -222,12 +222,12 @@ export async function getProductFoodCost(product: Product) {
 }
 
 export async function getProductsFoodCosts(products: Product[]) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase || !products.length) {
+  if (!database || !products.length) {
     return {
       items: products.map((product) => calculateMetrics(product, [])),
-      notConfigured: !supabase,
+      notConfigured: !database,
       error: null as string | null
     };
   }
@@ -243,7 +243,7 @@ export async function getProductsFoodCosts(products: Product[]) {
     };
   }
 
-  const { data: lineRows, error: linesError } = await supabase
+  const { data: lineRows, error: linesError } = await database
     .from("product_ingredients")
     .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
     .in("product_id", productIds)
@@ -253,7 +253,7 @@ export async function getProductsFoodCosts(products: Product[]) {
     return {
       items: products.map((product) => calculateMetrics(product, [])),
       notConfigured: false,
-      error: formatMissingTableError(linesError.message, "product_ingredients", "supabase/ingredients.sql")
+      error: formatMissingTableError(linesError.message, "product_ingredients")
     };
   }
 

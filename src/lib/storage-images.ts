@@ -1,7 +1,6 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { removeS3Object, s3KeyFromPublicUrl, uploadS3Object } from "@/lib/s3/server";
 
 type UploadImageParams = {
@@ -67,7 +66,7 @@ async function prepareImage(file: File) {
   }
 }
 
-export async function uploadImageToStorage({ bucket, file, path, upsert = false }: UploadImageParams) {
+export async function uploadImageToStorage({ bucket, file, path }: UploadImageParams) {
   if (!(file instanceof File) || file.size === 0) {
     return { url: null as string | null, error: "Файл не выбран." };
   }
@@ -89,53 +88,11 @@ export async function uploadImageToStorage({ bucket, file, path, upsert = false 
     `-${contentHash}.${prepared.extension}`
   );
 
-  if (process.env.STORAGE_PROVIDER === "s3") {
-    return uploadS3Object(`${bucket}/${versionedPath}`, prepared.buffer, prepared.contentType);
-  }
-
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) {
-    return { url: null as string | null, error: "Supabase не подключён." };
-  }
-
-  const { error } = await supabase.storage.from(bucket).upload(versionedPath, prepared.buffer, {
-    cacheControl: "31536000",
-    contentType: prepared.contentType,
-    upsert
-  });
-
-  if (error) {
-    return { url: null as string | null, error: error.message };
-  }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(versionedPath);
-
-  return { url: data.publicUrl, error: null as string | null };
+  return uploadS3Object(`${bucket}/${versionedPath}`, prepared.buffer, prepared.contentType);
 }
 
 export async function removeStoragePublicUrl(bucket: "products" | "hero" | "brand", imageUrl: string) {
-  if (process.env.STORAGE_PROVIDER === "s3") {
-    const key = s3KeyFromPublicUrl(imageUrl);
-    if (key) await removeS3Object(key);
-    return;
-  }
-
-  const supabase = createSupabaseServiceClient();
-
-  if (!supabase || !imageUrl) {
-    return;
-  }
-
-  const marker = `/object/public/${bucket}/`;
-  const markerIndex = imageUrl.indexOf(marker);
-
-  if (markerIndex === -1) {
-    return;
-  }
-
-  const path = decodeURIComponent(imageUrl.slice(markerIndex + marker.length).split("?")[0] ?? "");
-
-  if (path) {
-    await supabase.storage.from(bucket).remove([path]);
-  }
+  void bucket;
+  const key = s3KeyFromPublicUrl(imageUrl);
+  if (key) await removeS3Object(key);
 }

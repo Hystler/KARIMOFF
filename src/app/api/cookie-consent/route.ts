@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getShortUserAgent, recordLegalConsents } from "@/lib/legal-consents";
 import { isAllowedSameOriginRequest } from "@/lib/request-security";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export const runtime = "nodejs";
 
@@ -33,9 +33,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Некорректный запрос." }, { status: 400 });
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return NextResponse.json({ ok: true, stored: false });
   }
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     analytics: payload.categories?.analytics === true,
     marketing: payload.categories?.marketing === true
   };
-  const { error } = await supabase.from("cookie_consents").insert({
+  const { error } = await database.from("cookie_consents").insert({
     accepted: categories.analytics || categories.marketing,
     categories,
     consent_id:

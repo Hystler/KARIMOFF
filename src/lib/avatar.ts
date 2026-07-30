@@ -9,8 +9,8 @@ import {
   type AvatarOptions
 } from "@/lib/avatar-schema";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export function normalizeAvatar(row: Record<string, unknown> | null | undefined): AvatarConfig {
   const parsed = avatarSchema.safeParse({
@@ -26,9 +26,9 @@ export function normalizeAvatar(row: Record<string, unknown> | null | undefined)
 }
 
 export async function getCustomerAvatar(customerId: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       avatar: defaultAvatar,
       notConfigured: true,
@@ -36,7 +36,7 @@ export async function getCustomerAvatar(customerId: string) {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("customer_avatars")
     .select("base, eyes, mouth, accessory, clothes, background")
     .eq("customer_id", customerId)
@@ -45,14 +45,14 @@ export async function getCustomerAvatar(customerId: string) {
   return {
     avatar: normalizeAvatar(data),
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "customer_avatars", "supabase/avatar.sql")
+    error: formatMissingTableError(error?.message, "customer_avatars")
   };
 }
 
 export async function getAvatarAssets() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       options: avatarOptions,
       notConfigured: true,
@@ -60,7 +60,7 @@ export async function getAvatarAssets() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("avatar_assets")
     .select("type, name, value, image_url, sort_order")
     .eq("is_active", true)
@@ -71,7 +71,7 @@ export async function getAvatarAssets() {
     return {
       options: avatarOptions,
       notConfigured: false,
-      error: formatMissingTableError(error?.message, "avatar_assets", "supabase/avatar-assets.sql")
+      error: formatMissingTableError(error?.message, "avatar_assets")
     };
   }
 

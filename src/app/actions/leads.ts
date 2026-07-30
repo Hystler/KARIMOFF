@@ -3,7 +3,7 @@
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
 import { getShortUserAgent, isChecked, recordLegalConsents } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function createLeadAction(
   _previousState: LeadActionState,
@@ -30,11 +30,11 @@ export async function createLeadAction(
     };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn("Supabase env is not configured. Lead was not saved.");
+      console.warn("Database env is not configured. Lead was not saved.");
     }
 
     return {
@@ -44,7 +44,7 @@ export async function createLeadAction(
   }
 
   const { name, phone, interest, comment } = parsed.data;
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("leads")
     .insert({
       name,
@@ -76,7 +76,7 @@ export async function createLeadAction(
   });
 
   if (!consents.ok) {
-    await supabase.from("leads").delete().eq("id", data.id);
+    await database.from("leads").delete().eq("id", data.id);
     return { status: "error", message: consents.message };
   }
 

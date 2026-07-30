@@ -2,8 +2,8 @@ import "server-only";
 
 import { defaultAvatar, type AvatarConfig } from "@/lib/avatar-schema";
 import { normalizeAvatar } from "@/lib/avatar";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import type { CustomerOrder, CustomerOrderItem } from "@/lib/customer-data";
 import type { LoyaltyAccount, LoyaltyTransaction } from "@/lib/loyalty";
 
@@ -95,9 +95,9 @@ function normalizeTransaction(row: Record<string, unknown>): LoyaltyTransaction 
 }
 
 export async function getAdminCustomers() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       customers: [] as AdminCustomerListItem[],
       notConfigured: true,
@@ -105,7 +105,7 @@ export async function getAdminCustomers() {
     };
   }
 
-  const { data: customersData, error: customersError } = await supabase
+  const { data: customersData, error: customersError } = await database
     .from("customers")
     .select("id, created_at, last_login_at, name, phone, birthday")
     .order("created_at", { ascending: false });
@@ -114,7 +114,7 @@ export async function getAdminCustomers() {
     return {
       customers: [] as AdminCustomerListItem[],
       notConfigured: false,
-      error: formatMissingTableError(customersError.message, "customers", "supabase/customers.sql")
+      error: formatMissingTableError(customersError.message, "customers")
     };
   }
 
@@ -124,9 +124,9 @@ export async function getAdminCustomers() {
   const [{ data: avatarsData, error: avatarsError }, { data: accountsData, error: accountsError }, { data: ordersData, error: ordersError }] =
     customerIds.length
       ? await Promise.all([
-          supabase.from("customer_avatars").select("customer_id, base, eyes, mouth, accessory, clothes, background").in("customer_id", customerIds),
-          supabase.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").in("customer_id", customerIds),
-          supabase.from("orders").select("customer_id, total").in("customer_id", customerIds)
+          database.from("customer_avatars").select("customer_id, base, eyes, mouth, accessory, clothes, background").in("customer_id", customerIds),
+          database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").in("customer_id", customerIds),
+          database.from("orders").select("customer_id, total").in("customer_id", customerIds)
         ])
       : [
           { data: [], error: null },
@@ -138,7 +138,7 @@ export async function getAdminCustomers() {
     return {
       customers: [] as AdminCustomerListItem[],
       notConfigured: false,
-      error: formatMissingTableError(avatarsError.message, "customer_avatars", "supabase/avatar.sql")
+      error: formatMissingTableError(avatarsError.message, "customer_avatars")
     };
   }
 
@@ -146,7 +146,7 @@ export async function getAdminCustomers() {
     return {
       customers: [] as AdminCustomerListItem[],
       notConfigured: false,
-      error: formatMissingTableError(accountsError.message, "loyalty_accounts", "supabase/loyalty.sql")
+      error: formatMissingTableError(accountsError.message, "loyalty_accounts")
     };
   }
 
@@ -154,7 +154,7 @@ export async function getAdminCustomers() {
     return {
       customers: [] as AdminCustomerListItem[],
       notConfigured: false,
-      error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
+      error: formatMissingTableError(ordersError.message, "orders")
     };
   }
 
@@ -195,9 +195,9 @@ export async function getAdminCustomers() {
 }
 
 export async function getAdminCustomerById(id: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: true,
@@ -205,7 +205,7 @@ export async function getAdminCustomerById(id: string) {
     };
   }
 
-  const { data: customerData, error: customerError } = await supabase
+  const { data: customerData, error: customerError } = await database
     .from("customers")
     .select("id, created_at, last_login_at, name, phone, birthday")
     .eq("id", id)
@@ -215,7 +215,7 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(customerError.message, "customers", "supabase/customers.sql")
+      error: formatMissingTableError(customerError.message, "customers")
     };
   }
 
@@ -230,14 +230,14 @@ export async function getAdminCustomerById(id: string) {
   const customer = normalizeCustomer(customerData);
   const [{ data: avatarData, error: avatarError }, { data: accountData, error: accountError }, { data: ordersData, error: ordersError }, { data: transactionsData, error: transactionsError }] =
     await Promise.all([
-      supabase.from("customer_avatars").select("base, eyes, mouth, accessory, clothes, background").eq("customer_id", id).maybeSingle(),
-      supabase.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").eq("customer_id", id).maybeSingle(),
-      supabase
+      database.from("customer_avatars").select("base, eyes, mouth, accessory, clothes, background").eq("customer_id", id).maybeSingle(),
+      database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").eq("customer_id", id).maybeSingle(),
+      database
         .from("orders")
         .select("id, created_at, delivery_type, address, comment, status, fulfillment_mode, requested_at, total")
         .eq("customer_id", id)
         .order("created_at", { ascending: false }),
-      supabase
+      database
         .from("loyalty_transactions")
         .select("id, created_at, customer_id, order_id, type, points, description")
         .eq("customer_id", id)
@@ -249,7 +249,7 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(avatarError.message, "customer_avatars", "supabase/avatar.sql")
+      error: formatMissingTableError(avatarError.message, "customer_avatars")
     };
   }
 
@@ -257,7 +257,7 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(accountError.message, "loyalty_accounts", "supabase/loyalty.sql")
+      error: formatMissingTableError(accountError.message, "loyalty_accounts")
     };
   }
 
@@ -265,7 +265,7 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
+      error: formatMissingTableError(ordersError.message, "orders")
     };
   }
 
@@ -273,13 +273,13 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(transactionsError.message, "loyalty_transactions", "supabase/loyalty.sql")
+      error: formatMissingTableError(transactionsError.message, "loyalty_transactions")
     };
   }
 
   const orderIds = (ordersData ?? []).map((order) => String(order.id));
   const { data: itemsData, error: itemsError } = orderIds.length
-    ? await supabase
+    ? await database
         .from("order_items")
         .select("id, order_id, product_id, product_name, unit_price, quantity, line_total")
         .in("order_id", orderIds)
@@ -289,7 +289,7 @@ export async function getAdminCustomerById(id: string) {
     return {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
-      error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
+      error: formatMissingTableError(itemsError.message, "order_items")
     };
   }
 

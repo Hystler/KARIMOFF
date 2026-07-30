@@ -23,9 +23,10 @@ function httpsMediaPattern(value) {
 }
 
 const cdnPattern = httpsMediaPattern(process.env.S3_CDN_BASE_URL);
+const storagePattern = httpsMediaPattern(process.env.S3_PUBLIC_BASE_URL);
 const mediaOrigins = [
-  "https://*.supabase.co",
   "https://s3.twcstorage.ru",
+  storagePattern ? `https://${storagePattern.hostname}${storagePattern.port ? `:${storagePattern.port}` : ""}` : null,
   cdnPattern ? `https://${cdnPattern.hostname}${cdnPattern.port ? `:${cdnPattern.port}` : ""}` : null
 ].filter(Boolean);
 
@@ -35,8 +36,8 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "media-src 'self' https://*.supabase.co",
+  "connect-src 'self'",
+  `media-src 'self' ${mediaOrigins.join(" ")}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -58,13 +59,10 @@ const nextConfig = {
     minimumCacheTTL: 2678400,
     remotePatterns: [
       {
-        hostname: "*.supabase.co",
-        protocol: "https"
-      },
-      {
         hostname: "s3.twcstorage.ru",
         protocol: "https"
       },
+      ...(storagePattern ? [storagePattern] : []),
       ...(cdnPattern ? [cdnPattern] : [])
     ]
   },

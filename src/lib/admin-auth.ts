@@ -3,7 +3,7 @@ import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { normalizeRussianPhone } from "@/lib/phone";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 const ADMIN_COOKIE_NAME = "karimoff_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 4;
@@ -23,8 +23,8 @@ function isConfigured() {
 }
 
 function getSecret() {
-  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret) throw new Error("SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY must be configured.");
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET must be configured.");
   return secret;
 }
 
@@ -102,13 +102,13 @@ async function setSession(params: {
   subjectId?: string | null;
   subjectRefHash?: string | null;
 }) {
-  const supabase = createSupabaseServerClient();
-  if (!supabase) throw new Error("Supabase is not configured.");
+  const database = createDatabaseServerClient();
+  if (!database) throw new Error("Database is not configured.");
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
   const headerStore = await headers();
-  const { error } = await supabase.from("app_sessions").insert({
+  const { error } = await database.from("app_sessions").insert({
     expires_at: expiresAt.toISOString(),
     subject_id: params.subjectId ?? null,
     subject_ref_hash: params.subjectRefHash ?? null,
@@ -143,10 +143,10 @@ export async function setStaffSession(staffId: string) {
 export async function clearAdminSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (token && supabase) {
-    await supabase
+  if (token && database) {
+    await database
       .from("app_sessions")
       .update({ revoked_at: new Date().toISOString() })
       .eq("token_hash", hmac(token))
@@ -165,10 +165,10 @@ export async function clearAdminSession() {
 export async function getCurrentStaff(): Promise<CurrentStaff | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
-  const supabase = createSupabaseServerClient();
-  if (!token || !supabase) return null;
+  const database = createDatabaseServerClient();
+  if (!token || !database) return null;
 
-  const { data: session, error } = await supabase
+  const { data: session, error } = await database
     .from("app_sessions")
     .select("subject_id, subject_type, subject_ref_hash")
     .eq("token_hash", hmac(token))
@@ -191,7 +191,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
   }
 
   if (!session.subject_id) return null;
-  const { data: staff } = await supabase
+  const { data: staff } = await database
     .from("staff_users")
     .select("id, name, phone, role, is_active")
     .eq("id", session.subject_id)

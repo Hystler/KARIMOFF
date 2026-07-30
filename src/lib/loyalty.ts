@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type LoyaltyAccount = {
   customer_id: string;
@@ -54,15 +54,15 @@ function normalizeTransaction(row: Record<string, unknown>): LoyaltyTransaction 
 }
 
 export async function ensureLoyaltyAccount(customerId: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return null;
   }
 
-  await supabase.from("loyalty_accounts").upsert({ customer_id: customerId }, { onConflict: "customer_id" });
+  await database.from("loyalty_accounts").upsert({ customer_id: customerId }, { onConflict: "customer_id" });
 
-  const { data } = await supabase
+  const { data } = await database
     .from("loyalty_accounts")
     .select("customer_id, points_balance, total_earned, total_spent")
     .eq("customer_id", customerId)
@@ -72,9 +72,9 @@ export async function ensureLoyaltyAccount(customerId: string) {
 }
 
 export async function getAdminLoyalty() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       customers: [] as AdminLoyaltyCustomer[],
       transactions: [] as LoyaltyTransaction[],
@@ -83,7 +83,7 @@ export async function getAdminLoyalty() {
     };
   }
 
-  const { data: customersData, error: customersError } = await supabase
+  const { data: customersData, error: customersError } = await database
     .from("customers")
     .select("id, created_at, name, phone")
     .order("created_at", { ascending: false });
@@ -93,13 +93,13 @@ export async function getAdminLoyalty() {
       customers: [] as AdminLoyaltyCustomer[],
       transactions: [] as LoyaltyTransaction[],
       notConfigured: false,
-      error: formatMissingTableError(customersError.message, "customers", "supabase/customers.sql")
+      error: formatMissingTableError(customersError.message, "customers")
     };
   }
 
   const customerIds = (customersData ?? []).map((customer) => String(customer.id));
   const { data: accountsData, error: accountsError } = customerIds.length
-    ? await supabase
+    ? await database
         .from("loyalty_accounts")
         .select("customer_id, points_balance, total_earned, total_spent")
         .in("customer_id", customerIds)
@@ -110,13 +110,13 @@ export async function getAdminLoyalty() {
       customers: [] as AdminLoyaltyCustomer[],
       transactions: [] as LoyaltyTransaction[],
       notConfigured: false,
-      error: formatMissingTableError(accountsError.message, "loyalty_accounts", "supabase/loyalty.sql")
+      error: formatMissingTableError(accountsError.message, "loyalty_accounts")
     };
   }
 
   const accounts = new Map((accountsData ?? []).map((account) => [String(account.customer_id), normalizeAccount(account, String(account.customer_id))]));
 
-  const { data: transactionsData, error: transactionsError } = await supabase
+  const { data: transactionsData, error: transactionsError } = await database
     .from("loyalty_transactions")
     .select("id, created_at, customer_id, order_id, type, points, description")
     .order("created_at", { ascending: false })
@@ -127,7 +127,7 @@ export async function getAdminLoyalty() {
       customers: [] as AdminLoyaltyCustomer[],
       transactions: [] as LoyaltyTransaction[],
       notConfigured: false,
-      error: formatMissingTableError(transactionsError.message, "loyalty_transactions", "supabase/loyalty.sql")
+      error: formatMissingTableError(transactionsError.message, "loyalty_transactions")
     };
   }
 

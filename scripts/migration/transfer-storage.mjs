@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
-import { createClient } from "@supabase/supabase-js";
 import {
   GetObjectCommand,
   HeadObjectCommand,
@@ -21,25 +20,52 @@ function readEnv(path) {
   return result;
 }
 
-async function listObjects(storage, bucket, prefix = "") {
+async function storageRequest(sourceUrl, sourceKey, path, init = {}) {
+  const response = await fetch(`${sourceUrl}/storage/v1${path}`, {
+    ...init,
+    headers: {
+      apikey: sourceKey,
+      Authorization: `Bearer ${sourceKey}`,
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...init.headers
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Storage request failed (${response.status}) for ${path}.`);
+  }
+
+  return response;
+}
+
+async function listObjects(sourceUrl, sourceKey, bucket, prefix = "") {
   const collected = [];
   let offset = 0;
 
   while (true) {
-    const { data, error } = await storage.from(bucket).list(prefix, {
-      limit: 1000,
-      offset,
-      sortBy: { column: "name", order: "asc" }
-    });
-    if (error) throw new Error(`${bucket}: ${error.message}`);
-    if (!data?.length) break;
+    const response = await storageRequest(
+      sourceUrl,
+      sourceKey,
+      `/object/list/${encodeURIComponent(bucket)}`,
+      {
+        body: JSON.stringify({
+          limit: 1000,
+          offset,
+          prefix,
+          sortBy: { column: "name", order: "asc" }
+        }),
+        method: "POST"
+      }
+    );
+    const data = await response.json();
+    if (!Array.isArray(data) || !data.length) break;
 
     for (const entry of data) {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (entry.id) {
         collected.push({ path, size: Number(entry.metadata?.size ?? 0) });
       } else {
-        collected.push(...(await listObjects(storage, bucket, path)));
+        collected.push(...(await listObjects(sourceUrl, sourceKey, bucket, path)));
       }
     }
 
@@ -80,9 +106,6 @@ if (
   throw new Error("Source Supabase or target S3 configuration is incomplete.");
 }
 
-const supabase = createClient(sourceUrl, sourceKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
 const s3 = new S3Client({
   endpoint,
   region,
@@ -94,22 +117,24 @@ const s3 = new S3Client({
 });
 
 const mappings = [];
-const { data: sourceBuckets, error: bucketsError } = await supabase.storage.listBuckets();
-if (bucketsError) throw new Error(`Could not list Supabase buckets: ${bucketsError.message}`);
+const bucketResponse = await storageRequest(sourceUrl, sourceKey, "/bucket");
+const sourceBuckets = await bucketResponse.json();
 const buckets = (sourceBuckets ?? []).map((bucket) => bucket.name).sort();
 
 for (const bucket of buckets) {
-  const objects = await listObjects(supabase.storage, bucket);
+  const objects = await listObjects(sourceUrl, sourceKey, bucket);
 
   for (const object of objects) {
-    const { data, error } = await supabase.storage.from(bucket).download(object.path);
-    if (error) throw new Error(`${bucket}/${object.path}: ${error.message}`);
-
+    const sourcePath = `${encodeURIComponent(bucket)}/${object.path
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`;
+    const data = await storageRequest(sourceUrl, sourceKey, `/object/authenticated/${sourcePath}`);
     const body = Buffer.from(await data.arrayBuffer());
     const sourceSha256 = createHash("sha256").update(body).digest("hex");
     const key = `${bucket}/${object.path}`;
     const cacheControl = "public, max-age=31536000, immutable";
-    const contentType = data.type || "application/octet-stream";
+    const contentType = data.headers.get("content-type") || "application/octet-stream";
     await s3.send(
       new PutObjectCommand({
         Bucket: targetBucket,
@@ -131,7 +156,7 @@ for (const bucket of buckets) {
       throw new Error(`Checksum mismatch after upload: ${key}`);
     }
 
-    const oldUrl = supabase.storage.from(bucket).getPublicUrl(object.path).data.publicUrl;
+    const oldUrl = `${sourceUrl}/storage/v1/object/public/${sourcePath}`;
     const newUrl = `${publicBaseUrl}/${key
       .split("/")
       .map(encodeURIComponent)

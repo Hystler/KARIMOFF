@@ -60,7 +60,7 @@ export default async function AdminCustomersPage() {
 
         <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
           {notConfigured ? (
-            <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
+            <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (
             <div className="p-8 text-red-600">Не удалось загрузить пользователей: {error}</div>
           ) : customers.length === 0 ? (

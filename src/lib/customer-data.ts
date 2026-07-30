@@ -4,8 +4,8 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getCustomerAvatar } from "@/lib/avatar";
 import { defaultAvatar, type AvatarConfig } from "@/lib/avatar-schema";
 import { ensureLoyaltyAccount, type LoyaltyAccount, type LoyaltyTransaction } from "@/lib/loyalty";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type CustomerOrderItem = {
   id: string;
@@ -96,9 +96,9 @@ export async function getCustomerProfileData() {
     };
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       customer,
       account: null as LoyaltyAccount | null,
@@ -106,13 +106,13 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent: false,
-      error: "Supabase не подключён."
+      error: "База данных не подключена."
     };
   }
 
   const account = await ensureLoyaltyAccount(customer.id);
   const avatarResult = await getCustomerAvatar(customer.id);
-  const { data: marketingConsentData } = await supabase
+  const { data: marketingConsentData } = await database
     .from("legal_consents")
     .select("granted")
     .eq("subject_type", "customer")
@@ -123,7 +123,7 @@ export async function getCustomerProfileData() {
     .maybeSingle();
   const marketingConsent = marketingConsentData?.granted === true;
 
-  const { data: ordersData, error: ordersError } = await supabase
+  const { data: ordersData, error: ordersError } = await database
     .from("orders")
     .select("id, created_at, delivery_type, address, comment, status, fulfillment_mode, requested_at, total")
     .eq("customer_id", customer.id)
@@ -137,13 +137,13 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent,
-      error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
+      error: formatMissingTableError(ordersError.message, "orders")
     };
   }
 
   const orderIds = (ordersData ?? []).map((order) => String(order.id));
   const { data: itemsData, error: itemsError } = orderIds.length
-    ? await supabase
+    ? await database
         .from("order_items")
         .select("id, order_id, product_id, product_name, unit_price, quantity, line_total")
         .in("order_id", orderIds)
@@ -157,19 +157,19 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent,
-      error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
+      error: formatMissingTableError(itemsError.message, "order_items")
     };
   }
 
   const itemIds = (itemsData ?? []).map((item) => String(item.id));
   const { data: modifiersData } = itemIds.length
-    ? await supabase
+    ? await database
         .from("order_item_modifiers")
         .select("id, order_item_id, modifier_type, ingredient_name")
         .in("order_item_id", itemIds)
     : { data: [] };
 
-  const { data: transactionsData, error: transactionsError } = await supabase
+  const { data: transactionsData, error: transactionsError } = await database
     .from("loyalty_transactions")
     .select("id, created_at, customer_id, order_id, type, points, description")
     .eq("customer_id", customer.id)
@@ -184,7 +184,7 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent,
-      error: formatMissingTableError(transactionsError.message, "loyalty_transactions", "supabase/loyalty.sql")
+      error: formatMissingTableError(transactionsError.message, "loyalty_transactions")
     };
   }
 

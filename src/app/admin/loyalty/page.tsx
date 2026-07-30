@@ -51,7 +51,7 @@ export default async function AdminLoyaltyPage() {
 
         {notConfigured ? (
           <div className="mt-8 rounded-lg border border-karimoff-line bg-white p-8 text-karimoff-muted shadow-card">
-            Supabase не подключён. Заполните переменные окружения.
+            База данных не подключена. Заполните переменные окружения.
           </div>
         ) : error ? (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">{error}</div>

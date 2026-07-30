@@ -2,8 +2,8 @@ import "server-only";
 
 import { demoProducts } from "@/data/products";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import type { Product, ProductImage, ProductModifierOption } from "./product-types";
 
 export const fallbackProducts: Product[] = demoProducts;
@@ -78,14 +78,14 @@ function getPreferredProductImage(product: Product, images: ProductImage[]) {
 }
 
 async function attachProductImages(products: Product[]): Promise<Product[]> {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase || products.length === 0) {
+  if (!database || products.length === 0) {
     return products;
   }
 
   const ids = products.map((product) => product.id);
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("product_images")
     .select("id, product_id, created_at, image_url, alt, sort_order, is_primary")
     .in("product_id", ids)
@@ -120,14 +120,14 @@ async function attachProductImages(products: Product[]): Promise<Product[]> {
 }
 
 async function attachProductModifiers(products: Product[]): Promise<Product[]> {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase || products.length === 0) {
+  if (!database || products.length === 0) {
     return products;
   }
 
   const productIds = products.map((product) => product.id);
-  const { data: lines, error } = await supabase
+  const { data: lines, error } = await database
     .from("product_ingredients")
     .select("product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
     .in("product_id", productIds)
@@ -139,7 +139,7 @@ async function attachProductModifiers(products: Product[]): Promise<Product[]> {
   }
 
   const ingredientIds = Array.from(new Set(lines.map((line) => String(line.ingredient_id))));
-  const { data: ingredientRows, error: ingredientError } = await supabase
+  const { data: ingredientRows, error: ingredientError } = await database
     .from("ingredients")
     .select("id, name")
     .in("id", ingredientIds);
@@ -187,13 +187,13 @@ async function attachProductDetails(products: Product[]) {
 }
 
 export async function getActiveProducts(limit = 4): Promise<Product[]> {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return fallbackProducts.slice(0, limit);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("products")
     .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .eq("is_active", true)
@@ -212,9 +212,9 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
 }
 
 export async function getAdminProducts() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       products: [] as Product[],
       notConfigured: true,
@@ -222,7 +222,7 @@ export async function getAdminProducts() {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("products")
     .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .order("sort_order", { ascending: true })
@@ -233,14 +233,14 @@ export async function getAdminProducts() {
   return {
     products,
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
+    error: formatMissingTableError(error?.message, "products")
   };
 }
 
 export async function getAdminProductById(id: string) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       product: null as Product | null,
       notConfigured: true,
@@ -248,7 +248,7 @@ export async function getAdminProductById(id: string) {
     };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("products")
     .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
     .eq("id", id)
@@ -259,6 +259,6 @@ export async function getAdminProductById(id: string) {
   return {
     product: products[0] ?? null,
     notConfigured: false,
-    error: formatMissingTableError(error?.message, "products", "supabase/products.sql")
+    error: formatMissingTableError(error?.message, "products")
   };
 }

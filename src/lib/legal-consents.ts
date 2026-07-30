@@ -3,7 +3,7 @@ import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { LEGAL_VERSION } from "@/lib/legal";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type ConsentType =
   | "personal_data"
@@ -25,7 +25,7 @@ export async function getShortUserAgent() {
 }
 
 export function hashPrivacyValue(value: string) {
-  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = process.env.SESSION_SECRET;
 
   if (!secret) {
     return null;
@@ -41,14 +41,14 @@ export async function recordLegalConsents(params: {
   consents: Array<{ type: ConsentType; granted: boolean }>;
   userAgent?: string | null;
 }) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase || params.consents.length === 0) {
+  if (!database || params.consents.length === 0) {
     return { ok: false as const, message: "Журнал согласий недоступен." };
   }
 
   const now = new Date().toISOString();
-  const { error } = await supabase.from("legal_consents").insert(
+  const { error } = await database.from("legal_consents").insert(
     params.consents.map((consent) => ({
       consent_type: consent.type,
       document_version: LEGAL_VERSION,

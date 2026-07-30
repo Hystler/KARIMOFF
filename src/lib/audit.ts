@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function writeAuditLog(params: {
   action: string;
@@ -13,13 +13,13 @@ export async function writeAuditLog(params: {
   sourcePath?: string | null;
   userAgent?: string | null;
 }) {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return;
   }
 
-  await supabase.from("audit_logs").insert({
+  await database.from("audit_logs").insert({
     action: params.action,
     actor_id: params.actorId ?? null,
     actor_ref_hash: params.actorRefHash ?? null,

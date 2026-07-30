@@ -14,7 +14,7 @@ import { hashPrivacyValue } from "@/lib/legal-consents";
 import { verifyPassword } from "@/lib/password-auth";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { getPhoneLookupCandidates } from "@/lib/phone";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function loginAction(formData: FormData) {
   const phone = String(formData.get("phone") || "");
@@ -28,9 +28,9 @@ export async function loginAction(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent(limit.message ?? "Слишком много попыток входа.")}`);
   }
 
-  const supabase = createSupabaseServerClient();
-  const { data: staff } = supabase
-    ? await supabase
+  const database = createDatabaseServerClient();
+  const { data: staff } = database
+    ? await database
         .from("staff_users")
         .select("id, name, role, password_hash, is_active")
         .in("phone", getPhoneLookupCandidates(phone))
@@ -41,7 +41,7 @@ export async function loginAction(formData: FormData) {
   if (staff?.is_active && verifyPassword(password, String(staff.password_hash))) {
     await clearAuthFailures("admin_login", normalizedPhone);
     await setStaffSession(String(staff.id));
-    await supabase?.from("staff_users").update({ last_login_at: new Date().toISOString() }).eq("id", staff.id);
+    await database?.from("staff_users").update({ last_login_at: new Date().toISOString() }).eq("id", staff.id);
     await writeAuditLog({
       action: "staff.login",
       actorId: String(staff.id),

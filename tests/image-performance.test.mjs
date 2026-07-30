@@ -31,11 +31,13 @@ test("product images remain lazy and use bounded responsive sizes", () => {
   assert.doesNotMatch(productCard, /sizes="[^"]*20vw/);
 });
 
-test("legacy Supabase media URLs only map to S3 for the S3 provider", () => {
-  assert.match(mediaUrl, /process\.env\.STORAGE_PROVIDER !== "s3"/);
+test("S3 origin URLs map to an optional CDN without a provider fallback", () => {
   assert.match(mediaUrl, /S3_CDN_BASE_URL/);
   assert.match(mediaUrl, /S3_PUBLIC_BASE_URL/);
-  assert.match(mediaUrl, /storage\/v1\/object\/public/);
+  assert.match(mediaUrl, /value\.startsWith\(`\$\{originBaseUrl\}\//);
+  assert.doesNotMatch(mediaUrl, /STORAGE_PROVIDER/);
+  assert.doesNotMatch(mediaUrl, /supabase/i);
+  assert.doesNotMatch(nextConfig, /supabase/i);
 });
 
 test("new uploads are content-versioned before receiving immutable caching", () => {

@@ -1,7 +1,7 @@
 import "server-only";
 
-import { formatMissingTableError } from "@/lib/supabase/errors";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatMissingTableError } from "@/lib/database/errors";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export type AdminOrderItem = {
   id: string;
@@ -117,9 +117,9 @@ function normalizeModifier(row: Record<string, unknown>): AdminOrderItemModifier
 }
 
 export async function getAdminOrders() {
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
+  if (!database) {
     return {
       orders: [] as AdminOrder[],
       notConfigured: true,
@@ -127,7 +127,7 @@ export async function getAdminOrders() {
     };
   }
 
-  const { data: ordersData, error: ordersError } = await supabase
+  const { data: ordersData, error: ordersError } = await database
     .from("orders")
     .select("id, created_at, customer_name, customer_phone, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total")
     .order("created_at", { ascending: false });
@@ -136,7 +136,7 @@ export async function getAdminOrders() {
     return {
       orders: [] as AdminOrder[],
       notConfigured: false,
-      error: formatMissingTableError(ordersError.message, "orders", "supabase/orders.sql")
+      error: formatMissingTableError(ordersError.message, "orders")
     };
   }
 
@@ -152,18 +152,18 @@ export async function getAdminOrders() {
 
   const [{ data: itemsData, error: itemsError }, { data: staffData }] =
     await Promise.all([
-      supabase
+      database
         .from("order_items")
         .select("id, order_id, product_id, product_name, unit_price, quantity, line_total")
         .in("order_id", orderIds),
-      supabase.from("staff_users").select("id, name")
+      database.from("staff_users").select("id, name")
     ]);
 
   if (itemsError) {
     return {
       orders: [] as AdminOrder[],
       notConfigured: false,
-      error: formatMissingTableError(itemsError.message, "order_items", "supabase/orders.sql")
+      error: formatMissingTableError(itemsError.message, "order_items")
     };
   }
 
@@ -171,7 +171,7 @@ export async function getAdminOrders() {
   let resolvedModifiers: Record<string, unknown>[] = [];
 
   if (itemIds.length) {
-    const { data } = await supabase
+    const { data } = await database
       .from("order_item_modifiers")
       .select("id, order_item_id, modifier_type, ingredient_name, quantity, unit, line_price_delta")
       .in("order_item_id", itemIds);

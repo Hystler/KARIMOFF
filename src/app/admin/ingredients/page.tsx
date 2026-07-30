@@ -27,8 +27,8 @@ function getMessage(params: Awaited<NonNullable<AdminIngredientsPageProps["searc
     return { tone: "success", text: "Ингредиент удалён." };
   }
 
-  if (params.error === "supabase") {
-    return { tone: "error", text: "Supabase не подключён. Заполните переменные окружения." };
+  if (params.error === "database") {
+    return { tone: "error", text: "База данных не подключена. Заполните переменные окружения." };
   }
 
   if (params.error) {
@@ -86,7 +86,7 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
 
         <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
           {notConfigured ? (
-            <div className="p-8 text-karimoff-muted">Supabase не подключён. Заполните переменные окружения.</div>
+            <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (
             <div className="p-8 text-red-600">{error}</div>
           ) : ingredients.length === 0 ? (

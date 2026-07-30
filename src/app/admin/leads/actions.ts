@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function deleteLeadAction(formData: FormData) {
   const isAuthed = await isAdminAuthenticated();
@@ -18,13 +18,13 @@ export async function deleteLeadAction(formData: FormData) {
     redirect("/admin/leads?error=missing_id");
   }
 
-  const supabase = createSupabaseServerClient();
+  const database = createDatabaseServerClient();
 
-  if (!supabase) {
-    redirect("/admin/leads?error=supabase");
+  if (!database) {
+    redirect("/admin/leads?error=database");
   }
 
-  const { error } = await supabase.from("leads").delete().eq("id", id);
+  const { error } = await database.from("leads").delete().eq("id", id);
 
   if (error) {
     redirect(`/admin/leads?error=${encodeURIComponent(error.message)}`);
