@@ -53,11 +53,12 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">Не удалось загрузить ингредиенты.</div>
         ) : (
           <section className="mt-8 overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card">
-            <div className="hidden grid-cols-[minmax(210px,1.35fr)_130px_160px_170px_140px] gap-4 border-b border-karimoff-line bg-karimoff-soft px-5 py-4 text-xs font-bold text-karimoff-muted lg:grid">
+            <div className="hidden grid-cols-[minmax(200px,1.2fr)_120px_145px_150px_110px_130px] gap-4 border-b border-karimoff-line bg-karimoff-soft px-5 py-4 text-xs font-bold text-karimoff-muted lg:grid">
               <span>Ингредиент</span>
               <span>Размер упаковки</span>
               <span>Цена упаковки</span>
               <span>₽ за 1 ед.</span>
+              <span>Отходы, %</span>
               <span>Действие</span>
             </div>
             <div className="divide-y divide-karimoff-line">
@@ -67,7 +68,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                   <form
                     key={ingredient.id}
                     action={updateIngredientPriceAction}
-                    className={`grid gap-4 px-5 py-5 transition lg:grid-cols-[minmax(210px,1.35fr)_130px_160px_170px_140px] lg:items-end ${saved ? "bg-emerald-50/70" : "hover:bg-karimoff-soft/45"}`}
+                    className={`grid gap-4 px-5 py-5 transition lg:grid-cols-[minmax(200px,1.2fr)_120px_145px_150px_110px_130px] lg:items-end ${saved ? "bg-emerald-50/70" : "hover:bg-karimoff-soft/45"}`}
                   >
                     <input type="hidden" name="id" value={ingredient.id} />
                     <div className="self-center">
@@ -121,6 +122,18 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-karimoff-muted">₽</span>
                       </div>
                       {ingredient.cost_per_unit > 0 ? <span className="font-medium text-karimoff-muted">Сейчас: {formatCost(ingredient.cost_per_unit)} ₽</span> : null}
+                    </label>
+                    <label className="grid gap-1.5 text-xs font-bold text-karimoff-muted">
+                      <span className="lg:hidden">Отходы, %</span>
+                      <input
+                        name="waste_percent"
+                        type="number"
+                        min="0"
+                        max="95"
+                        step="0.1"
+                        defaultValue={ingredient.waste_percent}
+                        className="w-full rounded-lg border border-karimoff-line bg-white px-3 py-2.5 text-sm font-semibold text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_3px_rgba(251,103,10,0.10)]"
+                      />
                     </label>
                     <button type="submit" className="min-h-11 rounded-full bg-karimoff-black px-5 py-2.5 text-sm font-bold text-white transition hover:bg-karimoff-orange focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-karimoff-orange/20">
                       {saved ? "Сохранено" : "Сохранить"}

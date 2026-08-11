@@ -9,6 +9,7 @@ export const ingredientFormSchema = z.object({
   package_size: z.coerce.number().min(0, "Размер упаковки не может быть отрицательным").optional(),
   package_price: z.coerce.number().min(0, "Цена упаковки не может быть отрицательной").optional(),
   cost_per_unit: z.coerce.number().min(0, "Себестоимость не может быть отрицательной").optional(),
+  waste_percent: z.coerce.number().min(0, "Процент отходов не может быть отрицательным").max(95, "Процент отходов не может быть больше 95"),
   sort_order: z.coerce.number().int().min(0, "Порядок не может быть отрицательным"),
   is_active: z.coerce.boolean().default(false)
 });
@@ -18,7 +19,8 @@ export const ingredientPriceSchema = z
     id: z.string().uuid("Некорректный ингредиент"),
     package_size: z.coerce.number().positive("Укажите размер упаковки больше нуля").optional(),
     package_price: z.coerce.number().positive("Укажите цену упаковки больше нуля").optional(),
-    cost_per_unit: z.coerce.number().min(0, "Себестоимость не может быть отрицательной").optional()
+    cost_per_unit: z.coerce.number().min(0, "Себестоимость не может быть отрицательной").optional(),
+    waste_percent: z.coerce.number().min(0).max(95)
   })
   .superRefine((value, context) => {
     const hasPackageSize = value.package_size !== undefined;

@@ -96,7 +96,7 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
             <div className="p-8 text-karimoff-muted">Ингредиентов пока нет.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="admin-table min-w-[1220px]">
+              <table className="admin-table min-w-[1320px]">
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Название</th>
@@ -106,6 +106,7 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
                     <th className="px-4 py-4 font-bold">Мин.</th>
                     <th className="px-4 py-4 font-bold">Упаковка</th>
                     <th className="px-4 py-4 font-bold">Себестоимость</th>
+                    <th className="px-4 py-4 font-bold">Отходы</th>
                     <th className="px-4 py-4 font-bold">Статус</th>
                     <th className="px-4 py-4 font-bold">Действия</th>
                   </tr>
@@ -137,6 +138,11 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
                         </td>
                         <td className="px-4 py-4 font-black text-karimoff-orange">
                           {formatMoney(ingredient.cost_per_unit)} / {ingredient.unit}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`font-bold ${ingredient.waste_percent > 0 ? "text-amber-700" : "text-karimoff-muted"}`}>
+                            {ingredient.waste_percent}%
+                          </span>
                         </td>
                         <td className="px-4 py-4">
                           <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${ingredient.is_active ? "bg-karimoff-orange/10 text-karimoff-orange" : "bg-karimoff-black/5 text-karimoff-muted"}`}>

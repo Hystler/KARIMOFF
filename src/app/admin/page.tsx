@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  ChartNoAxesCombined,
   Boxes,
   ChefHat,
   PackageOpen,
@@ -21,6 +22,7 @@ const cards = [
   { title: "Склад", description: "Остатки и движения", href: "/admin/inventory", icon: Boxes },
   { title: "Пользователи", description: "Клиенты, профили и история", href: "/admin/customers", icon: Users },
   { title: "Экономика", description: "Маржинальность и расходы", href: "/admin/economics", icon: BarChart3 },
+  { title: "ERP и касса", description: "Продажи по дням и интеграция Эвотор", href: "/admin/erp", icon: ChartNoAxesCombined },
   { title: "Настройки", description: "Контакты, фоны и режимы", href: "/admin/settings", icon: Settings }
 ];
 

@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
 import { initialOrderActionState } from "@/lib/order-schema";
+import {
+  getMoscowDateKey,
+  getSameDayOrderSlots,
+  moscowOrderSlotToIso
+} from "@/lib/order-time";
 import { getCartLineUnitPrice, useCart } from "./CartProvider";
+import { CartLineCustomizer } from "./CartLineCustomizer";
+import { ScheduledTimeSlider } from "./ScheduledTimeSlider";
 
 type CustomerProfile = {
   id: string;
@@ -27,7 +34,8 @@ export function CartDrawer() {
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
   const [fulfillmentMode, setFulfillmentMode] = useState<"asap" | "scheduled">("asap");
-  const [requestedLocal, setRequestedLocal] = useState("");
+  const [clientNow, setClientNow] = useState(() => new Date());
+  const [requestedSlotIndex, setRequestedSlotIndex] = useState(0);
   const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings>({
     delivery_enabled: true,
     pickup_enabled: true
@@ -51,6 +59,15 @@ export function CartDrawer() {
     [lines]
   );
   const isCheckoutDisabled = !checkoutSettings.pickup_enabled && !checkoutSettings.delivery_enabled;
+  const scheduledSlots = useMemo(
+    () => (clientNow ? getSameDayOrderSlots(clientNow) : []),
+    [clientNow]
+  );
+  const requestedAt = useMemo(() => {
+    if (fulfillmentMode !== "scheduled" || !clientNow || !scheduledSlots.length) return "";
+    const slot = scheduledSlots[Math.min(requestedSlotIndex, scheduledSlots.length - 1)];
+    return moscowOrderSlotToIso(getMoscowDateKey(clientNow), slot);
+  }, [clientNow, fulfillmentMode, requestedSlotIndex, scheduledSlots]);
 
   const startCheckout = useCallback(async () => {
     if (!lines.length) {
@@ -70,6 +87,8 @@ export function CartDrawer() {
     setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
     setCustomer(context.customer);
     setCheckoutRequestId(crypto.randomUUID());
+    setClientNow(new Date());
+    setRequestedSlotIndex(0);
     setMode("checkout");
   }, [lines.length]);
 
@@ -201,7 +220,7 @@ export function CartDrawer() {
               <input
                 type="hidden"
                 name="requested_at"
-                value={requestedLocal ? new Date(requestedLocal).toISOString() : ""}
+                value={requestedAt}
               />
               <section className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
                 <p className="text-sm font-semibold text-karimoff-orange">Ваши данные</p>
@@ -277,30 +296,27 @@ export function CartDrawer() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFulfillmentMode("scheduled")}
+                      onClick={() => {
+                        setClientNow(new Date());
+                        setRequestedSlotIndex(0);
+                        setFulfillmentMode("scheduled");
+                      }}
+                      disabled={Boolean(clientNow && !scheduledSlots.length)}
                       className={`min-h-12 rounded-lg border px-3 text-sm font-bold transition ${
                         fulfillmentMode === "scheduled"
                           ? "border-karimoff-orange bg-karimoff-orange text-white"
                           : "border-karimoff-line bg-white text-karimoff-black hover:border-karimoff-orange"
-                      }`}
+                      } disabled:cursor-not-allowed disabled:opacity-45`}
                     >
                       Ко времени
                     </button>
                   </div>
                   {fulfillmentMode === "scheduled" ? (
-                    <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
-                      Дата и время
-                      <input
-                        type="datetime-local"
-                        required
-                        value={requestedLocal}
-                        onChange={(event) => setRequestedLocal(event.target.value)}
-                        className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-                      />
-                      <span className="text-xs font-normal leading-5">
-                        Минимум через 15 минут, максимум на 7 дней вперёд.
-                      </span>
-                    </label>
+                    <ScheduledTimeSlider
+                      slots={scheduledSlots}
+                      value={requestedSlotIndex}
+                      onChange={setRequestedSlotIndex}
+                    />
                   ) : null}
                 </div>
                 <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
@@ -429,6 +445,7 @@ export function CartDrawer() {
                       Удалить
                     </button>
                   </div>
+                  <CartLineCustomizer line={line} />
                   <div className="mt-4 flex items-center justify-between gap-4">
                     <div className="inline-flex items-center rounded-full border border-karimoff-line">
                       <button

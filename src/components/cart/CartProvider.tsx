@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import type { Product } from "@/lib/product-types";
+import type { Product, ProductModifierOption } from "@/lib/product-types";
 
 export type CartRemovedIngredient = {
   ingredient_id: string;
@@ -30,7 +30,9 @@ export type CartCustomization = {
 
 export type CartLine = {
   lineId: string;
-  product: Pick<Product, "id" | "name" | "slug" | "price" | "image_url">;
+  product: Pick<Product, "id" | "name" | "slug" | "price" | "image_url"> & {
+    modifier_options?: ProductModifierOption[];
+  };
   quantity: number;
   customization: CartCustomization;
 };
@@ -40,7 +42,9 @@ type CartContextValue = {
   isOpen: boolean;
   totalItems: number;
   totalPrice: number;
+  addAnimationKey: number;
   addItem: (product: Product, customization?: CartCustomization) => void;
+  updateCustomization: (lineId: string, customization: CartCustomization) => void;
   increment: (lineId: string) => void;
   decrement: (lineId: string) => void;
   removeItem: (lineId: string) => void;
@@ -60,7 +64,8 @@ function toCartProduct(product: Product): CartLine["product"] {
     name: product.name,
     slug: product.slug,
     price: product.price,
-    image_url: product.image_url
+    image_url: product.image_url,
+    modifier_options: product.modifier_options ?? []
   };
 }
 
@@ -104,7 +109,10 @@ function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
       name: line.product.name,
       slug: line.product.slug,
       price: Number(line.product.price ?? 0),
-      image_url: line.product.image_url ?? null
+      image_url: line.product.image_url ?? null,
+      modifier_options: Array.isArray(line.product.modifier_options)
+        ? line.product.modifier_options
+        : []
     },
     quantity: Math.max(1, Number(line.quantity ?? 1)),
     customization
@@ -115,6 +123,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [addAnimationKey, setAddAnimationKey] = useState(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -189,6 +198,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       ];
     });
+    setAddAnimationKey((current) => current + 1);
+  }, []);
+
+  const updateCustomization = useCallback((lineId: string, customization: CartCustomization) => {
+    const normalizedCustomization: CartCustomization = {
+      removed: [...customization.removed],
+      extras: customization.extras.filter((extra) => extra.quantity > 0)
+    };
+
+    setLines((current) => {
+      const target = current.find((line) => line.lineId === lineId);
+      if (!target) return current;
+
+      const nextLineId = makeLineId(target.product.id, normalizedCustomization);
+      const duplicate = current.find((line) => line.lineId === nextLineId && line.lineId !== lineId);
+
+      if (duplicate) {
+        return current
+          .filter((line) => line.lineId !== lineId)
+          .map((line) =>
+            line.lineId === duplicate.lineId
+              ? { ...line, quantity: Math.min(20, line.quantity + target.quantity) }
+              : line
+          );
+      }
+
+      return current.map((line) =>
+        line.lineId === lineId
+          ? { ...line, lineId: nextLineId, customization: normalizedCustomization }
+          : line
+      );
+    });
   }, []);
 
   const increment = useCallback((lineId: string) => {
@@ -233,7 +274,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       isOpen,
       totalItems,
       totalPrice,
+      addAnimationKey,
       addItem,
+      updateCustomization,
       increment,
       decrement,
       removeItem,
@@ -242,7 +285,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       closeCart: () => setIsOpen(false),
       checkout
     }),
-    [addItem, checkout, clearCart, decrement, increment, isOpen, lines, removeItem, totalItems, totalPrice]
+    [addAnimationKey, addItem, checkout, clearCart, decrement, increment, isOpen, lines, removeItem, totalItems, totalPrice, updateCustomization]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

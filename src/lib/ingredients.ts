@@ -12,6 +12,7 @@ export type Ingredient = {
   category: string | null;
   unit: "g" | "ml" | "pcs";
   cost_per_unit: number;
+  waste_percent: number;
   package_size: number | null;
   package_price: number | null;
   is_active: boolean;
@@ -28,6 +29,9 @@ export type ProductIngredientLine = {
   quantity: number;
   unit: "g" | "ml" | "pcs";
   cost_per_unit: number;
+  effective_cost_per_unit: number;
+  waste_percent: number;
+  gross_quantity: number;
   line_cost: number;
   sort_order: number;
   is_removable: boolean;
@@ -59,11 +63,21 @@ function normalizeIngredient(row: Record<string, unknown>): Ingredient {
     category: typeof row.category === "string" && row.category.length > 0 ? row.category : null,
     unit: normalizeUnit(row.unit),
     cost_per_unit: Number(row.cost_per_unit ?? 0),
+    waste_percent: Math.min(95, Math.max(0, Number(row.waste_percent ?? 0))),
     package_size: row.package_size === null || row.package_size === undefined ? null : Number(row.package_size),
     package_price: row.package_price === null || row.package_price === undefined ? null : Number(row.package_price),
     is_active: row.is_active !== false,
     sort_order: Number(row.sort_order ?? 100)
   };
+}
+
+export function getWasteAdjustedQuantity(quantity: number, wastePercent: number) {
+  const yieldRatio = 1 - Math.min(95, Math.max(0, wastePercent)) / 100;
+  return quantity / yieldRatio;
+}
+
+export function getEffectiveIngredientCostPerUnit(costPerUnit: number, wastePercent: number) {
+  return getWasteAdjustedQuantity(costPerUnit, wastePercent);
 }
 
 function calculateMetrics(product: Product, lines: ProductIngredientLine[]): ProductFoodCost {
@@ -106,7 +120,7 @@ export async function getAdminIngredients() {
 
   const { data, error } = await database
     .from("ingredients")
-    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, package_size, package_price, is_active, sort_order")
+    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, is_active, sort_order")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
@@ -130,7 +144,7 @@ export async function getAdminIngredientById(id: string) {
 
   const { data, error } = await database
     .from("ingredients")
-    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, package_size, package_price, is_active, sort_order")
+    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, is_active, sort_order")
     .eq("id", id)
     .maybeSingle();
 
@@ -191,6 +205,8 @@ export async function getProductFoodCost(product: Product) {
 
       const quantity = Number(line.quantity ?? 0);
       const costPerUnit = ingredient.cost_per_unit;
+      const grossQuantity = getWasteAdjustedQuantity(quantity, ingredient.waste_percent);
+      const effectiveCostPerUnit = getEffectiveIngredientCostPerUnit(costPerUnit, ingredient.waste_percent);
 
       return {
         id: String(line.id),
@@ -202,7 +218,10 @@ export async function getProductFoodCost(product: Product) {
         quantity,
         unit: normalizeUnit(line.unit),
         cost_per_unit: costPerUnit,
-        line_cost: quantity * costPerUnit,
+        effective_cost_per_unit: effectiveCostPerUnit,
+        waste_percent: ingredient.waste_percent,
+        gross_quantity: grossQuantity,
+        line_cost: grossQuantity * costPerUnit,
         sort_order: Number(line.sort_order ?? 100),
         is_removable: Boolean(line.is_removable),
         is_extra_available: Boolean(line.is_extra_available),
@@ -269,6 +288,7 @@ export async function getProductsFoodCosts(products: Product[]) {
 
     const productId = String(line.product_id);
     const quantity = Number(line.quantity ?? 0);
+    const grossQuantity = getWasteAdjustedQuantity(quantity, ingredient.waste_percent);
     const row: ProductIngredientLine = {
       id: String(line.id),
       product_id: productId,
@@ -279,7 +299,10 @@ export async function getProductsFoodCosts(products: Product[]) {
       quantity,
       unit: normalizeUnit(line.unit),
       cost_per_unit: ingredient.cost_per_unit,
-      line_cost: quantity * ingredient.cost_per_unit,
+      effective_cost_per_unit: getEffectiveIngredientCostPerUnit(ingredient.cost_per_unit, ingredient.waste_percent),
+      waste_percent: ingredient.waste_percent,
+      gross_quantity: grossQuantity,
+      line_cost: grossQuantity * ingredient.cost_per_unit,
       sort_order: Number(line.sort_order ?? 100),
       is_removable: Boolean(line.is_removable),
       is_extra_available: Boolean(line.is_extra_available),

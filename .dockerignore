@@ -12,7 +12,10 @@ Dockerfile
 .dockerignore
 
 docs
-supabase
+supabase/*
+!supabase/migrations/
+supabase/migrations/*
+!supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql
 tests
 tmp
 

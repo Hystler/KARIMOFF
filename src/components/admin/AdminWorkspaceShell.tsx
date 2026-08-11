@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  ChartNoAxesCombined,
   Boxes,
   BriefcaseBusiness,
   ChefHat,
@@ -33,6 +34,7 @@ const navigation = [
   { href: "/admin/inventory", label: "Склад", icon: Boxes, roles: ["admin", "manager"] },
   { href: "/admin/customers", label: "Пользователи", icon: Users, roles: ["admin", "manager"] },
   { href: "/admin/economics", label: "Экономика", icon: BarChart3, roles: ["admin", "manager"] },
+  { href: "/admin/erp", label: "ERP и касса", icon: ChartNoAxesCombined, roles: ["admin", "manager"] },
   { href: "/admin/loyalty", label: "Лояльность", icon: WalletCards, roles: ["admin", "manager"] },
   { href: "/admin/leads", label: "Заявки", icon: FileText, roles: ["admin", "manager"] },
   { href: "/admin/vacancies", label: "Вакансии", icon: BriefcaseBusiness, roles: ["admin", "manager"] },

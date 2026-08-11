@@ -43,6 +43,7 @@ function toPayload(formData: FormData) {
     package_size: formData.get("package_size") || undefined,
     package_price: formData.get("package_price") || undefined,
     cost_per_unit: formData.get("cost_per_unit") || undefined,
+    waste_percent: formData.get("waste_percent") || 0,
     sort_order: formData.get("sort_order") || 100,
     is_active: formData.get("is_active") === "on"
   });
@@ -63,6 +64,7 @@ function toPayload(formData: FormData) {
       category: parsed.data.category || null,
       unit: parsed.data.unit,
       cost_per_unit: costPerUnit,
+      waste_percent: parsed.data.waste_percent,
       package_size: packageSize,
       package_price: packagePrice,
       sort_order: parsed.data.sort_order,
@@ -85,7 +87,8 @@ export async function updateIngredientPriceAction(formData: FormData) {
     id: formData.get("id"),
     package_size: formData.get("package_size") || undefined,
     package_price: formData.get("package_price") || undefined,
-    cost_per_unit: formData.get("cost_per_unit") || undefined
+    cost_per_unit: formData.get("cost_per_unit") || undefined,
+    waste_percent: formData.get("waste_percent") || 0
   });
 
   if (!parsed.success) {
@@ -102,6 +105,7 @@ export async function updateIngredientPriceAction(formData: FormData) {
       package_size: packageSize,
       package_price: packagePrice,
       cost_per_unit: costPerUnit,
+      waste_percent: parsed.data.waste_percent,
       updated_at: new Date().toISOString()
     })
     .eq("id", parsed.data.id);
@@ -119,7 +123,8 @@ export async function updateIngredientPriceAction(formData: FormData) {
     metadata: {
       package_size: packageSize,
       package_price: packagePrice,
-      cost_per_unit: costPerUnit
+      cost_per_unit: costPerUnit,
+      waste_percent: parsed.data.waste_percent
     },
     sourcePath: "/admin/ingredients/prices"
   });
@@ -178,7 +183,7 @@ export async function updateIngredientAction(formData: FormData) {
     actorType: "admin",
     entityId: id,
     entityType: "ingredient",
-    metadata: { cost_per_unit: parsed.payload.cost_per_unit, unit: parsed.payload.unit },
+    metadata: { cost_per_unit: parsed.payload.cost_per_unit, waste_percent: parsed.payload.waste_percent, unit: parsed.payload.unit },
     sourcePath: `/admin/ingredients/${id}/edit`
   });
   revalidateIngredientViews();

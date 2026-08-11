@@ -5,6 +5,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
+import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
@@ -88,20 +89,8 @@ export async function createOrderAction(
   }
 
   if (parsed.data.fulfillment_mode === "scheduled") {
-    const requestedAt = parsed.data.requested_at ? new Date(parsed.data.requested_at) : null;
-    const minimum = Date.now() + 15 * 60 * 1000;
-    const maximum = Date.now() + 7 * 24 * 60 * 60 * 1000;
-
-    if (!requestedAt || Number.isNaN(requestedAt.getTime())) {
-      return { status: "error", message: "Выберите время получения заказа." };
-    }
-
-    if (requestedAt.getTime() < minimum || requestedAt.getTime() > maximum) {
-      return {
-        status: "error",
-        message: "Выберите время не раньше чем через 15 минут и не позже чем через 7 дней."
-      };
-    }
+    const validation = validateSameDayMoscowRequestedAt(parsed.data.requested_at || "");
+    if (!validation.ok) return { status: "error", message: validation.message };
   }
 
   const settings = await getSiteSettings();

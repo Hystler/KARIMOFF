@@ -97,6 +97,11 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
                   Удалить
                 </ConfirmSubmitButton>
               </div>
+              {line.waste_percent > 0 ? (
+                <p className="text-xs font-semibold leading-5 text-amber-700 lg:col-span-5">
+                  Отходы {line.waste_percent}%: для {line.quantity} {line.unit} чистого продукта учитывается {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(line.gross_quantity)} {line.unit} сырья.
+                </p>
+              ) : null}
               <fieldset className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/60 p-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-5">
                 <legend className="px-2 text-xs font-black text-karimoff-black">Настройка для гостя</legend>
                 <label className="flex items-center gap-2 text-xs font-bold text-karimoff-muted">

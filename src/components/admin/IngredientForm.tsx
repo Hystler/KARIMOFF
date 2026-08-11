@@ -28,7 +28,7 @@ export function IngredientForm({ action, ingredient, submitLabel }: IngredientFo
         </label>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-5">
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Единица
           <select name="unit" defaultValue={ingredient?.unit ?? "g"} className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange">
@@ -51,10 +51,14 @@ export function IngredientForm({ action, ingredient, submitLabel }: IngredientFo
           ₽ за единицу
           <input name="cost_per_unit" type="number" min="0" step="0.0001" defaultValue={ingredient?.cost_per_unit ?? ""} className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange" placeholder="Авто из упаковки" />
         </label>
+        <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
+          Отходы, %
+          <input name="waste_percent" type="number" min="0" max="95" step="0.1" defaultValue={ingredient?.waste_percent ?? 0} className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange" placeholder="0" />
+        </label>
       </div>
 
       <p className="-mt-2 text-sm leading-6 text-karimoff-muted">
-        Если заполнены размер и цена упаковки, себестоимость за 1 г, мл или штуку рассчитается автоматически. Ручное значение используется только без данных упаковки.
+        Если заполнены размер и цена упаковки, себестоимость за единицу рассчитается автоматически. Отходы учитывают несъедобную или технологически потерянную часть: например, кочерыжку, обрезь или ужарку.
       </p>
 
       <div className="grid gap-5 md:grid-cols-2">
