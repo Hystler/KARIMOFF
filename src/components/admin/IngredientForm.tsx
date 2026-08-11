@@ -53,6 +53,10 @@ export function IngredientForm({ action, ingredient, submitLabel }: IngredientFo
         </label>
       </div>
 
+      <p className="-mt-2 text-sm leading-6 text-karimoff-muted">
+        Если заполнены размер и цена упаковки, себестоимость за 1 г, мл или штуку рассчитается автоматически. Ручное значение используется только без данных упаковки.
+      </p>
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Порядок

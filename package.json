@@ -14,7 +14,8 @@
     "db:push:url": "node scripts/supabase-db-push.mjs --include-all",
     "db:migrations": "node scripts/supabase-migration-list.mjs",
     "db:test": "node scripts/supabase-db-test.mjs",
-    "db:audit": "node scripts/supabase-security-audit.mjs"
+    "db:audit": "node scripts/supabase-security-audit.mjs",
+    "data:migrate": "node scripts/apply-runtime-data-migrations.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",

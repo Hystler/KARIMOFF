@@ -13,6 +13,32 @@ export const ingredientFormSchema = z.object({
   is_active: z.coerce.boolean().default(false)
 });
 
+export const ingredientPriceSchema = z
+  .object({
+    id: z.string().uuid("Некорректный ингредиент"),
+    package_size: z.coerce.number().positive("Укажите размер упаковки больше нуля").optional(),
+    package_price: z.coerce.number().positive("Укажите цену упаковки больше нуля").optional(),
+    cost_per_unit: z.coerce.number().min(0, "Себестоимость не может быть отрицательной").optional()
+  })
+  .superRefine((value, context) => {
+    const hasPackageSize = value.package_size !== undefined;
+    const hasPackagePrice = value.package_price !== undefined;
+
+    if (hasPackageSize !== hasPackagePrice) {
+      context.addIssue({
+        code: "custom",
+        message: "Для автоматического расчёта заполните и размер, и цену упаковки"
+      });
+    }
+
+    if (!hasPackageSize && value.cost_per_unit === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "Заполните упаковку или себестоимость за единицу"
+      });
+    }
+  });
+
 export const productIngredientFormSchema = z.object({
   product_id: z.string().uuid("Некорректный товар"),
   ingredient_id: z.string().uuid("Выберите ингредиент"),
@@ -27,4 +53,5 @@ export const productIngredientFormSchema = z.object({
 });
 
 export type IngredientFormInput = z.infer<typeof ingredientFormSchema>;
+export type IngredientPriceInput = z.infer<typeof ingredientPriceSchema>;
 export type ProductIngredientFormInput = z.infer<typeof productIngredientFormSchema>;

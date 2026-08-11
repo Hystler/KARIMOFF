@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
-import { ingredientFormSchema } from "@/lib/ingredient-schema";
+import { ingredientFormSchema, ingredientPriceSchema } from "@/lib/ingredient-schema";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
@@ -54,7 +54,7 @@ function toPayload(formData: FormData) {
   const packageSize = parsed.data.package_size || null;
   const packagePrice = parsed.data.package_price || null;
   const calculatedCost = packageSize && packagePrice ? packagePrice / packageSize : null;
-  const costPerUnit = parsed.data.cost_per_unit ?? calculatedCost ?? 0;
+  const costPerUnit = calculatedCost ?? parsed.data.cost_per_unit ?? 0;
 
   return {
     ok: true as const,
@@ -73,8 +73,58 @@ function toPayload(formData: FormData) {
 
 function revalidateIngredientViews() {
   revalidatePath("/admin/ingredients");
+  revalidatePath("/admin/ingredients/prices");
   revalidatePath("/admin/products");
   revalidatePath("/admin/economics");
+}
+
+export async function updateIngredientPriceAction(formData: FormData) {
+  await requireAdmin();
+
+  const parsed = ingredientPriceSchema.safeParse({
+    id: formData.get("id"),
+    package_size: formData.get("package_size") || undefined,
+    package_price: formData.get("package_price") || undefined,
+    cost_per_unit: formData.get("cost_per_unit") || undefined
+  });
+
+  if (!parsed.success) {
+    redirect(`/admin/ingredients/prices?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте цену")}`);
+  }
+
+  const packageSize = parsed.data.package_size ?? null;
+  const packagePrice = parsed.data.package_price ?? null;
+  const costPerUnit = packageSize && packagePrice ? packagePrice / packageSize : (parsed.data.cost_per_unit ?? 0);
+  const database = getDatabaseOrRedirect();
+  const { error } = await database
+    .from("ingredients")
+    .update({
+      package_size: packageSize,
+      package_price: packagePrice,
+      cost_per_unit: costPerUnit,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", parsed.data.id);
+
+  if (error) {
+    redirect("/admin/ingredients/prices?error=save");
+  }
+
+  await writeAuditLog({
+    action: "ingredient.price_update",
+    actorRefHash: getAdminActorHash(),
+    actorType: "admin",
+    entityId: parsed.data.id,
+    entityType: "ingredient",
+    metadata: {
+      package_size: packageSize,
+      package_price: packagePrice,
+      cost_per_unit: costPerUnit
+    },
+    sourcePath: "/admin/ingredients/prices"
+  });
+  revalidateIngredientViews();
+  redirect(`/admin/ingredients/prices?saved=${parsed.data.id}`);
 }
 
 export async function createIngredientAction(formData: FormData) {

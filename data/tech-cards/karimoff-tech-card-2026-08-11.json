@@ -1,0 +1,299 @@
+{
+  "version": "2026-08-11",
+  "source_document": "Тех карта.docx",
+  "migration_marker": "data_migration.tech_card.20260811",
+  "ingredients": [
+    { "key": "lavash", "name": "Лаваш", "aliases": [], "category": "Основа", "unit": "pcs", "sort_order": 10 },
+    { "key": "flatbread", "name": "Лепёшка", "aliases": ["Лепешка"], "category": "Основа", "unit": "pcs", "sort_order": 20 },
+    { "key": "bun", "name": "Булочка пшеничная", "aliases": ["Булочка", "Булочка белая"], "category": "Основа", "unit": "pcs", "sort_order": 30 },
+    { "key": "black_bun", "name": "Булочка чёрная", "aliases": ["Булочка черная"], "category": "Основа", "unit": "pcs", "sort_order": 40 },
+    { "key": "beef_patty", "name": "Котлета говяжья", "aliases": ["Котлета"], "category": "Мясо", "unit": "g", "sort_order": 100 },
+    { "key": "chicken", "name": "Курица запечённая", "aliases": ["Курица", "Сочная курочка", "Курица запеченная"], "category": "Мясо", "unit": "g", "sort_order": 110 },
+    { "key": "pork", "name": "Свинина запечённая", "aliases": ["Свинина", "Свинина запеченная"], "category": "Мясо", "unit": "g", "sort_order": 120 },
+    { "key": "beef", "name": "Говядина запечённая", "aliases": ["Говядина", "Говядина запеченная"], "category": "Мясо", "unit": "g", "sort_order": 130 },
+    { "key": "bacon", "name": "Бекон жареный", "aliases": ["Бекон", "Жареный бекон"], "category": "Мясо", "unit": "pcs", "sort_order": 140 },
+    { "key": "chicken_sausage", "name": "Колбаска куриная", "aliases": [], "category": "Колбаски", "unit": "pcs", "sort_order": 150 },
+    { "key": "pork_sausage", "name": "Колбаска свиная", "aliases": ["Колбаска свинина"], "category": "Колбаски", "unit": "pcs", "sort_order": 160 },
+    { "key": "beef_sausage", "name": "Колбаска говяжья", "aliases": ["Колбаска говядина"], "category": "Колбаски", "unit": "pcs", "sort_order": 170 },
+    { "key": "breaded_shrimp", "name": "Королевская креветка в панировке", "aliases": ["Королевские креветки в панировке", "Креветка в панировке"], "category": "Морепродукты", "unit": "pcs", "sort_order": 200 },
+    { "key": "cabbage", "name": "Капуста", "aliases": [], "category": "Овощи", "unit": "g", "sort_order": 300 },
+    { "key": "lettuce", "name": "Лист салата", "aliases": ["Салат"], "category": "Овощи", "unit": "g", "sort_order": 310 },
+    { "key": "tomato", "name": "Помидор", "aliases": ["Помидоры"], "category": "Овощи", "unit": "g", "sort_order": 320 },
+    { "key": "cucumber", "name": "Огурец свежий", "aliases": ["Огурец"], "category": "Овощи", "unit": "g", "sort_order": 330 },
+    { "key": "pickle", "name": "Огурец маринованный", "aliases": ["Огурцы маринованные", "Маринованный огурец"], "category": "Овощи", "unit": "g", "sort_order": 340 },
+    { "key": "onion", "name": "Лук репчатый", "aliases": ["Лук", "Красный лук"], "category": "Овощи", "unit": "g", "sort_order": 350 },
+    { "key": "fried_onion", "name": "Лук жареный", "aliases": ["Жареный лук", "Лук фри"], "category": "Овощи", "unit": "g", "sort_order": 360 },
+    { "key": "cheddar", "name": "Сыр Чеддер, ломтик", "aliases": ["Сыр Чеддер", "Сыр чеддер"], "category": "Сыр", "unit": "pcs", "sort_order": 400 },
+    { "key": "cheese_stick", "name": "Сырная палочка", "aliases": ["Сырные палочки"], "category": "Сыр", "unit": "pcs", "sort_order": 410 },
+    { "key": "fries", "name": "Картофель фри", "aliases": ["Картошка фри"], "category": "Гарниры", "unit": "g", "sort_order": 500 },
+    { "key": "country_potatoes", "name": "Картофель по-деревенски", "aliases": ["Картофель по деревенски"], "category": "Гарниры", "unit": "g", "sort_order": 510 },
+    { "key": "bbq_sauce", "name": "Соус фирменный барбекю", "aliases": ["Фирменный соус барбекю", "Соус Барбекю фирменный"], "category": "Соусы", "unit": "g", "sort_order": 600 },
+    { "key": "garlic_sauce", "name": "Соус чесночный", "aliases": ["Чесночный соус", "Фирменный Чесночный соус"], "category": "Соусы", "unit": "g", "sort_order": 610 },
+    { "key": "caesar_sauce", "name": "Соус Цезарь", "aliases": ["Цезарь соус"], "category": "Соусы", "unit": "g", "sort_order": 620 },
+    { "key": "tasty_sauce", "name": "Соус Тейсти", "aliases": ["Соус тейсти", "Фирменный соус Тейсти"], "category": "Соусы", "unit": "g", "sort_order": 630 },
+    { "key": "cheese_sauce", "name": "Соус сырный", "aliases": ["Сырный соус"], "category": "Соусы", "unit": "g", "sort_order": 640 },
+    { "key": "ketchup", "name": "Кетчуп", "aliases": ["Соус кетчуп"], "category": "Соусы", "unit": "g", "sort_order": 650 },
+    { "key": "honey_mustard", "name": "Соус медово-горчичный", "aliases": ["Соус медовая горчица", "Соус Медовая Горчица"], "category": "Соусы", "unit": "g", "sort_order": 660 },
+    { "key": "drink_orange_1l", "name": "Добрый Апельсин 1 л", "aliases": [], "category": "Напитки", "unit": "pcs", "sort_order": 700 },
+    { "key": "drink_cola_1l", "name": "Добрый Кола 1 л", "aliases": [], "category": "Напитки", "unit": "pcs", "sort_order": 710 },
+    { "key": "drink_cola_zero_1l", "name": "Добрый Кола 1 л без сахара", "aliases": [], "category": "Напитки", "unit": "pcs", "sort_order": 720 },
+    { "key": "drink_cola_05", "name": "Добрый Кола 0,5", "aliases": [], "category": "Напитки", "unit": "pcs", "sort_order": 730 },
+    { "key": "drink_orange_05", "name": "Добрый Апельсин 0,5", "aliases": [], "category": "Напитки", "unit": "pcs", "sort_order": 740 },
+    { "key": "drink_orange_can", "name": "Добрый Апельсин жб 0,33 л", "aliases": ["Добрый Апельсин жб 0,33л"], "category": "Напитки", "unit": "pcs", "sort_order": 750 },
+    { "key": "drink_cola_zero_can", "name": "Добрый Кола жб 0,33 л без сахара", "aliases": ["Добрый Кола жб 0,33л (без сахара)"], "category": "Напитки", "unit": "pcs", "sort_order": 760 }
+  ],
+  "recipes": [
+    {
+      "product_slugs": ["firmennaya-shaurma"],
+      "product_names": ["Фирменная Шаурма"],
+      "source_name": "Шаурма фирменная",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bbq_sauce", "quantity": 75, "removable": true },
+        { "ingredient": "lavash", "quantity": 1 },
+        { "ingredient": "bacon", "quantity": 2, "removable": true },
+        { "ingredient": "pickle", "quantity": 5, "removable": true },
+        { "ingredient": "tomato", "quantity": 16, "removable": true },
+        { "ingredient": "onion", "quantity": 3, "removable": true },
+        { "ingredient": "cheese_stick", "quantity": 2, "removable": true },
+        { "ingredient": "chicken", "quantity": 150 },
+        { "ingredient": "fries", "quantity": 100 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-kurinaya"],
+      "product_names": ["Шаурма куриная"],
+      "source_name": "Шаурма в лаваше с курицей",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "lavash", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "chicken", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-zapechennaya-svinina", "shaurma-s-zapechennoy-svininoy"],
+      "product_names": ["Шаурма с запеченной свининой"],
+      "source_name": "Шаурма в лаваше со свининой",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "lavash", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "pork", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-zapechennaya-govyadina", "shaurma-s-zapechennoy-govyadinoy"],
+      "product_names": ["Шаурма с запеченной говядиной"],
+      "source_name": "Шаурма в лаваше с говядиной",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "lavash", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "beef", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-krevetka", "shaurma-s-korolevskoy-krevetkoy-v-panirovke"],
+      "product_names": ["Шаурма с Королевской креветкой в панировке"],
+      "source_name": "Шаурма в лаваше с креветками",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "lavash", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "onion", "quantity": 5, "removable": true },
+        { "ingredient": "caesar_sauce", "quantity": 66, "removable": true }, { "ingredient": "breaded_shrimp", "quantity": 4 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-v-lepeshke-kuritsa", "shaurma-v-lepeshke-s-sochnoy-kurochkoy"],
+      "product_names": ["Шаурма в лепешке с сочной курочкой"],
+      "source_name": "Шаурма в лепёшке с курицей",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "flatbread", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "chicken", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-v-lepeshke-svinina", "shaurma-v-lepeshke-s-zapechennoy-svininoy"],
+      "product_names": ["Шаурма в лепешке с запеченной свининой"],
+      "source_name": "Шаурма в лепёшке со свининой",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "flatbread", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "pork", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["shaurma-v-lepeshke-govyadina", "shaurma-v-lepeshke-s-zapechennoy-govyadinoy"],
+      "product_names": ["Шаурма в лепешке с запеченной говядиной"],
+      "source_name": "Шаурма в лепёшке с говядиной",
+      "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "flatbread", "quantity": 1 }, { "ingredient": "cabbage", "quantity": 83, "removable": true },
+        { "ingredient": "tomato", "quantity": 20, "removable": true }, { "ingredient": "cucumber", "quantity": 6, "removable": true },
+        { "ingredient": "onion", "quantity": 5, "removable": true }, { "ingredient": "garlic_sauce", "quantity": 66, "removable": true },
+        { "ingredient": "beef", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["tayson"], "product_names": ["Бургер Тайсон с сочной котлетой из говядины и жареным беконом"],
+      "source_name": "Бургер Тайсон", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "tasty_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
+        { "ingredient": "pickle", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
+        { "ingredient": "bacon", "quantity": 2, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
+        { "ingredient": "beef_patty", "quantity": 75 }
+      ]
+    },
+    {
+      "product_slugs": ["rokki"], "product_names": ["Рокки"], "source_name": "Бургер Рокки", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "cheese_sauce", "quantity": 15, "removable": true },
+        { "ingredient": "garlic_sauce", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
+        { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 },
+        { "ingredient": "cheese_stick", "quantity": 2, "removable": true }
+      ]
+    },
+    {
+      "product_slugs": ["voin-drakona"], "product_names": ["Бургер Воин Дракона с сочной говядиной"],
+      "source_name": "Бургер Воин дракона", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "garlic_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 },
+        { "ingredient": "fried_onion", "quantity": 5, "removable": true }
+      ]
+    },
+    {
+      "product_slugs": ["kantribif"], "product_names": ["Бургер КантриБиф с котлетой из говядины"],
+      "source_name": "Бургер Кантри биф", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "ketchup", "quantity": 15, "removable": true },
+        { "ingredient": "honey_mustard", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
+        { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "pickle", "quantity": 11, "removable": true },
+        { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
+        { "ingredient": "beef_patty", "quantity": 75 }
+      ]
+    },
+    {
+      "product_slugs": ["kantrigrand"], "product_names": ["Бургер КантриГранд сочная котлета из говядины"],
+      "source_name": "Бургер Кантри гранд", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "ketchup", "quantity": 15, "removable": true },
+        { "ingredient": "bbq_sauce", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
+        { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "pickle", "quantity": 11, "removable": true },
+        { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
+        { "ingredient": "beef_patty", "quantity": 75 }
+      ]
+    },
+    {
+      "product_slugs": ["borak-abama"], "product_names": ["Борак Абама"], "source_name": "Бургер Борак Обама", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "black_bun", "quantity": 1 }, { "ingredient": "bbq_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
+        { "ingredient": "pickle", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 }
+      ]
+    },
+    {
+      "product_slugs": ["sebastian"], "product_names": ["Себастиан"], "source_name": "Бургер Себастиан", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "caesar_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
+        { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "breaded_shrimp", "quantity": 3 }
+      ]
+    },
+    {
+      "product_slugs": ["aydahobox", "aydahoboks"], "product_names": ["АйдахоБокс"], "source_name": "Айдахо бокс с курицей", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "country_potatoes", "quantity": 170 }, { "ingredient": "cheese_sauce", "quantity": 50, "removable": true },
+        { "ingredient": "bacon", "quantity": 2, "removable": true }, { "ingredient": "fried_onion", "quantity": 5, "removable": true },
+        { "ingredient": "chicken", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["boxfood", "boksfud"], "product_names": ["БоксФуд"], "source_name": "Боксфуд с курицей", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "fries", "quantity": 170 }, { "ingredient": "garlic_sauce", "quantity": 60, "removable": true },
+        { "ingredient": "pickle", "quantity": 5, "removable": true }, { "ingredient": "fried_onion", "quantity": 5, "removable": true },
+        { "ingredient": "chicken", "quantity": 90 }
+      ]
+    },
+    {
+      "product_slugs": ["hot-dog-datskiy"], "product_names": ["Хот-Дог Датский"], "source_name": "Хот-дог датский, колбаска свинина", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "honey_mustard", "quantity": 10, "removable": true },
+        { "ingredient": "ketchup", "quantity": 10, "removable": true }, { "ingredient": "pork_sausage", "quantity": 1 },
+        { "ingredient": "lettuce", "quantity": 5, "removable": true }, { "ingredient": "pickle", "quantity": 8, "removable": true },
+        { "ingredient": "fried_onion", "quantity": 3, "removable": true }
+      ]
+    },
+    {
+      "product_slugs": ["hot-dog-barbekyu"], "product_names": ["Хот-Дог Барбекю"], "source_name": "Хот-дог барбекю, колбаска свинина", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "bbq_sauce", "quantity": 20, "removable": true },
+        { "ingredient": "pork_sausage", "quantity": 1 }, { "ingredient": "lettuce", "quantity": 5, "removable": true },
+        { "ingredient": "pickle", "quantity": 8, "removable": true }, { "ingredient": "tomato", "quantity": 10, "removable": true },
+        { "ingredient": "fried_onion", "quantity": 3, "removable": true }
+      ]
+    },
+    {
+      "product_slugs": ["hot-dog-itali"], "product_names": ["Хот-Дог Итали"], "source_name": "Хот-дог итали, колбаска свинина", "source_kind": "technical_card",
+      "lines": [
+        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "cheese_sauce", "quantity": 20, "removable": true },
+        { "ingredient": "pork_sausage", "quantity": 1 }, { "ingredient": "lettuce", "quantity": 5, "removable": true },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "fried_onion", "quantity": 3, "removable": true }
+      ]
+    },
+    { "product_slugs": ["dobryy-apelsin-1l", "dobryy-apelsin-1-l"], "product_names": ["Добрый Апельсин 1 л"], "source_name": "Добрый Апельсин 1 л", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_orange_1l", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-kola-1l", "dobryy-kola-1-l"], "product_names": ["Добрый Кола 1 л"], "source_name": "Добрый Кола 1 л", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_1l", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-kola-zero-1l", "dobryy-kola-1-l-bez-sahara"], "product_names": ["Добрый Кола 1 л без сахара"], "source_name": "Добрый Кола 1 л без сахара", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_zero_1l", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-kola-05", "dobryy-kola-0-5"], "product_names": ["Добрый Кола 0,5"], "source_name": "Добрый Кола 0,5", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_05", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-apelsin-05", "dobryy-apelsin-0-5"], "product_names": ["Добрый Апельсин 0,5"], "source_name": "Добрый Апельсин 0,5", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_orange_05", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-apelsin-can-033", "dobryy-apelsin-zhb-0-33l"], "product_names": ["Добрый Апельсин жб 0,33л"], "source_name": "Добрый Апельсин жб 0,33 л", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_orange_can", "quantity": 1 }] },
+    { "product_slugs": ["dobryy-kola-zero-can-033", "dobryy-kola-zhb-0-33l-bez-sahara"], "product_names": ["Добрый Кола жб 0,33л (без сахара)"], "source_name": "Добрый Кола жб 0,33 л без сахара", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_zero_can", "quantity": 1 }] }
+  ],
+  "pending_source_recipes": [
+    "Шаурма микс: курица × говядина",
+    "Шаурма микс: свинина × говядина",
+    "Шаурма микс: курица × свинина",
+    "Айдахо бокс со свининой",
+    "Айдахо бокс с говядиной",
+    "Боксфуд со свининой",
+    "Боксфуд с говядиной",
+    "Хот-дог датский с куриной колбаской",
+    "Хот-дог датский с говяжьей колбаской",
+    "Хот-дог барбекю с куриной колбаской",
+    "Хот-дог барбекю с говяжьей колбаской",
+    "Хот-дог итали с куриной колбаской",
+    "Хот-дог итали с говяжьей колбаской",
+    "Френчдог с куриной колбаской",
+    "Френчдог со свиной колбаской",
+    "Френчдог с говяжьей колбаской"
+  ],
+  "catalog_products_without_confirmed_recipe": [
+    "Креветки в панировке (королевские): в каталоге 6/12 шт., в техкарте нет отдельной порции",
+    "Наггетсы: в каталоге 6/12 шт., в техкарте отсутствуют",
+    "Сырные палочки: в каталоге 6/12 шт., в техкарте нет отдельной порции",
+    "Картофель по-деревенски: в каталоге 150/200 г, в техкарте только 170 г внутри бокса",
+    "Картошка фри: в каталоге 150/200 г, в техкарте 100/170 г только внутри других блюд",
+    "Крылышки куриные Барбекю: в каталоге 8/16 шт., в техкарте отсутствуют"
+  ],
+  "source_issues": [
+    "В рецепте «Хот-дог датский, колбаска говядина» указана куриная колбаска; рецепт не импортируется до подтверждения.",
+    "У френчдогов указан «соус на выбор» без списка допустимых соусов; рецепты не импортируются.",
+    "Котлета указана как 75 г / 1 шт.; для склада и food cost она нормализована в 75 г.",
+    "В исходнике склеены строки «Говядина — 90 г» и заголовок датского хот-дога; при разборе они разделены.",
+    "В документе нет закупочных цен, выхода готового блюда, технологических потерь, КБЖУ и аллергенов."
+  ]
+}
