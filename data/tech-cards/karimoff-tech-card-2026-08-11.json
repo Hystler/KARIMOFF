@@ -186,17 +186,6 @@
       ]
     },
     {
-      "product_slugs": ["kantrigrand"], "product_names": ["Бургер КантриГранд сочная котлета из говядины"],
-      "source_name": "Бургер Кантри гранд", "source_kind": "technical_card",
-      "lines": [
-        { "ingredient": "bun", "quantity": 1 }, { "ingredient": "ketchup", "quantity": 15, "removable": true },
-        { "ingredient": "bbq_sauce", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
-        { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "pickle", "quantity": 11, "removable": true },
-        { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
-        { "ingredient": "beef_patty", "quantity": 75 }
-      ]
-    },
-    {
       "product_slugs": ["borak-abama"], "product_names": ["Борак Абама"], "source_name": "Бургер Борак Обама", "source_kind": "technical_card",
       "lines": [
         { "ingredient": "black_bun", "quantity": 1 }, { "ingredient": "bbq_sauce", "quantity": 30, "removable": true },
@@ -264,6 +253,7 @@
     { "product_slugs": ["dobryy-kola-zero-can-033", "dobryy-kola-zhb-0-33l-bez-sahara"], "product_names": ["Добрый Кола жб 0,33л (без сахара)"], "source_name": "Добрый Кола жб 0,33 л без сахара", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_zero_can", "quantity": 1 }] }
   ],
   "pending_source_recipes": [
+    "Бургер КантриГранд: товар отсутствует в production-каталоге",
     "Шаурма микс: курица × говядина",
     "Шаурма микс: свинина × говядина",
     "Шаурма микс: курица × свинина",

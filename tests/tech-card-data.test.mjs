@@ -9,9 +9,9 @@ const data = JSON.parse(
 test("technical card data has stable unique references", () => {
   assert.equal(data.ingredients.length, 38);
   assert.equal(new Set(data.ingredients.map((ingredient) => ingredient.key)).size, data.ingredients.length);
-  assert.equal(data.recipes.length, 27);
+  assert.equal(data.recipes.length, 26);
   assert.equal(new Set(data.recipes.map((recipe) => recipe.product_slugs[0])).size, data.recipes.length);
-  assert.equal(data.pending_source_recipes.length, 16);
+  assert.equal(data.pending_source_recipes.length, 17);
   assert.equal(data.catalog_products_without_confirmed_recipe.length, 6);
 });
 
@@ -31,11 +31,11 @@ test("every recipe line references a supported ingredient and positive quantity"
     }
   }
 
-  assert.equal(data.recipes.flatMap((recipe) => recipe.lines).length, 151);
+  assert.equal(data.recipes.flatMap((recipe) => recipe.lines).length, 142);
 });
 
 test("only confirmed product mappings are imported", () => {
-  assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "technical_card").length, 20);
+  assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "technical_card").length, 19);
   assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "catalog_purchase_unit").length, 7);
 
   const danishHotDog = data.recipes.find((recipe) => recipe.product_slugs.includes("hot-dog-datskiy"));
@@ -45,6 +45,7 @@ test("only confirmed product mappings are imported", () => {
 
   assert.ok(data.pending_source_recipes.some((name) => name.includes("говяжьей колбаской")));
   assert.ok(data.pending_source_recipes.some((name) => name.startsWith("Френчдог")));
+  assert.ok(data.pending_source_recipes.some((name) => name.includes("КантриГранд")));
 });
 
 test("technical card does not invent paid extras", () => {
