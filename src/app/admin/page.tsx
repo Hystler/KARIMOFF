@@ -5,6 +5,7 @@ import {
   ChefHat,
   Factory,
   PackageOpen,
+  Plug,
   Settings,
   ShoppingBag,
   Users,
@@ -24,7 +25,8 @@ const cards = [
   { title: "Производство", description: "Выпуск, себестоимость и продажи франчайзи", href: "/admin/production", icon: Factory },
   { title: "Пользователи", description: "Клиенты, профили и история", href: "/admin/customers", icon: Users },
   { title: "Экономика", description: "Маржинальность и расходы", href: "/admin/economics", icon: BarChart3 },
-  { title: "ERP и касса", description: "Продажи по дням и интеграция Эвотор", href: "/admin/erp", icon: ChartNoAxesCombined },
+  { title: "Продажи", description: "Выручка, чеки и популярные позиции", href: "/admin/analytics/sales", icon: ChartNoAxesCombined },
+  { title: "Эвотор", description: "Подключение, кассы и синхронизация", href: "/admin/integrations/evotor", icon: Plug },
   { title: "Настройки", description: "Контакты, фоны и режимы", href: "/admin/settings", icon: Settings }
 ];
 

@@ -15,7 +15,9 @@ const ingredients = read("src/lib/ingredients.ts");
 const kitchen = read("src/components/admin/KitchenBoard.tsx");
 const sms = read("src/lib/verification/send-code.ts");
 const registerProvider = read("src/lib/cash-register/provider.ts");
-const evotorClient = read("src/lib/evotor/client.ts");
+const evotorClient = read("src/lib/integrations/evotor/client.ts");
+const evotorDocuments = read("src/lib/integrations/evotor/documents.ts");
+const evotorSync = read("src/lib/integrations/evotor/sync.ts");
 
 test("modifier price is authoritative and effective ingredients are snapshotted", () => {
   assert.match(migration, /v_line_unit_price := v_product\.price \+ v_extra_total/);
@@ -69,9 +71,10 @@ test("staff and register tables are private and cash register is fail closed", (
   assert.match(migration, /revoke all privileges on table public\.cash_registers from anon, authenticated/);
   assert.match(registerProvider, /class DisabledCashRegisterProvider/);
   assert.match(registerProvider, /Онлайн-касса не подключена/);
-  assert.match(evotorClient, /EVOTOR_ENABLED === "true"/);
   assert.match(evotorClient, /application\/vnd\.evotor\.v2\+json/);
-  assert.match(evotorClient, /type", "SELL"/);
+  assert.match(evotorClient, /method: "GET"/);
+  assert.match(evotorDocuments, /\/documents/);
+  assert.doesNotMatch(evotorSync, /inventory_items|inventory_movements/);
 });
 
 test("production SMS remains fail closed", () => {

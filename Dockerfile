@@ -34,6 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-data-migrat
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-schema-migrations.mjs ./scripts/apply-runtime-schema-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/data/tech-cards ./data/tech-cards
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql ./supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812190000_add_evotor_cloud_integration.sql ./supabase/migrations/20260812190000_add_evotor_cloud_integration.sql
 
 USER nextjs
 

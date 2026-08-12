@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createDatabaseServerClient } from "@/lib/database/server";
 import { getMoscowDateKey } from "@/lib/order-time";
 import { getAdminOrders } from "@/lib/orders";
-import { getEvotorStatus, type EvotorSaleDocument } from "@/lib/evotor/client";
+import { getPostgresSql } from "@/lib/postgres/server";
+import { getEvotorConnectionOverview } from "@/lib/integrations/evotor/repository";
 
 export type ErpPeriod = "today" | "month" | "30d";
 
@@ -25,64 +25,64 @@ export function getErpPeriodRange(period: string, now = new Date()) {
   return { period: normalized, since, until };
 }
 
-function asEvotorDocument(value: unknown): EvotorSaleDocument | null {
-  if (!value || typeof value !== "object") return null;
-  const document = value as Partial<EvotorSaleDocument>;
-  if (!document.id || !document.close_date || !Array.isArray(document.items)) return null;
-  return {
-    id: String(document.id),
-    number: document.number === null || document.number === undefined ? null : Number(document.number),
-    close_date: String(document.close_date),
-    device_id: document.device_id ? String(document.device_id) : null,
-    store_id: String(document.store_id ?? ""),
-    total: Number(document.total ?? 0),
-    items: document.items.map((item) => ({
-      product_id: item.product_id ? String(item.product_id) : null,
-      name: String(item.name ?? "Позиция"),
-      quantity: Number(item.quantity ?? 0),
-      unit_price: Number(item.unit_price ?? 0),
-      total: Number(item.total ?? 0)
-    }))
-  };
-}
+type ReceiptRow = {
+  id: string;
+  receipt_type: "sale" | "return" | "correction";
+  closed_at: string | null;
+  total: number;
+  payment_types: Array<{ type?: string; sum?: number }>;
+  register_name: string;
+};
+
+type ReceiptItemRow = {
+  receipt_id: string;
+  evotor_product_id: string | null;
+  name: string;
+  quantity: number;
+  line_total: number;
+  receipt_type: "sale" | "return" | "correction";
+};
 
 export async function getErpDashboard(periodValue: string) {
   const range = getErpPeriodRange(periodValue);
-  const database = createDatabaseServerClient();
-  const { orders, error: ordersError } = await getAdminOrders();
+  const sql = getPostgresSql();
+  const [{ orders, error: ordersError }, receipts, receiptItems, connections] = await Promise.all([
+    getAdminOrders(),
+    sql<ReceiptRow[]>`
+      select r.id, r.receipt_type, r.closed_at, r.total, r.payment_types,
+        coalesce(d.name, d.device_model, s.name, 'Касса Эвотор') as register_name
+      from public.evotor_receipts r
+      join public.evotor_stores s on s.id = r.store_id
+      left join public.evotor_devices d on d.id = r.device_id
+      where r.closed_at >= ${range.since.toISOString()}::timestamptz
+        and r.closed_at <= ${range.until.toISOString()}::timestamptz
+      order by r.closed_at
+    `,
+    sql<ReceiptItemRow[]>`
+      select i.receipt_id, i.evotor_product_id, i.name, i.quantity, i.line_total, r.receipt_type
+      from public.evotor_receipt_items i
+      join public.evotor_receipts r on r.id = i.receipt_id
+      where r.closed_at >= ${range.since.toISOString()}::timestamptz
+        and r.closed_at <= ${range.until.toISOString()}::timestamptz
+    `,
+    getEvotorConnectionOverview()
+  ]);
   const periodOrders = orders.filter((order) => {
     const createdAt = new Date(order.created_at).getTime();
     return createdAt >= range.since.getTime() && createdAt <= range.until.getTime();
   });
   const completedOrders = periodOrders.filter((order) => order.status === "completed");
-
-  let evotorDocuments: EvotorSaleDocument[] = [];
-  let evotorError: string | null = null;
-  if (database) {
-    const { data, error } = await database
-      .from("cash_register_events")
-      .select("payload")
-      .eq("event_type", "evotor.document.sell")
-      .order("created_at", { ascending: false })
-      .limit(2000);
-
-    if (error) {
-      evotorError = error.message;
-    } else {
-      evotorDocuments = (data ?? [])
-        .map((row) => asEvotorDocument(row.payload))
-        .filter((item): item is EvotorSaleDocument => Boolean(item))
-        .filter((item) => {
-          const createdAt = new Date(item.close_date).getTime();
-          return createdAt >= range.since.getTime() && createdAt <= range.until.getTime();
-        });
-    }
-  }
+  const sales = receipts.filter((receipt) => receipt.receipt_type === "sale");
+  const returns = receipts.filter((receipt) => receipt.receipt_type === "return");
 
   const siteRevenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
-  const evotorRevenue = evotorDocuments.reduce((sum, document) => sum + document.total, 0);
+  const evotorSales = sales.reduce((sum, receipt) => sum + Number(receipt.total), 0);
+  const refundAmount = returns.reduce((sum, receipt) => sum + Number(receipt.total), 0);
+  const evotorRevenue = evotorSales - refundAmount;
   const topProducts = new Map<string, { name: string; quantity: number; revenue: number }>();
   const daily = new Map<string, { date: string; site: number; evotor: number }>();
+  const registers = new Map<string, { name: string; checks: number; revenue: number }>();
+  const paymentMethods = new Map<string, { name: string; checks: number; revenue: number }>();
 
   for (const order of completedOrders) {
     const date = getMoscowDateKey(new Date(order.created_at));
@@ -98,37 +98,61 @@ export async function getErpDashboard(periodValue: string) {
     }
   }
 
-  for (const document of evotorDocuments) {
-    const date = getMoscowDateKey(new Date(document.close_date));
+  for (const receipt of receipts) {
+    if (!receipt.closed_at) continue;
+    const sign = receipt.receipt_type === "return" ? -1 : 1;
+    const date = getMoscowDateKey(new Date(receipt.closed_at));
     const day = daily.get(date) ?? { date, site: 0, evotor: 0 };
-    day.evotor += document.total;
+    day.evotor += Number(receipt.total) * sign;
     daily.set(date, day);
-    for (const item of document.items) {
-      const key = `evotor:${item.product_id ?? item.name}`;
-      const current = topProducts.get(key) ?? { name: item.name, quantity: 0, revenue: 0 };
-      current.quantity += item.quantity;
-      current.revenue += item.total;
-      topProducts.set(key, current);
+    const register = registers.get(receipt.register_name) ?? { name: receipt.register_name, checks: 0, revenue: 0 };
+    register.checks += 1;
+    register.revenue += Number(receipt.total) * sign;
+    registers.set(receipt.register_name, register);
+    for (const payment of Array.isArray(receipt.payment_types) ? receipt.payment_types : []) {
+      const name = String(payment.type ?? "UNKNOWN");
+      const current = paymentMethods.get(name) ?? { name, checks: 0, revenue: 0 };
+      current.checks += 1;
+      current.revenue += Number(payment.sum ?? 0) * sign;
+      paymentMethods.set(name, current);
     }
   }
 
-  const totalChecks = completedOrders.length + evotorDocuments.length;
+  for (const item of receiptItems) {
+    const sign = item.receipt_type === "return" ? -1 : 1;
+    const key = `evotor:${item.evotor_product_id ?? item.name}`;
+    const current = topProducts.get(key) ?? { name: item.name, quantity: 0, revenue: 0 };
+    current.quantity += Number(item.quantity) * sign;
+    current.revenue += Number(item.line_total) * sign;
+    topProducts.set(key, current);
+  }
+
+  const totalChecks = completedOrders.length + sales.length;
   const totalRevenue = siteRevenue + evotorRevenue;
 
   return {
     range,
-    status: getEvotorStatus(),
-    error: ordersError ?? evotorError,
+    status: {
+      enabled: process.env.EVOTOR_ENABLED === "true",
+      configured: connections.length > 0,
+      ready: process.env.EVOTOR_ENABLED === "true" && connections.some((item) => item.status === "connected")
+    },
+    error: ordersError,
     siteOrders: periodOrders.length,
     completedSiteOrders: completedOrders.length,
     siteRevenue,
-    evotorChecks: evotorDocuments.length,
+    evotorChecks: sales.length,
     evotorRevenue,
+    refundCount: returns.length,
+    refundAmount,
     totalRevenue,
-    averageCheck: totalChecks ? totalRevenue / totalChecks : 0,
+    averageCheck: totalChecks ? (siteRevenue + evotorSales) / totalChecks : 0,
     topProducts: Array.from(topProducts.values())
+      .filter((item) => item.quantity > 0)
       .sort((left, right) => right.quantity - left.quantity)
       .slice(0, 10),
-    daily: Array.from(daily.values()).sort((left, right) => left.date.localeCompare(right.date))
+    daily: Array.from(daily.values()).sort((left, right) => left.date.localeCompare(right.date)),
+    registers: Array.from(registers.values()).sort((left, right) => right.revenue - left.revenue),
+    paymentMethods: Array.from(paymentMethods.values()).sort((left, right) => right.revenue - left.revenue)
   };
 }

@@ -1,10 +1,9 @@
-import { ChartNoAxesCombined, CircleAlert, CloudDownload, ReceiptText } from "lucide-react";
+import { Cable, ChartNoAxesCombined, CircleAlert, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getErpDashboard } from "@/lib/erp";
 import { formatNumber, formatRub } from "@/lib/format";
-import { syncEvotorSalesAction } from "./actions";
 
 type ErpPageProps = {
   searchParams?: Promise<{ error?: string; period?: string; synced?: string }>;
@@ -44,24 +43,17 @@ export default async function ErpPage({ searchParams }: ErpPageProps) {
           <h1>ERP и аналитика</h1>
           <p>Заказы сайта и чеки Эвотора в одном операционном отчёте.</p>
         </div>
-        <form action={syncEvotorSalesAction}>
-          <input type="hidden" name="period" value={dashboard.range.period} />
-          <button
-            type="submit"
-            disabled={!dashboard.status.ready}
-            className="admin-primary-button disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            <CloudDownload size={18} />
-            Синхронизировать Эвотор
-          </button>
-        </form>
+        <Link href="/admin/integrations/evotor" className="admin-primary-button">
+          <Cable size={18} />
+          Настроить Эвотор
+        </Link>
       </header>
 
       <nav className="mt-6 flex gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="Период отчёта">
         {periods.map((period) => (
           <Link
             key={period.value}
-            href={`/admin/erp?period=${period.value}`}
+            href={`/admin/analytics/sales?period=${period.value}`}
             className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-bold transition ${
               dashboard.range.period === period.value
                 ? "border-karimoff-orange bg-karimoff-orange text-white"
@@ -73,11 +65,6 @@ export default async function ErpPage({ searchParams }: ErpPageProps) {
         ))}
       </nav>
 
-      {params.synced !== undefined ? (
-        <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800">
-          Синхронизация завершена. Новых чеков: {params.synced}.
-        </div>
-      ) : null}
       {params.error || dashboard.error ? (
         <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
           {params.error ? decodeURIComponent(params.error) : dashboard.error}
@@ -90,7 +77,7 @@ export default async function ErpPage({ searchParams }: ErpPageProps) {
           <div>
             <h2 className="font-black">Эвотор ожидает подключения</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6">
-              Для синхронизации нужны серверные переменные EVOTOR_ENABLED=true, EVOTOR_API_TOKEN и EVOTOR_STORE_ID. Пока они не заданы, раздел безопасно показывает только данные сайта и не обращается к API кассы.
+              Подключите приложение в разделе «Эвотор». Пока токен не получен, отчёт безопасно показывает только данные сайта.
             </p>
           </div>
         </section>
@@ -101,6 +88,13 @@ export default async function ErpPage({ searchParams }: ErpPageProps) {
         <article><span>Выручка сайта</span><strong>{formatRub(dashboard.siteRevenue)}</strong></article>
         <article><span>Чеки Эвотор</span><strong>{formatNumber(dashboard.evotorChecks)}</strong></article>
         <article><span>Средний чек</span><strong>{formatRub(dashboard.averageCheck)}</strong></article>
+      </section>
+
+      <section className="admin-metrics mt-4">
+        <article><span>Возвраты</span><strong>{formatNumber(dashboard.refundCount)}</strong></article>
+        <article><span>Сумма возвратов</span><strong>{formatRub(dashboard.refundAmount)}</strong></article>
+        <article><span>Выручка Эвотор</span><strong>{formatRub(dashboard.evotorRevenue)}</strong></article>
+        <article><span>Общая выручка</span><strong>{formatRub(dashboard.totalRevenue)}</strong></article>
       </section>
 
       <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
@@ -201,6 +195,38 @@ export default async function ErpPage({ searchParams }: ErpPageProps) {
           <p className="p-6 text-sm text-karimoff-muted">Пока недостаточно данных для рейтинга.</p>
         )}
       </section>
+
+
+      <div className="mt-7 grid gap-6 lg:grid-cols-2">
+        <section className="admin-card overflow-hidden">
+          <div className="border-b border-karimoff-line px-5 py-5 sm:px-6">
+            <p className="admin-eyebrow">Кассы</p>
+            <h2 className="mt-2 text-xl font-black">Продажи по терминалам</h2>
+          </div>
+          <div className="divide-y divide-karimoff-line">
+            {dashboard.registers.length ? dashboard.registers.map((register) => (
+              <div key={register.name} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
+                <div><strong>{register.name}</strong><p className="mt-1 text-xs text-karimoff-muted">Чеков: {formatNumber(register.checks)}</p></div>
+                <strong className="tabular-nums text-karimoff-orange">{formatRub(register.revenue)}</strong>
+              </div>
+            )) : <p className="p-6 text-sm text-karimoff-muted">Данных по кассам пока нет.</p>}
+          </div>
+        </section>
+        <section className="admin-card overflow-hidden">
+          <div className="border-b border-karimoff-line px-5 py-5 sm:px-6">
+            <p className="admin-eyebrow">Оплата</p>
+            <h2 className="mt-2 text-xl font-black">Формы оплаты</h2>
+          </div>
+          <div className="divide-y divide-karimoff-line">
+            {dashboard.paymentMethods.length ? dashboard.paymentMethods.map((method) => (
+              <div key={method.name} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
+                <div><strong>{method.name}</strong><p className="mt-1 text-xs text-karimoff-muted">Операций: {formatNumber(method.checks)}</p></div>
+                <strong className="tabular-nums text-karimoff-orange">{formatRub(method.revenue)}</strong>
+              </div>
+            )) : <p className="p-6 text-sm text-karimoff-muted">Данных по оплатам пока нет.</p>}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

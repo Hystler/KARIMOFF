@@ -29,6 +29,17 @@ const allowedTables = new Set([
   "customer_avatars",
   "customers",
   "economics_settings",
+  "evotor_connections",
+  "evotor_devices",
+  "evotor_documents",
+  "evotor_employees",
+  "evotor_product_mappings",
+  "evotor_products",
+  "evotor_receipt_items",
+  "evotor_receipts",
+  "evotor_stores",
+  "evotor_sync_errors",
+  "evotor_sync_events",
   "fiscal_receipts",
   "ingredients",
   "inventory_items",
@@ -104,6 +115,10 @@ function getSql() {
     prepare: false
   });
   return sharedSql;
+}
+
+export function getPostgresSql() {
+  return getSql();
 }
 
 class PostgresQueryBuilder implements PromiseLike<QueryResult> {
