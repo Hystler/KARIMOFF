@@ -16,6 +16,7 @@ supabase/*
 !supabase/migrations/
 supabase/migrations/*
 !supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql
+!supabase/migrations/20260812153000_add_production_accounting.sql
 !supabase/migrations/20260812190000_add_evotor_cloud_integration.sql
 tests
 tmp

@@ -17,6 +17,19 @@ const migrations = [
     }
   },
   {
+    name: "20260812153000_add_production_accounting",
+    applied: async (sql) => {
+      const [table] = await sql`
+        select 1
+        from information_schema.tables
+        where table_schema = 'public'
+          and table_name = 'production_recipes'
+        limit 1
+      `;
+      return Boolean(table);
+    }
+  },
+  {
     name: "20260812190000_add_evotor_cloud_integration",
     applied: async (sql) => {
       const [table] = await sql`
