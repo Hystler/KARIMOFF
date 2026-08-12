@@ -13,6 +13,8 @@ type MovementsPageProps = {
 
 const movementLabels: Record<InventoryMovementType, string> = {
   correction: "Корректировка",
+  production_consumption: "Сырьё в производство",
+  production_output: "Выпуск производства",
   receipt: "Приход",
   return: "Возврат",
   sale: "Автосписание",
@@ -29,11 +31,11 @@ function formatDate(date: string) {
 }
 
 function movementTone(type: InventoryMovementType) {
-  if (type === "receipt" || type === "return") {
+  if (type === "receipt" || type === "return" || type === "production_output") {
     return "bg-emerald-50 text-emerald-700";
   }
 
-  if (type === "write_off" || type === "sale") {
+  if (type === "write_off" || type === "sale" || type === "production_consumption") {
     return "bg-red-50 text-red-700";
   }
 
@@ -116,6 +118,7 @@ export default async function InventoryMovementsPage({ searchParams }: Movements
                     <th className="px-4 py-4 font-bold">Количество</th>
                     <th className="px-4 py-4 font-bold">Причина</th>
                     <th className="px-4 py-4 font-bold">Заказ</th>
+                    <th className="px-4 py-4 font-bold">Связь</th>
                     <th className="px-4 py-4 font-bold">Комментарий</th>
                     <th className="px-4 py-4 font-bold">Кем</th>
                   </tr>
@@ -135,6 +138,7 @@ export default async function InventoryMovementsPage({ searchParams }: Movements
                       </td>
                       <td className="px-4 py-4 text-karimoff-muted">{movement.reason ?? "—"}</td>
                       <td className="px-4 py-4 text-xs text-karimoff-muted">{movement.order_id ?? "—"}</td>
+                      <td className="px-4 py-4 text-xs text-karimoff-muted">{movement.production_run_id ? `Выпуск ${movement.production_run_id.slice(0, 8)}` : "—"}</td>
                       <td className="max-w-[260px] px-4 py-4 text-karimoff-muted">{movement.comment ?? "—"}</td>
                       <td className="px-4 py-4 text-karimoff-muted">{movement.created_by}</td>
                     </tr>

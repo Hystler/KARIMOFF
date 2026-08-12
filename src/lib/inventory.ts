@@ -4,7 +4,14 @@ import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { getAdminIngredients, type Ingredient } from "./ingredients";
 
-export type InventoryMovementType = "receipt" | "sale" | "write_off" | "correction" | "return";
+export type InventoryMovementType =
+  | "receipt"
+  | "sale"
+  | "write_off"
+  | "correction"
+  | "return"
+  | "production_consumption"
+  | "production_output";
 
 export type InventoryItem = {
   id: string;
@@ -33,6 +40,7 @@ export type InventoryMovement = {
   ingredient_name: string | null;
   order_id: string | null;
   product_id: string | null;
+  production_run_id: string | null;
   movement_type: InventoryMovementType;
   quantity: number;
   unit: "g" | "ml" | "pcs";
@@ -70,6 +78,7 @@ function normalizeMovement(row: Record<string, unknown>, ingredientName: string 
     ingredient_name: ingredientName,
     order_id: row.order_id ? String(row.order_id) : null,
     product_id: row.product_id ? String(row.product_id) : null,
+    production_run_id: row.production_run_id ? String(row.production_run_id) : null,
     movement_type: type,
     quantity: Number(row.quantity ?? 0),
     unit: normalizeUnit(row.unit),
@@ -209,7 +218,7 @@ export async function getInventoryMovements(filters?: { ingredientId?: string; m
   const ingredientNames = new Map(ingredientsResult.ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
   let query = database
     .from("inventory_movements")
-    .select("id, created_at, ingredient_id, order_id, product_id, movement_type, quantity, unit, reason, comment, created_by")
+    .select("id, created_at, ingredient_id, order_id, product_id, production_run_id, movement_type, quantity, unit, reason, comment, created_by")
     .order("created_at", { ascending: false })
     .limit(100);
 
