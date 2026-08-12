@@ -28,6 +28,26 @@ const migrations = [
       `;
       return Boolean(table);
     }
+  },
+  {
+    name: "20260812213000_add_unified_sales_analytics",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.analytics_sale_reconciliations') is not null as reconciliations,
+          to_regclass('public.staff_location_access') is not null as staff_scope,
+          to_regclass('public.analytics_sales') is not null as sales_view,
+          to_regclass('public.analytics_sale_items') is not null as items_view,
+          to_regclass('public.analytics_sale_payments') is not null as payments_view
+      `;
+      return Boolean(
+        objects?.reconciliations &&
+        objects?.staff_scope &&
+        objects?.sales_view &&
+        objects?.items_view &&
+        objects?.payments_view
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

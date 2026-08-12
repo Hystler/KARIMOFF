@@ -37,7 +37,7 @@ const navigation = [
   { href: "/admin/production", label: "Производство", icon: Factory, roles: ["admin", "manager"] },
   { href: "/admin/customers", label: "Пользователи", icon: Users, roles: ["admin", "manager"] },
   { href: "/admin/economics", label: "Экономика", icon: BarChart3, roles: ["admin", "manager"] },
-  { href: "/admin/analytics/sales", label: "Продажи", icon: ChartNoAxesCombined, roles: ["admin", "manager"] },
+  { href: "/admin/analytics", label: "Аналитика", icon: ChartNoAxesCombined, roles: ["admin", "manager"] },
   { href: "/admin/integrations/evotor", label: "Эвотор", icon: Plug, roles: ["admin", "manager"] },
   { href: "/admin/loyalty", label: "Лояльность", icon: WalletCards, roles: ["admin", "manager"] },
   { href: "/admin/leads", label: "Заявки", icon: FileText, roles: ["admin", "manager"] },

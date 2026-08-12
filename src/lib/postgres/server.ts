@@ -19,6 +19,7 @@ function compatData(value: unknown) {
 
 const identifierPattern = /^[a-z_][a-z0-9_]*$/;
 const allowedTables = new Set([
+  "analytics_sale_reconciliations",
   "app_sessions",
   "audit_logs",
   "auth_rate_limits",
@@ -66,6 +67,7 @@ const allowedTables = new Set([
   "production_runs",
   "refunds",
   "site_settings",
+  "staff_location_access",
   "staff_users",
   "vacancies",
   "verification_codes"

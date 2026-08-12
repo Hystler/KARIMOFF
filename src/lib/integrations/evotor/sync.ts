@@ -270,7 +270,7 @@ export async function processEvotorSyncEvent(eventId: string) {
     const client = new EvotorClient(decryptEvotorToken(event.encrypted_token));
     const stores = await fetchEvotorStores(client);
     const isConnectionCheck = event.sync_type === "check";
-    const devices = isConnectionCheck ? [] : await fetchEvotorDevices(client);
+    const devices = await fetchEvotorDevices(client);
     const employees = isConnectionCheck ? [] : await fetchEvotorEmployees(client);
     const productsByStore = new Map<string, EvotorProduct[]>();
     const documentsByStore = new Map<string, EvotorDocument[]>();
@@ -335,7 +335,7 @@ export async function processEvotorSyncEvent(eventId: string) {
       `;
       await transaction`
         update public.evotor_connections
-        set status = ${status === 401 || status === 403 ? "revoked" : "error"},
+        set status = ${status === 401 ? "revoked" : "error"},
             last_sync_at = now(), last_error_at = now(), last_error_message = ${message}
         where id = ${event.connection_id}::uuid
       `;
@@ -343,8 +343,9 @@ export async function processEvotorSyncEvent(eventId: string) {
         insert into public.evotor_sync_errors (
           connection_id, sync_event_id, scope, error_code, http_status, message, retryable
         ) values (
-          ${event.connection_id}::uuid, ${event.id}::uuid, 'sync',
-          ${error instanceof EvotorApiError ? error.name : "SYNC_ERROR"},
+          ${event.connection_id}::uuid, ${event.id}::uuid,
+          ${error instanceof EvotorApiError ? error.endpoint : "sync"},
+          ${error instanceof EvotorApiError ? error.providerCode ?? error.name : "SYNC_ERROR"},
           ${status}, ${message}, ${retryable}
         )
       `;
