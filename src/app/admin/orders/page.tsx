@@ -1,15 +1,17 @@
 import { CalendarClock, MapPin, PackageCheck, Phone, ShoppingBag } from "lucide-react";
 import { redirect } from "next/navigation";
-import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { getCurrentStaff } from "@/lib/admin-auth";
-import { getAdminOrders, type AdminOrder } from "@/lib/orders";
-import { deleteOrderAction, updateOrderStatusAction } from "./actions";
+import { getAdminOrders } from "@/lib/orders";
+import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
+import { kitchenStatusLabel, orderSourceLabel, type KitchenStatus } from "@/lib/order-flow/types";
+import { updateOrderStatusAction } from "./actions";
 
-const statusLabels: Record<AdminOrder["status"], string> = {
-  new: "Новый",
-  in_progress: "В работе",
-  completed: "Выполнен",
-  cancelled: "Отменён"
+const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
+  new: "accepted",
+  accepted: "cooking",
+  cooking: "ready",
+  ready: "handed_out"
 };
 
 function formatDate(date: string) {
@@ -34,10 +36,14 @@ export default async function AdminOrdersPage({
 }) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  if (staff.role === "cook") redirect("/admin/kitchen");
+  if (staff.role === "cook") redirect("/kitchen");
 
   const params = await searchParams;
-  const { orders, notConfigured, error } = await getAdminOrders();
+  const locations = await getAccessibleOrderLocations(staff);
+  const locationIds = staff.legacy || ["owner", "admin"].includes(staff.role)
+    ? null
+    : locations.map((location) => location.id);
+  const { orders, notConfigured, error } = await getAdminOrders(locationIds);
 
   return (
     <main className="admin-content admin-content-wide">
@@ -66,13 +72,15 @@ export default async function AdminOrdersPage({
               <div className="admin-order-main">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase text-karimoff-orange">#{order.id.slice(0, 8)} · {formatDate(order.created_at)}</p>
+                    <p className="text-xs font-black uppercase text-karimoff-orange">{order.display_number} · {orderSourceLabel(order.source)} · {formatDate(order.created_at)}</p>
                     <h2 className="mt-2 text-xl font-black">{order.customer_name}</h2>
-                    <a href={`tel:${order.customer_phone}`} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-karimoff-muted">
-                      <Phone size={15} /> {order.customer_phone}
-                    </a>
+                    {order.customer_phone ? (
+                      <a href={`tel:${order.customer_phone}`} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-karimoff-muted">
+                        <Phone size={15} /> {order.customer_phone}
+                      </a>
+                    ) : null}
                   </div>
-                  <span className={`admin-order-status admin-order-status-${order.status}`}>{statusLabels[order.status]}</span>
+                  <span className={`admin-order-status admin-order-status-${order.status}`}>{kitchenStatusLabel(order.kitchen_status)}</span>
                 </div>
 
                 <div className="mt-4 grid gap-2 rounded-lg bg-karimoff-cream p-4 text-sm sm:grid-cols-2">
@@ -114,22 +122,25 @@ export default async function AdminOrdersPage({
               </div>
 
               <div className="admin-order-actions">
-                <form action={updateOrderStatusAction} className="grid gap-2">
-                  <input type="hidden" name="id" value={order.id} />
-                  <select name="status" defaultValue={order.status} className="admin-control">
-                    {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                  <button type="submit" className="admin-primary-button">Сохранить статус</button>
-                </form>
+                {nextStatus[order.kitchen_status] && canTransitionKitchen(staff.role, order.kitchen_status, nextStatus[order.kitchen_status]!) ? (
+                  <form action={updateOrderStatusAction} className="grid gap-2">
+                    <input type="hidden" name="id" value={order.id} />
+                    <input type="hidden" name="from_status" value={order.kitchen_status} />
+                    <input type="hidden" name="status" value={nextStatus[order.kitchen_status]} />
+                    <button type="submit" className="admin-primary-button">{kitchenStatusLabel(nextStatus[order.kitchen_status]!)}</button>
+                  </form>
+                ) : null}
                 <p className="text-xs leading-5 text-karimoff-muted">
                   Исполнитель: {order.assigned_staff_name || "не назначен"}
                 </p>
-                <form action={deleteOrderAction}>
-                  <input type="hidden" name="id" value={order.id} />
-                  <ConfirmSubmitButton message={`Удалить заказ ${order.id}?`} className="admin-danger-button w-full">
-                    Удалить заказ
-                  </ConfirmSubmitButton>
-                </form>
+                {canCancelOrder(staff.role) && !["ready", "cancelled", "handed_out"].includes(order.kitchen_status) ? (
+                  <form action={updateOrderStatusAction}>
+                    <input type="hidden" name="id" value={order.id} />
+                    <input type="hidden" name="from_status" value={order.kitchen_status} />
+                    <input type="hidden" name="status" value="cancelled" />
+                    <button type="submit" className="admin-danger-button w-full">Отменить заказ</button>
+                  </form>
+                ) : null}
               </div>
             </article>
           ))}

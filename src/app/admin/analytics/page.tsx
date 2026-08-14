@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
 export default async function AnalyticsPage({ searchParams }: PageProps) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  if (staff.role === "cook") redirect("/admin/kitchen");
+  if (staff.role === "cook") redirect("/kitchen");
+  if (staff.role === "cashier") redirect("/pos");
 
   const filters = parseAnalyticsFilters(searchParams ? await searchParams : {});
   const range = getAnalyticsRange({

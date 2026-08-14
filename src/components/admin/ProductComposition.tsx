@@ -125,6 +125,36 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
                   <input name="max_extra_quantity" type="number" min="1" max="10" step="1" defaultValue={line.max_extra_quantity} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
                 </label>
               </fieldset>
+              <fieldset className="grid gap-3 rounded-lg border border-karimoff-line bg-white p-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-6">
+                <legend className="px-2 text-xs font-black text-karimoff-black">Техкарта для кухни</legend>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-3">
+                  Шаг приготовления
+                  <textarea name="preparation_step" rows={2} maxLength={500} defaultValue={line.preparation_step ?? ""} className="resize-y rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm leading-5 text-karimoff-black" placeholder="Обжарить котлету, затем собрать позицию" />
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-3">
+                  Важная заметка
+                  <textarea name="preparation_note" rows={2} maxLength={500} defaultValue={line.preparation_note ?? ""} className="resize-y rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm leading-5 text-karimoff-black" placeholder="Не пересушивать, подавать сразу" />
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted lg:col-span-2">
+                  Станция
+                  <select name="station" defaultValue={line.station ?? ""} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black">
+                    <option value="">Не указана</option>
+                    <option value="grill">Гриль</option>
+                    <option value="fryer">Фритюр</option>
+                    <option value="assembly">Сборка</option>
+                    <option value="drinks">Напитки</option>
+                    <option value="packing">Упаковка</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted lg:col-span-2">
+                  Время, сек.
+                  <input name="preparation_time_seconds" type="number" min="0" max="14400" step="1" defaultValue={line.preparation_time_seconds ?? 0} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+                </label>
+                <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-2">
+                  Фото этапа, URL
+                  <input name="preparation_image_url" type="url" defaultValue={line.preparation_image_url ?? ""} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" placeholder="https://…" />
+                </label>
+              </fieldset>
             </form>
           ))}
         </div>
@@ -183,6 +213,36 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
           <label className="grid gap-1 text-xs font-bold text-karimoff-muted">
             Максимум порций
             <input name="max_extra_quantity" type="number" min="1" max="10" step="1" defaultValue={1} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+          </label>
+        </fieldset>
+        <fieldset className="grid gap-3 rounded-lg border border-karimoff-orange/20 bg-white p-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-6">
+          <legend className="px-2 text-xs font-black text-karimoff-black">Техкарта для кухни</legend>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-3">
+            Шаг приготовления
+            <textarea name="preparation_step" rows={2} maxLength={500} className="resize-y rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm leading-5 text-karimoff-black" placeholder="Что сделать с ингредиентом" />
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-3">
+            Важная заметка
+            <textarea name="preparation_note" rows={2} maxLength={500} className="resize-y rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm leading-5 text-karimoff-black" placeholder="Температура, порядок или контроль качества" />
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted lg:col-span-2">
+            Станция
+            <select name="station" defaultValue="" className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black">
+              <option value="">Не указана</option>
+              <option value="grill">Гриль</option>
+              <option value="fryer">Фритюр</option>
+              <option value="assembly">Сборка</option>
+              <option value="drinks">Напитки</option>
+              <option value="packing">Упаковка</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted lg:col-span-2">
+            Время, сек.
+            <input name="preparation_time_seconds" type="number" min="0" max="14400" step="1" defaultValue={0} className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" />
+          </label>
+          <label className="grid gap-1 text-xs font-bold text-karimoff-muted sm:col-span-2 lg:col-span-2">
+            Фото этапа, URL
+            <input name="preparation_image_url" type="url" className="rounded-lg border border-karimoff-line bg-white px-3 py-2 text-sm text-karimoff-black" placeholder="https://…" />
           </label>
         </fieldset>
       </form>

@@ -10,7 +10,7 @@ import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireOwnerAdmin() {
   const staff = await getCurrentStaff();
-  if (!staff || staff.role !== "admin") redirect("/admin");
+  if (!staff || !["owner", "admin"].includes(staff.role)) redirect("/admin");
   return staff;
 }
 
@@ -21,7 +21,7 @@ export async function createStaffAction(formData: FormData) {
   const password = String(formData.get("password") || "");
   const role = String(formData.get("role") || "");
 
-  if (name.length < 2 || !/^\+7\d{10}$/.test(phone) || password.length < 10 || !["admin", "manager", "cook"].includes(role)) {
+  if (name.length < 2 || !/^\+7\d{10}$/.test(phone) || password.length < 10 || !["owner", "admin", "manager", "cashier", "cook"].includes(role)) {
     redirect("/admin/staff?error=Проверьте имя, телефон, роль и пароль от 10 символов");
   }
 

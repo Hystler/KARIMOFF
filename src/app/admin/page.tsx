@@ -15,6 +15,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
+import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 
 const cards = [
   { title: "Кухня", description: "Живая очередь и отметка готовности", href: "/admin/kitchen", icon: ChefHat },
@@ -35,9 +36,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  if (staff.role === "cook") redirect("/admin/kitchen");
+  if (staff.role === "cook") redirect("/kitchen");
+  if (staff.role === "cashier") redirect("/pos");
 
-  const { orders } = await getAdminOrders();
+  const locations = await getAccessibleOrderLocations(staff);
+  const locationIds = staff.legacy || ["owner", "admin"].includes(staff.role)
+    ? null
+    : locations.map((location) => location.id);
+  const { orders } = await getAdminOrders(locationIds);
   const newCount = orders.filter((order) => order.status === "new").length;
   const inProgressCount = orders.filter((order) => order.status === "in_progress").length;
   const todayKey = new Date().toISOString().slice(0, 10);

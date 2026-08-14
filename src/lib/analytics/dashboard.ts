@@ -72,7 +72,7 @@ async function getMetricRow(
       count(distinct s.customer_id) filter (where s.sale_count_eligible and s.customer_id is not null)::integer as customers,
       bool_or(s.customer_id is not null) as customers_available,
       bool_or(s.discount_data_available) as discounts_available
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
   `, where.values);
   return rows[0] ?? {
@@ -124,7 +124,7 @@ async function getTimelineRows(
       count(distinct s.customer_id) filter (where s.customer_id is not null)::integer as customers,
       bool_or(s.customer_id is not null) as customers_available,
       bool_or(s.discount_data_available) as discounts_available
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
     group by 1, 2
     order by 1, 2
@@ -187,7 +187,7 @@ export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<
     }>(`
       select distinct source, location_id, location_name, terminal_id, terminal_name,
         employee_id, employee_name, payment_method
-      from public.analytics_sales s
+      from public.canonical_analytics_sales s
       where ${scopeWhere.text}
     `, scopeWhere.values),
     query<{
@@ -200,13 +200,13 @@ export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<
         i.product_name,
         i.category
       from public.analytics_sale_items i
-      join public.analytics_sales s on s.sale_id = i.sale_id
+      join public.canonical_analytics_sales s on s.sale_id = i.sale_id
       where ${scopeWhere.text}
       order by i.product_name
     `, scopeWhere.values),
     query<{ has_previous_year: boolean }>(`
       select coalesce(min(s.analytics_at) <= now() - interval '1 year', false) as has_previous_year
-      from public.analytics_sales s
+      from public.canonical_analytics_sales s
       where ${scopeWhere.text}
     `, scopeWhere.values)
   ]);
@@ -268,7 +268,7 @@ async function getProductRows(
       coalesce(sum(i.net_quantity), 0)::numeric as quantity,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue
     from public.analytics_sale_items i
-    join public.analytics_sales s on s.sale_id = i.sale_id
+    join public.canonical_analytics_sales s on s.sale_id = i.sale_id
     where ${where.text}
     group by 1, 2
   `, where.values);
@@ -343,7 +343,7 @@ async function getSaleBreakdownRows(
       count(*) filter (where s.sale_count_eligible)::integer as sales,
       coalesce(sum(s.refund_amount), 0)::numeric as refunds,
       coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text} and ${columns.extra}
     group by 1, 2
     order by revenue desc
@@ -407,7 +407,7 @@ async function getCategories(
         coalesce(sum(i.refund_amount), 0)::numeric as refunds,
         coalesce(sum(i.net_quantity), 0)::numeric as items
       from public.analytics_sale_items i
-      join public.analytics_sales s on s.sale_id = i.sale_id
+      join public.canonical_analytics_sales s on s.sale_id = i.sale_id
       where ${where.text}
       group by 1, 2
       order by revenue desc
@@ -434,7 +434,7 @@ async function getPayments(
         coalesce(sum(abs(p.amount)) filter (where p.amount < 0), 0)::numeric as refunds,
         0::numeric as items
       from public.analytics_sale_payments p
-      join public.analytics_sales s on s.sale_id = p.sale_id
+      join public.canonical_analytics_sales s on s.sale_id = p.sale_id
       where ${where.text}
       group by 1, 2
       order by revenue desc
@@ -452,7 +452,7 @@ async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scop
       extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer as hour,
       coalesce(sum(s.net_revenue), 0)::numeric as revenue,
       count(*) filter (where s.sale_count_eligible)::integer as sales
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
     group by 1, 2
     order by 1, 2
@@ -473,7 +473,7 @@ async function getWeekdays(filters: AnalyticsFilters, range: AnalyticsRange, sco
       coalesce(sum(s.net_revenue), 0)::numeric as revenue,
       coalesce(sum(s.gross_amount - s.discount_amount) filter (where s.sale_count_eligible), 0)::numeric as sale_revenue,
       count(*) filter (where s.sale_count_eligible)::integer as sales
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
     group by 1
     order by 1
@@ -495,7 +495,7 @@ async function getUpdatedAt(filters: AnalyticsFilters, range: AnalyticsRange, sc
   const where = buildSalesWhere(filters, range, scope, { alias: "s" });
   const rows = await query<{ updated_at: string | null }>(`
     select max(s.source_updated_at)::text as updated_at
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
   `, where.values);
   return rows[0]?.updated_at ?? null;

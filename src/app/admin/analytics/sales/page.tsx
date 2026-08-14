@@ -40,7 +40,8 @@ function SortLink({ label, field, filters }: { label: string; field: AnalyticsFi
 export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  if (staff.role === "cook") redirect("/admin/kitchen");
+  if (staff.role === "cook") redirect("/kitchen");
+  if (staff.role === "cashier") redirect("/pos");
 
   const raw = searchParams ? await searchParams : {};
   const filters = parseAnalyticsFilters(raw);

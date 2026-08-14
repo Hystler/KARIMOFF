@@ -1,36 +1,53 @@
 import { redirect } from "next/navigation";
-import { KitchenBoard } from "@/components/admin/KitchenBoard";
+import { KitchenWorkspace } from "@/components/operations/KitchenWorkspace";
 import { getCurrentStaff } from "@/lib/admin-auth";
-import { getAdminOrders } from "@/lib/orders";
+import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import { isOrderVisibleToKitchen } from "@/lib/order-flow/permissions";
+import { getKitchenOperationsMetrics, getKitchenSla, getLatestOrderEventCursor, getOrderFlowQueue } from "@/lib/order-flow/queries";
+import { saveKitchenSlaAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function KitchenPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string; warning?: string }> }) {
+export default async function KitchenPage({
+  searchParams
+}: {
+  searchParams: Promise<{ location?: string; saved?: string; error?: string }>;
+}) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-
   const params = await searchParams;
-  const { orders, error } = await getAdminOrders();
-  const queue = orders.filter((order) => order.status === "new" || order.status === "in_progress");
+  const locations = await getAccessibleOrderLocations(staff);
+  const location = locations.find((item) => item.id === params.location || item.key === params.location)
+    ?? locations.find((item) => item.isDefault)
+    ?? locations[0];
+  if (!location) throw new Error("Не настроена точка кухни.");
+  const [orders, sla, initialCursor] = await Promise.all([
+    getOrderFlowQueue({ locationId: location.id }),
+    getKitchenSla(location.id),
+    getLatestOrderEventCursor(location.id)
+  ]);
+  const metrics = await getKitchenOperationsMetrics(location.id, sla);
 
   return (
     <main className="admin-content admin-content-wide">
-      <header className="admin-heading">
-        <div>
-          <p className="admin-eyebrow">Кухня · обновление каждые 15 секунд</p>
-          <h1>Экран заказов</h1>
-          <p>{staff.name}, здесь только то, что нужно приготовить прямо сейчас.</p>
-        </div>
-        <div className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm font-bold">
-          В очереди: <span className="text-karimoff-orange">{queue.length}</span>
-        </div>
-      </header>
-
-      {params.error || error ? <div className="admin-alert admin-alert-error">{decodeURIComponent(params.error || error || "")}</div> : null}
-      {params.saved ? <div className="admin-alert admin-alert-success">Статус заказа обновлён.</div> : null}
-      {params.warning ? <div className="admin-alert admin-alert-warning">{decodeURIComponent(params.warning)}</div> : null}
-
-      <KitchenBoard orders={queue} />
+      {params.saved ? <div className="admin-alert admin-alert-success">Настройки кухни сохранены.</div> : null}
+      {params.error ? <div className="admin-alert admin-alert-error">{params.error}</div> : null}
+      {staff.legacy || ["owner", "admin", "manager"].includes(staff.role) ? (
+        <details className="admin-card mb-6 p-5 sm:p-6">
+          <summary className="cursor-pointer list-none font-black">Настройки SLA и допуска заказов</summary>
+          <form action={saveKitchenSlaAction} className="mt-5 grid gap-4 md:grid-cols-3">
+            <input type="hidden" name="location_id" value={location.id} />
+            <label className="admin-field">Предупреждение, мин<input name="warning_minutes" type="number" min="1" max="120" defaultValue={Math.round(sla.warningSeconds / 60)} required /></label>
+            <label className="admin-field">Критический SLA, мин<input name="critical_minutes" type="number" min="2" max="240" defaultValue={Math.round(sla.criticalSeconds / 60)} required /></label>
+            <label className="admin-field">Заказ на табло, мин<input name="ready_display_minutes" type="number" min="1" max="1440" defaultValue={Math.round(sla.readyDisplaySeconds / 60)} required /></label>
+            <label className="flex min-h-12 items-center gap-3 rounded-lg border border-karimoff-line px-4 text-sm font-bold"><input name="online_requires_paid" type="checkbox" defaultChecked={sla.onlineRequiresPaid} className="h-5 w-5 accent-karimoff-orange" />Сайт: показывать после оплаты</label>
+            <label className="flex min-h-12 items-center gap-3 rounded-lg border border-karimoff-line px-4 text-sm font-bold"><input name="pos_requires_paid" type="checkbox" defaultChecked={sla.posRequiresPaid} className="h-5 w-5 accent-karimoff-orange" />POS: показывать после оплаты</label>
+            <div className="rounded-lg bg-karimoff-cream px-4 py-3 text-sm leading-6 text-karimoff-muted">Склад списывается один раз при статусе «Готово». Это правило на этой итерации не меняется.</div>
+            <button type="submit" className="admin-primary-button md:col-span-3">Сохранить настройки</button>
+          </form>
+        </details>
+      ) : null}
+      <KitchenWorkspace orders={orders.filter((order) => isOrderVisibleToKitchen(order, sla))} location={location} locations={locations} sla={sla} metrics={metrics} role={staff.role} staffName={staff.name} initialCursor={initialCursor} embedded />
     </main>
   );
 }

@@ -12,9 +12,11 @@ export class AnalyticsAccessError extends Error {
 }
 export async function getAnalyticsScope(): Promise<AnalyticsScope> {
   const staff = await getCurrentStaff();
-  if (!staff || staff.role === "cook") throw new AnalyticsAccessError();
+  if (!staff || !["owner", "admin", "manager"].includes(staff.role)) {
+    throw new AnalyticsAccessError();
+  }
 
-  if (staff.legacy) {
+  if (staff.legacy || staff.role === "owner") {
     return { role: "owner", locationIds: null, cacheKey: "owner:all" };
   }
 
@@ -27,7 +29,10 @@ export async function getAnalyticsScope(): Promise<AnalyticsScope> {
   const sql = getPostgresSql();
   try {
     const rows = await sql<{ location_key: string }[]>`
-      select location_key
+      select coalesce(
+        case when order_location_id is not null then 'order:location:' || order_location_id::text end,
+        location_key
+      ) as location_key
       from public.staff_location_access
       where staff_id = ${staff.id}::uuid
       order by location_key

@@ -13,7 +13,7 @@ import {
 
 async function requireProductionStaff() {
   const staff = await getCurrentStaff();
-  if (!staff || staff.role === "cook") redirect("/admin/login");
+  if (!staff || !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin/login");
   return staff;
 }
 

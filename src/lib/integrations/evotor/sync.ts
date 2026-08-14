@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { writeAuditLog } from "@/lib/audit";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { EvotorApiError, EvotorClient } from "./client";
@@ -15,6 +16,7 @@ import type {
   EvotorDocument,
   EvotorEmployee,
   EvotorProduct,
+  EvotorReceipt,
   EvotorStore,
   EvotorSyncCounts
 } from "./types";
@@ -25,6 +27,36 @@ type JsonValue = null | string | number | boolean | readonly JsonValue[] | {
 
 function jsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
+}
+
+function receiptSourceHash(receipt: EvotorReceipt) {
+  const items = receipt.items
+    .map((item) => ({
+      sourceKey: item.sourceKey,
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      lineTotal: item.lineTotal,
+      tax: item.tax
+    }))
+    .sort((left, right) => left.sourceKey.localeCompare(right.sourceKey));
+  const payments = [...receipt.payments].sort((left, right) => (
+    `${left.type}:${left.sum}`.localeCompare(`${right.type}:${right.sum}`)
+  ));
+  return createHash("sha256").update(JSON.stringify({
+    externalId: receipt.externalId,
+    type: receipt.type,
+    number: receipt.number,
+    employeeId: receipt.employeeId,
+    closedAt: receipt.closedAt,
+    subtotal: receipt.subtotal,
+    discount: receipt.discount,
+    total: receipt.total,
+    payments,
+    items
+  })).digest("hex");
 }
 
 function safeMessage(error: unknown) {
@@ -39,14 +71,26 @@ function displayName(employee: EvotorEmployee) {
     .trim() || "Сотрудник";
 }
 
+type SyncWindow = { since: Date; until: Date };
+
+type PersistResult = {
+  receipts: number;
+  imported: number;
+  updated: number;
+  cursorBefore: Date | null;
+  cursorAfter: Date | null;
+};
+
 async function persistSnapshot(params: {
   connectionId: string;
   eventId: string;
+  syncType: string;
   stores: EvotorStore[];
   devices: EvotorDevice[];
   employees: EvotorEmployee[];
   productsByStore: Map<string, EvotorProduct[]>;
   documentsByStore: Map<string, EvotorDocument[]>;
+  windowsByStore: Map<string, SyncWindow>;
 }) {
   const sql = getPostgresSql();
   return sql.begin(async (transaction) => {
@@ -170,6 +214,10 @@ async function persistSnapshot(params: {
     `;
 
     let receiptCount = 0;
+    let importedCount = 0;
+    let updatedCount = 0;
+    let cursorBefore: Date | null = null;
+    let cursorAfter: Date | null = null;
     for (const [externalStoreId, documents] of params.documentsByStore) {
       const storeId = storeIds.get(externalStoreId);
       if (!storeId) continue;
@@ -196,18 +244,27 @@ async function persistSnapshot(params: {
         const receipt = parseEvotorReceipt(document);
         if (!receipt) continue;
         receiptCount += 1;
-        const receiptRows = await transaction<{ id: string }[]>`
+        const sourceHash = receiptSourceHash(receipt);
+        const previousReceipt = await transaction<{ id: string; source_hash: string | null }[]>`
+          select id, source_hash
+          from public.evotor_receipts
+          where connection_id = ${params.connectionId}::uuid
+            and external_receipt_id = ${receipt.externalId}
+          for update
+        `;
+        const receiptRows = await transaction<{ id: string; inserted: boolean }[]>`
           insert into public.evotor_receipts (
             connection_id, document_id, store_id, device_id, external_receipt_id,
             receipt_type, receipt_number, evotor_employee_id, closed_at, subtotal,
             discount, total, payment_types, fiscal_document_number,
-            fiscal_drive_number, fiscal_sign, raw_metadata, synchronized_at
+            fiscal_drive_number, fiscal_sign, source_hash, raw_metadata, synchronized_at
           ) values (
             ${params.connectionId}::uuid, ${documentRows[0].id}::uuid, ${storeId}::uuid,
             ${deviceId}::uuid, ${receipt.externalId}, ${receipt.type}, ${receipt.number},
             ${receipt.employeeId}, ${receipt.closedAt}, ${receipt.subtotal}, ${receipt.discount},
             ${receipt.total}, ${transaction.json(receipt.payments)}, ${receipt.fiscalDocumentNumber},
-            ${receipt.fiscalDriveNumber}, ${receipt.fiscalSign}, ${transaction.json(jsonValue(receipt.raw))}, now()
+            ${receipt.fiscalDriveNumber}, ${receipt.fiscalSign}, ${sourceHash},
+            ${transaction.json(jsonValue(receipt.raw))}, now()
           )
           on conflict (connection_id, external_receipt_id) do update
           set document_id = excluded.document_id, store_id = excluded.store_id,
@@ -218,9 +275,12 @@ async function persistSnapshot(params: {
               payment_types = excluded.payment_types,
               fiscal_document_number = excluded.fiscal_document_number,
               fiscal_drive_number = excluded.fiscal_drive_number, fiscal_sign = excluded.fiscal_sign,
+              source_hash = excluded.source_hash,
               raw_metadata = excluded.raw_metadata, synchronized_at = now()
-          returning id
+          returning id, (xmax = 0) as inserted
         `;
+        if (!previousReceipt[0]) importedCount += 1;
+        else if (previousReceipt[0].source_hash !== sourceHash) updatedCount += 1;
         for (const item of receipt.items) {
           await transaction`
             insert into public.evotor_receipt_items (
@@ -238,11 +298,121 @@ async function persistSnapshot(params: {
                 tax = excluded.tax, raw_metadata = excluded.raw_metadata
           `;
         }
+        const itemKeys = receipt.items.map((item) => item.sourceKey);
+        if (itemKeys.length) {
+          await transaction`
+            delete from public.evotor_receipt_items
+            where receipt_id = ${receiptRows[0].id}::uuid
+              and not (source_key = any(${itemKeys}::text[]))
+          `;
+        } else {
+          await transaction`
+            delete from public.evotor_receipt_items
+            where receipt_id = ${receiptRows[0].id}::uuid
+          `;
+        }
+      }
+
+      const window = params.windowsByStore.get(externalStoreId);
+      if (window) {
+        const previousRows = await transaction<{ cursor_time: string | null }[]>`
+          select cursor_time
+          from public.evotor_sync_cursors
+          where connection_id = ${params.connectionId}::uuid
+            and store_id = ${storeId}::uuid
+          for update
+        `;
+        const previous = previousRows[0]?.cursor_time ? new Date(previousRows[0].cursor_time) : null;
+        if (previous && (!cursorBefore || previous < cursorBefore)) cursorBefore = previous;
+        const latestDocumentAt = documents.reduce<Date | null>((latest, document) => {
+          const value = document.close_date ? new Date(document.close_date) : null;
+          if (!value || Number.isNaN(value.getTime())) return latest;
+          return !latest || value > latest ? value : latest;
+        }, null);
+        await transaction`
+          insert into public.evotor_sync_cursors (
+            connection_id, store_id, cursor_time, last_document_id,
+            last_incremental_at, last_reconciled_at, last_seen_document_at, updated_at
+          ) values (
+            ${params.connectionId}::uuid, ${storeId}::uuid, ${window.until.toISOString()},
+            ${documents.at(-1)?.id ?? null},
+            ${params.syncType === "reconciliation" ? null : new Date().toISOString()}::timestamptz,
+            ${params.syncType === "reconciliation" ? new Date().toISOString() : null}::timestamptz,
+            ${latestDocumentAt?.toISOString() ?? null}, now()
+          )
+          on conflict (connection_id, store_id) do update
+          set cursor_time = greatest(
+                coalesce(public.evotor_sync_cursors.cursor_time, '-infinity'::timestamptz),
+                excluded.cursor_time
+              ),
+              last_document_id = coalesce(excluded.last_document_id, public.evotor_sync_cursors.last_document_id),
+              last_incremental_at = coalesce(
+                excluded.last_incremental_at,
+                public.evotor_sync_cursors.last_incremental_at
+              ),
+              last_reconciled_at = coalesce(
+                excluded.last_reconciled_at,
+                public.evotor_sync_cursors.last_reconciled_at
+              ),
+              last_seen_document_at = case
+                when excluded.last_seen_document_at is null
+                  then public.evotor_sync_cursors.last_seen_document_at
+                when public.evotor_sync_cursors.last_seen_document_at is null
+                  then excluded.last_seen_document_at
+                else greatest(
+                  public.evotor_sync_cursors.last_seen_document_at,
+                  excluded.last_seen_document_at
+                )
+              end,
+              updated_at = now()
+        `;
+        if (!cursorAfter || window.until > cursorAfter) cursorAfter = window.until;
       }
     }
 
-    return receiptCount;
+    return {
+      receipts: receiptCount,
+      imported: importedCount,
+      updated: updatedCount,
+      cursorBefore,
+      cursorAfter
+    } satisfies PersistResult;
   });
+}
+
+async function resolveSyncWindow(params: {
+  connectionId: string;
+  externalStoreId: string;
+  syncType: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  now: Date;
+}): Promise<SyncWindow> {
+  const until = params.periodTo ? new Date(params.periodTo) : params.now;
+  if (params.periodFrom) return { since: new Date(params.periodFrom), until };
+  if (!["incremental", "webhook"].includes(params.syncType)) {
+    return { since: new Date(until.getTime() - 7 * 86_400_000), until };
+  }
+
+  const sql = getPostgresSql();
+  const rows = await sql<{ cursor_time: string | null; overlap_seconds: number | null }[]>`
+    select cursor.cursor_time, cursor.overlap_seconds
+    from public.evotor_stores store
+    left join public.evotor_sync_cursors cursor
+      on cursor.connection_id = store.connection_id
+     and cursor.store_id = store.id
+    where store.connection_id = ${params.connectionId}::uuid
+      and store.evotor_store_id = ${params.externalStoreId}
+    limit 1
+  `;
+  const cursor = rows[0]?.cursor_time ? new Date(rows[0].cursor_time) : null;
+  const overlap = Math.max(60, Number(rows[0]?.overlap_seconds ?? 300));
+  return {
+    since: cursor
+      ? new Date(cursor.getTime() - overlap * 1000)
+      : new Date(until.getTime() - 24 * 60 * 60 * 1000),
+    until
+  };
 }
 
 export async function processEvotorSyncEvent(eventId: string) {
@@ -254,6 +424,7 @@ export async function processEvotorSyncEvent(eventId: string) {
     period_from: string | null;
     period_to: string | null;
     encrypted_token: string;
+    retry_count: number;
   }[]>`
     update public.evotor_sync_events e
     set status = 'running', started_at = now()
@@ -261,37 +432,64 @@ export async function processEvotorSyncEvent(eventId: string) {
     where e.id = ${eventId}::uuid
       and e.connection_id = c.id
       and e.status = 'pending'
-    returning e.id, e.connection_id, e.sync_type, e.period_from, e.period_to, c.encrypted_token
+      and e.available_at <= now()
+    returning e.id, e.connection_id, e.sync_type, e.period_from, e.period_to,
+      e.retry_count, c.encrypted_token
   `;
   if (!claimed[0]) return { skipped: true } as const;
 
   const event = claimed[0];
+  await sql`
+    update public.evotor_connections
+    set last_sync_started_at = now()
+    where id = ${event.connection_id}::uuid
+  `;
   try {
     const client = new EvotorClient(decryptEvotorToken(event.encrypted_token));
     const stores = await fetchEvotorStores(client);
     const isConnectionCheck = event.sync_type === "check";
+    const isFullCatalogSync = ["initial", "installation", "manual"].includes(event.sync_type);
     const devices = await fetchEvotorDevices(client);
-    const employees = isConnectionCheck ? [] : await fetchEvotorEmployees(client);
+    const employees = isFullCatalogSync && !isConnectionCheck
+      ? await fetchEvotorEmployees(client)
+      : [];
     const productsByStore = new Map<string, EvotorProduct[]>();
     const documentsByStore = new Map<string, EvotorDocument[]>();
-    const since = event.period_from ? new Date(event.period_from) : new Date(Date.now() - 7 * 86_400_000);
-    const until = event.period_to ? new Date(event.period_to) : new Date();
+    const windowsByStore = new Map<string, SyncWindow>();
+    const now = new Date();
 
     if (!isConnectionCheck) {
       for (const store of stores) {
-        productsByStore.set(store.id, await fetchEvotorProducts(client, store.id));
-        documentsByStore.set(store.id, await fetchEvotorDocuments(client, { storeId: store.id, since, until }));
+        if (isFullCatalogSync) {
+          productsByStore.set(store.id, await fetchEvotorProducts(client, store.id));
+        }
+        const window = await resolveSyncWindow({
+          connectionId: event.connection_id,
+          externalStoreId: store.id,
+          syncType: event.sync_type,
+          periodFrom: event.period_from,
+          periodTo: event.period_to,
+          now
+        });
+        windowsByStore.set(store.id, window);
+        documentsByStore.set(store.id, await fetchEvotorDocuments(client, {
+          storeId: store.id,
+          since: window.since,
+          until: window.until
+        }));
       }
     }
 
-    const receipts = await persistSnapshot({
+    const persisted = await persistSnapshot({
       connectionId: event.connection_id,
       eventId: event.id,
+      syncType: event.sync_type,
       stores,
       devices,
       employees,
       productsByStore,
-      documentsByStore
+      documentsByStore,
+      windowsByStore
     });
     const counts: EvotorSyncCounts = {
       stores: stores.length,
@@ -299,17 +497,27 @@ export async function processEvotorSyncEvent(eventId: string) {
       employees: employees.length,
       products: Array.from(productsByStore.values()).reduce((sum, items) => sum + items.length, 0),
       documents: Array.from(documentsByStore.values()).reduce((sum, items) => sum + items.length, 0),
-      receipts
+      receipts: persisted.receipts
     };
     await sql.begin(async (transaction) => {
       await transaction`
         update public.evotor_sync_events
-        set status = 'success', finished_at = now(), result_counts = ${transaction.json(counts)}
+        set status = 'success', finished_at = now(), result_counts = ${transaction.json(counts)},
+            imported_count = ${persisted.imported}, updated_count = ${persisted.updated},
+            failed_count = 0, cursor_before = ${persisted.cursorBefore?.toISOString() ?? null},
+            cursor_after = ${persisted.cursorAfter?.toISOString() ?? null}
         where id = ${event.id}::uuid
       `;
       await transaction`
         update public.evotor_connections
         set status = 'connected', last_sync_at = now(), last_success_at = now(),
+            last_cursor_at = coalesce(
+              ${persisted.cursorAfter?.toISOString() ?? null}::timestamptz,
+              last_cursor_at
+            ),
+            last_imported_receipts = ${persisted.imported},
+            last_updated_receipts = ${persisted.updated},
+            failed_items = 0, retry_count = 0,
             last_error_at = null, last_error_message = null
         where id = ${event.connection_id}::uuid
       `;
@@ -322,21 +530,41 @@ export async function processEvotorSyncEvent(eventId: string) {
       metadata: { event_id: event.id, sync_type: event.sync_type, counts },
       sourcePath: "/api/integrations/evotor"
     });
-    return { skipped: false, counts } as const;
+    return {
+      skipped: false,
+      counts,
+      imported: persisted.imported,
+      updated: persisted.updated
+    } as const;
   } catch (error) {
     const message = safeMessage(error);
     const status = error instanceof EvotorApiError ? error.status : null;
     const retryable = error instanceof EvotorApiError ? error.retryable : false;
+    const shouldRetry = retryable && event.retry_count < 4;
+    const retryDelaySeconds = Math.min(300, 15 * 2 ** event.retry_count);
     await sql.begin(async (transaction) => {
       await transaction`
         update public.evotor_sync_events
-        set status = 'failed', finished_at = now()
+        set status = ${shouldRetry ? "pending" : "failed"},
+            finished_at = ${shouldRetry ? null : new Date().toISOString()},
+            retry_count = retry_count + 1,
+            failed_count = failed_count + 1,
+            available_at = case
+              when ${shouldRetry} then now() + make_interval(secs => ${retryDelaySeconds})
+              else available_at
+            end
         where id = ${event.id}::uuid
       `;
       await transaction`
         update public.evotor_connections
-        set status = ${status === 401 ? "revoked" : "error"},
-            last_sync_at = now(), last_error_at = now(), last_error_message = ${message}
+        set status = case
+              when ${status} = 401 then 'revoked'
+              when ${shouldRetry} then status
+              else 'error'
+            end,
+            last_sync_at = now(), last_error_at = now(), last_error_message = ${message},
+            failed_items = failed_items + 1,
+            retry_count = retry_count + 1
         where id = ${event.connection_id}::uuid
       `;
       await transaction`
@@ -358,6 +586,22 @@ export async function processEvotorSyncEvent(eventId: string) {
       metadata: { event_id: event.id, sync_type: event.sync_type, http_status: status, retryable },
       sourcePath: "/api/integrations/evotor"
     });
-    return { skipped: false, error: message } as const;
+    return { skipped: false, error: message, retryScheduled: shouldRetry } as const;
   }
+}
+
+export async function processPendingEvotorSyncEvents(limit = 5) {
+  const sql = getPostgresSql();
+  const events = await sql<{ id: string }[]>`
+    select id
+    from public.evotor_sync_events
+    where status = 'pending' and available_at <= now()
+    order by created_at
+    limit ${Math.min(20, Math.max(1, limit))}
+  `;
+  const results = [];
+  for (const event of events) {
+    results.push(await processEvotorSyncEvent(event.id));
+  }
+  return results;
 }

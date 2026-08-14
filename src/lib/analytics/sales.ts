@@ -98,7 +98,7 @@ export async function getAnalyticsSaleDetail(params: {
   const sql = getPostgresSql();
   const sales = await sql.unsafe<SaleDatabaseRow[]>(`
     select s.*
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where s.sale_id = $1 and ${locationCondition.text}
     limit 1
   `, values as never[]);
@@ -183,7 +183,7 @@ export async function getAnalyticsSalesPage(params: {
     sql.unsafe<{ total_rows: string | number; total_revenue: string | number }[]>(`
       select count(*)::bigint as total_rows,
         coalesce(sum(s.net_revenue) filter (where s.analytics_included), 0)::numeric as total_revenue
-      from public.analytics_sales s
+      from public.canonical_analytics_sales s
       where ${where.text}
     `, where.values as never[]),
     getAnalyticsFilterOptions(scope),
@@ -202,7 +202,7 @@ export async function getAnalyticsSalesPage(params: {
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
       s.net_revenue, s.payment_method, s.currency, s.analytics_included
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text}
     order by ${sortExpression(filters)}
     limit ${limitPlaceholder} offset ${offsetPlaceholder}
@@ -250,7 +250,7 @@ export async function getAnalyticsSalesExportBatch(params: {
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
       s.net_revenue, s.payment_method, s.currency, s.analytics_included
-    from public.analytics_sales s
+    from public.canonical_analytics_sales s
     where ${where.text} ${cursorClause}
     order by s.analytics_at desc, s.sale_id desc
     limit ${limitPlaceholder}

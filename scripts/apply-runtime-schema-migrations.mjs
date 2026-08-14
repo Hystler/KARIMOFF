@@ -48,6 +48,30 @@ const migrations = [
         objects?.payments_view
       );
     }
+  },
+  {
+    name: "20260814120000_add_canonical_order_flow_kds",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.order_locations') is not null as locations,
+          to_regclass('public.order_status_events') is not null as status_events,
+          to_regclass('public.order_outbox') is not null as outbox,
+          to_regclass('public.evotor_sync_cursors') is not null as sync_cursors,
+          to_regclass('public.canonical_analytics_sales') is not null as canonical_sales,
+          to_regprocedure('public.create_pos_order_atomic(uuid,text,text,jsonb,uuid,uuid,text,text,timestamp with time zone)') is not null as create_pos,
+          to_regprocedure('public.set_order_kitchen_status_atomic(uuid,text,uuid,text,text)') is not null as transition_order
+      `;
+      return Boolean(
+        objects?.locations &&
+        objects?.status_events &&
+        objects?.outbox &&
+        objects?.sync_cursors &&
+        objects?.canonical_sales &&
+        objects?.create_pos &&
+        objects?.transition_order
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

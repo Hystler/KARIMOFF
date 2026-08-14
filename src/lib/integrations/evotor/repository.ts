@@ -4,6 +4,16 @@ import { createHash } from "node:crypto";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { encryptEvotorToken, fingerprintEvotorToken } from "./crypto";
 
+export type EvotorSyncType =
+  | "initial"
+  | "manual"
+  | "check"
+  | "installation"
+  | "uninstallation"
+  | "incremental"
+  | "reconciliation"
+  | "webhook";
+
 export async function registerEvotorConnection(userId: string, token: string) {
   const sql = getPostgresSql();
   const fingerprint = fingerprintEvotorToken(token);
@@ -87,9 +97,11 @@ export async function registerEvotorConnection(userId: string, token: string) {
 
 export async function createEvotorSyncEvent(params: {
   connectionId: string;
-  syncType: "manual" | "check" | "installation" | "uninstallation";
+  syncType: Exclude<EvotorSyncType, "initial">;
   requestedBy: string;
   idempotencyKey?: string;
+  periodFrom?: Date | null;
+  periodTo?: Date | null;
 }) {
   const sql = getPostgresSql();
   const idempotencyKey = params.idempotencyKey ?? createHash("sha256")
@@ -101,7 +113,9 @@ export async function createEvotorSyncEvent(params: {
       period_from, period_to
     ) values (
       ${params.connectionId}::uuid, ${params.syncType}, 'pending', ${idempotencyKey},
-      ${params.requestedBy}, now() - interval '7 days', now()
+      ${params.requestedBy},
+      ${params.periodFrom?.toISOString() ?? null}::timestamptz,
+      ${params.periodTo?.toISOString() ?? null}::timestamptz
     )
     on conflict (idempotency_key) do update
     set connection_id = excluded.connection_id,
@@ -114,6 +128,47 @@ export async function createEvotorSyncEvent(params: {
     returning id
   `;
   return rows[0].id;
+}
+
+export async function queueDueEvotorSyncs(params: {
+  syncType: "incremental" | "reconciliation";
+  requestedBy?: string;
+  now?: Date;
+}) {
+  const sql = getPostgresSql();
+  const now = params.now ?? new Date();
+  const bucketMs = params.syncType === "incremental" ? 60_000 : 3_600_000;
+  const bucket = Math.floor(now.getTime() / bucketMs);
+  const connections = await sql<{ id: string }[]>`
+    select id
+    from public.evotor_connections connection
+    where connection.status = 'connected'
+      and not exists (
+        select 1
+        from public.evotor_sync_events event
+        where event.connection_id = connection.id
+          and event.status in ('pending', 'running')
+          and event.sync_type in ('initial', 'manual', 'incremental', 'reconciliation', 'webhook')
+      )
+    order by connection.last_success_at nulls first, connection.created_at
+  `;
+  const eventIds: string[] = [];
+  for (const connection of connections) {
+    const eventId = await createEvotorSyncEvent({
+      connectionId: connection.id,
+      syncType: params.syncType,
+      requestedBy: params.requestedBy ?? "scheduler",
+      idempotencyKey: createHash("sha256")
+        .update(`${params.syncType}:${connection.id}:${bucket}`)
+        .digest("hex"),
+      periodFrom: params.syncType === "reconciliation"
+        ? new Date(now.getTime() - 72 * 60 * 60 * 1000)
+        : null,
+      periodTo: now
+    });
+    eventIds.push(eventId);
+  }
+  return eventIds;
 }
 
 export async function findEvotorConnectionByUserId(userId: string) {
@@ -134,12 +189,21 @@ export async function getEvotorConnectionOverview() {
     last_success_at: string | null;
     last_error_at: string | null;
     last_error_message: string | null;
+    last_event_received_at: string | null;
+    last_sync_started_at: string | null;
+    last_cursor_at: string | null;
+    last_imported_receipts: number;
+    last_updated_receipts: number;
+    failed_items: number;
+    retry_count: number;
     stores_count: number;
     devices_count: number;
     receipts_count: number;
   }[]>`
     select c.id, c.status, c.installed_at, c.last_sync_at, c.last_success_at,
-      c.last_error_at, c.last_error_message,
+      c.last_error_at, c.last_error_message, c.last_event_received_at,
+      c.last_sync_started_at, c.last_cursor_at, c.last_imported_receipts,
+      c.last_updated_receipts, c.failed_items, c.retry_count,
       (select count(*)::integer from public.evotor_stores s where s.connection_id = c.id) as stores_count,
       (select count(*)::integer from public.evotor_devices d where d.connection_id = c.id) as devices_count,
       (select count(*)::integer from public.evotor_receipts r where r.connection_id = c.id) as receipts_count
@@ -182,11 +246,18 @@ export async function getEvotorAdminData() {
       status: string;
       requested_by: string;
       result_counts: Record<string, number>;
+      imported_count: number;
+      updated_count: number;
+      failed_count: number;
+      retry_count: number;
+      cursor_before: string | null;
+      cursor_after: string | null;
       created_at: string;
       finished_at: string | null;
     }[]>`
       select id, connection_id, sync_type, status, requested_by,
-        result_counts, created_at, finished_at
+        result_counts, imported_count, updated_count, failed_count,
+        retry_count, cursor_before, cursor_after, created_at, finished_at
       from public.evotor_sync_events order by created_at desc limit 20
     `,
     sql<{

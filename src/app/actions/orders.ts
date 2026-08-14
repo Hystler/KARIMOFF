@@ -5,9 +5,9 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
+import { createOrder } from "@/lib/order-flow/service";
 import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
-import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -30,6 +30,13 @@ export async function createOrderAction(
   formData: FormData
 ): Promise<OrderActionState> {
   void _previousState;
+
+  if (process.env.MAINTENANCE_MODE === "true") {
+    return {
+      status: "error",
+      message: "Сервис временно обновляется. Попробуйте снова через несколько минут."
+    };
+  }
 
   const customer = await getCurrentCustomer();
 
@@ -109,49 +116,40 @@ export async function createOrderAction(
     };
   }
 
-  const database = createDatabaseServerClient();
-
-  if (!database) {
-    return {
-      status: "error",
-      message: "База данных не подключена."
-    };
-  }
-
   const rawIdempotencyKey = String(formData.get("idempotency_key") || "");
   const idempotencyKey = /^[0-9a-f-]{36}$/i.test(rawIdempotencyKey)
     ? rawIdempotencyKey
     : randomUUID();
-  const { data, error } = await database.rpc("create_site_order", {
-    p_address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
-    p_comment: parsed.data.comment || null,
-    p_customer_id: customer.id,
-    p_delivery_type: parsed.data.delivery_type,
-    p_document_version: LEGAL_VERSION,
-    p_idempotency_key: idempotencyKey,
-    p_items: parsed.data.cart,
-    p_fulfillment_mode: parsed.data.fulfillment_mode,
-    p_requested_at:
-      parsed.data.fulfillment_mode === "scheduled" ? parsed.data.requested_at || null : null,
-    p_marketing_granted: isChecked(formData.get("marketing_consent")),
-    p_offer_accepted: true,
-    p_personal_data_granted: true,
-    p_source_path: "/checkout",
-    p_user_agent_short: await getShortUserAgent()
-  });
+  try {
+    const order = await createOrder({
+      source: "web",
+      address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
+      comment: parsed.data.comment || null,
+      customerId: customer.id,
+      deliveryType: parsed.data.delivery_type,
+      documentVersion: LEGAL_VERSION,
+      idempotencyKey,
+      items: parsed.data.cart,
+      fulfillmentMode: parsed.data.fulfillment_mode,
+      requestedAt:
+        parsed.data.fulfillment_mode === "scheduled" ? parsed.data.requested_at || null : null,
+      marketingGranted: isChecked(formData.get("marketing_consent")),
+      offerAccepted: true,
+      personalDataGranted: true,
+      sourcePath: "/checkout",
+      userAgentShort: await getShortUserAgent()
+    });
 
-  const order = Array.isArray(data) ? data[0] : null;
-
-  if (error || !order?.order_id) {
+    return {
+      status: "success",
+      message: "Заказ отправлен. Мы свяжемся с вами для подтверждения.",
+      orderId: order.orderId
+    };
+  } catch (error) {
+    const failure = error as { code?: string; message?: string };
     return {
       status: "error",
-      message: error?.code === "P0001" ? error.message : "Не удалось создать заказ."
+      message: failure.code === "P0001" ? failure.message || "Проверьте заказ." : "Не удалось создать заказ."
     };
   }
-
-  return {
-    status: "success",
-    message: "Заказ отправлен. Мы свяжемся с вами для подтверждения.",
-    orderId: String(order.order_id)
-  };
 }

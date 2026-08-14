@@ -52,7 +52,7 @@ export async function loginAction(formData: FormData) {
       metadata: { role: staff.role },
       sourcePath: "/admin/login"
     });
-    redirect(staff.role === "cook" ? "/admin/kitchen" : "/admin");
+    redirect(staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin");
   }
 
   if (!verifyAdminCredentials(phone, password, totp)) {

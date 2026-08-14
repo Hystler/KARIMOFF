@@ -209,7 +209,7 @@ test("analytics UI handles negative revenue and remains keyboard accessible", ()
 });
 
 test("analytics permissions deny cooks and fail closed for unscoped managers", () => {
-  assert.match(permissions, /staff\.role === "cook"/);
+  assert.match(permissions, /!\["owner", "admin", "manager"\]\.includes\(staff\.role\)/);
   assert.match(permissions, /locationIds: \[\]/);
   assert.match(query, /if \(!scope\.locationIds\.length\) clauses\.push\("false"\)/);
   assert.match(exportRoute, /getAnalyticsScope/);

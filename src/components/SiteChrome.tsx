@@ -23,8 +23,9 @@ export function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
+  const isOperational = pathname === "/pos" || pathname.startsWith("/kitchen") || pathname.startsWith("/display");
 
-  if (isAdmin) {
+  if (isAdmin || isOperational) {
     return (
       <ThemeProvider defaultTheme="light" forceTheme="light">
         <div className="admin-root min-h-screen">{children}</div>

@@ -31,6 +31,8 @@
 
 Первая синхронизация загружает документы только за последние 7 дней. Полная многолетняя история намеренно не запрашивается.
 
+Последующие обновления не зависят от повторной передачи token: incremental sync хранит high-water mark, повторяет пятиминутное overlap-окно и проходит cursor pagination до фиксированного `until`. Reconciliation периодически перепроверяет последние 72 часа. Подробности: [evotor-sync-reliability.md](./evotor-sync-reliability.md).
+
 ## Callback URL
 
 - Токен приложения: `https://karimoff.site/api/integrations/evotor/token`
@@ -48,6 +50,9 @@
 - `EVOTOR_WEBHOOK_AUTH_TOKEN` — общий Bearer token для входящих callback; не application token Эвотор.
 - `EVOTOR_TOKEN_ENCRYPTION_KEY` — ровно 32 случайных байта в base64 либо 64 hex-символа.
 - `AUTH_RATE_LIMIT_SECRET` и `DATABASE_URL` — уже используются KARIMOFF.
+- `EVOTOR_SYNC_SECRET` — отдельный Bearer для защищённого Timeweb scheduler endpoint;
+- `EVOTOR_BACKGROUND_SYNC` — opt-in worker для постоянного single-instance контейнера;
+- `EVOTOR_INCREMENTAL_INTERVAL_SECONDS` и `EVOTOR_RECONCILIATION_INTERVAL_HOURS` — ограниченные интервалы worker.
 
 Ни одна переменная Эвотор не имеет префикса `NEXT_PUBLIC_`. Старые `EVOTOR_API_TOKEN` и `EVOTOR_STORE_ID` больше не используются.
 
@@ -73,6 +78,7 @@
 ## Админка
 
 - `/admin/integrations/evotor` — состояние подключения, магазины, кассы, последний sync/ошибка, ручной sync и проверка соединения.
+- `/admin/integrations/evotor/reconciliation` — ручное подтверждение связи order ↔ receipt без изменения исходных данных или склада.
 - `/admin/analytics/sales` — выручка, чеки, средний чек, возвраты, кассы, формы оплаты и популярные позиции.
 
 Действия доступны администратору и управляющему. Повар перенаправляется в кухонный интерфейс. Серверные actions защищены текущей staff session, встроенной проверкой origin для Server Actions, DB rate limit и audit log.

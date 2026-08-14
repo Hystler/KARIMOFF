@@ -8,7 +8,7 @@ import { createDatabaseServerClient } from "@/lib/database/server";
 const ADMIN_COOKIE_NAME = "karimoff_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 4;
 
-export type StaffRole = "admin" | "manager" | "cook";
+export type StaffRole = "owner" | "admin" | "manager" | "cashier" | "cook";
 
 export type CurrentStaff = {
   id: string | null;
@@ -198,7 +198,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!staff || !["admin", "manager", "cook"].includes(String(staff.role))) return null;
+  if (!staff || !["owner", "admin", "manager", "cashier", "cook"].includes(String(staff.role))) return null;
 
   return {
     id: String(staff.id),
@@ -211,7 +211,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
 
 export async function isAdminAuthenticated() {
   const staff = await getCurrentStaff();
-  return staff?.role === "admin" || staff?.role === "manager";
+  return staff?.role === "owner" || staff?.role === "admin" || staff?.role === "manager";
 }
 
 export async function isKitchenAuthenticated() {

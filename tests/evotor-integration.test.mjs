@@ -215,13 +215,15 @@ test("Evotor tables are private and imported receipts never mutate inventory", (
 test("connection check reads stores and devices but skips sales data", () => {
   assert.match(sync, /const stores = await fetchEvotorStores\(client\)/);
   assert.match(sync, /const devices = await fetchEvotorDevices\(client\)/);
-  assert.match(sync, /const employees = isConnectionCheck \? \[\] : await fetchEvotorEmployees/);
-  assert.match(sync, /status === 401 \? "revoked" : "error"/);
+  assert.match(sync, /const isFullCatalogSync = \["initial", "installation", "manual"\]\.includes/);
+  assert.match(sync, /const employees = isFullCatalogSync && !isConnectionCheck[\s\S]+fetchEvotorEmployees/);
+  assert.match(sync, /if \(!isConnectionCheck\) \{[\s\S]+fetchEvotorDocuments/);
+  assert.match(sync, /when \$\{status\} = 401 then 'revoked'/);
 });
 
 test("admin actions require staff permissions and never expose a token", () => {
   assert.match(adminAction, /getCurrentStaff/);
-  assert.match(adminAction, /staff\.role === "cook"/);
+  assert.match(adminAction, /\["owner", "admin", "manager"\]\.includes\(staff\.role\)/);
   assert.match(adminAction, /consumeEvotorRateLimitKey/);
   assert.doesNotMatch(adminAction, /encrypted_token|EVOTOR_TOKEN_ENCRYPTION_KEY/);
 });

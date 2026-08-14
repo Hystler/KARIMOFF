@@ -28,6 +28,9 @@ export type AdminOrder = {
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  display_number: string;
+  source: "web" | "pos" | "mobile" | "kiosk" | "aggregator";
+  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_out" | "cancelled";
   delivery_type: "pickup" | "delivery";
   address: string | null;
   comment: string | null;
@@ -55,6 +58,19 @@ function normalizeOrder(
     created_at: String(row.created_at),
     customer_name: String(row.customer_name ?? ""),
     customer_phone: String(row.customer_phone ?? ""),
+    display_number: String(row.display_number || row.id).slice(0, 12).toUpperCase(),
+    source:
+      row.source === "pos" || row.source === "mobile" || row.source === "kiosk" || row.source === "aggregator"
+        ? row.source
+        : "web",
+    kitchen_status:
+      row.kitchen_status === "accepted" ||
+      row.kitchen_status === "cooking" ||
+      row.kitchen_status === "ready" ||
+      row.kitchen_status === "handed_out" ||
+      row.kitchen_status === "cancelled"
+        ? row.kitchen_status
+        : "new",
     delivery_type: row.delivery_type === "delivery" ? "delivery" : "pickup",
     address: typeof row.address === "string" ? row.address : null,
     comment: typeof row.comment === "string" ? row.comment : null,
@@ -116,7 +132,7 @@ function normalizeModifier(row: Record<string, unknown>): AdminOrderItemModifier
   };
 }
 
-export async function getAdminOrders() {
+export async function getAdminOrders(locationIds: string[] | null = null) {
   const database = createDatabaseServerClient();
 
   if (!database) {
@@ -127,10 +143,19 @@ export async function getAdminOrders() {
     };
   }
 
-  const { data: ordersData, error: ordersError } = await database
+  if (locationIds !== null && !locationIds.length) {
+    return {
+      orders: [] as AdminOrder[],
+      notConfigured: false,
+      error: null as string | null
+    };
+  }
+
+  let ordersQuery = database
     .from("orders")
-    .select("id, created_at, customer_name, customer_phone, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total")
-    .order("created_at", { ascending: false });
+    .select("id, created_at, customer_name, customer_phone, display_number, source, kitchen_status, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total");
+  if (locationIds !== null) ordersQuery = ordersQuery.in("location_id", locationIds);
+  const { data: ordersData, error: ordersError } = await ordersQuery.order("created_at", { ascending: false });
 
   if (ordersError) {
     return {
