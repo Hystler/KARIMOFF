@@ -160,6 +160,9 @@ test("Evotor sync has cursor overlap, retries, and rolling reconciliation", () =
   assert.match(evotorRepository, /new Date\(now\.getTime\(\) - 72 \* 60 \* 60 \* 1000\)/);
   assert.match(evotorScheduler, /EVOTOR_INCREMENTAL_INTERVAL_SECONDS/);
   assert.match(evotorScheduler, /EVOTOR_RECONCILIATION_INTERVAL_HOURS/);
+  assert.match(evotorScheduler, /pendingModes: Set<SyncMode>/);
+  assert.match(evotorScheduler, /pendingModes\.has\("reconciliation"\)/);
+  assert.match(evotorScheduler, /scheduleSync\("reconciliation", state\)/);
   assert.match(evotorSync, /sourceHash/);
   assert.match(evotorSync, /sort\(\(left, right\) => left\.sourceKey\.localeCompare/);
 });
