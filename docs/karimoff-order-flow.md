@@ -69,7 +69,7 @@ Payment и fiscal lifecycle подготовлены, но provider disabled о�
 
 ## Realtime и восстановление
 
-Business write и outbox event атомарны. SSE `/api/order-events` отдаёт только события разрешённой location, поддерживает `Last-Event-ID`, heartbeat и переподключение. UI имеет controlled 30-second fallback; сервер всегда остаётся источником истины.
+Business write и outbox event атомарны. PostgreSQL `NOTIFY` будит выделенный server-side `LISTEN`, а SSE `/api/order-events` отдаёт только события разрешённой location. Поток поддерживает `Last-Event-ID`, heartbeat и переподключение. 5-second server recovery check и 30-second browser refresh остаются controlled fallback; сервер всегда остаётся источником истины.
 
 В браузерное событие не входят телефон, адрес, email и комментарий. После reconnect интерфейс перечитывает актуальную очередь, поэтому потерянный transient event не означает потерю состояния.
 
@@ -90,3 +90,24 @@ Runtime role получает только необходимые grants/RLS. Br
 Файл: `supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql`.
 
 Миграция additive и idempotent: существующие orders backfill-ятся в default location, старые completed/cancelled/in_progress получают соответствующий kitchen status. Перед тестовым deploy её нужно применить migration/schema-owner ролью и затем проверить RPC от `karimoff_app`.
+
+## Уточнение POS/KDS 2026-08-15
+
+Дополнительная миграция: `supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql`.
+
+Она добавляет:
+
+- `orders.is_operational`, `operational_started_at`, `is_test`;
+- item note и immutable configuration snapshot;
+- группы и опции модификаторов с single/multi, min/max и remove/add/replace;
+- snapshot выбранных опций в `order_item_modifiers`;
+- effective ingredient usage с учётом удаления, добавки и замены;
+- перегрузки web/POS RPC с server-only `p_is_test`;
+- фильтрацию test orders из canonical sales analytics;
+- RLS, grants и runtime migration check.
+
+Legacy rows получают безопасные значения по умолчанию и не переводятся в operational автоматически. Новый order становится operational только в текущих create-order RPC. Поэтому история остаётся на месте, а рабочая очередь начинается с явной границы.
+
+Клиент отправляет только ID, количество и выбранную конфигурацию. PostgreSQL проверяет разрешения модификатора, обязательность группы, min/max, active product и вычисляет `base price + server price deltas`. Browser price не участвует в записи.
+
+В test mode статус `ready` обновляет только заказ, timeline и outbox. Вызов `set_order_status_staff_atomic`, а значит inventory deduction, loyalty и fiscal side effects, пропускается. В production при `TEST_ORDER_MODE=false` authoritative trigger остаётся прежним: exactly-once deduction на `ready`.

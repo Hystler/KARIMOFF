@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { KitchenWorkspace } from "@/components/operations/KitchenWorkspace";
+import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { isOrderVisibleToKitchen } from "@/lib/order-flow/permissions";
@@ -16,17 +17,30 @@ export default async function KitchenPage({
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
   const params = await searchParams;
-  const locations = await getAccessibleOrderLocations(staff);
+  let locations;
+  try {
+    locations = await getAccessibleOrderLocations(staff);
+  } catch {
+    return <OperationsUnavailable embedded title="Кухня временно недоступна" message="Проверьте связь и повторите." />;
+  }
   const location = locations.find((item) => item.id === params.location || item.key === params.location)
     ?? locations.find((item) => item.isDefault)
     ?? locations[0];
-  if (!location) throw new Error("Не настроена точка кухни.");
-  const [orders, sla, initialCursor] = await Promise.all([
-    getOrderFlowQueue({ locationId: location.id }),
-    getKitchenSla(location.id),
-    getLatestOrderEventCursor(location.id)
-  ]);
-  const metrics = await getKitchenOperationsMetrics(location.id, sla);
+  if (!location) return <OperationsUnavailable embedded title="Не настроена точка кухни" message="Добавьте активную точку в ERP." />;
+  let orders;
+  let sla;
+  let initialCursor;
+  let metrics;
+  try {
+    [orders, sla, initialCursor] = await Promise.all([
+      getOrderFlowQueue({ locationId: location.id }),
+      getKitchenSla(location.id),
+      getLatestOrderEventCursor(location.id)
+    ]);
+    metrics = await getKitchenOperationsMetrics(location.id, sla);
+  } catch {
+    return <OperationsUnavailable embedded title="Очередь не загрузилась" message="Заказы не изменены. Повторите после проверки сети." />;
+  }
 
   return (
     <main className="admin-content admin-content-wide">

@@ -73,6 +73,8 @@ export default async function AdminOrdersPage({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-black uppercase text-karimoff-orange">{order.display_number} · {orderSourceLabel(order.source)} · {formatDate(order.created_at)}</p>
+                    {order.is_test ? <span className="mt-2 inline-block rounded-md bg-sky-100 px-2 py-1 text-[10px] font-black uppercase text-sky-800">Test · без склада и выручки</span> : null}
+                    {!order.is_operational ? <span className="mt-2 inline-block rounded-md bg-black/5 px-2 py-1 text-[10px] font-black uppercase text-black/45">Архивный</span> : null}
                     <h2 className="mt-2 text-xl font-black">{order.customer_name}</h2>
                     {order.customer_phone ? (
                       <a href={`tel:${order.customer_phone}`} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-karimoff-muted">
@@ -109,10 +111,11 @@ export default async function AdminOrdersPage({
                         <strong className="shrink-0 text-karimoff-orange">{formatPrice(item.line_total)} ₽</strong>
                       </div>
                       {item.modifiers.map((modifier) => (
-                        <p key={modifier.id} className={`mt-1 text-xs font-bold ${modifier.modifier_type === "remove" ? "text-amber-700" : "text-karimoff-orange"}`}>
-                          {modifier.modifier_type === "remove" ? "Без" : "Добавить"}: {modifier.ingredient_name}
+                        <p key={modifier.id} className={`mt-1 text-xs font-black uppercase ${modifier.modifier_type === "remove" ? "text-amber-800" : modifier.modifier_type === "replace" ? "text-sky-800" : "text-emerald-800"}`}>
+                          {modifier.modifier_type === "remove" ? "БЕЗ" : modifier.modifier_type === "replace" ? "ЗАМЕНА" : "+"} {modifier.ingredient_name}
                         </p>
                       ))}
+                      {item.item_note ? <p className="mt-1 text-xs font-bold text-violet-800">К позиции: {item.item_note}</p> : null}
                     </div>
                   ))}
                 </div>

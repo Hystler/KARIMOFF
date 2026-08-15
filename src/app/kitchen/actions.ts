@@ -3,17 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { canStaffAccessOrder } from "@/lib/order-flow/access";
+import type { KitchenActionState } from "@/lib/order-flow/kitchen-action-state";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
 import { transitionOrder } from "@/lib/order-flow/service";
 import { KITCHEN_STATUSES, type KitchenStatus } from "@/lib/order-flow/types";
-
-export type KitchenActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  warnings?: string[];
-};
-
-export const initialKitchenActionState: KitchenActionState = { status: "idle", message: "" };
 
 export async function transitionKitchenOrderAction(
   _previous: KitchenActionState,

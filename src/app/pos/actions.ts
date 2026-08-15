@@ -5,11 +5,19 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { canStaffAccessOrderLocation } from "@/lib/order-flow/access";
+import type { PosOrderActionState } from "@/lib/order-flow/pos-action-state";
 import { createOrder } from "@/lib/order-flow/service";
 
 const itemSchema = z.object({
   product_id: z.string().uuid(),
-  quantity: z.number().int().min(1).max(20)
+  quantity: z.number().int().min(1).max(20),
+  removed_ingredient_ids: z.array(z.string().uuid()).max(50).default([]),
+  extras: z.array(z.object({
+    ingredient_id: z.string().uuid(),
+    quantity: z.number().int().min(1).max(20)
+  })).max(30).default([]),
+  modifier_option_ids: z.array(z.string().uuid()).max(20).default([]),
+  note: z.string().trim().max(300).default("")
 });
 
 const payloadSchema = z.object({
@@ -19,19 +27,6 @@ const payloadSchema = z.object({
   idempotencyKey: z.string().uuid(),
   items: z.array(itemSchema).min(1).max(50)
 });
-
-export type PosOrderActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  orderId?: string;
-  displayNumber?: string;
-  resetKey?: string;
-};
-
-export const initialPosOrderActionState: PosOrderActionState = {
-  status: "idle",
-  message: ""
-};
 
 export async function createPosOrderAction(
   _previous: PosOrderActionState,

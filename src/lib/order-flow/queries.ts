@@ -20,6 +20,7 @@ type OrderRow = {
   location_id: string;
   location_name: string;
   created_at: string;
+  operational_started_at: string | null;
   accepted_at: string | null;
   cooking_started_at: string | null;
   ready_at: string | null;
@@ -38,6 +39,7 @@ type OrderRow = {
   address: string | null;
   total: string | number;
   assigned_staff_name: string | null;
+  is_test: boolean;
 };
 
 type ItemRow = {
@@ -49,16 +51,22 @@ type ItemRow = {
   unit_price: string | number;
   line_total: string | number;
   allergens: string[] | null;
+  item_note: string | null;
+  configuration_snapshot: Record<string, unknown> | null;
 };
 
 type ModifierRow = {
   id: string;
   order_item_id: string;
   ingredient_id: string | null;
-  modifier_type: "remove" | "add";
+  modifier_option_id: string | null;
+  modifier_group_name: string | null;
+  modifier_type: "remove" | "add" | "replace";
   ingredient_name: string;
   quantity: string | number;
   unit: string;
+  price_delta: string | number;
+  kitchen_note: string | null;
 };
 
 function source(value: string): OrderSource {
@@ -70,10 +78,14 @@ function mapModifier(row: ModifierRow): OrderFlowModifier {
   return {
     id: row.id,
     ingredientId: row.ingredient_id,
+    optionId: row.modifier_option_id,
+    groupName: row.modifier_group_name,
     type: row.modifier_type,
     name: row.ingredient_name,
     quantity: Number(row.quantity),
-    unit: row.unit
+    unit: row.unit,
+    priceDelta: Number(row.price_delta),
+    kitchenNote: row.kitchen_note
   };
 }
 
@@ -89,6 +101,8 @@ function mapItem(
     quantity: Number(row.quantity),
     unitPrice: Number(row.unit_price),
     lineTotal: Number(row.line_total),
+    itemNote: row.item_note,
+    configurationSnapshot: row.configuration_snapshot ?? {},
     modifiers,
     recipe: row.product_id
       ? {
@@ -105,11 +119,12 @@ function mapItem(
 function mapOrder(row: OrderRow, items: OrderFlowItem[]): OrderFlowOrder {
   return {
     id: row.id,
-    displayNumber: row.display_number || row.id.slice(0, 8).toUpperCase(),
+    displayNumber: row.display_number || "—",
     source: source(row.source),
     locationId: row.location_id,
     locationName: row.location_name,
     createdAt: row.created_at,
+    operationalStartedAt: row.operational_started_at,
     acceptedAt: row.accepted_at,
     cookingStartedAt: row.cooking_started_at,
     readyAt: row.ready_at,
@@ -134,6 +149,7 @@ function mapOrder(row: OrderRow, items: OrderFlowItem[]): OrderFlowOrder {
     address: row.address,
     total: Number(row.total),
     assignedStaffName: row.assigned_staff_name,
+    isTest: Boolean(row.is_test),
     items
   };
 }
@@ -208,6 +224,7 @@ export async function getKitchenOperationsMetrics(
       from public.orders o
       join public.order_locations location on location.id = o.location_id
       where o.location_id = ${locationId}::uuid
+        and o.is_operational = true
         and (o.created_at at time zone location.timezone)::date =
             (now() at time zone location.timezone)::date
     ), cycle as (
@@ -267,15 +284,16 @@ export async function getOrderFlowQueue(params: {
   const sql = getPostgresSql();
   const orders = await sql<OrderRow[]>`
     select o.id, o.display_number, o.source, o.location_id, l.name as location_name,
-      o.created_at, o.accepted_at, o.cooking_started_at, o.ready_at,
+      o.created_at, o.operational_started_at, o.accepted_at, o.cooking_started_at, o.ready_at,
       o.handed_out_at, o.requested_at, o.kitchen_status, o.status,
       o.payment_status, o.fiscal_status, o.public_display_name,
       o.public_avatar_seed, o.public_avatar_config, o.delivery_type, o.fulfillment_mode,
-      o.comment, o.address, o.total, staff.name as assigned_staff_name
+      o.comment, o.address, o.total, staff.name as assigned_staff_name, o.is_test
     from public.orders o
     join public.order_locations l on l.id = o.location_id
     left join public.staff_users staff on staff.id = o.assigned_staff_id
     where o.location_id = ${params.locationId}::uuid
+      and o.is_operational = true
       and o.kitchen_status = any(${statuses}::text[])
     order by coalesce(o.requested_at, o.created_at), o.created_at
     limit ${limit}
@@ -284,7 +302,8 @@ export async function getOrderFlowQueue(params: {
   const orderIds = orders.map((order) => order.id);
   const items = await sql<ItemRow[]>`
     select item.id, item.order_id, item.product_id, item.product_name,
-      item.quantity, item.unit_price, item.line_total, product.allergens
+      item.quantity, item.unit_price, item.line_total, product.allergens,
+      item.item_note, item.configuration_snapshot
     from public.order_items item
     left join public.products product on product.id = item.product_id
     where item.order_id = any(${orderIds}::uuid[])
@@ -293,10 +312,15 @@ export async function getOrderFlowQueue(params: {
   const itemIds = items.map((item) => item.id);
   const modifiers = itemIds.length
     ? await sql<ModifierRow[]>`
-        select id, order_item_id, ingredient_id, modifier_type, ingredient_name, quantity, unit
-        from public.order_item_modifiers
-        where order_item_id = any(${itemIds}::uuid[])
-        order by created_at, id
+        select modifier.id, modifier.order_item_id, modifier.ingredient_id,
+          modifier.modifier_option_id, group_row.name as modifier_group_name,
+          modifier.modifier_type, modifier.ingredient_name, modifier.quantity, modifier.unit,
+          modifier.unit_price_delta as price_delta, modifier.kitchen_note
+        from public.order_item_modifiers modifier
+        left join public.product_modifier_groups group_row
+          on group_row.id = modifier.modifier_group_id
+        where modifier.order_item_id = any(${itemIds}::uuid[])
+        order by modifier.created_at, modifier.id
       `
     : [];
   const modifiersByItem = new Map<string, OrderFlowModifier[]>();
@@ -437,6 +461,7 @@ export async function getOrderOutboxEvents(params: {
     join public.orders order_row on order_row.id = event.aggregate_id
     where event.id > ${params.afterId}
       and order_row.location_id = ${params.locationId}::uuid
+      and order_row.is_operational = true
     order by event.id
     limit ${limit}
   `;
@@ -449,6 +474,7 @@ export async function getLatestOrderEventCursor(locationId: string) {
     from public.order_outbox event
     join public.orders order_row on order_row.id = event.aggregate_id
     where order_row.location_id = ${locationId}::uuid
+      and order_row.is_operational = true
   `;
   return Number(rows[0]?.id ?? 0);
 }

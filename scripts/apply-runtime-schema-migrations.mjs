@@ -72,6 +72,39 @@ const migrations = [
         objects?.transition_order
       );
     }
+  },
+  {
+    name: "20260815103000_refine_pos_kds_display_operations",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.product_modifier_groups') is not null as modifier_groups,
+          to_regclass('public.product_modifier_options') is not null as modifier_options,
+          exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public' and table_name = 'orders' and column_name = 'is_operational'
+          ) as operational_orders,
+          exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public' and table_name = 'orders' and column_name = 'is_test'
+          ) as test_orders,
+          exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public' and table_name = 'order_items' and column_name = 'configuration_snapshot'
+          ) as item_snapshot,
+          to_regprocedure('public.create_pos_order_atomic(uuid,text,text,jsonb,uuid,uuid,text,text,timestamp with time zone,boolean)') is not null as create_pos_test,
+          to_regprocedure('public.create_site_order(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamp with time zone,boolean)') is not null as create_web_test
+      `;
+      return Boolean(
+        objects?.modifier_groups &&
+        objects?.modifier_options &&
+        objects?.operational_orders &&
+        objects?.test_orders &&
+        objects?.item_snapshot &&
+        objects?.create_pos_test &&
+        objects?.create_web_test
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

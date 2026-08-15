@@ -65,6 +65,8 @@ const allowedTables = new Set([
   "payments",
   "product_images",
   "product_ingredients",
+  "product_modifier_groups",
+  "product_modifier_options",
   "products",
   "production_overheads",
   "production_recipe_expenses",

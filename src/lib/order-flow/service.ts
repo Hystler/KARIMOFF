@@ -9,6 +9,8 @@ type CartItemInput = {
   quantity: number;
   removed_ingredient_ids?: string[];
   extras?: Array<{ ingredient_id: string; quantity: number }>;
+  modifier_option_ids?: string[];
+  note?: string;
 };
 
 type WebOrderInput = {
@@ -57,6 +59,7 @@ function firstRow(value: unknown) {
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const database = createDatabaseServerClient();
   if (!database) throw new Error("База данных не подключена.");
+  const isTest = process.env.TEST_ORDER_MODE === "true";
 
   if (input.source === "web") {
     const { data, error } = await database.rpc("create_site_order", {
@@ -73,7 +76,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       p_offer_accepted: input.offerAccepted,
       p_personal_data_granted: input.personalDataGranted,
       p_source_path: input.sourcePath,
-      p_user_agent_short: input.userAgentShort
+      p_user_agent_short: input.userAgentShort,
+      p_is_test: isTest
     });
     const order = firstRow(data);
     if (error || !order?.order_id) {
@@ -89,7 +93,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     logOperationalEvent("order.created", {
       order_id: result.orderId,
       source: "web",
-      item_lines: input.items.length
+      item_lines: input.items.length,
+      is_test: isTest
     });
     return result;
   }
@@ -103,7 +108,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     p_actor_id: input.actorId,
     p_actor_role: input.actorRole,
     p_fulfillment_mode: input.fulfillmentMode ?? "asap",
-    p_requested_at: input.fulfillmentMode === "scheduled" ? input.requestedAt ?? null : null
+    p_requested_at: input.fulfillmentMode === "scheduled" ? input.requestedAt ?? null : null,
+    p_is_test: isTest
   });
   const order = firstRow(data);
   if (error || !order?.order_id) {
@@ -120,7 +126,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     order_id: result.orderId,
     source: "pos",
     location_id: input.locationId,
-    item_lines: input.items.length
+    item_lines: input.items.length,
+    is_test: isTest
   });
   return result;
 }

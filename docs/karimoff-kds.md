@@ -14,7 +14,7 @@
 
 Карточка показывает номер, безопасное имя, канал, время ожидания, самовывоз/доставку, позиции, количество, удаления, добавки, комментарий и заполненные аллергенные заметки. Большие actions соответствуют следующему допустимому переходу.
 
-Цвет SLA рассчитывается относительно `created_at` или желаемого времени:
+Цвет SLA рассчитывается относительно `operational_started_at` или желаемого времени для scheduled-заказа:
 
 - normal — до warning;
 - warning — от warning до critical;
@@ -49,10 +49,11 @@ Side panel позиции использует `product_ingredients`. Для к�
 
 ## Сеть и отказоустойчивость
 
+- PostgreSQL `LISTEN/NOTIFY` будит server-side SSE поток сразу после commit транзакции.
 - EventSource сам переподключается с backoff браузера.
 - `Last-Event-ID` позволяет продолжить поток.
 - Heartbeat не даёт proxy молча закрыть соединение.
-- 30-second refresh является fallback, а не aggressive polling.
+- 5-second server recovery check и 30-second browser refresh являются fallback, а не aggressive polling.
 - Offline state видим; action не считается успешным, пока сервер не подтвердил transition.
 - После reconnect выполняется полная сверка активной очереди.
 
@@ -78,3 +79,23 @@ Top bar считает server-side за локальные сутки точки
 5. Кассир отмечает `handed_out`.
 
 Для планшета кухни рекомендуется landscape и standalone/kiosk browser. История не грузится: запрос ограничен активными и недавними ready orders.
+
+## POS, модификаторы и operational cutover
+
+POS поддерживает два пути: «Добавить» кладёт позицию с допустимой конфигурацией по умолчанию, а касание карточки открывает настройку. Строка корзины редактируется по собственному `lineId`: количество, удаления, добавки, группы и комментарий меняются у существующей строки, а не создают случайный дубль.
+
+Базовый состав остаётся в `product_ingredients`. Удалять можно только строки с `is_removable=true`; безопасное значение по умолчанию — `false`. Добавки из техкарты используют `is_extra_available`, `extra_quantity`, `extra_price` и `max_extra_quantity`. Группы `product_modifier_groups` и `product_modifier_options` дают single/multi, min/max и типы `remove`, `add`, `replace`.
+
+Цена в POS является только preview. Сервер повторно проверяет активный товар, разрешённые опции и лимиты, читает цену из PostgreSQL, создаёт snapshot конфигурации и effective ingredient usage. В KDS изменения выводятся крупными строками `БЕЗ`, `+` и `ЗАМЕНА`. В техкарте удалённая строка зачёркнута и помечена «НЕ ДОБАВЛЯТЬ».
+
+`is_operational` отделяет новую рабочую очередь от архивных заказов. Legacy orders не удаляются и не перенумеровываются, но KDS, display, SLA и realtime outbox их не читают. SLA использует `operational_started_at`; отсутствующий, будущий или старше 24 часов timestamp не превращается в многотысячный таймер.
+
+## Новый pickup display
+
+Табло использует спокойный тёмный фон и фирменный оранжевый только как акцент. Ready-карточки крупнее cooking-карточек. Переход в `ready` выполняется layout-анимацией, `handed_out` и `cancelled` удаляются через короткую exit-анимацию без reload. Сетка меняет плотность для 1, 3, 10 и 20 заказов.
+
+Короткий двухнотный сигнал включается вручную. Mute сохраняется в localStorage; после перезапуска браузер предлагает разрешить звук касанием, если autoplay заблокирован. `prefers-reduced-motion` отключает пространственные переходы.
+
+## TEST_ORDER_MODE
+
+На стенде `TEST_ORDER_MODE=true` помечает новые web/POS-заказы как `is_test`. Они получают A/B-номер, проходят KDS, display, realtime и status timeline, но transition RPC не вызывает складскую, бонусную и фискальную цепочку. `canonical_analytics_sales` исключает их из business revenue. Режим задаётся только server environment и не принимается из browser payload.

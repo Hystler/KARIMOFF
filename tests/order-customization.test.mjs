@@ -60,7 +60,8 @@ test("ingredient waste adjusts food cost and order usage", () => {
 });
 
 test("kitchen displays modifiers and uses atomic status RPC", () => {
-  assert.match(kitchen, /modifier\.type === "remove" \? "БЕЗ" : "ДОБАВИТЬ"/);
+  assert.match(kitchen, /if \(type === "remove"\) return "БЕЗ"/);
+  assert.match(kitchen, /if \(type === "replace"\) return "ЗАМЕНА"/);
   assert.match(migration, /create or replace function public\.set_order_status_staff_atomic/);
   assert.match(orderFlowMigration, /create or replace function public\.set_order_kitchen_status_atomic/);
   assert.match(orderFlowMigration, /select public\.set_order_status_staff_atomic/);

@@ -37,6 +37,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026081122300
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812190000_add_evotor_cloud_integration.sql ./supabase/migrations/20260812190000_add_evotor_cloud_integration.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812213000_add_unified_sales_analytics.sql ./supabase/migrations/20260812213000_add_unified_sales_analytics.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql ./supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql ./supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql
 
 USER nextjs
 

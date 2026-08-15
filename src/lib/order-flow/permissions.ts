@@ -38,6 +38,8 @@ export function canTransitionKitchen(
 }
 
 export function isOrderVisibleToKitchen(order: OrderFlowOrder, sla: KitchenSla) {
+  // Test orders exercise the full operational flow without depending on a real payment provider.
+  if (order.isTest) return true;
   const paid = order.paymentStatus === "paid" || order.paymentStatus === "partially_refunded";
   if ((order.source === "web" || order.source === "mobile") && sla.onlineRequiresPaid) return paid;
   if ((order.source === "pos" || order.source === "kiosk") && sla.posRequiresPaid) return paid;

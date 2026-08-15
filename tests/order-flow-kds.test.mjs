@@ -74,6 +74,7 @@ test("KDS SLA and role transitions remain deterministic", () => {
         cashier: permissions.canTransitionKitchen("cashier", "ready", "handed_out"),
         managerCannotCancelReady: permissions.canTransitionKitchen("manager", "ready", "cancelled"),
         onlineVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "web", paymentStatus: "unpaid" }, settings),
+        testOnlineVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "web", paymentStatus: "unpaid", isTest: true }, settings),
         posVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "pos", paymentStatus: "unpaid" }, settings)
       }));
     `);
@@ -86,6 +87,7 @@ test("KDS SLA and role transitions remain deterministic", () => {
   assert.equal(result.cashier, true);
   assert.equal(result.managerCannotCancelReady, false);
   assert.equal(result.onlineVisibleUnpaid, false);
+  assert.equal(result.testOnlineVisibleUnpaid, true);
   assert.equal(result.posVisibleUnpaid, true);
   assert.match(kitchenSettingsAction, /criticalMinutes > value\.warningMinutes/);
   assert.match(kitchenSettingsAction, /inventory_trigger[\s\S]+'ready'/);

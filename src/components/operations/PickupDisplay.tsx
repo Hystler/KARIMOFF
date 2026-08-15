@@ -1,14 +1,16 @@
 "use client";
 
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { BellRing, Clock3, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, Clock3, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
 import type { AvatarConfig } from "@/lib/avatar-schema";
 import type { OrderLocation, PublicDisplayOrder } from "@/lib/order-flow/types";
 
-const fallbackColors = ["#FB670A", "#E53E3E", "#2F855A", "#2B6CB0", "#6B46C1", "#B7791F"];
+const SOUND_STORAGE_KEY = "karimoff-display-sound-v1";
+const fallbackColors = ["#D95706", "#B9382E", "#247A52", "#276B91", "#70549A", "#9A6A20"];
 
 function seedNumber(value: string) {
   return Array.from(value).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
@@ -16,46 +18,85 @@ function seedNumber(value: string) {
 
 function initials(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
-  return (parts[0]?.[0] || "Г") + (parts[1]?.[0] || "");
+  return ((parts[0]?.[0] || "Г") + (parts[1]?.[0] || "")).toUpperCase();
 }
 
 function GuestAvatar({ order, large = false }: { order: PublicDisplayOrder; large?: boolean }) {
   if (order.publicAvatar) {
     return (
-      <div className={`${large ? "scale-[0.72] sm:scale-90" : "scale-[0.48]"} grid shrink-0 place-items-center overflow-hidden ${large ? "h-24 w-24 sm:h-28 sm:w-28" : "h-14 w-14"}`}>
-        <AvatarPreview avatar={order.publicAvatar as AvatarConfig} size="sm" />
+      <div className={`grid shrink-0 place-items-center overflow-hidden ${large ? "h-24 w-24 sm:h-28 sm:w-28" : "h-14 w-14"}`}>
+        <div className={large ? "scale-90" : "scale-[0.48]"}>
+          <AvatarPreview avatar={order.publicAvatar as AvatarConfig} size="sm" />
+        </div>
       </div>
     );
   }
   const color = fallbackColors[seedNumber(order.publicAvatarSeed) % fallbackColors.length];
   return (
-    <span className={`grid shrink-0 place-items-center rounded-full font-black text-white shadow-lg ${large ? "h-20 w-20 text-2xl sm:h-24 sm:w-24 sm:text-3xl" : "h-14 w-14 text-lg"}`} style={{ backgroundColor: color }} aria-hidden="true">
-      {initials(order.publicDisplayName).toUpperCase()}
+    <span
+      className={`grid shrink-0 place-items-center rounded-full border border-white/15 font-black text-white ${large ? "h-20 w-20 text-2xl sm:h-24 sm:w-24 sm:text-3xl" : "h-14 w-14 text-lg"}`}
+      style={{ backgroundColor: color }}
+      aria-hidden="true"
+    >
+      {initials(order.publicDisplayName)}
     </span>
   );
 }
 
-function beep() {
-  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return;
+async function playReadySound() {
+  const AudioContextClass = window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return false;
   const context = new AudioContextClass();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(740, context.currentTime);
-  gain.gain.setValueAtTime(0.0001, context.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.32);
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + 0.34);
-  oscillator.addEventListener("ended", () => void context.close());
+  try {
+    await context.resume();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.09, context.currentTime + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.7);
+    gain.connect(context.destination);
+    [659.25, 783.99].forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      oscillator.start(context.currentTime + index * 0.16);
+      oscillator.stop(context.currentTime + 0.52 + index * 0.16);
+    });
+    window.setTimeout(() => void context.close(), 900);
+    return true;
+  } catch {
+    void context.close();
+    return false;
+  }
 }
 
-export function PickupDisplay({ orders, location, initialCursor }: { orders: PublicDisplayOrder[]; location: OrderLocation; initialCursor: number }) {
+function cookingGrid(count: number) {
+  if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
+  if (count <= 9) return "grid-cols-2 xl:grid-cols-3";
+  return "grid-cols-2 xl:grid-cols-4";
+}
+
+function readyGrid(count: number) {
+  if (count === 1) return "grid-cols-1";
+  if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
+  return "grid-cols-2 2xl:grid-cols-3";
+}
+
+export function PickupDisplay({
+  orders,
+  location,
+  initialCursor
+}: {
+  orders: PublicDisplayOrder[];
+  location: OrderLocation;
+  initialCursor: number;
+}) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const realtime = useOrderRealtime(location.id, () => router.refresh(), initialCursor);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundUnlocked, setSoundUnlocked] = useState(false);
   const previousReady = useRef<Set<string> | null>(null);
   const cooking = useMemo(
     () => orders.filter((order) => ["new", "accepted", "cooking"].includes(order.kitchenStatus)),
@@ -67,75 +108,152 @@ export function PickupDisplay({ orders, location, initialCursor }: { orders: Pub
   );
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSoundEnabled(window.localStorage.getItem(SOUND_STORAGE_KEY) === "on");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const next = new Set(ready.map((order) => order.id));
-    if (soundEnabled && previousReady.current && ready.some((order) => !previousReady.current?.has(order.id))) beep();
+    if (
+      soundEnabled &&
+      soundUnlocked &&
+      previousReady.current &&
+      ready.some((order) => !previousReady.current?.has(order.id))
+    ) {
+      void playReadySound();
+    }
     previousReady.current = next;
-  }, [ready, soundEnabled]);
+  }, [ready, soundEnabled, soundUnlocked]);
+
+  async function toggleSound() {
+    if (soundEnabled && soundUnlocked) {
+      setSoundEnabled(false);
+      setSoundUnlocked(false);
+      window.localStorage.setItem(SOUND_STORAGE_KEY, "off");
+      return;
+    }
+    const unlocked = await playReadySound();
+    setSoundEnabled(true);
+    setSoundUnlocked(unlocked);
+    window.localStorage.setItem(SOUND_STORAGE_KEY, "on");
+  }
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-[#0C0C0D] text-white">
-      <header className="flex min-h-[84px] items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-8 lg:px-12">
+    <main className="min-h-dvh overflow-x-hidden bg-[#0D0D0F] text-white">
+      <header className="flex min-h-[88px] items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-8 lg:px-12">
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase text-[#FF914D]">KARIMOFF · {location.name}</p>
-          <h1 className="mt-1 truncate text-2xl font-black sm:text-3xl">Заказы гостей</h1>
+          <div className="flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-[#FB670A]" aria-hidden="true" />
+            <p className="truncate text-xs font-black uppercase text-white/55">KARIMOFF · {location.name}</p>
+          </div>
+          <h1 className="mt-1 truncate text-2xl font-black sm:text-3xl">Ваш заказ</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden min-h-11 items-center gap-2 rounded-lg bg-white/[0.07] px-3 text-xs font-black sm:inline-flex">
+          <span className="hidden min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-3 text-xs font-black sm:inline-flex">
             {realtime === "online" ? <Wifi size={17} className="text-emerald-400" /> : <WifiOff size={17} className="text-amber-400" />}
-            {realtime === "online" ? "Онлайн" : "Переподключение"}
+            {realtime === "online" ? "Обновляется" : "Переподключение"}
           </span>
-          <button type="button" onClick={() => { setSoundEnabled((value) => !value); if (!soundEnabled) beep(); }} className="grid h-12 w-12 place-items-center rounded-lg border border-white/15 bg-white/[0.07]" aria-label={soundEnabled ? "Выключить звук" : "Включить звук"}>
+          <button
+            type="button"
+            onClick={() => void toggleSound()}
+            className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-white/15 bg-white/[0.06] px-3 font-bold transition hover:border-[#FB670A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FB670A]/30"
+            aria-label={soundEnabled && soundUnlocked ? "Выключить звук" : "Разрешить звук"}
+          >
             {soundEnabled ? <Volume2 size={21} /> : <VolumeX size={21} />}
+            <span className="hidden text-xs sm:inline">{soundEnabled && soundUnlocked ? "Звук вкл." : soundEnabled ? "Разрешить звук" : "Звук выкл."}</span>
           </button>
         </div>
       </header>
 
-      <div className="grid min-h-[calc(100dvh-84px)] lg:grid-cols-[0.9fr_1.1fr]">
+      <LayoutGroup id="pickup-orders">
+      <div className="grid min-h-[calc(100dvh-88px)] lg:grid-cols-[1.15fr_0.85fr]">
         <section className="border-b border-white/10 p-5 sm:p-8 lg:border-b-0 lg:border-r lg:p-10" aria-labelledby="display-cooking">
           <div className="flex items-center justify-between gap-4">
-            <h2 id="display-cooking" className="flex items-center gap-3 text-xl font-black uppercase text-white/75 sm:text-2xl"><Clock3 className="text-[#FB670A]" /> Готовится</h2>
-            <span className="grid h-10 min-w-10 place-items-center rounded-full bg-white/10 px-3 font-black">{cooking.length}</span>
+            <div>
+              <p className="text-xs font-black uppercase text-white/35">Очередь</p>
+              <h2 id="display-cooking" className="mt-2 flex items-center gap-3 text-2xl font-black uppercase sm:text-3xl">
+                <Clock3 className="text-[#FB670A]" /> Готовится
+              </h2>
+            </div>
+            <span className="grid h-11 min-w-11 place-items-center rounded-full border border-white/10 bg-white/[0.06] px-3 text-lg font-black">{cooking.length}</span>
           </div>
           {cooking.length ? (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              {cooking.map((order) => (
-                <article key={order.id} className="flex min-h-[116px] items-center gap-3 rounded-lg border border-white/10 bg-white/[0.06] p-3 sm:p-4">
-                  <GuestAvatar order={order} />
-                  <div className="min-w-0">
-                    <strong className="block text-2xl font-black tabular-nums sm:text-3xl">{order.displayNumber}</strong>
-                    <p className="mt-1 truncate text-sm font-bold text-white/55 sm:text-base">{order.publicDisplayName}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <motion.div layout className={`mt-7 grid gap-3 ${cookingGrid(cooking.length)}`}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {cooking.map((order) => (
+                  <motion.article
+                    layout
+                    layoutId={`pickup-order-${order.id}`}
+                    key={order.id}
+                    initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.22 }}
+                    className="flex min-h-[118px] min-w-0 items-center gap-4 rounded-lg border border-white/10 bg-white/[0.055] p-4"
+                  >
+                    <GuestAvatar order={order} />
+                    <div className="min-w-0">
+                      <strong className="block text-3xl font-black leading-none tabular-nums sm:text-4xl">{order.displayNumber}</strong>
+                      <p className="mt-2 truncate text-base font-bold text-white/55">{order.publicDisplayName}</p>
+                      {order.isTest ? <span className="mt-2 inline-block rounded-md bg-sky-400/15 px-2 py-1 text-[10px] font-black uppercase text-sky-300">Test</span> : null}
+                    </div>
+                  </motion.article>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           ) : (
-            <div className="mt-6 grid min-h-[180px] place-items-center rounded-lg border border-dashed border-white/15 text-center text-white/35">Заказов в работе пока нет</div>
+            <div className="mt-7 grid min-h-[220px] place-items-center rounded-lg border border-dashed border-white/15 px-5 text-center">
+              <div><Clock3 className="mx-auto text-white/20" size={34} /><p className="mt-4 text-lg font-black text-white/45">Заказов в работе пока нет</p></div>
+            </div>
           )}
         </section>
 
-        <section className="relative overflow-hidden bg-[#FB670A] p-5 text-[#121214] sm:p-8 lg:p-10" aria-labelledby="display-ready">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, #fff 0 2px, transparent 2px)", backgroundSize: "26px 26px" }} />
-          <div className="relative flex items-center justify-between gap-4">
-            <h2 id="display-ready" className="flex items-center gap-3 text-2xl font-black uppercase sm:text-3xl"><BellRing /> Готово</h2>
-            <span className="grid h-11 min-w-11 place-items-center rounded-full bg-[#121214] px-3 font-black text-white">{ready.length}</span>
+        <section className="relative bg-[#171719] p-5 sm:p-8 lg:p-10" aria-labelledby="display-ready">
+          <div className="absolute inset-y-0 left-0 hidden w-1 bg-[#FB670A] lg:block" aria-hidden="true" />
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase text-[#FF9A5C]">Можно забирать</p>
+              <h2 id="display-ready" className="mt-2 flex items-center gap-3 text-3xl font-black uppercase sm:text-4xl">
+                <BellRing className="text-[#FB670A]" /> Готово
+              </h2>
+            </div>
+            <span className="grid h-12 min-w-12 place-items-center rounded-full bg-[#FB670A] px-3 text-xl font-black text-white">{ready.length}</span>
           </div>
           {ready.length ? (
-            <div className="relative mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {ready.map((order) => (
-                <article key={order.id} className="flex min-h-[150px] items-center gap-4 rounded-lg border-2 border-black/15 bg-white p-4 shadow-[0_18px_0_rgba(18,18,20,0.12)] sm:p-5">
-                  <GuestAvatar order={order} large />
-                  <div className="min-w-0">
-                    <strong className="block text-4xl font-black leading-none tabular-nums sm:text-5xl">{order.displayNumber}</strong>
-                    <p className="mt-3 truncate text-lg font-black sm:text-xl">{order.publicDisplayName}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <motion.div layout className={`mt-7 grid gap-4 ${readyGrid(ready.length)}`}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {ready.map((order) => (
+                  <motion.article
+                    layout
+                    layoutId={`pickup-order-${order.id}`}
+                    key={order.id}
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.9, y: 18 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className="relative flex min-h-[160px] min-w-0 items-center gap-4 overflow-hidden rounded-lg border border-[#FB670A]/40 bg-white p-4 text-[#121214] shadow-[0_18px_48px_rgba(0,0,0,0.24)] sm:p-5"
+                  >
+                    <span className="absolute inset-y-0 left-0 w-1.5 bg-[#FB670A]" aria-hidden="true" />
+                    <GuestAvatar order={order} large />
+                    <div className="min-w-0">
+                      <strong className="block text-5xl font-black leading-none tabular-nums sm:text-6xl">{order.displayNumber}</strong>
+                      <p className="mt-3 truncate text-lg font-black sm:text-xl">{order.publicDisplayName}</p>
+                      {order.isTest ? <span className="mt-2 inline-block rounded-md bg-sky-100 px-2 py-1 text-[10px] font-black uppercase text-sky-800">Test</span> : null}
+                    </div>
+                  </motion.article>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           ) : (
-            <div className="relative mt-6 grid min-h-[240px] place-items-center rounded-lg border-2 border-dashed border-black/20 bg-white/20 text-center font-black text-black/45">Готовые заказы появятся здесь</div>
+            <div className="mt-7 grid min-h-[280px] place-items-center rounded-lg border border-dashed border-white/15 px-5 text-center">
+              <div><BellRing className="mx-auto text-[#FB670A]/45" size={38} /><p className="mt-4 text-xl font-black text-white/45">Готовые заказы появятся здесь</p></div>
+            </div>
           )}
         </section>
       </div>
+      </LayoutGroup>
     </main>
   );
 }

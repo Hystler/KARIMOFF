@@ -16,10 +16,14 @@ export type OrderActorRole = "owner" | "admin" | "manager" | "cashier" | "cook";
 export type OrderFlowModifier = {
   id: string;
   ingredientId: string | null;
-  type: "remove" | "add";
+  optionId: string | null;
+  groupName: string | null;
+  type: "remove" | "add" | "replace";
   name: string;
   quantity: number;
   unit: string;
+  priceDelta: number;
+  kitchenNote: string | null;
 };
 
 export type PublicDisplayOrder = Pick<
@@ -30,6 +34,7 @@ export type PublicDisplayOrder = Pick<
   | "publicDisplayName"
   | "publicAvatarSeed"
   | "publicAvatar"
+  | "isTest"
 >;
 
 export type OrderFlowItem = {
@@ -39,6 +44,8 @@ export type OrderFlowItem = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  itemNote: string | null;
+  configurationSnapshot: Record<string, unknown>;
   modifiers: OrderFlowModifier[];
   recipe: OrderRecipe | null;
 };
@@ -50,6 +57,7 @@ export type OrderFlowOrder = {
   locationId: string;
   locationName: string;
   createdAt: string;
+  operationalStartedAt: string | null;
   acceptedAt: string | null;
   cookingStartedAt: string | null;
   readyAt: string | null;
@@ -75,6 +83,7 @@ export type OrderFlowOrder = {
   address: string | null;
   total: number;
   assignedStaffName: string | null;
+  isTest: boolean;
   items: OrderFlowItem[];
 };
 

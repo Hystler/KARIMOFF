@@ -4,7 +4,13 @@ import { demoProducts } from "@/data/products";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
-import type { Product, ProductImage, ProductModifierOption } from "./product-types";
+import type {
+  Product,
+  ProductImage,
+  ProductModifierGroup,
+  ProductModifierGroupOption,
+  ProductModifierOption
+} from "./product-types";
 
 export const fallbackProducts: Product[] = demoProducts;
 
@@ -182,8 +188,84 @@ async function attachProductModifiers(products: Product[]): Promise<Product[]> {
   }));
 }
 
+async function attachProductModifierGroups(products: Product[]): Promise<Product[]> {
+  const database = createDatabaseServerClient();
+
+  if (!database || products.length === 0) {
+    return products;
+  }
+
+  const productIds = products.map((product) => product.id);
+  const { data: groupRows, error: groupError } = await database
+    .from("product_modifier_groups")
+    .select("id, product_id, name, selection_type, min_selections, max_selections, sort_order")
+    .in("product_id", productIds)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (groupError || !groupRows?.length) {
+    return products.map((product) => ({ ...product, modifier_groups: [] }));
+  }
+
+  const groupIds = groupRows.map((group) => String(group.id));
+  const { data: optionRows, error: optionError } = await database
+    .from("product_modifier_options")
+    .select("id, group_id, label, modifier_type, ingredient_id, replacement_ingredient_id, quantity_delta, unit, price_delta, kitchen_note, is_default, sort_order")
+    .in("group_id", groupIds)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (optionError) {
+    return products.map((product) => ({ ...product, modifier_groups: [] }));
+  }
+
+  const optionsByGroup = new Map<string, ProductModifierGroupOption[]>();
+  for (const row of optionRows ?? []) {
+    const groupId = String(row.group_id);
+    const option: ProductModifierGroupOption = {
+      id: String(row.id),
+      label: String(row.label ?? ""),
+      modifier_type:
+        row.modifier_type === "remove" || row.modifier_type === "replace"
+          ? row.modifier_type
+          : "add",
+      ingredient_id: row.ingredient_id ? String(row.ingredient_id) : null,
+      replacement_ingredient_id: row.replacement_ingredient_id
+        ? String(row.replacement_ingredient_id)
+        : null,
+      quantity_delta: Number(row.quantity_delta ?? 0),
+      unit: row.unit === "ml" || row.unit === "pcs" ? row.unit : "g",
+      price_delta: Number(row.price_delta ?? 0),
+      kitchen_note: typeof row.kitchen_note === "string" ? row.kitchen_note : null,
+      is_default: Boolean(row.is_default),
+      sort_order: Number(row.sort_order ?? 100)
+    };
+    optionsByGroup.set(groupId, [...(optionsByGroup.get(groupId) ?? []), option]);
+  }
+
+  const groupsByProduct = new Map<string, ProductModifierGroup[]>();
+  for (const row of groupRows) {
+    const productId = String(row.product_id);
+    const group: ProductModifierGroup = {
+      id: String(row.id),
+      name: String(row.name ?? ""),
+      selection_type: row.selection_type === "single" ? "single" : "multi",
+      min_selections: Number(row.min_selections ?? 0),
+      max_selections: Number(row.max_selections ?? 1),
+      sort_order: Number(row.sort_order ?? 100),
+      options: optionsByGroup.get(String(row.id)) ?? []
+    };
+    groupsByProduct.set(productId, [...(groupsByProduct.get(productId) ?? []), group]);
+  }
+
+  return products.map((product) => ({
+    ...product,
+    modifier_groups: groupsByProduct.get(product.id) ?? []
+  }));
+}
+
 async function attachProductDetails(products: Product[]) {
-  return attachProductModifiers(await attachProductImages(products));
+  return attachProductModifierGroups(await attachProductModifiers(await attachProductImages(products)));
 }
 
 export async function getActiveProducts(limit = 4): Promise<Product[]> {

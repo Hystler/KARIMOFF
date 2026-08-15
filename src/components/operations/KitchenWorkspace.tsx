@@ -19,12 +19,12 @@ import {
   X
 } from "lucide-react";
 import {
-  initialKitchenActionState,
   transitionKitchenOrderAction
 } from "@/app/kitchen/actions";
+import { initialKitchenActionState } from "@/lib/order-flow/kitchen-action-state";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
-import { classifySla, elapsedSeconds, formatElapsed } from "@/lib/order-flow/sla";
+import { classifySla, formatElapsed, operationalElapsedSeconds } from "@/lib/order-flow/sla";
 import {
   type KitchenOperationsMetrics,
   orderSourceLabel,
@@ -74,6 +74,21 @@ function stationLabel(value: string) {
   return value;
 }
 
+function modifierPrefix(type: OrderFlowItem["modifiers"][number]["type"]) {
+  if (type === "remove") return "БЕЗ";
+  if (type === "replace") return "ЗАМЕНА";
+  return "+";
+}
+
+function modifierLabel(modifier: OrderFlowItem["modifiers"][number]) {
+  const cleaned = modifier.name
+    .replace(/^\s*без\s+/i, "")
+    .replace(/^\s*\+\s*/, "")
+    .replace(/^\s*замена\s*:?\s*/i, "")
+    .trim();
+  return `${modifierPrefix(modifier.type)} ${cleaned || modifier.name}`;
+}
+
 function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => void }) {
   const recipe = item.recipe;
   return (
@@ -91,17 +106,24 @@ function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => v
         </header>
 
         {item.modifiers.length ? (
-          <section className="mt-5 rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <h3 className="flex items-center gap-2 text-sm font-black text-amber-900"><AlertTriangle size={18} /> Изменения гостя</h3>
-            <ul className="mt-3 grid gap-2 text-sm font-bold text-amber-900">
+          <section className="mt-5 rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
+            <h3 className="flex items-center gap-2 text-sm font-black text-amber-950"><AlertTriangle size={18} /> Изменения гостя</h3>
+            <ul className="mt-3 grid gap-2">
               {item.modifiers.map((modifier) => (
-                <li key={modifier.id}>
-                  {modifier.type === "remove" ? "БЕЗ" : "ДОБАВИТЬ"}: {modifier.name}
-                  {modifier.type === "add" ? ` · ${modifier.quantity * item.quantity} ${modifier.unit}` : ""}
+                <li key={modifier.id} className={`rounded-md px-3 py-2 text-base font-black uppercase ${modifier.type === "remove" ? "bg-amber-200 text-amber-950" : modifier.type === "replace" ? "bg-sky-100 text-sky-900" : "bg-emerald-100 text-emerald-900"}`}>
+                  {modifierLabel(modifier)}
+                  {modifier.type !== "remove" && modifier.quantity > 0 ? ` · ${modifier.quantity * item.quantity} ${modifier.unit}` : ""}
+                  {modifier.kitchenNote ? <span className="mt-1 block text-xs normal-case opacity-70">{modifier.kitchenNote}</span> : null}
                 </li>
               ))}
             </ul>
           </section>
+        ) : null}
+
+        {item.itemNote ? (
+          <p className="mt-4 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-black leading-6 text-violet-950">
+            К позиции: {item.itemNote}
+          </p>
         ) : null}
 
         {recipe?.allergens.length ? (
@@ -111,8 +133,9 @@ function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => v
         ) : null}
 
         {recipe?.lines.length ? (
-          <ol className="mt-6 grid gap-3">
-            {recipe.lines.map((line, index) => {
+          <>
+            <ol className="mt-6 grid gap-3">
+              {recipe.lines.map((line, index) => {
               const removed = item.modifiers.some(
                 (modifier) => modifier.type === "remove" && modifier.ingredientId === line.ingredientId
               );
@@ -128,7 +151,7 @@ function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => v
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <h3 className={`font-black ${removed ? "line-through" : ""}`}>{line.name}</h3>
                         <strong className="tabular-nums text-[#C94F05]">
-                          {line.quantity * item.quantity} {line.unit}
+                          {removed ? "НЕ ДОБАВЛЯТЬ" : `${line.quantity * item.quantity} ${line.unit}`}
                         </strong>
                       </div>
                       {line.step ? <p className="mt-2 text-sm font-semibold leading-6 text-black/70">{line.step}</p> : null}
@@ -141,8 +164,22 @@ function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => v
                   </div>
                 </li>
               );
-            })}
-          </ol>
+              })}
+            </ol>
+            {item.modifiers.some((modifier) => modifier.type === "add" || modifier.type === "replace") ? (
+              <section className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <h3 className="text-sm font-black uppercase text-emerald-950">Добавить при сборке</h3>
+                <div className="mt-3 grid gap-2">
+                  {item.modifiers.filter((modifier) => modifier.type === "add" || modifier.type === "replace").map((modifier) => (
+                    <p key={modifier.id} className="rounded-md bg-white px-3 py-2 font-black text-emerald-950">
+                      {modifierLabel(modifier)}
+                      {modifier.quantity > 0 ? ` · ${modifier.quantity * item.quantity} ${modifier.unit}` : ""}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </>
         ) : (
           <div className="mt-6 rounded-lg border border-dashed border-black/15 bg-white p-8 text-center">
             <CookingPot className="mx-auto text-black/25" size={32} />
@@ -169,9 +206,11 @@ function OrderTicket({
   onRecipe: (item: OrderFlowItem) => void;
 }) {
   const [state, action, pending] = useActionState(transitionKitchenOrderAction, initialKitchenActionState);
-  const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt ? order.requestedAt : order.createdAt;
-  const elapsed = elapsedSeconds(anchor, now);
-  const tone = classifySla(elapsed, sla);
+  const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt
+    ? order.requestedAt
+    : order.operationalStartedAt;
+  const elapsed = operationalElapsedSeconds(anchor, now);
+  const tone = elapsed === null ? "normal" : classifySla(elapsed, sla);
   const target = nextStatus[order.kitchenStatus];
   const canAdvance = target ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
   const toneClasses = tone === "critical"
@@ -189,12 +228,13 @@ function OrderTicket({
           <div className="flex flex-wrap items-center gap-2">
             <strong className="text-2xl font-black tabular-nums">{order.displayNumber}</strong>
             <span className="rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-black uppercase text-black/55">{orderSourceLabel(order.source)}</span>
+            {order.isTest ? <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-black uppercase text-sky-800">Test</span> : null}
           </div>
           <p className="mt-1 truncate text-base font-bold text-black/65">{order.publicDisplayName}</p>
         </div>
         <div className={`shrink-0 rounded-lg px-3 py-2 text-right ${tone === "critical" ? "bg-red-600 text-white" : tone === "warning" ? "bg-amber-400 text-black" : "bg-[#121214] text-white"}`}>
           <p className="text-[10px] font-black uppercase opacity-70">Время</p>
-          <p className="mt-0.5 font-mono text-lg font-black tabular-nums">{formatElapsed(elapsed)}</p>
+          <p className="mt-0.5 font-mono text-lg font-black tabular-nums">{elapsed === null ? "—" : formatElapsed(elapsed)}</p>
         </div>
       </header>
 
@@ -223,10 +263,11 @@ function OrderTicket({
               <strong className="shrink-0 text-lg tabular-nums text-[#D95405]">×{item.quantity}</strong>
             </div>
             {item.modifiers.map((modifier) => (
-              <p key={modifier.id} className={`mt-2 text-xs font-black ${modifier.type === "remove" ? "text-amber-800" : "text-[#C94F05]"}`}>
-                {modifier.type === "remove" ? "БЕЗ" : "ДОБАВИТЬ"}: {modifier.name}
+              <p key={modifier.id} className={`mt-2 rounded-md px-2.5 py-2 text-sm font-black uppercase leading-5 ${modifier.type === "remove" ? "bg-amber-100 text-amber-950" : modifier.type === "replace" ? "bg-sky-100 text-sky-900" : "bg-emerald-100 text-emerald-900"}`}>
+                {modifierLabel(modifier)}
               </p>
             ))}
+            {item.itemNote ? <p className="mt-2 rounded-md bg-violet-100 px-2.5 py-2 text-sm font-black leading-5 text-violet-950">К позиции: {item.itemNote}</p> : null}
             <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-black/40"><PanelRightClose size={13} /> Открыть техкарту</p>
           </button>
         ))}
@@ -306,14 +347,21 @@ export function KitchenWorkspace({
     };
   }, []);
   const active = orders.filter((order) => order.kitchenStatus !== "ready");
-  const overdue = active.filter((order) => classifySla(elapsedSeconds(order.requestedAt || order.createdAt, now), sla) === "critical").length;
-  const longest = active.reduce((value, order) => Math.max(value, elapsedSeconds(order.requestedAt || order.createdAt, now)), 0);
+  const elapsedValues = active.flatMap((order) => {
+    const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt
+      ? order.requestedAt
+      : order.operationalStartedAt;
+    const elapsed = operationalElapsedSeconds(anchor, now);
+    return elapsed === null ? [] : [elapsed];
+  });
+  const overdue = elapsedValues.filter((elapsed) => classifySla(elapsed, sla) === "critical").length;
+  const longest = elapsedValues.length ? Math.max(...elapsedValues) : null;
   const stats = [
     { label: "Активные", value: active.length, icon: CircleDot },
     { label: "Готовятся", value: orders.filter((order) => order.kitchenStatus === "cooking").length, icon: CookingPot },
     { label: "К выдаче", value: orders.filter((order) => order.kitchenStatus === "ready").length, icon: CheckCircle2 },
     { label: "Просрочено", value: overdue, icon: AlertTriangle },
-    { label: "Самый долгий", value: formatElapsed(longest), icon: TimerReset },
+    { label: "Самый долгий", value: longest === null ? "—" : formatElapsed(longest), icon: TimerReset },
     { label: "Средняя готовка", value: metrics.averageCookingSeconds === null ? "—" : formatElapsed(metrics.averageCookingSeconds), icon: ChefHat },
     { label: "За час", value: metrics.throughputLastHour, icon: CheckCircle2 }
   ];
