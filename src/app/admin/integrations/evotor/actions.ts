@@ -1,7 +1,7 @@
 "use server";
 
 import { after } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
@@ -41,6 +41,7 @@ async function queueAdminSync(formData: FormData, syncType: "manual" | "check" |
   });
   after(async () => {
     await processEvotorSyncEvent(eventId);
+    revalidateTag("karimoff-analytics", { expire: 0 });
     revalidatePath("/admin/integrations/evotor");
     revalidatePath("/admin/analytics/sales");
   });

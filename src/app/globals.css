@@ -558,6 +558,8 @@ button:not(:disabled),
     @apply inline-flex items-center gap-2 text-xs font-bold text-karimoff-muted;
   }
 
+  .analytics-heading-actions > span.is-stale { @apply text-amber-700; }
+
   .analytics-subnav {
     @apply mb-4 flex gap-1 overflow-x-auto border-b border-black/10 scrollbar-hide;
   }
@@ -1031,6 +1033,202 @@ button:not(:disabled),
 
   .analytics-error-state h1 { @apply text-2xl font-black text-karimoff-black; }
   .analytics-error-state p { @apply mb-2 text-sm text-karimoff-muted; }
+
+  .analytics-filter-group {
+    @apply m-0 min-w-0 border-0 p-0;
+  }
+
+  .analytics-filter-group-wide {
+    @apply sm:col-span-2 lg:col-span-3;
+  }
+
+  .analytics-filter-group legend,
+  .analytics-time-filter > span {
+    @apply mb-2 flex items-center gap-1.5 text-[11px] font-black text-karimoff-muted;
+  }
+
+  .analytics-filter-group legend span { @apply font-semibold normal-case; }
+
+  .analytics-check-grid {
+    @apply flex flex-wrap gap-1.5;
+  }
+
+  .analytics-check-grid button,
+  .analytics-weekday-filter button {
+    @apply min-h-9 rounded-md border border-karimoff-line bg-white px-3 text-xs font-bold text-karimoff-muted transition hover:border-karimoff-orange hover:text-karimoff-black;
+  }
+
+  .analytics-check-grid button.is-active,
+  .analytics-weekday-filter button.is-active {
+    @apply border-karimoff-orange bg-orange-50 text-karimoff-orange;
+  }
+
+  .analytics-weekday-filter { @apply grid grid-cols-7 gap-1.5; }
+  .analytics-weekday-filter button { @apply min-w-0 px-1; }
+
+  .analytics-time-filter > div { @apply flex items-center gap-2; }
+  .analytics-time-filter select { @apply min-h-10 flex-1 rounded-lg border border-karimoff-line bg-white px-3 text-sm font-bold outline-none disabled:opacity-45; }
+
+  .analytics-active-filters {
+    @apply flex flex-wrap items-center gap-1.5 border-t border-black/[0.06] px-1 pt-2;
+  }
+
+  .analytics-active-filters > button {
+    @apply inline-flex min-h-8 items-center gap-1.5 rounded-full bg-karimoff-soft px-2.5 text-[11px] font-black text-karimoff-black transition hover:bg-orange-50 hover:text-karimoff-orange;
+  }
+
+  .analytics-active-filters > button.analytics-active-reset { @apply bg-transparent text-karimoff-muted underline decoration-black/20 underline-offset-4; }
+
+  .analytics-insight-strip {
+    @apply mt-5 border-y border-black/[0.08] bg-[#171717] px-5 py-5 text-white sm:px-6;
+  }
+
+  .analytics-insight-strip > header { @apply mb-4 flex items-center gap-3; }
+  .analytics-insight-strip > header svg { @apply text-karimoff-orange; }
+  .analytics-insight-strip h2 { @apply mt-0.5 text-lg font-black; }
+  .analytics-insight-strip .admin-eyebrow { @apply text-white/45; }
+  .analytics-insight-strip > div { @apply grid gap-px overflow-hidden rounded-lg bg-white/10 lg:grid-cols-2 2xl:grid-cols-4; }
+  .analytics-insight-strip > div > a { @apply relative grid min-h-[104px] gap-1 bg-[#1D1D1D] px-4 py-4 pr-10 transition hover:bg-[#252525]; }
+  .analytics-insight-strip > div > a strong { @apply text-sm font-black; }
+  .analytics-insight-strip > div > a span { @apply text-xs leading-relaxed text-white/55; }
+  .analytics-insight-strip > div > a > svg { @apply absolute right-4 top-4 text-white/35; }
+  .analytics-insight-strip > div > a.is-positive { @apply border-l-2 border-emerald-500; }
+  .analytics-insight-strip > div > a.is-negative { @apply border-l-2 border-red-500; }
+  .analytics-insight-strip > div > a.is-neutral { @apply border-l-2 border-karimoff-orange; }
+
+  .analytics-context-badge { @apply inline-flex w-fit rounded-full bg-orange-50 px-3 py-1.5 text-[10px] font-black uppercase text-karimoff-orange; }
+
+  .analytics-category-grid {
+    @apply grid gap-2 p-3 sm:grid-cols-2 sm:p-5 xl:grid-cols-4 2xl:grid-cols-5;
+  }
+
+  .analytics-category-grid > a {
+    @apply relative min-h-[190px] overflow-hidden rounded-lg border border-black/[0.08] bg-[#FBF9F6] p-4 transition hover:-translate-y-0.5 hover:border-karimoff-orange hover:shadow-[0_12px_26px_rgba(18,18,20,0.08)];
+  }
+
+  .analytics-category-grid > a.is-active { @apply border-karimoff-orange bg-orange-50; }
+  .analytics-category-grid > a > div:first-child { @apply flex items-start justify-between gap-3; }
+  .analytics-category-grid > a > div:first-child strong { @apply line-clamp-2 text-sm font-black; }
+  .analytics-category-grid > a > div:first-child span { @apply shrink-0 text-[10px] font-black; }
+  .analytics-category-grid > a > b { @apply relative z-10 mt-4 block text-xl font-black tabular-nums; }
+  .analytics-category-grid > a > svg { @apply absolute inset-x-0 top-16 h-16 w-full opacity-50; }
+  .analytics-category-grid > a > svg polyline { fill: none; stroke: #fb670a; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .analytics-category-grid dl { @apply absolute inset-x-4 bottom-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-black/[0.07] pt-3; }
+  .analytics-category-grid dl div { @apply flex items-center justify-between gap-2; }
+  .analytics-category-grid dt { @apply text-[9px] font-bold text-karimoff-muted; }
+  .analytics-category-grid dd { @apply text-[10px] font-black tabular-nums; }
+
+  .analytics-product-profile {
+    @apply mt-5 grid gap-5 border-y border-black/[0.08] bg-[#F4F0EA] px-5 py-6 sm:px-6 xl:grid-cols-[minmax(220px,0.7fr)_2fr] xl:items-center;
+  }
+  .analytics-product-profile > div { @apply relative pl-10; }
+  .analytics-product-profile > div > svg { @apply absolute left-0 top-0 text-karimoff-orange; }
+  .analytics-product-profile > div > span { @apply text-[10px] font-black uppercase text-karimoff-muted; }
+  .analytics-product-profile h2 { @apply mt-1 text-2xl font-black; }
+  .analytics-product-profile p { @apply mt-1 text-xs text-karimoff-muted; }
+  .analytics-product-profile dl { @apply grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-black/[0.08] md:grid-cols-3; }
+  .analytics-product-profile dl div { @apply grid gap-1 bg-white px-4 py-3; }
+  .analytics-product-profile dt { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-product-profile dd { @apply text-sm font-black tabular-nums; }
+
+  .analytics-intelligence-columns { @apply items-stretch; }
+  .analytics-intelligence-columns > .analytics-panel { @apply h-auto; }
+
+  .analytics-factor-grid { @apply grid grid-cols-[1fr_auto_1fr] items-center gap-3 p-5 sm:p-6; }
+  .analytics-factor-grid article { @apply grid min-w-0 gap-2; }
+  .analytics-factor-grid article > span { @apply text-xs font-bold text-karimoff-muted; }
+  .analytics-factor-grid article > strong { @apply text-xl font-black tabular-nums sm:text-2xl; }
+  .analytics-factor-grid article > span.is-positive,
+  .analytics-factor-grid article > span.is-negative,
+  .analytics-factor-grid article > span.is-neutral { @apply text-[11px] font-black; }
+  .analytics-factor-grid article small { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-factor-sign { @apply text-xl font-black text-black/20; }
+  .analytics-method-note { @apply flex items-start gap-2 border-t border-black/[0.06] px-5 py-3 text-[10px] leading-relaxed text-karimoff-muted sm:px-6; }
+  .analytics-method-note svg { @apply mt-0.5 shrink-0; }
+
+  .analytics-bridge { @apply divide-y divide-black/[0.07] px-5 py-3 sm:px-6; }
+  .analytics-bridge > div { @apply flex items-center justify-between gap-4 py-3 text-sm; }
+  .analytics-bridge > div span { @apply text-karimoff-muted; }
+  .analytics-bridge > div strong { @apply text-right font-black tabular-nums; }
+  .analytics-bridge > div.is-total { @apply mt-1 border-t-2 border-black py-4 text-base; }
+  .analytics-bridge > div.is-total span { @apply font-black text-karimoff-black; }
+
+  .analytics-heading-tools { @apply flex items-center gap-2; }
+  .analytics-icon-button { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-karimoff-line bg-white text-karimoff-muted transition hover:border-karimoff-orange hover:text-karimoff-orange; }
+  .analytics-export-link { @apply inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-karimoff-line bg-white px-3 text-[10px] font-black text-karimoff-muted transition hover:border-karimoff-orange hover:text-karimoff-orange; }
+  .analytics-expanded-panel:fullscreen { @apply overflow-auto bg-[#F7F5F2] p-6; }
+  .analytics-expanded-panel:fullscreen .analytics-demand-chart svg { height: calc(100vh - 190px); }
+
+  .analytics-demand-chart { @apply px-3 pb-4 pt-5 sm:px-5; }
+  .analytics-demand-chart svg { @apply h-[310px] w-full overflow-visible; }
+  .analytics-demand-chart svg line { stroke: rgba(18,18,20,0.08); stroke-width: 1; }
+  .analytics-demand-chart svg polyline { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .analytics-demand-chart svg text { fill: #77736e; font-size: 10px; font-weight: 700; }
+  .analytics-demand-chart svg circle { stroke: white; stroke-width: 2; transition: r 160ms ease; }
+  .analytics-demand-chart svg a:hover circle { r: 7; }
+  .analytics-demand-legend { @apply flex flex-wrap gap-4 border-t border-black/[0.06] px-2 pt-3 text-[11px] font-bold text-karimoff-muted; }
+  .analytics-demand-legend span { @apply inline-flex items-center gap-2; }
+  .analytics-demand-legend i { @apply h-2 w-2 rounded-full; }
+
+  .analytics-calendar-wrap { @apply p-4 sm:p-5; }
+  .analytics-calendar-head,
+  .analytics-calendar-grid { @apply grid grid-cols-7 gap-1.5; }
+  .analytics-calendar-head { @apply mb-2 text-center text-[9px] font-black uppercase text-karimoff-muted; }
+  .analytics-calendar-grid > a { @apply flex aspect-square min-w-0 flex-col justify-between rounded-md p-2 text-karimoff-black transition hover:outline hover:outline-2 hover:outline-karimoff-orange focus:outline focus:outline-2 focus:outline-karimoff-orange; }
+  .analytics-calendar-grid > a strong { @apply text-xs font-black; }
+  .analytics-calendar-grid > a span { @apply truncate text-[8px] font-black tabular-nums; }
+
+  .analytics-dayparts { @apply divide-y divide-black/[0.07] px-5 py-3 sm:px-6; }
+  .analytics-dayparts > a { @apply grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 py-3 transition hover:text-karimoff-orange; }
+  .analytics-dayparts > a > div { @apply flex items-baseline gap-2; }
+  .analytics-dayparts > a > div strong { @apply text-sm font-black; }
+  .analytics-dayparts > a > div span,
+  .analytics-dayparts > a > span { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-dayparts > a > strong { @apply font-black tabular-nums; }
+
+  .analytics-treemap { @apply flex min-h-[360px] flex-wrap content-stretch gap-2 p-3 sm:p-5; }
+  .analytics-treemap > a { @apply flex min-h-[116px] min-w-[150px] flex-grow flex-col justify-end overflow-hidden rounded-lg p-4 transition hover:-translate-y-0.5 hover:shadow-lg; }
+  .analytics-treemap > a span { @apply mb-auto truncate text-[9px] font-black uppercase opacity-60; }
+  .analytics-treemap > a strong { @apply line-clamp-2 text-sm font-black leading-tight; }
+  .analytics-treemap > a b { @apply mt-2 text-lg font-black tabular-nums; }
+  .analytics-treemap > a small { @apply mt-1 text-[9px] font-bold opacity-65; }
+
+  .analytics-pareto-summary { @apply grid grid-cols-3 gap-px overflow-hidden border-b border-black/[0.07] bg-black/[0.07]; }
+  .analytics-pareto-summary > div { @apply grid justify-items-center gap-1 bg-[#FBF9F6] px-2 py-4 text-center; }
+  .analytics-pareto-summary span,
+  .analytics-pareto-summary small { @apply text-[9px] font-bold text-karimoff-muted; }
+  .analytics-pareto-summary strong { @apply text-xl font-black; }
+  .analytics-pareto-list { @apply grid gap-2 px-5 py-4 sm:px-6; }
+  .analytics-pareto-list > div { @apply grid grid-cols-[28px_minmax(90px,0.9fr)_minmax(80px,1fr)_45px] items-center gap-2 text-xs; }
+  .analytics-pareto-list > div > span { @apply flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-black; }
+  .analytics-pareto-list .abc-A { @apply bg-orange-100 text-orange-800; }
+  .analytics-pareto-list .abc-B { @apply bg-blue-50 text-blue-800; }
+  .analytics-pareto-list .abc-C { @apply bg-black/[0.06] text-karimoff-muted; }
+  .analytics-pareto-list > div > strong { @apply truncate text-[11px]; }
+  .analytics-pareto-list > div > div { @apply h-1.5 overflow-hidden rounded-full bg-karimoff-soft; }
+  .analytics-pareto-list > div > div i { @apply block h-full rounded-full bg-karimoff-orange; }
+  .analytics-pareto-list em { @apply text-right text-[10px] font-black not-italic tabular-nums; }
+
+  .analytics-basket-size { @apply grid gap-4 px-5 py-5 sm:px-6; }
+  .analytics-basket-size > div { @apply grid grid-cols-[88px_minmax(80px,1fr)_auto] items-center gap-3; }
+  .analytics-basket-size > div > strong { @apply text-xs font-black; }
+  .analytics-basket-size > div > div { @apply h-3 overflow-hidden rounded-full bg-karimoff-soft; }
+  .analytics-basket-size > div > div i { @apply block h-full rounded-full bg-karimoff-orange; }
+  .analytics-basket-size > div > span { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-basket-size > div > b { @apply col-start-2 text-[10px] font-black text-karimoff-muted; }
+
+  .analytics-pair-grid { @apply grid gap-2 p-3 sm:grid-cols-2 sm:p-5 xl:grid-cols-4; }
+  .analytics-pair-grid article { @apply grid min-h-[180px] content-start gap-4 rounded-lg border border-black/[0.08] bg-[#FBF9F6] p-4; }
+  .analytics-pair-grid article > svg { @apply text-karimoff-orange; }
+  .analytics-pair-grid article > div { @apply grid gap-1 text-sm; }
+  .analytics-pair-grid article > div strong { @apply line-clamp-1 font-black; }
+  .analytics-pair-grid article > div span { @apply text-[10px] font-black text-karimoff-muted; }
+  .analytics-pair-grid dl { @apply mt-auto grid grid-cols-3 gap-2 border-t border-black/[0.07] pt-3; }
+  .analytics-pair-grid dl div { @apply grid gap-1; }
+  .analytics-pair-grid dt { @apply text-[8px] font-bold text-karimoff-muted; }
+  .analytics-pair-grid dd { @apply text-[10px] font-black tabular-nums; }
+
+  .analytics-panel-note { @apply border-b border-black/[0.06] bg-amber-50 px-5 py-3 text-[10px] font-semibold leading-relaxed text-amber-900 sm:px-6; }
 }
 
 .admin-workspace .admin-page {
@@ -1085,6 +1283,33 @@ button:not(:disabled),
   .analytics-filter-sheet-heading {
     display: flex;
   }
+
+  .analytics-filter-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .analytics-select-control:first-child { min-width: 0; }
+  .analytics-select-control:nth-child(2) { grid-column: 1 / -1; }
+  .analytics-custom-range { grid-column: 1 / -1; width: 100%; }
+  .analytics-custom-range label { min-width: 0; flex: 1; }
+  .analytics-custom-range input { min-width: 0; width: 100%; }
+  .analytics-more-filters { grid-column: 2; grid-row: 1; }
+  .analytics-search { grid-column: 1 / -1; min-width: 0; }
+  .analytics-filter-loading { grid-column: 1 / -1; margin-left: 0; }
+  .analytics-active-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .analytics-active-filters > button { flex-shrink: 0; }
+  .analytics-weekday-filter { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .analytics-factor-grid { grid-template-columns: 1fr; }
+  .analytics-factor-sign { display: none; }
+  .analytics-heading-tools { width: 100%; justify-content: space-between; }
+  .analytics-demand-chart { overflow-x: auto; }
+  .analytics-demand-chart svg { min-width: 720px; }
+  .analytics-calendar-grid > a { min-height: 52px; aspect-ratio: auto; padding: 6px; }
+  .analytics-calendar-grid > a span { display: none; }
+  .analytics-pareto-list > div { grid-template-columns: 28px minmax(72px, .8fr) minmax(64px, 1fr) 42px; }
+  .analytics-basket-size > div { grid-template-columns: 76px minmax(60px, 1fr) auto; }
+  .analytics-product-profile dl { grid-template-columns: 1fr 1fr; }
 }
 
 @layer base {

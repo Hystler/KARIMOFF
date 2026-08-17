@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { queueDueEvotorSyncs } from "@/lib/integrations/evotor/repository";
 import { processPendingEvotorSyncEvents } from "@/lib/integrations/evotor/sync";
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     requestedBy: "timeweb-scheduler"
   });
   const results = await processPendingEvotorSyncEvents(parsed.data.limit);
+  if (results.length) revalidateTag("karimoff-analytics", { expire: 0 });
 
   return NextResponse.json({
     ok: true,

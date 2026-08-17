@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Check, Filter, LoaderCircle, RotateCcw, X } from "lucide-react";
+import { CalendarDays, Check, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { channelLabels } from "@/lib/analytics/channels";
@@ -18,7 +18,12 @@ const periods = [
   ["this_month", "Этот месяц"],
   ["last_month", "Прошлый месяц"],
   ["this_quarter", "Этот квартал"],
+  ["last_quarter", "Прошлый квартал"],
   ["custom", "Свой период"]
+] as const;
+
+const weekdays = [
+  [1, "Пн"], [2, "Вт"], [3, "Ср"], [4, "Чт"], [5, "Пт"], [6, "Сб"], [7, "Вс"]
 ] as const;
 
 const comparisons = [
@@ -54,8 +59,21 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
     startTransition(() => router.push(`${pathname}?${params.toString()}`, { scroll: false }));
   };
 
+  const toggleRepeated = (key: "category" | "weekday", value: string, maximum = 7) => {
+    const params = analyticsFiltersToParams(filters);
+    const current = params.getAll(key);
+    const next = current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value].slice(0, maximum);
+    params.delete(key);
+    for (const item of next) params.append(key, item);
+    params.delete("page");
+    startTransition(() => router.push(`${pathname}?${params.toString()}`, { scroll: false }));
+  };
+
   const hasDetailedFilters = Boolean(
-    filters.location || filters.terminal || filters.employee || filters.payment || filters.category || filters.product
+    filters.location || filters.terminal || filters.employee || filters.payment || filters.categories.length ||
+    filters.product || filters.weekdays.length || filters.hourFrom !== null
   );
   const visibleComparisons = comparisons.filter(
     ([value]) => value !== "previous_year" || options.hasPreviousYear || filters.comparison === "previous_year"
@@ -151,13 +169,75 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
               options={options.payments.map((item) => ({ ...item, label: paymentMethodLabels[item.value] ?? "Не определено" }))}
               onChange={(value) => navigate({ payment: value })}
             />
-            <FilterSelect label="Категория" value={filters.category} options={options.categories} onChange={(value) => navigate({ category: value })} />
+            <fieldset className="analytics-filter-group analytics-filter-group-wide">
+              <legend><Tags size={14} />Категории <span>до 5</span></legend>
+              <div className="analytics-check-grid">
+                {options.categories.map((option) => (
+                  <button
+                    type="button"
+                    key={option.value}
+                    aria-pressed={filters.categories.includes(option.value)}
+                    className={filters.categories.includes(option.value) ? "is-active" : ""}
+                    onClick={() => toggleRepeated("category", option.value, 5)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <FilterSelect label="Товар" value={filters.product} options={options.products} onChange={(value) => navigate({ product: value })} />
+            <fieldset className="analytics-filter-group analytics-filter-group-wide">
+              <legend>Дни недели</legend>
+              <div className="analytics-weekday-filter">
+                {weekdays.map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    aria-pressed={filters.weekdays.includes(value)}
+                    className={filters.weekdays.includes(value) ? "is-active" : ""}
+                    onClick={() => toggleRepeated("weekday", String(value))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <div className="analytics-time-filter analytics-filter-group-wide">
+              <span><Clock3 size={14} />Время внутри суток</span>
+              <div>
+                <select
+                  aria-label="Время с"
+                  value={filters.hourFrom ?? ""}
+                  onChange={(event) => {
+                    const from = event.target.value;
+                    const currentTo = filters.hourTo ?? Math.min(24, Number(from) + 1);
+                    navigate({ hourFrom: from || null, hourTo: from ? String(Math.max(Number(from) + 1, currentTo)) : null });
+                  }}
+                >
+                  <option value="">С любого</option>
+                  {Array.from({ length: 24 }, (_, hour) => <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>)}
+                </select>
+                <span>—</span>
+                <select
+                  aria-label="Время до"
+                  value={filters.hourTo ?? ""}
+                  disabled={filters.hourFrom === null}
+                  onChange={(event) => navigate({ hourTo: event.target.value || null })}
+                >
+                  {Array.from({ length: 24 - (filters.hourFrom ?? 0) }, (_, index) => (filters.hourFrom ?? 0) + index + 1).map((hour) => (
+                    <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             {hasDetailedFilters ? (
               <button
                 type="button"
                 className="analytics-reset-button"
-                onClick={() => navigate({ location: null, terminal: null, employee: null, payment: null, category: null, product: null })}
+                onClick={() => navigate({
+                  location: null, terminal: null, employee: null, payment: null, category: null,
+                  product: null, weekday: null, hourFrom: null, hourTo: null
+                })}
               >
                 <RotateCcw size={16} />
                 Сбросить фильтры
@@ -192,8 +272,40 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
           </span>
         ) : null}
       </div>
+      {hasDetailedFilters ? (
+        <div className="analytics-active-filters" aria-label="Активные фильтры">
+          {filters.categories.map((category) => (
+            <button type="button" key={category} onClick={() => toggleRepeated("category", category, 5)}>
+              {category}<X size={13} />
+            </button>
+          ))}
+          {filters.weekdays.map((weekday) => (
+            <button type="button" key={weekday} onClick={() => toggleRepeated("weekday", String(weekday))}>
+              {weekdays.find(([value]) => value === weekday)?.[1]}<X size={13} />
+            </button>
+          ))}
+          {filters.hourFrom !== null && filters.hourTo !== null ? (
+            <button type="button" onClick={() => navigate({ hourFrom: null, hourTo: null })}>
+              {String(filters.hourFrom).padStart(2, "0")}:00–{String(filters.hourTo).padStart(2, "0")}:00<X size={13} />
+            </button>
+          ) : null}
+          {filters.location ? <FilterChip label={options.locations.find((item) => item.value === filters.location)?.label ?? "Точка"} onRemove={() => navigate({ location: null, terminal: null })} /> : null}
+          {filters.terminal ? <FilterChip label={options.terminals.find((item) => item.value === filters.terminal)?.label ?? "Касса"} onRemove={() => navigate({ terminal: null })} /> : null}
+          {filters.employee ? <FilterChip label={options.employees.find((item) => item.value === filters.employee)?.label ?? "Сотрудник"} onRemove={() => navigate({ employee: null })} /> : null}
+          {filters.payment ? <FilterChip label={paymentMethodLabels[filters.payment] ?? "Способ оплаты"} onRemove={() => navigate({ payment: null })} /> : null}
+          {filters.product ? <FilterChip label={options.products.find((item) => item.value === filters.product)?.label ?? "Товар"} onRemove={() => navigate({ product: null })} /> : null}
+          <button type="button" className="analytics-active-reset" onClick={() => navigate({
+            location: null, terminal: null, employee: null, payment: null, category: null,
+            product: null, weekday: null, hourFrom: null, hourTo: null
+          })}>Сбросить всё</button>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return <button type="button" onClick={onRemove}>{label}<X size={13} /></button>;
 }
 
 function FilterSelect({

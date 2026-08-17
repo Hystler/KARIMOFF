@@ -12,6 +12,8 @@ import type {
 } from "@/lib/analytics/types";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import { AnalyticsTrendChart } from "./AnalyticsTrendChart";
+import { AnalyticsIntelligenceHub } from "./AnalyticsIntelligenceHub";
+import { AnalyticsFullscreenButton } from "./AnalyticsFullscreenButton";
 
 const metricTabs: Array<[AnalyticsMetric, string]> = [
   ["revenue", "Выручка"],
@@ -87,7 +89,9 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
   const metricLabel = metricTabs.find(([value]) => value === dashboard.filters.metric)?.[1] ?? "Выручка";
   const maxHeat = Math.max(
     1,
-    ...dashboard.heatmap.map((cell) => Math.abs(dashboard.filters.heatmapMetric === "sales" ? cell.sales : cell.revenue))
+    ...dashboard.heatmap.map((cell) => Math.abs(
+      dashboard.filters.heatmapMetric === "sales" ? cell.sales : dashboard.filters.heatmapMetric === "items" ? cell.items : cell.revenue
+    ))
   );
   const maxWeekday = Math.max(1, ...dashboard.weekdays.map((row) => row.revenue));
 
@@ -96,14 +100,14 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
       <section className="analytics-kpi-grid" aria-label="Основные показатели">
         <KpiCard label="Выручка" value={dashboard.kpis.revenue} format={(value) => formatRub(value)} />
         <KpiCard label="Продажи / чеки" value={dashboard.kpis.sales} format={(value) => formatNumber(value)} />
-        <KpiCard label="Средний чек" value={dashboard.kpis.averageCheck} format={(value) => formatRub(value)} />
+        <KpiCard label={dashboard.itemFiltered ? "Выручка выбора на чек" : "Средний чек"} value={dashboard.kpis.averageCheck} format={(value) => formatRub(value)} />
         <KpiCard label="Продано товаров" value={dashboard.kpis.items} format={(value) => formatNumber(value, 2)} />
         <KpiCard label="Возвраты" value={dashboard.kpis.refunds} format={(value) => formatRub(value)} inverse />
         {dashboard.kpis.discountsAvailable ? <KpiCard label="Скидки" value={dashboard.kpis.discounts} format={(value) => formatRub(value)} inverse /> : null}
         {dashboard.kpis.customersAvailable ? <KpiCard label="Известные клиенты" value={dashboard.kpis.customers} format={(value) => formatNumber(value)} /> : null}
       </section>
 
-      <section className="analytics-panel analytics-main-chart">
+      <section className="analytics-panel analytics-main-chart analytics-expanded-panel" id="main-analytics-chart">
         <header className="analytics-panel-heading">
           <div>
             <p className="admin-eyebrow">Динамика</p>
@@ -123,6 +127,7 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
             >
               По каналам
             </Link>
+            <AnalyticsFullscreenButton targetId="main-analytics-chart" />
           </div>
         </header>
         <AnalyticsTrendChart data={dashboard.timeline} metric={dashboard.filters.metric} breakdown={dashboard.filters.breakdown} />
@@ -134,6 +139,8 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
           ))}
         </div>
       </section>
+
+      <AnalyticsIntelligenceHub dashboard={dashboard} />
 
       <div className="analytics-two-column">
         <section className="analytics-panel">
@@ -163,17 +170,22 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
           <header className="analytics-panel-heading compact">
             <div><p className="admin-eyebrow">Оплата</p><h2>Способы оплаты</h2></div>
           </header>
+          {dashboard.itemFiltered ? <p className="analytics-panel-note">Оплата показана по полным чекам, содержащим выбранные позиции: внутри смешанного чека платёж нельзя достоверно разделить по категории.</p> : null}
           <CompactBreakdown rows={dashboard.payments.map((row) => ({ ...row, name: getPaymentMethodLabel(row.method) }))} />
         </section>
       </div>
 
-      <section className="analytics-panel" id="heatmap">
+      <section className="analytics-panel analytics-expanded-panel" id="heatmap">
         <header className="analytics-panel-heading">
           <div><p className="admin-eyebrow">Ритм точки</p><h2>День недели × час</h2><span>Локальное время ресторана</span></div>
-          <nav className="analytics-mini-tabs" aria-label="Метрика тепловой карты">
-            <Link href={analyticsHref(dashboard.filters, { heatmap: null })} className={dashboard.filters.heatmapMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
-            <Link href={analyticsHref(dashboard.filters, { heatmap: "sales" })} className={dashboard.filters.heatmapMetric === "sales" ? "is-active" : ""} scroll={false}>Продажи</Link>
-          </nav>
+          <div className="analytics-heading-tools">
+            <nav className="analytics-mini-tabs" aria-label="Метрика тепловой карты">
+              <Link href={analyticsHref(dashboard.filters, { heatmap: null })} className={dashboard.filters.heatmapMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
+              <Link href={analyticsHref(dashboard.filters, { heatmap: "sales" })} className={dashboard.filters.heatmapMetric === "sales" ? "is-active" : ""} scroll={false}>Продажи</Link>
+              <Link href={analyticsHref(dashboard.filters, { heatmap: "items" })} className={dashboard.filters.heatmapMetric === "items" ? "is-active" : ""} scroll={false}>Товары</Link>
+            </nav>
+            <AnalyticsFullscreenButton targetId="heatmap" />
+          </div>
         </header>
         <div className="analytics-heatmap-scroll">
           <div className="analytics-heatmap" role="grid" aria-label="Продажи по дням недели и часам">
@@ -184,9 +196,15 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
                 <strong>{weekdays[weekday - 1]}</strong>
                 {Array.from({ length: 24 }, (_, hour) => {
                   const cell = dashboard.heatmap.find((item) => item.weekday === weekday && item.hour === hour);
-                  const value = dashboard.filters.heatmapMetric === "sales" ? cell?.sales ?? 0 : cell?.revenue ?? 0;
+                  const value = dashboard.filters.heatmapMetric === "sales"
+                    ? cell?.sales ?? 0
+                    : dashboard.filters.heatmapMetric === "items"
+                      ? cell?.items ?? 0
+                      : cell?.revenue ?? 0;
                   const intensity = Math.abs(value) / maxHeat;
-                  const label = dashboard.filters.heatmapMetric === "sales" ? `${formatNumber(value)} продаж` : formatRub(value);
+                  const label = dashboard.filters.heatmapMetric === "revenue"
+                    ? formatRub(value)
+                    : `${formatNumber(value, dashboard.filters.heatmapMetric === "items" ? 2 : 0)} ${dashboard.filters.heatmapMetric === "items" ? "товаров" : "продаж"}`;
                   const color = value < 0 ? "220, 38, 38" : "251, 103, 10";
                   return <span key={hour} role="gridcell" tabIndex={0} title={`${weekdays[weekday - 1]}, ${hour}:00 — ${label}`} style={{ backgroundColor: `rgba(${color}, ${0.05 + intensity * 0.9})` }} />;
                 })}

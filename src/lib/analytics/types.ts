@@ -12,6 +12,7 @@ export const ANALYTICS_PERIODS = [
   "this_month",
   "last_month",
   "this_quarter",
+  "last_quarter",
   "custom"
 ] as const;
 export type AnalyticsPeriodKey = (typeof ANALYTICS_PERIODS)[number];
@@ -28,7 +29,9 @@ export const ANALYTICS_METRICS = ["revenue", "sales", "average_check", "items", 
 export type AnalyticsMetric = (typeof ANALYTICS_METRICS)[number];
 export type AnalyticsGranularity = "hour" | "day" | "week" | "month";
 export type ProductRankingMode = "revenue" | "quantity" | "growth" | "decline";
-export type HeatmapMetric = "revenue" | "sales";
+export type HeatmapMetric = "revenue" | "sales" | "items";
+export type DemandMetric = "revenue" | "items";
+export type CalendarMetric = "revenue" | "sales" | "average_check";
 
 export type AnalyticsFilters = {
   period: AnalyticsPeriodKey;
@@ -40,11 +43,18 @@ export type AnalyticsFilters = {
   terminal: string | null;
   employee: string | null;
   payment: string | null;
+  categories: string[];
   category: string | null;
   product: string | null;
+  weekdays: number[];
+  hourFrom: number | null;
+  hourTo: number | null;
   metric: AnalyticsMetric;
   breakdown: boolean;
   heatmapMetric: HeatmapMetric;
+  demandMetric: DemandMetric;
+  calendarMetric: CalendarMetric;
+  treemapMetric: DemandMetric;
   productRanking: ProductRankingMode;
   search: string;
   sort: "date" | "number" | "channel" | "location" | "total" | "net" | "status";
@@ -151,6 +161,135 @@ export type HeatmapCell = {
   hour: number;
   revenue: number;
   sales: number;
+  items: number;
+};
+
+export type AnalyticsCategoryCard = {
+  id: string;
+  name: string;
+  revenue: number;
+  quantity: number;
+  receipts: number;
+  averageItemPrice: number;
+  share: number;
+  delta: MetricDelta;
+  sparkline: number[];
+};
+
+export type AnalyticsHourlyCategoryPoint = {
+  hour: number;
+  categories: Record<string, { revenue: number; quantity: number; receipts: number }>;
+};
+
+export type AnalyticsCalendarDay = {
+  date: string;
+  revenue: number;
+  receipts: number;
+  averageCheck: number;
+};
+
+export type AnalyticsTreemapItem = {
+  key: string;
+  name: string;
+  category: string;
+  revenue: number;
+  quantity: number;
+  share: number;
+  mappingStatus: "mapped" | "unmapped";
+};
+
+export type AnalyticsParetoItem = {
+  key: string;
+  name: string;
+  revenue: number;
+  quantity: number;
+  cumulativeShare: number;
+  abc: "A" | "B" | "C";
+};
+
+export type AnalyticsParetoSummary = {
+  totalProducts: number;
+  productsTo50: number;
+  productsTo80: number;
+  productsTo90: number;
+  rows: AnalyticsParetoItem[];
+};
+
+export type AnalyticsBasketPair = {
+  leftKey: string;
+  leftName: string;
+  rightKey: string;
+  rightName: string;
+  baskets: number;
+  support: number;
+  confidence: number;
+};
+
+export type AnalyticsBasketSizeRow = {
+  bucket: "1" | "2" | "3" | "4+";
+  receipts: number;
+  revenue: number;
+  averageRevenue: number;
+};
+
+export type AnalyticsDaypartRow = {
+  key: string;
+  label: string;
+  hours: string;
+  revenue: number;
+  receipts: number;
+  quantity: number;
+  averageCheck: number;
+};
+
+export type AnalyticsInsight = {
+  id: string;
+  tone: "positive" | "negative" | "neutral";
+  title: string;
+  detail: string;
+  href: string;
+};
+
+export type AnalyticsProductProfile = {
+  key: string;
+  name: string;
+  category: string | null;
+  revenue: number;
+  quantity: number;
+  daysSold: number;
+  averageUnitsPerDay: number;
+  peakHour: number | null;
+  strongestWeekday: number | null;
+  weakestWeekday: number | null;
+  categoryShare: number | null;
+  delta: MetricDelta;
+};
+
+export type AnalyticsIntelligence = {
+  categoryCards: AnalyticsCategoryCard[];
+  hourlyDemand: AnalyticsHourlyCategoryPoint[];
+  calendar: AnalyticsCalendarDay[];
+  treemap: AnalyticsTreemapItem[];
+  pareto: AnalyticsParetoSummary;
+  basketPairs: AnalyticsBasketPair[];
+  basketSizes: AnalyticsBasketSizeRow[];
+  dayparts: AnalyticsDaypartRow[];
+  peakHours: Array<{ hour: number; revenue: number; quantity: number; receipts: number }>;
+  averageTicketFactors: {
+    itemsPerReceipt: KpiValue;
+    averageItemValue: KpiValue;
+  };
+  revenueBridge: {
+    current: number;
+    previous: number;
+    receiptEffect: number;
+    ticketEffect: number;
+    refundChange: number;
+  };
+  insights: AnalyticsInsight[];
+  productProfile: AnalyticsProductProfile | null;
+  lastEvotorSyncAt: string | null;
+  stale: boolean;
 };
 
 export type WeekdayRow = {
@@ -185,6 +324,8 @@ export type AnalyticsDashboard = {
   payments: AnalyticsPaymentRow[];
   options: AnalyticsFilterOptions;
   updatedAt: string | null;
+  itemFiltered: boolean;
+  intelligence: AnalyticsIntelligence;
   error: string | null;
 };
 

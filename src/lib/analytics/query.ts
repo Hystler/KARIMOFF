@@ -8,9 +8,11 @@ export type ParameterizedQuery = {
 class Parameters {
   values: unknown[] = [];
 
+  constructor(private readonly offset = 0) {}
+
   add(value: unknown, cast = "") {
     this.values.push(value);
-    return `$${this.values.length}${cast}`;
+    return `$${this.values.length + this.offset}${cast}`;
   }
 }
 function escapeLike(value: string) {
@@ -21,6 +23,7 @@ type SaleWhereOptions = {
   alias?: string;
   includeSearch?: boolean;
   includedOnly?: boolean;
+  includeItemFilters?: boolean;
 };
 
 export function buildSalesWhere(
@@ -44,20 +47,28 @@ export function buildSalesWhere(
   if (filters.terminal) clauses.push(`${alias}.terminal_id = ${parameters.add(filters.terminal)}`);
   if (filters.employee) clauses.push(`${alias}.employee_id = ${parameters.add(filters.employee)}`);
   if (filters.payment) clauses.push(`${alias}.payment_method = ${parameters.add(filters.payment)}`);
+  if (filters.weekdays.length) {
+    clauses.push(`extract(isodow from ${alias}.analytics_at at time zone 'Europe/Moscow')::integer = any(${parameters.add(filters.weekdays, "::integer[]")})`);
+  }
+  if (filters.hourFrom !== null && filters.hourTo !== null) {
+    clauses.push(`extract(hour from ${alias}.analytics_at at time zone 'Europe/Moscow')::integer >= ${parameters.add(filters.hourFrom, "::integer")}`);
+    clauses.push(`extract(hour from ${alias}.analytics_at at time zone 'Europe/Moscow')::integer < ${parameters.add(filters.hourTo, "::integer")}`);
+  }
 
   if (scope.locationIds !== null) {
     if (!scope.locationIds.length) clauses.push("false");
     else clauses.push(`${alias}.location_id = any(${parameters.add(scope.locationIds, "::text[]")})`);
   }
 
-  if (filters.category) {
+  const categories = filters.categories.length ? filters.categories : filters.category ? [filters.category] : [];
+  if (options.includeItemFilters !== false && categories.length) {
     clauses.push(`exists (
       select 1 from public.analytics_sale_items filter_item
       where filter_item.sale_id = ${alias}.sale_id
-        and filter_item.category = ${parameters.add(filters.category)}
+        and filter_item.category = any(${parameters.add(categories, "::text[]")})
     )`);
   }
-  if (filters.product) {
+  if (options.includeItemFilters !== false && filters.product) {
     clauses.push(`exists (
       select 1 from public.analytics_sale_items filter_item
       where filter_item.sale_id = ${alias}.sale_id
@@ -84,6 +95,26 @@ export function buildSalesWhere(
   }
 
   return { text: clauses.join(" and "), values: parameters.values };
+}
+
+export function buildItemWhere(
+  filters: AnalyticsFilters,
+  options: { alias?: string; offset?: number; includeCategory?: boolean; includeProduct?: boolean } = {}
+): ParameterizedQuery {
+  const alias = options.alias ?? "i";
+  const parameters = new Parameters(options.offset ?? 0);
+  const clauses: string[] = [];
+  const categories = filters.categories.length ? filters.categories : filters.category ? [filters.category] : [];
+  if (options.includeCategory !== false && categories.length) {
+    clauses.push(`${alias}.category = any(${parameters.add(categories, "::text[]")})`);
+  }
+  if (options.includeProduct !== false && filters.product) {
+    clauses.push(`coalesce(
+      ${alias}.product_id::text,
+      ${alias}.source || ':' || coalesce(${alias}.source_product_id, ${alias}.external_source_id)
+    ) = ${parameters.add(filters.product)}`);
+  }
+  return { text: clauses.length ? clauses.join(" and ") : "true", values: parameters.values };
 }
 
 export function buildScopeWhere(scope: AnalyticsScope, alias = "s"): ParameterizedQuery {

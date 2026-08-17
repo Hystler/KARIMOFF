@@ -3,13 +3,14 @@ import "server-only";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { channelLabels } from "./channels";
 import { calculateMetricDelta, safeAverage } from "./metrics";
+import { getAnalyticsIntelligence } from "./intelligence";
 import {
   buildBucketKeys,
   formatBucketLabel,
   getAnalyticsGranularity,
   getComparisonRange
 } from "./periods";
-import { buildSalesWhere, buildScopeWhere } from "./query";
+import { buildItemWhere, buildSalesWhere, buildScopeWhere, offsetPlaceholders } from "./query";
 import type {
   AnalyticsBreakdownRow,
   AnalyticsChannel,
@@ -49,6 +50,23 @@ function metricValue(current: number, previous: number, sparkline: number[]): Kp
   return { current, previous, delta: calculateMetricDelta(current, previous), sparkline };
 }
 
+function hasItemFilters(filters: AnalyticsFilters) {
+  return Boolean(filters.categories.length || filters.category || filters.product);
+}
+
+function itemFilteredWhere(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
+  const sales = buildSalesWhere(filters, range, scope, {
+    alias: "s",
+    includedOnly: true,
+    includeItemFilters: false
+  });
+  const items = buildItemWhere(filters, { alias: "i", offset: sales.values.length });
+  return {
+    text: `${sales.text} and ${offsetPlaceholders(items.text, 0)}`,
+    values: [...sales.values, ...items.values]
+  };
+}
+
 async function query<T>(text: string, values: unknown[] = []) {
   const sql = getPostgresSql();
   return sql.unsafe<T[]>(text, values as never[]);
@@ -59,6 +77,26 @@ async function getMetricRow(
   range: AnalyticsRange,
   scope: AnalyticsScope
 ) {
+  if (hasItemFilters(filters)) {
+    const where = itemFilteredWhere(filters, range, scope);
+    const rows = await query<MetricRow>(`
+      select
+        coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+        coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items,
+        coalesce(sum(i.refund_amount), 0)::numeric as refund_amount,
+        count(distinct s.sale_id) filter (where i.refund_amount > 0)::integer as refund_count,
+        coalesce(sum(i.discount_amount), 0)::numeric as discounts,
+        count(distinct s.customer_id) filter (where s.sale_count_eligible and s.customer_id is not null)::integer as customers,
+        coalesce(bool_or(s.customer_id is not null), false) as customers_available,
+        coalesce(bool_or(s.discount_data_available), false) as discounts_available
+      from public.canonical_analytics_sales s
+      join public.analytics_sale_items i on i.sale_id = s.sale_id
+      where ${where.text}
+    `, where.values);
+    return rows[0];
+  }
   const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
   const rows = await query<MetricRow>(`
     select
@@ -108,6 +146,30 @@ async function getTimelineRows(
   scope: AnalyticsScope,
   granularity: AnalyticsGranularity
 ) {
+  if (hasItemFilters(filters)) {
+    const where = itemFilteredWhere(filters, range, scope);
+    const bucket = bucketExpression(granularity);
+    return query<TimelineRow>(`
+      select
+        ${bucket} as bucket,
+        s.source,
+        coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+        coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items,
+        coalesce(sum(i.refund_amount), 0)::numeric as refund_amount,
+        count(distinct s.sale_id) filter (where i.refund_amount > 0)::integer as refund_count,
+        coalesce(sum(i.discount_amount), 0)::numeric as discounts,
+        count(distinct s.customer_id) filter (where s.customer_id is not null)::integer as customers,
+        coalesce(bool_or(s.customer_id is not null), false) as customers_available,
+        coalesce(bool_or(s.discount_data_available), false) as discounts_available
+      from public.canonical_analytics_sales s
+      join public.analytics_sale_items i on i.sale_id = s.sale_id
+      where ${where.text}
+      group by 1, 2
+      order by 1, 2
+    `, where.values);
+  }
   const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
   const bucket = bucketExpression(granularity);
   return query<TimelineRow>(`
@@ -256,7 +318,7 @@ async function getProductRows(
   range: AnalyticsRange,
   scope: AnalyticsScope
 ) {
-  const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
+  const where = itemFilteredWhere(filters, range, scope);
   return query<ProductAggregate>(`
     select
       coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
@@ -330,6 +392,27 @@ async function getSaleBreakdownRows(
   scope: AnalyticsScope,
   field: "location" | "terminal" | "employee"
 ) {
+  if (hasItemFilters(filters)) {
+    const where = itemFilteredWhere(filters, range, scope);
+    const columns = {
+      location: { id: "s.location_id", name: "s.location_name", extra: "true" },
+      terminal: { id: "s.terminal_id", name: "s.terminal_name", extra: "s.terminal_id is not null" },
+      employee: { id: "s.employee_id", name: "s.employee_name", extra: "s.employee_id is not null" }
+    }[field];
+    return query<BreakdownAggregate>(`
+      select ${columns.id} as id, coalesce(${columns.name}, 'Не указано') as name,
+        coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+        coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        coalesce(sum(i.refund_amount), 0)::numeric as refunds,
+        coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items
+      from public.canonical_analytics_sales s
+      join public.analytics_sale_items i on i.sale_id = s.sale_id
+      where ${where.text} and ${columns.extra}
+      group by 1, 2
+      order by revenue desc
+    `, where.values);
+  }
   const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
   const columns = {
     location: { id: "s.location_id", name: "s.location_name", extra: "true" },
@@ -397,7 +480,7 @@ async function getCategories(
   totalRevenue: number
 ) {
   const load = async (selectedRange: AnalyticsRange) => {
-    const where = buildSalesWhere(filters, selectedRange, scope, { alias: "s", includedOnly: true });
+    const where = itemFilteredWhere(filters, selectedRange, scope);
     return query<BreakdownAggregate>(`
       select coalesce(i.category, '__unknown__') as id,
         coalesce(i.category, 'Категория не указана') as name,
@@ -421,8 +504,7 @@ async function getPayments(
   filters: AnalyticsFilters,
   range: AnalyticsRange,
   comparisonRange: AnalyticsRange,
-  scope: AnalyticsScope,
-  totalRevenue: number
+  scope: AnalyticsScope
 ): Promise<AnalyticsPaymentRow[]> {
   const load = async (selectedRange: AnalyticsRange) => {
     const where = buildSalesWhere(filters, selectedRange, scope, { alias: "s", includedOnly: true });
@@ -441,17 +523,42 @@ async function getPayments(
     `, where.values);
   };
   const [current, previous] = await Promise.all([load(range), load(comparisonRange)]);
-  return mergeBreakdowns(current, previous, totalRevenue).map((row) => ({ ...row, method: row.id }));
+  const paymentTotal = current.reduce((sum, row) => sum + number(row.revenue), 0);
+  return mergeBreakdowns(current, previous, paymentTotal).map((row) => ({ ...row, method: row.id }));
 }
 
 async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
+  if (hasItemFilters(filters)) {
+    const where = itemFilteredWhere(filters, range, scope);
+    const rows = await query<{ weekday: string | number; hour: string | number; revenue: string | number; sales: string | number; items: string | number }>(`
+      select
+        extract(isodow from s.analytics_at at time zone 'Europe/Moscow')::integer as weekday,
+        extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer as hour,
+        coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items
+      from public.canonical_analytics_sales s
+      join public.analytics_sale_items i on i.sale_id = s.sale_id
+      where ${where.text}
+      group by 1, 2
+      order by 1, 2
+    `, where.values);
+    return rows.map((row) => ({
+      weekday: number(row.weekday),
+      hour: number(row.hour),
+      revenue: number(row.revenue),
+      sales: number(row.sales),
+      items: number(row.items)
+    }));
+  }
   const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
-  const rows = await query<{ weekday: string | number; hour: string | number; revenue: string | number; sales: string | number }>(`
+  const rows = await query<{ weekday: string | number; hour: string | number; revenue: string | number; sales: string | number; items: string | number }>(`
     select
       extract(isodow from s.analytics_at at time zone 'Europe/Moscow')::integer as weekday,
       extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer as hour,
       coalesce(sum(s.net_revenue), 0)::numeric as revenue,
-      count(*) filter (where s.sale_count_eligible)::integer as sales
+      count(*) filter (where s.sale_count_eligible)::integer as sales,
+      coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items
     from public.canonical_analytics_sales s
     where ${where.text}
     group by 1, 2
@@ -461,11 +568,28 @@ async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scop
     weekday: number(row.weekday),
     hour: number(row.hour),
     revenue: number(row.revenue),
-    sales: number(row.sales)
+    sales: number(row.sales),
+    items: number(row.items)
   }));
 }
 
 async function getWeekdays(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
+  if (hasItemFilters(filters)) {
+    const where = itemFilteredWhere(filters, range, scope);
+    const rows = await query<{ weekday: string | number; revenue: string | number; sale_revenue: string | number; sales: string | number }>(`
+      select
+        extract(isodow from s.analytics_at at time zone 'Europe/Moscow')::integer as weekday,
+        coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+        coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales
+      from public.canonical_analytics_sales s
+      join public.analytics_sale_items i on i.sale_id = s.sale_id
+      where ${where.text}
+      group by 1
+      order by 1
+    `, where.values);
+    return weekdayRows(rows);
+  }
   const where = buildSalesWhere(filters, range, scope, { alias: "s", includedOnly: true });
   const rows = await query<{ weekday: string | number; revenue: string | number; sale_revenue: string | number; sales: string | number }>(`
     select
@@ -478,6 +602,10 @@ async function getWeekdays(filters: AnalyticsFilters, range: AnalyticsRange, sco
     group by 1
     order by 1
   `, where.values);
+  return weekdayRows(rows);
+}
+
+function weekdayRows(rows: Array<{ weekday: string | number; revenue: string | number; sale_revenue: string | number; sales: string | number }>) {
   return Array.from({ length: 7 }, (_, index) => {
     const weekday = index + 1;
     const row = rows.find((item) => number(item.weekday) === weekday);
@@ -577,8 +705,28 @@ export async function getAnalyticsDashboard(params: {
     getBreakdown(filters, range, comparisonRange, scope, "employee", current.revenue),
     getBreakdown(filters, range, comparisonRange, scope, "location", current.revenue),
     getBreakdown(filters, range, comparisonRange, scope, "terminal", current.revenue),
-    getPayments(filters, range, comparisonRange, scope, current.revenue)
+    getPayments(filters, range, comparisonRange, scope)
   ]);
+  const intelligence = await getAnalyticsIntelligence({
+    filters,
+    range,
+    comparisonRange,
+    scope,
+    current: {
+      revenue: current.revenue,
+      sales: current.sales,
+      items: current.items,
+      saleRevenue: current.saleRevenue,
+      refunds: current.refundAmount
+    },
+    previous: {
+      revenue: previous.revenue,
+      sales: previous.sales,
+      items: previous.items,
+      saleRevenue: previous.saleRevenue,
+      refunds: previous.refundAmount
+    }
+  });
 
   return {
     filters,
@@ -609,6 +757,8 @@ export async function getAnalyticsDashboard(params: {
     payments,
     options,
     updatedAt,
+    itemFiltered: hasItemFilters(filters),
+    intelligence,
     error: null
   };
 }

@@ -1,4 +1,4 @@
-import { Clock3, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Clock3, DatabaseZap, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 import { AnalyticsFilterBar } from "@/components/admin/analytics/AnalyticsFilterBar";
 import { AnalyticsOverview } from "@/components/admin/analytics/AnalyticsOverview";
@@ -37,6 +37,15 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
         timeZone: "Europe/Moscow"
       }).format(new Date(dashboard.updatedAt))
     : "данных пока нет";
+  const evotorSyncLabel = dashboard.intelligence.lastEvotorSyncAt
+    ? new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Moscow"
+      }).format(new Date(dashboard.intelligence.lastEvotorSyncAt))
+    : "ещё не выполнялась";
 
   return (
     <main className="admin-content admin-content-wide analytics-page">
@@ -48,6 +57,10 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
         </div>
         <div className="analytics-heading-actions">
           <span><Clock3 size={16} />Данные обновлены: {updatedLabel}</span>
+          <span className={dashboard.intelligence.stale ? "is-stale" : ""}>
+            {dashboard.intelligence.stale ? <AlertTriangle size={16} /> : <DatabaseZap size={16} />}
+            Эвотор: {evotorSyncLabel}
+          </span>
           <AnalyticsRefreshButton />
         </div>
       </header>

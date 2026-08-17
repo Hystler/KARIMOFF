@@ -194,6 +194,12 @@ export function getAnalyticsRange(params: {
     case "this_quarter":
       from = quarterStart(today);
       break;
+    case "last_quarter": {
+      const currentQuarter = quarterStart(today);
+      from = addCalendarMonths(currentQuarter, -3);
+      toExclusive = currentQuarter;
+      break;
+    }
     case "custom":
       if (params.dateFrom && params.dateTo && params.dateFrom <= params.dateTo) {
         from = params.dateFrom;
