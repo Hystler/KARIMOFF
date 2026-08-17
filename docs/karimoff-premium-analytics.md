@@ -130,6 +130,8 @@ Insights are generated from report values without an LLM:
 - average-receipt movement;
 - unusually high or low latest day.
 
+Product growth/decline rankings also require the configured minimum receipt volume across the current and comparison periods, preventing a one-to-two sale change from appearing as a meaningful momentum signal.
+
 Anomaly detection compares the latest date with up to eight previous observations of the same weekday. It requires sufficient history and flags a deviation beyond the configured standard-deviation threshold. The UI states the rule and links to the underlying filtered data.
 
 ## Configuration

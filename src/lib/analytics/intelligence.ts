@@ -56,7 +56,7 @@ type AnalyticsConfiguration = {
   anomalySigma: number;
 };
 
-function getAnalyticsConfiguration(filters: AnalyticsFilters, scope: AnalyticsScope): AnalyticsConfiguration {
+export function getAnalyticsConfiguration(filters: AnalyticsFilters, scope: AnalyticsScope): AnalyticsConfiguration {
   const fallback: AnalyticsConfiguration = {
     dayparts: daypartDefinitions.map((part) => ({ ...part })),
     abcA: 80,

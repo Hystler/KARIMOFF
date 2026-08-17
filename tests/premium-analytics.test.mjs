@@ -160,6 +160,14 @@ test("location analytics configuration is optional, server-only, and schema-vali
   assert.doesNotMatch(filterBar + hub, /ANALYTICS_CONFIG_JSON/);
 });
 
+test("product momentum ignores tiny comparison samples and the time filter stays open", () => {
+  assert.match(dashboard, /comparisonReceiptVolume/);
+  assert.match(dashboard, /comparisonReceiptVolume >= momentumMinimum/);
+  assert.match(dashboard, /getAnalyticsConfiguration\(filters, scope\)\.momentumMinReceipts/);
+  assert.match(filterBar, /navigate\(\{ hourFrom:[\s\S]*\}, true\)/);
+  assert.match(filterBar, /navigate\(\{ hourTo: event\.target\.value \|\| null \}, true\)/);
+});
+
 test("analytics controls are URL-backed, keyboard reachable, and support drill-through", () => {
   assert.match(filterBar, /params\.getAll\(key\)/);
   assert.match(filterBar, /aria-pressed=/);

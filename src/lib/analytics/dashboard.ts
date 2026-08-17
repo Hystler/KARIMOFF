@@ -3,7 +3,7 @@ import "server-only";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { channelLabels } from "./channels";
 import { calculateMetricDelta, safeAverage } from "./metrics";
-import { getAnalyticsIntelligence } from "./intelligence";
+import { getAnalyticsConfiguration, getAnalyticsIntelligence } from "./intelligence";
 import {
   buildBucketKeys,
   formatBucketLabel,
@@ -311,6 +311,7 @@ type ProductAggregate = {
   single_channel: AnalyticsChannel;
   quantity: string | number;
   revenue: string | number;
+  receipts: string | number;
 };
 
 async function getProductRows(
@@ -328,7 +329,8 @@ async function getProductRows(
       count(distinct i.source)::integer as channel_count,
       min(i.source) as single_channel,
       coalesce(sum(i.net_quantity), 0)::numeric as quantity,
-      coalesce(sum(i.net_revenue), 0)::numeric as revenue
+      coalesce(sum(i.net_revenue), 0)::numeric as revenue,
+      count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
     from public.analytics_sale_items i
     join public.canonical_analytics_sales s on s.sale_id = i.sale_id
     where ${where.text}
@@ -347,11 +349,15 @@ async function getProducts(
     getProductRows(filters, range, scope),
     getProductRows(filters, comparisonRange, scope)
   ]);
-  const previousByKey = new Map(previous.map((row) => [row.product_key, number(row.revenue)]));
+  const previousByKey = new Map(previous.map((row) => [row.product_key, {
+    revenue: number(row.revenue),
+    receipts: number(row.receipts)
+  }]));
   const rows = current.map((row) => {
     const revenue = number(row.revenue);
     const quantity = number(row.quantity);
-    const previousRevenue = previousByKey.get(row.product_key) ?? 0;
+    const previousProduct = previousByKey.get(row.product_key);
+    const previousRevenue = previousProduct?.revenue ?? 0;
     return {
       key: row.product_key,
       name: row.product_name,
@@ -361,19 +367,24 @@ async function getProducts(
       averagePrice: safeAverage(revenue, quantity),
       share: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0,
       previousRevenue,
+      comparisonReceiptVolume: number(row.receipts) + (previousProduct?.receipts ?? 0),
       delta: calculateMetricDelta(revenue, previousRevenue),
       channel: number(row.channel_count) > 1 ? "multiple" as const : row.single_channel,
       mappingStatus: row.mapping_status === "mapped" ? "mapped" as const : "unmapped" as const
     };
   });
   const mode = filters.productRanking;
-  rows.sort((left, right) => {
+  const momentumMinimum = getAnalyticsConfiguration(filters, scope).momentumMinReceipts;
+  const visibleRows = mode === "growth" || mode === "decline"
+    ? rows.filter((row) => row.comparisonReceiptVolume >= momentumMinimum)
+    : rows;
+  visibleRows.sort((left, right) => {
     if (mode === "quantity") return right.quantity - left.quantity;
     if (mode === "growth") return (right.delta.percent ?? -Infinity) - (left.delta.percent ?? -Infinity);
     if (mode === "decline") return (left.delta.percent ?? Infinity) - (right.delta.percent ?? Infinity);
     return right.revenue - left.revenue;
   });
-  return rows.slice(0, 12);
+  return visibleRows.slice(0, 12);
 }
 
 type BreakdownAggregate = {

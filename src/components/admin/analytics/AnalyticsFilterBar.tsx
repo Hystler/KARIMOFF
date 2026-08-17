@@ -48,8 +48,8 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
   const [search, setSearch] = useState(filters.search);
   const filtersRef = useRef<HTMLDetailsElement>(null);
 
-  const navigate = (patch: Record<string, string | null>) => {
-    if (filtersRef.current?.open) filtersRef.current.open = false;
+  const navigate = (patch: Record<string, string | null>, keepFiltersOpen = false) => {
+    if (filtersRef.current?.open && !keepFiltersOpen) filtersRef.current.open = false;
     const params = analyticsFiltersToParams(filters);
     for (const [key, value] of Object.entries(patch)) {
       if (!value) params.delete(key);
@@ -211,7 +211,7 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                   onChange={(event) => {
                     const from = event.target.value;
                     const currentTo = filters.hourTo ?? Math.min(24, Number(from) + 1);
-                    navigate({ hourFrom: from || null, hourTo: from ? String(Math.max(Number(from) + 1, currentTo)) : null });
+                    navigate({ hourFrom: from || null, hourTo: from ? String(Math.max(Number(from) + 1, currentTo)) : null }, true);
                   }}
                 >
                   <option value="">С любого</option>
@@ -222,7 +222,7 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                   aria-label="Время до"
                   value={filters.hourTo ?? ""}
                   disabled={filters.hourFrom === null}
-                  onChange={(event) => navigate({ hourTo: event.target.value || null })}
+                  onChange={(event) => navigate({ hourTo: event.target.value || null }, true)}
                 >
                   {Array.from({ length: 24 - (filters.hourFrom ?? 0) }, (_, index) => (filters.hourFrom ?? 0) + index + 1).map((hour) => (
                     <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>
