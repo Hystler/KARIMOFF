@@ -5,6 +5,7 @@ import { channelLabels } from "./channels";
 import { calculateMetricDelta, safeAverage } from "./metrics";
 import { getAnalyticsConfiguration, getAnalyticsIntelligence } from "./intelligence";
 import {
+  averagePerAnalyticsDay,
   buildBucketKeys,
   formatBucketLabel,
   getAnalyticsGranularity,
@@ -30,6 +31,7 @@ type MetricRow = {
   revenue: string | number;
   sale_revenue: string | number;
   sales: string | number;
+  receipts: string | number;
   items: string | number;
   refund_amount: string | number;
   refund_count: string | number;
@@ -84,6 +86,7 @@ async function getMetricRow(
         coalesce(sum(i.net_revenue), 0)::numeric as revenue,
         coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
         count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible and s.source = 'pos_evotor')::integer as receipts,
         coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items,
         coalesce(sum(i.refund_amount), 0)::numeric as refund_amount,
         count(distinct s.sale_id) filter (where i.refund_amount > 0)::integer as refund_count,
@@ -103,6 +106,7 @@ async function getMetricRow(
       coalesce(sum(s.net_revenue), 0)::numeric as revenue,
       coalesce(sum(s.gross_amount - s.discount_amount) filter (where s.sale_count_eligible), 0)::numeric as sale_revenue,
       count(*) filter (where s.sale_count_eligible)::integer as sales,
+      count(*) filter (where s.sale_count_eligible and s.source = 'pos_evotor')::integer as receipts,
       coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items,
       coalesce(sum(s.refund_amount), 0)::numeric as refund_amount,
       count(*) filter (where s.refund_amount > 0)::integer as refund_count,
@@ -117,6 +121,7 @@ async function getMetricRow(
     revenue: 0,
     sale_revenue: 0,
     sales: 0,
+    receipts: 0,
     items: 0,
     refund_amount: 0,
     refund_count: 0,
@@ -156,6 +161,7 @@ async function getTimelineRows(
         coalesce(sum(i.net_revenue), 0)::numeric as revenue,
         coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
         count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,
+        count(distinct s.sale_id) filter (where s.sale_count_eligible and s.source = 'pos_evotor')::integer as receipts,
         coalesce(sum(i.quantity) filter (where s.sale_count_eligible and i.operation_type = 'sale'), 0)::numeric as items,
         coalesce(sum(i.refund_amount), 0)::numeric as refund_amount,
         count(distinct s.sale_id) filter (where i.refund_amount > 0)::integer as refund_count,
@@ -179,6 +185,7 @@ async function getTimelineRows(
       coalesce(sum(s.net_revenue), 0)::numeric as revenue,
       coalesce(sum(s.gross_amount - s.discount_amount) filter (where s.sale_count_eligible), 0)::numeric as sale_revenue,
       count(*) filter (where s.sale_count_eligible)::integer as sales,
+      count(*) filter (where s.sale_count_eligible and s.source = 'pos_evotor')::integer as receipts,
       coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items,
       coalesce(sum(s.refund_amount), 0)::numeric as refund_amount,
       count(*) filter (where s.refund_amount > 0)::integer as refund_count,
@@ -220,6 +227,7 @@ function mergeTimelineRows(
       revenue: bucketRows.reduce((sum, row) => sum + number(row.revenue), 0),
       sale_revenue: bucketRows.reduce((sum, row) => sum + number(row.sale_revenue), 0),
       sales: bucketRows.reduce((sum, row) => sum + number(row.sales), 0),
+      receipts: bucketRows.reduce((sum, row) => sum + number(row.receipts), 0),
       items: bucketRows.reduce((sum, row) => sum + number(row.items), 0),
       refund_amount: bucketRows.reduce((sum, row) => sum + number(row.refund_amount), 0)
     };
@@ -674,6 +682,7 @@ export async function getAnalyticsDashboard(params: {
     revenue: number(currentMetric.revenue),
     saleRevenue: number(currentMetric.sale_revenue),
     sales: number(currentMetric.sales),
+    receipts: number(currentMetric.receipts),
     items: number(currentMetric.items),
     refundAmount: number(currentMetric.refund_amount),
     refundCount: number(currentMetric.refund_count),
@@ -684,6 +693,7 @@ export async function getAnalyticsDashboard(params: {
     revenue: number(previousMetric.revenue),
     saleRevenue: number(previousMetric.sale_revenue),
     sales: number(previousMetric.sales),
+    receipts: number(previousMetric.receipts),
     items: number(previousMetric.items),
     refundAmount: number(previousMetric.refund_amount),
     refundCount: number(previousMetric.refund_count),
@@ -694,6 +704,15 @@ export async function getAnalyticsDashboard(params: {
     mergeTimelineRows(currentTimelineRows, currentKeys, granularity, metric).map((point) => point.value);
   const currentAverage = safeAverage(current.saleRevenue, current.sales);
   const previousAverage = safeAverage(previous.saleRevenue, previous.sales);
+  const currentOrdersPerDay = averagePerAnalyticsDay(current.sales, range, filters.weekdays);
+  const previousOrdersPerDay = averagePerAnalyticsDay(previous.sales, comparisonRange, filters.weekdays);
+  const currentReceiptsPerDay = averagePerAnalyticsDay(current.receipts, range, filters.weekdays);
+  const previousReceiptsPerDay = averagePerAnalyticsDay(previous.receipts, comparisonRange, filters.weekdays);
+  const receiptSparkline = currentKeys.map((key) =>
+    currentTimelineRows
+      .filter((row) => row.bucket === key)
+      .reduce((sum, row) => sum + number(row.receipts), 0)
+  );
 
   const revenueMix = options.channels
     .map((option) => {
@@ -747,6 +766,12 @@ export async function getAnalyticsDashboard(params: {
     kpis: {
       revenue: metricValue(current.revenue, previous.revenue, spark("revenue")),
       sales: metricValue(current.sales, previous.sales, spark("sales")),
+      averageOrdersPerDay: metricValue(currentOrdersPerDay, previousOrdersPerDay, spark("sales")),
+      averageReceiptsPerDay: metricValue(
+        currentReceiptsPerDay,
+        previousReceiptsPerDay,
+        receiptSparkline
+      ),
       averageCheck: metricValue(currentAverage, previousAverage, spark("average_check")),
       items: metricValue(current.items, previous.items, spark("items")),
       refunds: metricValue(current.refundAmount, previous.refundAmount, spark("refunds")),

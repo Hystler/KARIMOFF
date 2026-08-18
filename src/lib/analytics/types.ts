@@ -95,6 +95,8 @@ export type KpiValue = {
 export type AnalyticsKpis = {
   revenue: KpiValue;
   sales: KpiValue;
+  averageOrdersPerDay: KpiValue;
+  averageReceiptsPerDay: KpiValue;
   averageCheck: KpiValue;
   items: KpiValue;
   refunds: KpiValue;

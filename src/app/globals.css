@@ -704,6 +704,10 @@ button:not(:disabled),
     @apply text-2xl font-black tabular-nums sm:text-[28px];
   }
 
+  .analytics-kpi-hint {
+    @apply max-w-[24ch] text-[10px] font-semibold leading-4 text-karimoff-muted;
+  }
+
   .analytics-sparkline {
     @apply absolute inset-x-0 bottom-9 h-14 w-full opacity-70;
   }

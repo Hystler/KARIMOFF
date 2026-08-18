@@ -63,18 +63,21 @@ function KpiCard({
   label,
   value,
   format,
-  inverse = false
+  inverse = false,
+  hint
 }: {
   label: string;
   value: KpiValue;
   format: (value: number) => string;
   inverse?: boolean;
+  hint?: string;
 }) {
   return (
     <article className="analytics-kpi-card">
       <div>
         <span>{label}</span>
         <strong>{format(value.current)}</strong>
+        {hint ? <small className="analytics-kpi-hint">{hint}</small> : null}
       </div>
       <Sparkline values={value.sparkline} />
       <div className="analytics-kpi-meta">
@@ -99,7 +102,9 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
     <>
       <section className="analytics-kpi-grid" aria-label="Основные показатели">
         <KpiCard label="Выручка" value={dashboard.kpis.revenue} format={(value) => formatRub(value)} />
-        <KpiCard label="Продажи / чеки" value={dashboard.kpis.sales} format={(value) => formatNumber(value)} />
+        <KpiCard label="Завершённые продажи" value={dashboard.kpis.sales} format={(value) => formatNumber(value)} hint="Касса и оплаченные завершённые web-заказы" />
+        <KpiCard label="Среднее заказов в день" value={dashboard.kpis.averageOrdersPerDay} format={(value) => formatNumber(value, 1)} hint="Завершённые продажи / календарные дни" />
+        <KpiCard label="Среднее чеков в день" value={dashboard.kpis.averageReceiptsPerDay} format={(value) => formatNumber(value, 1)} hint="Только фискальные POS-чеки" />
         <KpiCard label={dashboard.itemFiltered ? "Выручка выбора на чек" : "Средний чек"} value={dashboard.kpis.averageCheck} format={(value) => formatRub(value)} />
         <KpiCard label="Продано товаров" value={dashboard.kpis.items} format={(value) => formatNumber(value, 2)} />
         <KpiCard label="Возвраты" value={dashboard.kpis.refunds} format={(value) => formatRub(value)} inverse />

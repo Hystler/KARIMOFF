@@ -34,9 +34,11 @@ export default async function AdminEconomicsPage() {
     redirect("/admin/login");
   }
 
-  const productsResult = await getAdminProducts();
-  const economicsResult = await getAdminEconomicsSettings();
-  const inventoryStock = await getInventoryStockValue();
+  const [productsResult, economicsResult, inventoryStock] = await Promise.all([
+    getAdminProducts(),
+    getAdminEconomicsSettings(),
+    getInventoryStockValue()
+  ]);
   const productEconomics = productsResult.error
     ? {
         items: [],

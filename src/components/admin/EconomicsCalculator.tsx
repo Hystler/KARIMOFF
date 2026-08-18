@@ -1,11 +1,15 @@
 "use client";
 
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
+import { saveEconomicsSettingsAction } from "@/app/admin/economics/actions";
 import {
+  economicsValuesToDrafts,
+  formatEconomicsDraft,
   initialEconomicsSaveState,
-  saveEconomicsSettingsAction
-} from "@/app/admin/economics/actions";
-import type { EconomicsValues } from "@/lib/economics";
+  parseEconomicsNumber
+} from "@/lib/economics-input";
+import { economicsKeys, type EconomicsValues } from "@/lib/economics-values";
 import { formatNumber, formatRub } from "@/lib/format";
 
 type EconomicsCalculatorProps = {
@@ -14,22 +18,26 @@ type EconomicsCalculatorProps = {
 
 const groups: Array<{
   title: string;
-  items: Array<{ key: keyof EconomicsValues; label: string; suffix?: "%" | "₽" }>;
+  description: string;
+  items: Array<{ key: keyof EconomicsValues; label: string; suffix?: string }>;
 }> = [
   {
     title: "Выручка",
+    description: "Средние операционные показатели одной точки.",
     items: [
       { key: "average_check", label: "Средний чек", suffix: "₽" },
-      { key: "orders_per_day", label: "Заказов в день" },
-      { key: "working_days_per_month", label: "Рабочих дней в месяц" }
+      { key: "orders_per_day", label: "Заказов в день", suffix: "шт." },
+      { key: "working_days_per_month", label: "Рабочих дней в месяц", suffix: "дн." }
     ]
   },
   {
     title: "Себестоимость",
+    description: "Доля продуктов в выручке без учёта постоянных расходов.",
     items: [{ key: "food_cost_percent", label: "Себестоимость продуктов", suffix: "%" }]
   },
   {
     title: "OPEX",
+    description: "Регулярные ежемесячные расходы точки.",
     items: [
       { key: "rent", label: "Аренда", suffix: "₽" },
       { key: "payroll", label: "ФОТ", suffix: "₽" },
@@ -40,6 +48,7 @@ const groups: Array<{
   },
   {
     title: "CAPEX",
+    description: "Разовые вложения в запуск и оснащение.",
     items: [
       { key: "equipment", label: "Оборудование", suffix: "₽" },
       { key: "renovation", label: "Ремонт", suffix: "₽" },
@@ -50,6 +59,7 @@ const groups: Array<{
   },
   {
     title: "Франшиза и комиссии",
+    description: "Процентные расходы, которые считаются от выручки.",
     items: [
       { key: "royalty_percent", label: "Роялти", suffix: "%" },
       { key: "acquiring_percent", label: "Эквайринг", suffix: "%" },
@@ -65,7 +75,17 @@ function formatMonths(value: number) {
 
 export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps) {
   const [state, formAction, isPending] = useActionState(saveEconomicsSettingsAction, initialEconomicsSaveState);
-  const [values, setValues] = useState<EconomicsValues>(initialValues);
+  const [drafts, setDrafts] = useState(() => economicsValuesToDrafts(initialValues));
+  const [editedFields, setEditedFields] = useState<Set<keyof EconomicsValues>>(() => new Set());
+  const [focusedKey, setFocusedKey] = useState<keyof EconomicsValues | null>(null);
+
+  const values = useMemo(
+    () => economicsKeys.reduce((accumulator, key) => {
+      accumulator[key] = parseEconomicsNumber(drafts[key]) ?? 0;
+      return accumulator;
+    }, {} as EconomicsValues),
+    [drafts]
+  );
 
   const results = useMemo(() => {
     const monthlyRevenue = values.average_check * values.orders_per_day * values.working_days_per_month;
@@ -94,53 +114,82 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
     };
   }, [values]);
 
+  const updateDraft = (key: keyof EconomicsValues, value: string) => {
+    setDrafts((current) => ({ ...current, [key]: value }));
+    setEditedFields((current) => new Set(current).add(key));
+  };
+
+  const finishEditing = (key: keyof EconomicsValues) => {
+    const parsed = parseEconomicsNumber(drafts[key]);
+    if (parsed !== null) updateDraft(key, String(parsed));
+    setFocusedKey((current) => current === key ? null : current);
+  };
+
   return (
-    <form action={formAction} className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.72fr)]">
+    <form
+      action={formAction}
+      noValidate
+      onSubmit={() => setEditedFields(new Set())}
+      className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.72fr)]"
+    >
       <section className="grid gap-5">
         {groups.map((group) => (
           <div key={group.title} className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <h2 className="text-2xl font-black">{group.title}</h2>
+            <p className="mt-1 text-sm leading-5 text-karimoff-muted">{group.description}</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {group.items.map((item) => (
-                <label key={item.key} className="grid gap-2 text-sm font-semibold text-karimoff-black">
-                  {item.label}
-                  <div className="flex overflow-hidden rounded-lg border border-karimoff-line bg-white focus-within:border-karimoff-orange">
-                    <input
-                      type="number"
-                      step={item.suffix === "%" ? "0.1" : "1"}
-                      min="0"
-                      name={item.key}
-                      value={values[item.key]}
-                      onChange={(event) =>
-                        setValues((current) => ({
-                          ...current,
-                          [item.key]: Number(event.target.value)
-                        }))
-                      }
-                      className="min-w-0 flex-1 px-4 py-3 text-sm outline-none"
-                    />
-                    {item.suffix ? (
-                      <span className="flex items-center bg-karimoff-soft px-3 text-sm font-bold text-karimoff-muted">
-                        {item.suffix}
-                      </span>
-                    ) : null}
-                  </div>
-                </label>
-              ))}
+              {group.items.map((item) => {
+                const error = editedFields.has(item.key) ? undefined : state.fieldErrors?.[item.key];
+                const errorId = `${item.key}-error`;
+                return (
+                  <label key={item.key} className="grid content-start gap-2 text-sm font-semibold text-karimoff-black">
+                    <span>{item.label}</span>
+                    <div
+                      className={`flex min-h-[48px] overflow-hidden rounded-lg border bg-white transition focus-within:border-karimoff-orange focus-within:shadow-[0_0_0_3px_rgba(251,103,10,0.09)] ${error ? "border-red-300" : "border-karimoff-line"}`}
+                    >
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        spellCheck={false}
+                        name={item.key}
+                        value={focusedKey === item.key ? drafts[item.key] : formatEconomicsDraft(drafts[item.key])}
+                        onFocus={() => setFocusedKey(item.key)}
+                        onBlur={() => finishEditing(item.key)}
+                        onChange={(event) => updateDraft(item.key, event.target.value)}
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={error ? errorId : undefined}
+                        className="min-w-0 flex-1 bg-transparent px-4 py-3 text-base font-bold tabular-nums outline-none sm:text-sm"
+                      />
+                      {item.suffix ? (
+                        <span className="flex min-w-12 items-center justify-center border-l border-karimoff-line bg-karimoff-soft px-3 text-sm font-bold text-karimoff-muted">
+                          {item.suffix}
+                        </span>
+                      ) : null}
+                    </div>
+                    {error ? <span id={errorId} className="text-xs font-semibold text-red-600">{error}</span> : null}
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
-        <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
+        <div className="flex flex-col items-start gap-3 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-65"
+            className="min-h-12 rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange disabled:cursor-not-allowed disabled:opacity-65"
           >
             {isPending ? "Сохраняем" : "Сохранить вводные"}
           </button>
-          {state.message ? (
-            <p className={state.status === "success" ? "mt-3 text-sm font-semibold text-karimoff-orange" : "mt-3 text-sm font-semibold text-red-600"}>
-              {state.message}
+          {state.message && !isPending && editedFields.size === 0 ? (
+            <p
+              role={state.status === "error" ? "alert" : "status"}
+              aria-live="polite"
+              className={`inline-flex items-center gap-2 text-sm font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-600"}`}
+            >
+              {state.status === "success" ? <CircleCheck size={18} /> : <CircleAlert size={18} />}
+              <span>{state.message}</span>
             </p>
           ) : null}
         </div>

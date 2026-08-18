@@ -141,6 +141,27 @@ function countCalendarDays(from: string, toExclusive: string) {
   );
 }
 
+export function countAnalyticsCalendarDays(range: AnalyticsRange, weekdays: number[] = []) {
+  let count = 0;
+  for (
+    let key = range.fromDateKey;
+    key < range.toDateKeyExclusive;
+    key = addCalendarDays(key, 1)
+  ) {
+    if (!weekdays.length || weekdays.includes(weekday(key))) count += 1;
+  }
+  return count;
+}
+
+export function averagePerAnalyticsDay(
+  total: number,
+  range: AnalyticsRange,
+  weekdays: number[] = []
+) {
+  const days = countAnalyticsCalendarDays(range, weekdays);
+  return days > 0 ? total / days : 0;
+}
+
 function formatRangeLabel(from: string, toExclusive: string) {
   const to = addCalendarDays(toExclusive, -1);
   const date = (key: string) =>

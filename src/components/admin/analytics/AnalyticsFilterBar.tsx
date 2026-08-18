@@ -224,6 +224,7 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                   disabled={filters.hourFrom === null}
                   onChange={(event) => navigate({ hourTo: event.target.value || null }, true)}
                 >
+                  <option value="">До любого</option>
                   {Array.from({ length: 24 - (filters.hourFrom ?? 0) }, (_, index) => (filters.hourFrom ?? 0) + index + 1).map((hour) => (
                     <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>
                   ))}

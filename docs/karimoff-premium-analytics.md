@@ -21,7 +21,9 @@ Test orders, cancelled web orders and web orders that do not satisfy the canonic
 All financial aggregation runs in PostgreSQL using `numeric`; JavaScript receives finalized report values.
 
 - **Revenue**: canonical net revenue after discounts and refunds.
-- **Receipts / sales**: distinct operations eligible for sale counting. A refund is not a positive sale.
+- **Completed sales**: distinct canonical business operations eligible for sale counting. For POS this is a closed sale receipt; for web this is a completed order with an eligible payment status. A refund is not a positive sale.
+- **Average orders per day**: completed canonical sales divided by selected calendar days. A weekday filter narrows the denominator to matching weekdays; hour, product and category filters do not turn a calendar day into a fraction. A one-day period is divided by one, not by elapsed hours.
+- **Average receipts per day**: closed Evotor POS sale receipts divided by the same calendar-day denominator. Web orders are intentionally excluded, so this KPI is not a duplicate of the channel-neutral order average.
 - **Average receipt**: sale revenue divided by eligible receipt count. Empty periods return zero without a meaningless percentage change.
 - **Items sold**: sum of positive sale-line quantities.
 - **Refunds**: refund amount and count of operations containing a refund.
@@ -192,6 +194,8 @@ Apache ECharts remains the preferred extension when future reports genuinely req
 The browser receives aggregates, not raw receipt history. Queries filter by business period and scope before grouping. Existing analytics indexes cover timestamp, source, store, terminal, employee, external ID, product mapping and reconciliation paths.
 
 Materialized views are intentionally not introduced yet. Current report volume does not justify refresh complexity, and short scoped cache handles repeated dashboard reads. Query plans should be reviewed again as the dataset approaches millions of receipt lines.
+
+On test environments, an owner/admin-only diagnostic route can execute the fixed representative query set with `EXPLAIN (ANALYZE, BUFFERS)` inside a read-only PostgreSQL transaction. It is unavailable unless `TEST_ORDER_MODE=true`, accepts no arbitrary SQL, has a statement timeout and returns only plan summaries.
 
 ## TEST_ORDER_MODE
 
