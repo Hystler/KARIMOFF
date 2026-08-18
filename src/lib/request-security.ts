@@ -1,5 +1,34 @@
 const ALLOWED_FETCH_SITES = new Set(["same-origin", "same-site", "none"]);
 
+function firstForwardedValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+function normalizePublicHost(value: string | null) {
+  const host = firstForwardedValue(value);
+  if (!host || !/^(?:\[[0-9a-f:]+\]|[a-z0-9.-]+)(?::\d{1,5})?$/i.test(host)) return null;
+  return host;
+}
+
+export function getPublicRequestOrigin(request: Request) {
+  const internalUrl = new URL(request.url);
+  const forwardedProto = firstForwardedValue(request.headers.get("x-forwarded-proto"));
+  const protocol = forwardedProto === "http" || forwardedProto === "https"
+    ? forwardedProto
+    : internalUrl.protocol.slice(0, -1);
+  const publicHost = normalizePublicHost(request.headers.get("x-forwarded-host"))
+    ?? normalizePublicHost(request.headers.get("host"));
+
+  return publicHost ? new URL(`${protocol}://${publicHost}`).origin : internalUrl.origin;
+}
+
+export function getPublicRequestUrl(request: Request, path: string) {
+  const origin = getPublicRequestOrigin(request);
+  const url = new URL(path, origin);
+  if (url.origin !== origin) throw new Error("Cross-origin redirect is not allowed.");
+  return url;
+}
+
 export function isAllowedSameOriginRequest(request: Request) {
   const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
 

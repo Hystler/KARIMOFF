@@ -7,26 +7,27 @@ import { getTelegramAuthorizeUrl } from "@/lib/auth/social/telegram";
 import { createOAuthAttempt, sanitizeSocialRedirect } from "@/lib/auth/social/state";
 import { isSocialProvider } from "@/lib/auth/social/types";
 import { getVkAuthorizeUrl } from "@/lib/auth/social/vk";
+import { getPublicRequestUrl } from "@/lib/request-security";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ provider: string }> }) {
   const { provider: rawProvider } = await context.params;
   if (!isSocialProvider(rawProvider) || !getSocialProviderConfig(rawProvider)) {
-    return NextResponse.redirect(new URL("/login?socialError=unavailable", request.url));
+    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=unavailable"));
   }
 
   const requestHeaders = await headers();
   const clientKey = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const limit = await checkAuthRateLimit("social_oauth", `${rawProvider}:${clientKey}`);
   if (!limit.allowed) {
-    return NextResponse.redirect(new URL("/login?socialError=rate_limit", request.url));
+    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=rate_limit"));
   }
   await recordAuthFailure("social_oauth", `${rawProvider}:${clientKey}`);
 
   const intent = request.nextUrl.searchParams.get("intent") === "link" ? "link" : "login";
   if (intent === "link" && !(await getCustomerSession())) {
-    const login = new URL("/login", request.url);
+    const login = getPublicRequestUrl(request, "/login");
     login.searchParams.set("redirectTo", "/profile");
     return NextResponse.redirect(login);
   }
@@ -46,6 +47,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
       : getVkAuthorizeUrl({ state: attempt.state, codeChallenge: attempt.codeChallenge });
     return NextResponse.redirect(authorizeUrl);
   } catch {
-    return NextResponse.redirect(new URL("/login?socialError=start_failed", request.url));
+    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=start_failed"));
   }
 }

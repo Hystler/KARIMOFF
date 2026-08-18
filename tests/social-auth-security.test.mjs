@@ -87,6 +87,24 @@ test("OAuth state is browser-bound, one-time and expires", () => {
   assert.match(state, /sameSite: "lax"/);
 });
 
+test("social redirects preserve the external reverse-proxy origin", () => {
+  const output = importTypescriptScript("src/lib/request-security.ts", `
+    const request = new Request("https://0.0.0.0:3000/api/auth/social/telegram/start", {
+      headers: {
+        host: "0.0.0.0:3000",
+        "x-forwarded-host": "hystler-karimoff-stand-ad9d.twc1.net",
+        "x-forwarded-proto": "https"
+      }
+    });
+    console.log(subject.getPublicRequestUrl(request, "/login?socialError=unavailable").toString());
+  `);
+  assert.equal(output, "https://hystler-karimoff-stand-ad9d.twc1.net/login?socialError=unavailable");
+
+  const routes = `${read("src/app/api/auth/social/[provider]/start/route.ts")}\n${read("src/app/api/auth/social/[provider]/callback/route.ts")}`;
+  assert.doesNotMatch(routes, /new URL\([^\n]+request\.url/);
+  assert.match(routes, /getPublicRequestUrl/);
+});
+
 test("VK ID uses OAuth 2.1 code flow with state and PKCE, without persisting tokens", () => {
   const vk = read("src/lib/auth/social/vk.ts");
   const migration = read("supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
