@@ -28,6 +28,16 @@ export type AnalyticsPlanSummary = {
   topNode: string;
 };
 
+export class AnalyticsPerformanceQueryError extends Error {
+  constructor(
+    readonly queryName: string,
+    readonly databaseCode: string | null
+  ) {
+    super(`Analytics performance query failed: ${queryName}.`);
+    this.name = "AnalyticsPerformanceQueryError";
+  }
+}
+
 const representativeQueries: Array<{ name: string; text: string }> = [
   {
     name: "revenue_trend",
@@ -234,14 +244,22 @@ export async function explainRepresentativeAnalyticsQueries() {
     const summaries: AnalyticsPlanSummary[] = [];
 
     for (const query of representativeQueries) {
-      const rows = await transaction.unsafe<Record<string, unknown>[]>(
-        `explain (analyze, buffers, format json) ${query.text}`,
-        [range.from.toISOString(), range.to.toISOString()]
-      );
-      const raw = rows[0]?.["QUERY PLAN"];
-      const document = (Array.isArray(raw) ? raw[0] : raw) as ExplainDocument | undefined;
-      if (!document) throw new Error(`EXPLAIN did not return a plan for ${query.name}.`);
-      summaries.push(summarizePlan(query.name, document));
+      try {
+        const rows = await transaction.unsafe<Record<string, unknown>[]>(
+          `explain (analyze, buffers, format json) ${query.text}`,
+          [range.from.toISOString(), range.to.toISOString()]
+        );
+        const raw = rows[0]?.["QUERY PLAN"];
+        const document = (Array.isArray(raw) ? raw[0] : raw) as ExplainDocument | undefined;
+        if (!document) throw new Error("missing_plan");
+        summaries.push(summarizePlan(query.name, document));
+      } catch (error) {
+        const databaseCode =
+          typeof error === "object" && error && "code" in error
+            ? String(error.code)
+            : null;
+        throw new AnalyticsPerformanceQueryError(query.name, databaseCode);
+      }
     }
 
     return { range: range.label, summaries };

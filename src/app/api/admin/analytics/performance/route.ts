@@ -1,5 +1,8 @@
 import { AnalyticsAccessError, getAnalyticsScope } from "@/lib/analytics/permissions";
-import { explainRepresentativeAnalyticsQueries } from "@/lib/analytics/performance";
+import {
+  AnalyticsPerformanceQueryError,
+  explainRepresentativeAnalyticsQueries
+} from "@/lib/analytics/performance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,6 +24,16 @@ export async function GET() {
   } catch (error) {
     if (error instanceof AnalyticsAccessError) {
       return Response.json({ error: "Недостаточно прав." }, { status: 403 });
+    }
+    if (error instanceof AnalyticsPerformanceQueryError) {
+      console.error("[analytics.performance.query_failed]", {
+        code: error.databaseCode,
+        query: error.queryName
+      });
+    } else {
+      console.error("[analytics.performance.failed]", {
+        name: error instanceof Error ? error.name : "UnknownError"
+      });
     }
     return Response.json({ error: "Не удалось выполнить диагностику." }, { status: 500 });
   }
