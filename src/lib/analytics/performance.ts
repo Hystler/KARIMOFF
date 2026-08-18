@@ -46,7 +46,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(s.net_revenue), 0)::numeric as revenue,
         count(*) filter (where s.sale_count_eligible)::integer as sales
       from public.canonical_analytics_sales s
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1 order by 1
     `
   },
@@ -59,7 +59,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         count(*) filter (where s.sale_count_eligible)::integer as sales,
         coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items
       from public.canonical_analytics_sales s
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1, 2 order by 1, 2
     `
   },
@@ -72,7 +72,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(i.gross_amount - i.discount_amount), 0)::numeric as sale_revenue
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1 order by 1
     `
   },
@@ -85,7 +85,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1 order by revenue desc limit 20
     `
   },
@@ -98,7 +98,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1 order by revenue desc
     `
   },
@@ -110,7 +110,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
           coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key
         from public.analytics_sale_items i
         join public.canonical_analytics_sales s on s.sale_id = i.sale_id
-        where s.included_in_analytics and s.sale_count_eligible
+        where s.analytics_included and s.sale_count_eligible
           and s.analytics_at >= $1 and s.analytics_at < $2
           and i.operation_type = 'sale' and i.quantity > 0
       )
@@ -133,7 +133,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1, 2 order by revenue desc limit 48
     `
   },
@@ -145,7 +145,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
           coalesce(sum(i.net_revenue), 0)::numeric as revenue
         from public.canonical_analytics_sales s
         join public.analytics_sale_items i on i.sale_id = s.sale_id
-        where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+        where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
         group by 1
       )
       select product_key, revenue,
@@ -168,7 +168,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       group by 1
     `
   },
@@ -182,7 +182,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
         coalesce(sum(s.refund_amount), 0)::numeric as refunds,
         coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items
       from public.canonical_analytics_sales s
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
     `
   },
   {
@@ -191,7 +191,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
       select s.sale_id, s.analytics_at, s.order_number, s.source, s.location_name,
         s.net_revenue, s.payment_method, s.status
       from public.canonical_analytics_sales s
-      where s.included_in_analytics and s.analytics_at >= $1 and s.analytics_at < $2
+      where s.analytics_included and s.analytics_at >= $1 and s.analytics_at < $2
       order by s.analytics_at desc, s.sale_id desc
       limit 25
     `

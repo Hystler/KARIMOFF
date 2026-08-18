@@ -182,5 +182,7 @@ test("analytics EXPLAIN diagnostics are fixed-query, admin-only, test-only, and 
   assert.match(performance, /set transaction read only/);
   assert.match(performance, /explain \(analyze, buffers, format json\)/);
   assert.match(performance, /statement_timeout/);
+  assert.match(performance, /s\.analytics_included/);
+  assert.doesNotMatch(performance, /s\.included_in_analytics/);
   assert.doesNotMatch(route, /request\.json|searchParams|get\("sql"\)/);
 });
