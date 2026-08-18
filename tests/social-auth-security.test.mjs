@@ -169,6 +169,7 @@ test("404 is brand-safe, responsive and respects reduced motion", () => {
   const css = read("src/app/globals.css");
   assert.match(page, /Заказ №404/);
   assert.match(page, /Похоже, его уже забрали/);
+  assert.match(page, /aria-label="Заказ №404 не найден"/);
   assert.match(page, /В меню/);
   assert.match(page, /На главную/);
   assert.doesNotMatch(page, /бургер|панда|маскот/i);

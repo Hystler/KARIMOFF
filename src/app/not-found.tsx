@@ -11,7 +11,7 @@ export default function NotFound() {
             <span className="h-2 w-2 rounded-full bg-karimoff-orange shadow-[0_0_16px_rgba(251,103,10,0.8)]" aria-hidden="true" />
             Статус заказа
           </div>
-          <h1 className="mt-7 max-w-3xl text-4xl font-black leading-[1.04] sm:text-6xl lg:text-7xl">
+          <h1 aria-label="Заказ №404 не найден" className="mt-7 max-w-3xl text-4xl font-black leading-[1.04] sm:text-6xl lg:text-7xl">
             Заказ №404
             <span className="mt-2 block text-karimoff-orange">не найден</span>
           </h1>
