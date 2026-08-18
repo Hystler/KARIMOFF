@@ -105,6 +105,18 @@ test("social redirects preserve the external reverse-proxy origin", () => {
   assert.match(routes, /getPublicRequestUrl/);
 });
 
+test("configured app origin wins when a reverse proxy hides the public host", () => {
+  const output = importTypescriptScript("src/lib/request-security.ts", `
+    process.env.APP_ORIGIN = "https://hystler-karimoff-stand-ad9d.twc1.net";
+    const request = new Request("https://0.0.0.0:3000/api/auth/social/telegram/start", {
+      headers: { host: "0.0.0.0:3000" }
+    });
+    console.log(subject.getPublicRequestUrl(request, "/login?socialError=unavailable").toString());
+  `);
+  assert.equal(output, "https://hystler-karimoff-stand-ad9d.twc1.net/login?socialError=unavailable");
+  assert.match(read(".env.example"), /^APP_ORIGIN=https:\/\//m);
+});
+
 test("VK ID uses OAuth 2.1 code flow with state and PKCE, without persisting tokens", () => {
   const vk = read("src/lib/auth/social/vk.ts");
   const migration = read("supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");

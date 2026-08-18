@@ -12,6 +12,8 @@ Staff passwords in `staff_users.password_hash` are also bcrypt. Existing legacy 
 
 Failed logins are stored without passwords and use a database rate limit with exponential temporary lockout. Password rotation invalidates legacy owner sessions because the session actor fingerprint includes the active password hash.
 
+`APP_ORIGIN` must contain the public HTTPS origin without a path. It keeps same-origin auth redirects correct when App Platform exposes an internal container host to Next.js.
+
 ### Safe owner password reset
 
 Generate a new temporary credential outside the repository:

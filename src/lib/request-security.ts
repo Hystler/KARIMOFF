@@ -10,7 +10,25 @@ function normalizePublicHost(value: string | null) {
   return host;
 }
 
+function getConfiguredAppOrigin() {
+  const value = process.env.APP_ORIGIN?.trim();
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    const isLocalHttp = url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !isLocalHttp) return null;
+    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export function getPublicRequestOrigin(request: Request) {
+  const configuredOrigin = getConfiguredAppOrigin();
+  if (configuredOrigin) return configuredOrigin;
+
   const internalUrl = new URL(request.url);
   const forwardedProto = firstForwardedValue(request.headers.get("x-forwarded-proto"));
   const protocol = forwardedProto === "http" || forwardedProto === "https"
