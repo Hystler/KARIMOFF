@@ -4,6 +4,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { verifyPassword } from "@/lib/password-auth";
 
 const ADMIN_COOKIE_NAME = "karimoff_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 4;
@@ -19,7 +20,8 @@ export type CurrentStaff = {
 };
 
 function isConfigured() {
-  return Boolean(process.env.ADMIN_PHONE && process.env.ADMIN_PASSWORD);
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH ?? "";
+  return Boolean(process.env.ADMIN_PHONE && /^\$2[aby]\$/.test(passwordHash));
 }
 
 function getSecret() {
@@ -85,16 +87,36 @@ export function isAdminTotpConfigured() {
 }
 
 export function getAdminActorHash() {
-  return hmac(normalizeRussianPhone(process.env.ADMIN_PHONE ?? ""));
+  const credentialFingerprint = createHmac("sha256", getSecret())
+    .update(process.env.ADMIN_PASSWORD_HASH ?? "")
+    .digest("hex")
+    .slice(0, 16);
+  return hmac(`${normalizeRussianPhone(process.env.ADMIN_PHONE ?? "")}:${credentialFingerprint}`);
 }
 
-export function verifyAdminCredentials(phone: string, password: string, totp = "") {
+export async function verifyAdminCredentials(phone: string, password: string, totp = "") {
   if (!isConfigured()) return false;
-  return (
-    safeCompare(normalizeRussianPhone(phone), normalizeRussianPhone(process.env.ADMIN_PHONE ?? "")) &&
-    safeCompare(password, process.env.ADMIN_PASSWORD ?? "") &&
-    verifyTotp(totp)
-  );
+  const expectedPhoneHash = hmac(normalizeRussianPhone(process.env.ADMIN_PHONE ?? ""));
+  const actualPhoneHash = hmac(normalizeRussianPhone(phone));
+  const [phoneMatches, passwordMatches] = [
+    safeCompare(actualPhoneHash, expectedPhoneHash),
+    await verifyPassword(password, process.env.ADMIN_PASSWORD_HASH)
+  ];
+  return phoneMatches && passwordMatches && verifyTotp(totp);
+}
+
+async function revokeCurrentSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  const database = createDatabaseServerClient();
+
+  if (token && database) {
+    await database
+      .from("app_sessions")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("token_hash", hmac(token))
+      .in("subject_type", ["admin", "staff"]);
+  }
 }
 
 async function setSession(params: {
@@ -104,6 +126,8 @@ async function setSession(params: {
 }) {
   const database = createDatabaseServerClient();
   if (!database) throw new Error("Database is not configured.");
+
+  await revokeCurrentSession();
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
@@ -129,10 +153,10 @@ async function setSession(params: {
   });
 }
 
-export async function setAdminSession(phone: string) {
+export async function setAdminSession() {
   return setSession({
     subjectType: "admin",
-    subjectRefHash: hmac(normalizeRussianPhone(phone))
+    subjectRefHash: getAdminActorHash()
   });
 }
 

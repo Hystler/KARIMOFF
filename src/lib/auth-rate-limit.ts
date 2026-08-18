@@ -12,6 +12,7 @@ const presets = {
   admin_login: { lockSeconds: 1800, maxAttempts: 5, windowSeconds: 900 },
   customer_login: { lockSeconds: 900, maxAttempts: 5, windowSeconds: 900 },
   customer_register: { lockSeconds: 900, maxAttempts: 5, windowSeconds: 900 },
+  social_oauth: { lockSeconds: 900, maxAttempts: 20, windowSeconds: 600 },
   send_code: { lockSeconds: 600, maxAttempts: 3, windowSeconds: 600 },
   verify_code: { lockSeconds: 900, maxAttempts: 5, windowSeconds: 900 }
 } as const;

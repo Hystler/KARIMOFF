@@ -11,15 +11,18 @@ import {
   requestRegisterCodeAction
 } from "@/app/auth/actions";
 import { PhoneInput } from "@/components/forms/PhoneInput";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { initialAuthActionState } from "@/lib/customer-schema";
 
 type AuthFormProps = {
   mode: "login" | "register";
   next?: string;
   redirectTo?: string;
+  socialProviders?: { telegram: boolean; vk: boolean };
+  socialError?: string | null;
 };
 
-export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, socialError }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
@@ -56,6 +59,9 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
             ? "Получите одноразовый код по SMS и войдите без пароля."
             : "Войдите по телефону и постоянному паролю."}
       </p>
+
+      <SocialAuthButtons enabled={socialProviders} returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")} />
+      {socialError ? <p className="mt-4 text-sm font-semibold text-red-600">{socialError}</p> : null}
 
       {!codeMode ? (
       <form action={passwordAction} className="mt-7 grid gap-4">

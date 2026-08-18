@@ -1,4 +1,4 @@
-export const LEGAL_VERSION = "2026-07-24.v1";
+export const LEGAL_VERSION = "2026-08-18.v2";
 
 export const LEGAL_CONTACTS = {
   operator: "Индивидуальный предприниматель Каримов Рустам Радикович",

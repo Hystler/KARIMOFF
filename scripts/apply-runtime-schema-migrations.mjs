@@ -105,6 +105,27 @@ const migrations = [
         objects?.create_web_test
       );
     }
+  },
+  {
+    name: "20260818170000_add_social_identities_and_auth_hardening",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.user_identities') is not null as identities,
+          to_regclass('public.oauth_login_attempts') is not null as oauth_attempts,
+          to_regclass('public.pending_social_identities') is not null as pending_identities,
+          exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public' and table_name = 'customers' and column_name = 'phone_verified_at'
+          ) as verified_phone
+      `;
+      return Boolean(
+        objects?.identities &&
+        objects?.oauth_attempts &&
+        objects?.pending_identities &&
+        objects?.verified_phone
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

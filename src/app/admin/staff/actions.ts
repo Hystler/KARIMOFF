@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { hashPassword } from "@/lib/password-auth";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
 
 async function requireOwnerAdmin() {
   const staff = await getCurrentStaff();
@@ -15,6 +16,7 @@ async function requireOwnerAdmin() {
 }
 
 export async function createStaffAction(formData: FormData) {
+  await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const name = String(formData.get("name") || "").trim();
   const phone = normalizeRussianPhone(String(formData.get("phone") || ""));
@@ -30,7 +32,7 @@ export async function createStaffAction(formData: FormData) {
   const { data, error } = await database.from("staff_users").insert({
     name,
     phone,
-    password_hash: hashPassword(password),
+    password_hash: await hashPassword(password),
     role,
     is_active: true
   }).select("id").single();
@@ -50,6 +52,7 @@ export async function createStaffAction(formData: FormData) {
 }
 
 export async function toggleStaffAction(formData: FormData) {
+  await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const id = String(formData.get("id") || "");
   const isActive = formData.get("is_active") === "true";

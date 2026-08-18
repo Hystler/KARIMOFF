@@ -5,7 +5,7 @@ import { loginAction } from "./actions";
 
 const errorMessages: Record<string, string> = {
   invalid: "Неверный телефон или пароль.",
-  not_configured: "ADMIN_PHONE и ADMIN_PASSWORD не заполнены в env."
+  not_configured: "Вход владельца не настроен. Используйте безопасный сброс учётных данных."
 };
 
 type AdminLoginPageProps = {

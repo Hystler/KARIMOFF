@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 
 type RegisterPageProps = {
   searchParams?: Promise<{
@@ -17,7 +18,12 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <Link href="/" className="mb-5 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
           На сайт KARIMOFF
         </Link>
-        <AuthForm mode="register" next={params.next} redirectTo={params.redirectTo} />
+        <AuthForm
+          mode="register"
+          next={params.next}
+          redirectTo={params.redirectTo}
+          socialProviders={getConfiguredSocialProviders()}
+        />
       </div>
     </main>
   );

@@ -57,12 +57,14 @@ const allowedTables = new Set([
   "order_number_counters",
   "order_outbox",
   "order_status_events",
+  "oauth_login_attempts",
   "order_item_ingredient_usage",
   "order_item_modifiers",
   "order_items",
   "orders",
   "payment_events",
   "payments",
+  "pending_social_identities",
   "product_images",
   "product_ingredients",
   "product_modifier_groups",
@@ -78,6 +80,7 @@ const allowedTables = new Set([
   "site_settings",
   "staff_location_access",
   "staff_users",
+  "user_identities",
   "vacancies",
   "verification_codes"
 ]);

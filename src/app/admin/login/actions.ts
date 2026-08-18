@@ -11,12 +11,14 @@ import {
   verifyAdminCredentials
 } from "@/lib/admin-auth";
 import { hashPrivacyValue } from "@/lib/legal-consents";
-import { verifyPassword } from "@/lib/password-auth";
+import { hashPassword, passwordNeedsRehash, verifyPassword } from "@/lib/password-auth";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { getPhoneLookupCandidates } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
 
 export async function loginAction(formData: FormData) {
+  await assertTrustedRequestOrigin();
   const phone = String(formData.get("phone") || "");
   const password = String(formData.get("password") || "");
   const totp = String(formData.get("totp") || "");
@@ -38,10 +40,16 @@ export async function loginAction(formData: FormData) {
         .maybeSingle()
     : { data: null };
 
-  if (staff?.is_active && verifyPassword(password, String(staff.password_hash))) {
+  if (staff?.is_active && (await verifyPassword(password, String(staff.password_hash)))) {
     await clearAuthFailures("admin_login", normalizedPhone);
     await setStaffSession(String(staff.id));
-    await database?.from("staff_users").update({ last_login_at: new Date().toISOString() }).eq("id", staff.id);
+    await database
+      ?.from("staff_users")
+      .update({
+        last_login_at: new Date().toISOString(),
+        ...(passwordNeedsRehash(String(staff.password_hash)) ? { password_hash: await hashPassword(password) } : {})
+      })
+      .eq("id", staff.id);
     await writeAuditLog({
       action: "staff.login",
       actorId: String(staff.id),
@@ -55,11 +63,11 @@ export async function loginAction(formData: FormData) {
     redirect(staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin");
   }
 
-  if (!verifyAdminCredentials(phone, password, totp)) {
+  if (!(await verifyAdminCredentials(phone, password, totp))) {
     await recordAuthFailure("admin_login", normalizedPhone);
     await writeAuditLog({
       action: "admin.login_failed",
-      actorRefHash: getAdminActorHash(),
+      actorRefHash: hashPrivacyValue(normalizedPhone),
       actorType: "admin",
       sourcePath: "/admin/login"
     });
@@ -67,7 +75,7 @@ export async function loginAction(formData: FormData) {
   }
 
   await clearAuthFailures("admin_login", normalizedPhone);
-  await setAdminSession(normalizedPhone);
+  await setAdminSession();
   await writeAuditLog({
     action: "admin.login",
     actorRefHash: getAdminActorHash(),
@@ -78,6 +86,7 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  await assertTrustedRequestOrigin();
   await writeAuditLog({
     action: "admin.logout",
     actorRefHash: getAdminActorHash(),

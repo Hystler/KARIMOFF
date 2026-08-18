@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
+import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getAdminCustomers } from "@/lib/admin-customers";
 import { logoutAction } from "../login/actions";
@@ -73,6 +74,7 @@ export default async function AdminCustomersPage() {
                     <th className="px-4 py-4 font-bold">Пользователь</th>
                     <th className="px-4 py-4 font-bold">Регистрация</th>
                     <th className="px-4 py-4 font-bold">Последний вход</th>
+                    <th className="px-4 py-4 font-bold">Способы входа</th>
                     <th className="px-4 py-4 font-bold">Баллы</th>
                     <th className="px-4 py-4 font-bold">Заказы</th>
                     <th className="px-4 py-4 font-bold">Сумма заказов</th>
@@ -88,11 +90,24 @@ export default async function AdminCustomersPage() {
                           <div>
                             <p className="font-black text-karimoff-black">{customer.name}</p>
                             <p className="mt-1 text-xs font-semibold text-karimoff-muted">{customer.phone}</p>
+                            <p className="mt-1 font-mono text-[10px] text-karimoff-muted">{customer.id}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-karimoff-muted">{formatDate(customer.created_at)}</td>
                       <td className="px-4 py-4 text-karimoff-muted">{formatDate(customer.last_login_at)}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex -space-x-1">
+                          {customer.identities.map((identity) => (
+                            <IdentityAvatar
+                              key={identity.id}
+                              identityId={identity.id}
+                              label={identity.provider === "phone" ? "+7" : identity.provider === "telegram" ? "T" : "VK"}
+                              hasImage={Boolean(identity.avatarUrl)}
+                            />
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-4 py-4 font-black text-karimoff-orange">{formatNumber(customer.points_balance)}</td>
                       <td className="px-4 py-4 font-semibold">{customer.order_count}</td>
                       <td className="px-4 py-4 font-black">{formatPrice(customer.order_total)} ₽</td>
