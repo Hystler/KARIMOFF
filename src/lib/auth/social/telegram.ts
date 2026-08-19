@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { getSocialProviderConfig, shouldRequestSocialPhone } from "./config";
 import { getSocialAuthError, SocialAuthError } from "./errors";
-import { getSafeNetworkErrorCode, postFormJson } from "./telegram-http";
+import { getJson, getSafeNetworkErrorCode, postFormJson } from "./telegram-http";
 import { normalizeTelegramPhone, parseTelegramTokenResponse } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
@@ -28,9 +28,10 @@ async function getTelegramKeys(forceRefresh = false) {
 
   for (let attempt = 0; attempt < TELEGRAM_JWKS_RETRIES; attempt += 1) {
     try {
-      const response = await fetch(TELEGRAM_JWKS_URL, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(TELEGRAM_JWKS_TIMEOUT_MS)
+      const response = await getJson({
+        url: TELEGRAM_JWKS_URL,
+        headers: { Accept: "application/json" },
+        timeoutMs: TELEGRAM_JWKS_TIMEOUT_MS
       });
       if (!response.ok) {
         throw new SocialAuthError({
@@ -39,9 +40,7 @@ async function getTelegramKeys(forceRefresh = false) {
           httpStatus: response.status
         });
       }
-      const payload = await response.json().catch((error) => {
-        throw new SocialAuthError({ code: "jwks_invalid", stage: "jwks", cause: error });
-      });
+      const payload = response.payload;
       const parsed = z.object({ keys: z.array(z.record(z.string(), z.unknown())).min(1) }).safeParse(payload);
       if (!parsed.success) {
         throw new SocialAuthError({ code: "jwks_invalid", stage: "jwks" });

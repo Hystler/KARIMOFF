@@ -19,15 +19,16 @@ export function getSafeNetworkErrorCode(error: unknown) {
   return typeof value === "string" && /^[A-Z0-9_]{1,64}$/.test(value) ? value : null;
 }
 
-export async function postFormJson(params: {
+async function requestJson(params: {
   url: string;
-  body: URLSearchParams;
-  headers: Record<string, string>;
+  body?: string;
+  headers?: Record<string, string>;
+  method: "GET" | "POST";
   timeoutMs: number;
 }) {
   const target = new URL(params.url);
   const request = target.protocol === "https:" ? requestHttps : requestHttp;
-  const body = params.body.toString();
+  const body = params.body ?? "";
 
   return new Promise<{ ok: boolean; payload: unknown; status: number }>((resolve, reject) => {
     let completed = false;
@@ -40,17 +41,13 @@ export async function postFormJson(params: {
       callback();
     };
 
-    const options: RequestOptions & {
-      autoSelectFamily: boolean;
-      autoSelectFamilyAttemptTimeout: number;
-    } = {
-      autoSelectFamily: true,
-      autoSelectFamilyAttemptTimeout: 250,
+    const options: RequestOptions = {
+      family: 4,
       headers: {
         ...params.headers,
-        "Content-Length": String(Buffer.byteLength(body))
+        ...(body ? { "Content-Length": String(Buffer.byteLength(body)) } : {})
       },
-      method: "POST"
+      method: params.method
     };
 
     const outgoing = request(target, options, (response) => {
@@ -87,6 +84,23 @@ export async function postFormJson(params: {
       const timeout = new TelegramHttpError("REQUEST_TIMEOUT");
       outgoing.destroy(timeout);
     }, params.timeoutMs);
-    outgoing.end(body);
+    outgoing.end(body || undefined);
   });
+}
+
+export function getJson(params: {
+  url: string;
+  headers?: Record<string, string>;
+  timeoutMs: number;
+}) {
+  return requestJson({ ...params, method: "GET" });
+}
+
+export function postFormJson(params: {
+  url: string;
+  body: URLSearchParams;
+  headers: Record<string, string>;
+  timeoutMs: number;
+}) {
+  return requestJson({ ...params, body: params.body.toString(), method: "POST" });
 }

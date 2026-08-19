@@ -68,7 +68,7 @@ test("Telegram token endpoint errors are recognized even when Telegram returns H
   });
 });
 
-test("Telegram token transport preserves the official form POST without the global fetch connect timeout", () => {
+test("Telegram server transport forces IPv4 and preserves official GET and form POST requests", () => {
   const output = importTypescriptScript("src/lib/auth/social/telegram-http.ts", `
     const { createServer } = await import("node:http");
     const server = createServer((request, response) => {
@@ -87,16 +87,21 @@ test("Telegram token transport preserves the official form POST without the glob
     });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
-    const result = await subject.postFormJson({
+    const post = await subject.postFormJson({
       url: "http://127.0.0.1:" + address.port + "/token",
       body: new URLSearchParams({ grant_type: "authorization_code", code: "code", redirect_uri: "https://example.test/callback", client_id: "client", code_verifier: "verifier" }),
       headers: { Authorization: "Basic test", "Content-Type": "application/x-www-form-urlencoded" },
       timeoutMs: 2_000
     });
+    const get = await subject.getJson({
+      url: "http://127.0.0.1:" + address.port + "/jwks",
+      timeoutMs: 2_000
+    });
     await new Promise((resolve) => server.close(resolve));
-    console.log(JSON.stringify(result));
+    console.log(JSON.stringify({ post, get, source: await (await import("node:fs/promises")).readFile("src/lib/auth/social/telegram-http.ts", "utf8") }));
   `);
-  assert.deepEqual(JSON.parse(output), {
+  const result = JSON.parse(output);
+  assert.deepEqual(result.post, {
     ok: true,
     payload: {
       method: "POST",
@@ -106,6 +111,9 @@ test("Telegram token transport preserves the official form POST without the glob
     },
     status: 200
   });
+  assert.equal(result.get.ok, true);
+  assert.equal(result.get.payload.method, "GET");
+  assert.match(result.source, /family: 4/);
 });
 
 test("Telegram phone normalization accepts Russian E.164 with and without plus", () => {
