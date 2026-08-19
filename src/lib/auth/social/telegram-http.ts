@@ -4,7 +4,7 @@ import { request as requestHttps } from "node:https";
 const MAX_RESPONSE_BYTES = 128 * 1024;
 
 export class TelegramHttpError extends Error {
-  readonly code: "RESPONSE_TOO_LARGE" | "REQUEST_TIMEOUT";
+  readonly code: string;
 
   constructor(code: TelegramHttpError["code"], options?: { cause?: unknown }) {
     super(code, options);
@@ -32,6 +32,7 @@ async function requestJson(params: {
 
   return new Promise<{ ok: boolean; payload: unknown; status: number }>((resolve, reject) => {
     let completed = false;
+    let phase = "request";
     let timer: NodeJS.Timeout | null = null;
 
     const finish = (callback: () => void) => {
@@ -51,6 +52,7 @@ async function requestJson(params: {
     };
 
     const outgoing = request(target, options, (response) => {
+      phase = "response";
       const chunks: Buffer[] = [];
       let receivedBytes = 0;
 
@@ -79,9 +81,21 @@ async function requestJson(params: {
       });
     });
 
+    outgoing.once("socket", (socket) => {
+      phase = "socket";
+      socket.once("lookup", (error) => {
+        phase = error ? "dns_error" : "dns";
+      });
+      socket.once("connect", () => {
+        phase = "tcp";
+      });
+      socket.once("secureConnect", () => {
+        phase = "tls";
+      });
+    });
     outgoing.once("error", (error) => finish(() => reject(error)));
     timer = setTimeout(() => {
-      const timeout = new TelegramHttpError("REQUEST_TIMEOUT");
+      const timeout = new TelegramHttpError(`REQUEST_TIMEOUT_${phase.toUpperCase()}`);
       outgoing.destroy(timeout);
     }, params.timeoutMs);
     outgoing.end(body || undefined);

@@ -114,6 +114,7 @@ test("Telegram server transport forces IPv4 and preserves official GET and form 
   assert.equal(result.get.ok, true);
   assert.equal(result.get.payload.method, "GET");
   assert.match(result.source, /family: 4/);
+  assert.match(result.source, /REQUEST_TIMEOUT_\$\{phase\.toUpperCase\(\)\}/);
 });
 
 test("Telegram phone normalization accepts Russian E.164 with and without plus", () => {
