@@ -3,17 +3,14 @@ import "server-only";
 import type { OAuthBrowserBinding } from "./state-policy";
 
 export type TelegramAuthEvent =
-  | "telegram.callback.received"
+  | "telegram.client.completed"
   | "telegram.failed"
   | "telegram.id_token.valid"
   | "telegram.identity.resolved"
-  | "telegram.redirect.success"
+  | "telegram.library.result"
+  | "telegram.library.start"
   | "telegram.session.created"
-  | "telegram.session.readback"
-  | "telegram.start"
-  | "telegram.token_exchange.fail"
-  | "telegram.token_exchange.start"
-  | "telegram.token_exchange.success";
+  | "telegram.session.readback";
 
 type TelegramAuthEventDetails = {
   attemptId: string;

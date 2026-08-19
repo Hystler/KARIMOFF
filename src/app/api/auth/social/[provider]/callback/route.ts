@@ -5,8 +5,6 @@ import { getSocialAuthError, getSocialResultReason, SocialAuthError, type Social
 import { completeProviderCallback } from "@/lib/auth/social/identity";
 import { buildSocialResultPath } from "@/lib/auth/social/redirect";
 import { consumeOAuthAttempt } from "@/lib/auth/social/state";
-import { exchangeTelegramCode } from "@/lib/auth/social/telegram";
-import { logTelegramAuthEvent } from "@/lib/auth/social/telegram-observability";
 import { isSocialProvider } from "@/lib/auth/social/types";
 import { exchangeVkCode } from "@/lib/auth/social/vk";
 import { getPublicRequestUrl } from "@/lib/request-security";
@@ -19,6 +17,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
     return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=invalid_provider"));
   }
 
+  // Telegram web login is coordinated by the official JavaScript Login Library.
+  // Keep this old callback closed so both protocols cannot compete for one attempt.
+  if (rawProvider === "telegram") {
+    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=session_expired"), 303);
+  }
+
   const state = request.nextUrl.searchParams.get("state") ?? "";
   const code = request.nextUrl.searchParams.get("code") ?? "";
   const providerError = request.nextUrl.searchParams.get("error");
@@ -26,7 +30,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
   let returnTo = "/profile";
   let attemptId: string = randomUUID();
   let stage: SocialAuthStage = "callback";
-  let tokenExchangeStartedAt: number | null = null;
+
   try {
     if (!state) {
       throw new SocialAuthError({
@@ -35,17 +39,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
         providerError
       });
     }
+
     stage = "state";
-    const attempt = await consumeOAuthAttempt(rawProvider, state);
+    const attempt = await consumeOAuthAttempt("vk", state);
     attemptId = attempt.id;
     returnTo = attempt.redirectTo;
-    if (rawProvider === "telegram") {
-      logTelegramAuthEvent("telegram.callback.received", {
-        attemptId,
-        stage: "callback",
-        browserBinding: attempt.browserBinding
-      });
-    }
+
     if (providerError) {
       throw new SocialAuthError({
         code: "provider_cancelled",
@@ -56,116 +55,37 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
     if (!code) {
       throw new SocialAuthError({ code: "missing_code", stage: "callback" });
     }
+
     stage = "token_exchange";
-    const tokenExchangeStartTimestamp = Date.now();
-    tokenExchangeStartedAt = tokenExchangeStartTimestamp;
-    if (rawProvider === "telegram") {
-      logTelegramAuthEvent("telegram.token_exchange.start", {
-        attemptId,
-        stage: "token_exchange"
-      });
-    }
-    const claims = rawProvider === "telegram"
-      ? await exchangeTelegramCode({
-          code,
-          codeVerifier: attempt.codeVerifier,
-          expectedNonce: attempt.nonce ?? "",
-          onStage: (telegramStage) => {
-            if (telegramStage === "token_exchange.success") {
-              logTelegramAuthEvent("telegram.token_exchange.success", {
-                attemptId,
-                stage: "token_exchange",
-                durationMs: Date.now() - tokenExchangeStartTimestamp
-              });
-              stage = "id_token";
-            } else {
-              logTelegramAuthEvent("telegram.id_token.valid", {
-                attemptId,
-                stage: "id_token"
-              });
-              stage = "identity";
-            }
-          }
-        })
-      : await exchangeVkCode({
-          code,
-          deviceId: request.nextUrl.searchParams.get("device_id") ?? "",
-          state,
-          codeVerifier: attempt.codeVerifier
-        });
+    const claims = await exchangeVkCode({
+      code,
+      deviceId: request.nextUrl.searchParams.get("device_id") ?? "",
+      state,
+      codeVerifier: attempt.codeVerifier
+    });
     stage = "identity";
     const result = await completeProviderCallback(claims, attempt);
-    if (rawProvider === "telegram") {
-      logTelegramAuthEvent("telegram.identity.resolved", {
-        attemptId,
-        stage: "identity",
-        resolution: result.kind
-      });
-    }
     if (result.kind === "needs_phone") {
-      if (rawProvider === "telegram") {
-        logTelegramAuthEvent("telegram.redirect.success", {
-          attemptId,
-          stage: "redirect"
-        });
-      }
       return NextResponse.redirect(getPublicRequestUrl(request, result.redirectTo));
     }
-    if (rawProvider === "telegram" && result.kind === "authenticated") {
-      logTelegramAuthEvent("telegram.session.created", {
-        attemptId,
-        stage: "session"
-      });
-      logTelegramAuthEvent("telegram.session.readback", {
-        attemptId,
-        stage: "session"
-      });
-    }
+
     const successTarget = result.kind === "authenticated"
       ? result.redirectTo
       : buildSocialResultPath({
-          provider: rawProvider,
+          provider: "vk",
           status: "success",
           returnTo: result.redirectTo,
           linked: result.kind === "linked"
         });
-    const response = NextResponse.redirect(getPublicRequestUrl(request, successTarget), 303);
-    if (rawProvider === "telegram") {
-      logTelegramAuthEvent("telegram.redirect.success", {
-        attemptId,
-        stage: "redirect"
-      });
-    }
-    return response;
+    return NextResponse.redirect(getPublicRequestUrl(request, successTarget), 303);
   } catch (error) {
     const failure = getSocialAuthError(error, stage);
-    if (rawProvider === "telegram") {
-      if (failure.stage === "token_exchange") {
-        logTelegramAuthEvent("telegram.token_exchange.fail", {
-          attemptId,
-          stage: failure.stage,
-          errorCode: failure.code,
-          httpStatus: failure.httpStatus,
-          networkError: failure.networkError,
-          providerError: failure.providerError,
-          durationMs: tokenExchangeStartedAt ? Date.now() - tokenExchangeStartedAt : null
-        });
-      }
-      logTelegramAuthEvent("telegram.failed", {
-        attemptId,
-        stage: failure.stage,
-        errorCode: failure.code,
-        httpStatus: failure.httpStatus,
-        networkError: failure.networkError,
-        providerError: failure.providerError
-      });
-    }
     await writeAuditLog({
       action: "customer.social_login_failed",
       actorType: "system",
       entityType: "customer",
       metadata: {
-        provider: rawProvider,
+        provider: "vk",
         attempt_id: attemptId,
         stage: failure.stage,
         error_code: failure.code,
@@ -173,10 +93,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
         ...(failure.networkError ? { network_error: failure.networkError } : {}),
         ...(failure.providerError ? { provider_error: failure.providerError } : {})
       },
-      sourcePath: `/api/auth/social/${rawProvider}/callback`
+      sourcePath: "/api/auth/social/vk/callback"
     }).catch(() => undefined);
     return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
-      provider: rawProvider,
+      provider: "vk",
       status: "error",
       returnTo,
       reason: getSocialResultReason(failure)

@@ -21,15 +21,11 @@ export function getSafeNetworkErrorCode(error: unknown) {
 
 async function requestJson(params: {
   url: string;
-  body?: string;
   headers?: Record<string, string>;
-  method: "GET" | "POST";
   timeoutMs: number;
 }) {
   const target = new URL(params.url);
   const request = target.protocol === "https:" ? requestHttps : requestHttp;
-  const body = params.body ?? "";
-
   return new Promise<{ ok: boolean; payload: unknown; status: number }>((resolve, reject) => {
     let completed = false;
     let phase = "request";
@@ -44,11 +40,8 @@ async function requestJson(params: {
 
     const options: RequestOptions = {
       family: 4,
-      headers: {
-        ...params.headers,
-        ...(body ? { "Content-Length": String(Buffer.byteLength(body)) } : {})
-      },
-      method: params.method
+      headers: params.headers,
+      method: "GET"
     };
 
     const outgoing = request(target, options, (response) => {
@@ -98,7 +91,7 @@ async function requestJson(params: {
       const timeout = new TelegramHttpError(`REQUEST_TIMEOUT_${phase.toUpperCase()}`);
       outgoing.destroy(timeout);
     }, params.timeoutMs);
-    outgoing.end(body || undefined);
+    outgoing.end();
   });
 }
 
@@ -107,14 +100,5 @@ export function getJson(params: {
   headers?: Record<string, string>;
   timeoutMs: number;
 }) {
-  return requestJson({ ...params, method: "GET" });
-}
-
-export function postFormJson(params: {
-  url: string;
-  body: URLSearchParams;
-  headers: Record<string, string>;
-  timeoutMs: number;
-}) {
-  return requestJson({ ...params, body: params.body.toString(), method: "POST" });
+  return requestJson(params);
 }

@@ -19,79 +19,74 @@ function importTypescriptScript(modulePath, body) {
   return result.stdout.trim();
 }
 
-test("social result paths preserve safe checkout returns and reject external redirects", () => {
+test("social redirects preserve safe checkout returns and reject external redirects", () => {
   const output = importTypescriptScript("src/lib/auth/social/redirect.ts", `
     console.log(JSON.stringify([
-      subject.buildSocialResultPath({ provider: "telegram", status: "success", returnTo: "/checkout?step=delivery" }),
-      subject.buildSocialResultPath({ provider: "telegram", status: "success", returnTo: "https://evil.example" }),
+      subject.sanitizeSocialRedirect("/checkout?step=delivery"),
+      subject.sanitizeSocialRedirect("https://evil.example"),
       subject.sanitizeSocialRedirect("//evil.example")
     ]));
   `);
-  const [checkoutPath, externalPath, protocolRelative] = JSON.parse(output);
-  assert.match(checkoutPath, /returnTo=%2Fcheckout%3Fstep%3Ddelivery/);
-  assert.match(externalPath, /returnTo=%2Fprofile/);
-  assert.equal(protocolRelative, "/profile");
+  assert.deepEqual(JSON.parse(output), ["/checkout?step=delivery", "/profile", "/profile"]);
 });
 
-test("Telegram is the primary human-readable social login option", () => {
+test("Telegram is the primary human-readable login option and remains on the KARIMOFF page", () => {
   const social = read("src/components/auth/SocialAuthButtons.tsx");
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
   const authForm = read("src/components/auth/AuthForm.tsx");
-  assert.match(social, /Войти через Telegram/);
-  assert.match(social, /Быстрый вход без ввода пароля/);
-  assert.match(social, /Вход выполняется через официальный Telegram/);
-  assert.match(social, /Мы не публикуем ничего от вашего имени/);
-  assert.match(social, /Если вы разрешите доступ, мы получим ваш номер телефона/);
-  assert.match(social, /SocialProviderIcon provider="telegram"/);
-  assert.doesNotMatch(social, /mark: "T"/);
+  assert.match(telegram, /Войти через Telegram/);
+  assert.match(telegram, /Быстрый вход без ввода пароля/);
+  assert.match(telegram, /Вход выполняется через официальный Telegram/);
+  assert.match(telegram, /Мы не публикуем ничего от вашего имени/);
+  assert.match(telegram, /Подтвердите вход в Telegram/);
+  assert.match(telegram, /После подтверждения вернитесь сюда — вход завершится автоматически/);
+  assert.match(telegram, /SocialProviderIcon provider="telegram"/);
+  assert.match(telegram, /router\.replace\(payload\.returnTo/);
+  assert.doesNotMatch(telegram, /window\.location\s*=|oauth\.telegram\.org\/auth/);
   assert.ok(social.indexOf("enabled.telegram") < social.indexOf("enabled.vk"));
   assert.ok(authForm.indexOf("<SocialAuthButtons") < authForm.indexOf("<form action={passwordAction}"));
 });
 
+test("official Telegram Login Library is configured in Russian with profile, phone and write scopes", () => {
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
+  assert.match(telegram, /https:\/\/oauth\.telegram\.org\/js\/telegram-login\.js\?5/);
+  assert.match(telegram, /window\.Telegram\.Login\.auth/);
+  assert.match(telegram, /lang: "ru"/);
+  assert.match(telegram, /nonce: attempt\.nonce/);
+  assert.match(telegram, /scope: \["profile", "phone", "write"\]/);
+  assert.doesNotMatch(telegram, /CLIENT_SECRET|clientSecret|TELEGRAM_OIDC_CLIENT_SECRET/);
+});
+
 test("missing provider configuration hides social controls without a client error", () => {
   const social = read("src/components/auth/SocialAuthButtons.tsx");
+  const config = read("src/lib/auth/social/config.ts");
   assert.match(social, /if \(!hasProviders\) return null/);
-  assert.match(read("src/lib/auth/social/config.ts"), /return clientId && clientSecret && redirectUri/);
+  assert.match(config, /getTelegramLoginLibraryConfig/);
+  assert.match(config, /telegram: Boolean\(getTelegramLoginLibraryConfig\(\)\)/);
 });
 
-test("Telegram callback uses branded success and cancellation result screens", () => {
-  const callback = read("src/app/api/auth/social/[provider]/callback/route.ts");
-  const result = read("src/components/auth/SocialAuthResult.tsx");
-  assert.match(callback, /buildSocialResultPath/);
-  assert.match(callback, /code: "provider_cancelled"/);
-  assert.match(callback, /getSocialResultReason/);
-  assert.match(callback, /status: "success"/);
-  assert.match(result, /Вход подтверждён/);
-  assert.match(result, /Вы вошли через/);
-  assert.match(result, /Возвращаем вас в KARIMOFF/);
-  assert.match(result, /Вернуться в KARIMOFF/);
-  assert.match(result, /window\.location\.replace\(returnTo\)/);
-  assert.match(result, /1_650/);
-  assert.match(result, /Не удалось подтвердить вход через Telegram\. Попробуйте ещё раз\./);
-  assert.match(result, /Вы отменили вход через Telegram\./);
-  assert.match(result, /Время подтверждения истекло\. Попробуйте ещё раз\./);
-  assert.match(result, /Этот Telegram уже связан с другим аккаунтом\./);
-  assert.match(result, /Попробовать снова/);
-  assert.match(result, /Вернуться ко входу/);
-});
-
-test("a forged success URL cannot show success without a valid customer session", () => {
-  const page = read("src/app/login/social/result/page.tsx");
-  assert.match(page, /await getCustomerSession\(\)/);
-  assert.match(page, /requestedSuccess && customerSession \? "success" : "error"/);
+test("Telegram cancellation, expiry and identity conflict are human-readable", () => {
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
+  assert.match(telegram, /Вы отменили вход через Telegram/);
+  assert.match(telegram, /Время подтверждения истекло/);
+  assert.match(telegram, /Этот Telegram уже связан с другим аккаунтом/);
+  assert.match(telegram, /Не удалось завершить вход/);
+  assert.doesNotMatch(telegram, />\s*(Success|Callback|OAuth|Token|Authorization failed)\s*</);
 });
 
 test("missing Telegram phone continues through safe SMS confirmation", () => {
   const complete = read("src/components/auth/SocialCompleteForm.tsx");
   const action = read("src/app/login/social/complete/actions.ts");
+  const libraryRoute = read("src/app/api/auth/social/telegram/library/complete/route.ts");
   assert.match(complete, /Telegram не передал номер телефона/);
   assert.match(complete, /Подтвердите номер по SMS/);
   assert.match(complete, /По имени или username аккаунты не объединяются/);
-  assert.match(action, /buildSocialResultPath/);
+  assert.match(libraryRoute, /status: result\.kind/);
   assert.match(action, /Не удалось завершить вход\. Попробуйте позже\./);
 });
 
 test("Telegram profile names and identity status are available to admins without exposing tokens", () => {
-  const telegram = read("src/lib/auth/social/telegram.ts");
+  const telegram = read("src/lib/auth/social/telegram-library.ts");
   const detail = read("src/app/admin/customers/[id]/page.tsx");
   const list = read("src/app/admin/customers/page.tsx");
   assert.match(telegram, /givenName: claims\.given_name/);

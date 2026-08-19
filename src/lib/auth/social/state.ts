@@ -82,7 +82,11 @@ export async function createOAuthAttempt(params: {
   return { attemptId, state, codeVerifier, nonce, codeChallenge: sha256Base64Url(codeVerifier) };
 }
 
-export async function consumeOAuthAttempt(provider: SocialProvider, returnedState: string) {
+export async function consumeOAuthAttempt(
+  provider: SocialProvider,
+  returnedState: string,
+  options?: { requireBrowserBinding?: boolean }
+) {
   const cookieStore = await cookies();
   const cookieName = `${OAUTH_COOKIE_PREFIX}${provider}`;
   const cookieState = cookieStore.get(cookieName)?.value ?? null;
@@ -95,6 +99,9 @@ export async function consumeOAuthAttempt(provider: SocialProvider, returnedStat
   });
 
   const browserBinding = validateOAuthBrowserBinding({ provider, cookieState, returnedState });
+  if (options?.requireBrowserBinding && browserBinding !== "matched") {
+    throw new SocialAuthError({ code: "browser_binding_mismatch", stage: "state" });
+  }
 
   const sql = getPostgresSql();
   const [attempt] = await sql<{
@@ -143,6 +150,19 @@ export async function consumeOAuthAttempt(provider: SocialProvider, returnedStat
   } catch (error) {
     throw new SocialAuthError({ code: "state_invalid", stage: "state", cause: error });
   }
+}
+
+export async function getConsumedOAuthAttemptId(provider: SocialProvider, returnedState: string) {
+  const sql = getPostgresSql();
+  const [attempt] = await sql<{ id: string }[]>`
+    select id
+    from public.oauth_login_attempts
+    where provider = ${provider}
+      and state_hash = ${hashOAuthSecret(returnedState)}
+      and consumed_at is not null
+      and expires_at > now()
+  `;
+  return attempt?.id ?? null;
 }
 
 export async function createPendingSocialIdentity(claims: SocialIdentityClaims, redirectTo: string) {

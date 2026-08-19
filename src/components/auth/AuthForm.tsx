@@ -20,11 +20,10 @@ type AuthFormProps = {
   next?: string;
   redirectTo?: string;
   socialProviders?: { telegram: boolean; vk: boolean };
-  requestSocialPhone?: boolean;
   socialError?: string | null;
 };
 
-export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, requestSocialPhone = false, socialError }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, socialError }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
@@ -66,7 +65,6 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
 
       <SocialAuthButtons
         enabled={socialProviders}
-        requestPhone={requestSocialPhone}
         returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")}
       />
       {socialError ? (

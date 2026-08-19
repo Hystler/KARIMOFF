@@ -4,8 +4,6 @@ import { checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { getSocialProviderConfig } from "@/lib/auth/social/config";
 import { buildSocialResultPath } from "@/lib/auth/social/redirect";
-import { getTelegramAuthorizeUrl } from "@/lib/auth/social/telegram";
-import { logTelegramAuthEvent } from "@/lib/auth/social/telegram-observability";
 import { createOAuthAttempt, sanitizeSocialRedirect } from "@/lib/auth/social/state";
 import { isSocialProvider } from "@/lib/auth/social/types";
 import { getVkAuthorizeUrl } from "@/lib/auth/social/vk";
@@ -19,6 +17,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
     return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=unavailable"));
   }
   const returnTo = sanitizeSocialRedirect(request.nextUrl.searchParams.get("returnTo"));
+  if (rawProvider === "telegram") {
+    const login = getPublicRequestUrl(request, "/login");
+    login.searchParams.set("redirectTo", returnTo);
+    return NextResponse.redirect(login, 303);
+  }
   if (!getSocialProviderConfig(rawProvider)) {
     return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
       provider: rawProvider,
@@ -54,19 +57,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
       intent,
       redirectTo: returnTo
     });
-    const authorizeUrl = rawProvider === "telegram"
-      ? getTelegramAuthorizeUrl({
-          state: attempt.state,
-          nonce: attempt.nonce ?? "",
-          codeChallenge: attempt.codeChallenge
-        })
-      : getVkAuthorizeUrl({ state: attempt.state, codeChallenge: attempt.codeChallenge });
-    if (rawProvider === "telegram") {
-      logTelegramAuthEvent("telegram.start", {
-        attemptId: attempt.attemptId,
-        stage: "start"
-      });
-    }
+    const authorizeUrl = getVkAuthorizeUrl({ state: attempt.state, codeChallenge: attempt.codeChallenge });
     return NextResponse.redirect(authorizeUrl);
   } catch {
     return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({

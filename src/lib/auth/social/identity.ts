@@ -85,6 +85,7 @@ export async function bindIdentityToUser(userId: string, rawClaims: SocialIdenti
           email = excluded.email,
           phone = excluded.phone,
           phone_verified = excluded.phone_verified,
+          metadata = excluded.metadata,
           last_login_at = now(),
           updated_at = now()
       where public.user_identities.user_id = excluded.user_id
@@ -178,6 +179,7 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
           email = excluded.email,
           phone = excluded.phone,
           phone_verified = excluded.phone_verified,
+          metadata = excluded.metadata,
           last_login_at = now(),
           updated_at = now()
       where public.user_identities.user_id = excluded.user_id
@@ -217,9 +219,11 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
 
 export async function completeProviderCallback(
   rawClaims: SocialIdentityClaims,
-  attempt: ConsumedOAuthAttempt
+  attempt: ConsumedOAuthAttempt,
+  options?: { sourcePath?: string }
 ) {
   const claims = claimsSchema.parse(rawClaims);
+  const sourcePath = options?.sourcePath ?? `/api/auth/social/${claims.provider}/callback`;
 
   if (attempt.intent === "link") {
     const current = await getCustomerSession();
@@ -234,7 +238,7 @@ export async function completeProviderCallback(
       entityId: current.customerId,
       entityType: "customer",
       metadata: { provider: claims.provider },
-      sourcePath: `/api/auth/social/${claims.provider}/callback`
+      sourcePath
     }).catch(() => undefined);
     return { kind: "linked" as const, redirectTo: attempt.redirectTo };
   }
@@ -256,7 +260,7 @@ export async function completeProviderCallback(
       entityId: userId,
       entityType: "customer",
       metadata: { provider: claims.provider },
-      sourcePath: `/api/auth/social/${claims.provider}/callback`
+      sourcePath
     }).catch(() => undefined);
     return { kind: "authenticated" as const, redirectTo: attempt.redirectTo };
   }

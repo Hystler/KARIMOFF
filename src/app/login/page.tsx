@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Logo } from "@/components/Logo";
-import { getConfiguredSocialProviders, shouldRequestSocialPhone } from "@/lib/auth/social/config";
+import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -36,7 +36,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           next={params.next}
           redirectTo={returnTo}
           socialProviders={getConfiguredSocialProviders()}
-          requestSocialPhone={shouldRequestSocialPhone()}
           socialError={params.socialError ? socialErrors[params.socialError] ?? "Не удалось выполнить вход." : null}
         />
       </div>

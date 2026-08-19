@@ -6,6 +6,7 @@ import { getCustomerProfileData } from "@/lib/customer-data";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
 import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
+import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
 import { logoutCustomerAction, unlinkSocialIdentityAction, updateMarketingConsentAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -226,6 +227,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     </div>
                   ) : provider === "phone" ? (
                     <span className="text-xs font-semibold text-karimoff-muted">Не подтверждён</span>
+                  ) : provider === "telegram" && isConfigured ? (
+                    <TelegramLoginButton intent="link" returnTo="/profile" variant="compact" />
                   ) : isConfigured ? (
                     <Link href={`/api/auth/social/${provider}/start?intent=link&returnTo=%2Fprofile`} className="min-h-10 rounded-full border border-karimoff-orange px-4 py-2.5 text-center text-xs font-bold text-karimoff-orange transition hover:bg-karimoff-orange hover:text-white">
                       Подключить

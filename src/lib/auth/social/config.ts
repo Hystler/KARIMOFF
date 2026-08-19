@@ -8,6 +8,11 @@ type ProviderConfig = {
   redirectUri: string;
 };
 
+export type TelegramLoginLibraryConfig = {
+  clientId: string;
+  clientIdNumber: number;
+};
+
 function validRedirectUri(value: string | undefined, provider: SocialProvider) {
   if (!value) return null;
   try {
@@ -34,13 +39,23 @@ export function getSocialProviderConfig(provider: SocialProvider): ProviderConfi
   return clientId && redirectUri ? { clientId, redirectUri } : null;
 }
 
+export function getTelegramLoginLibraryConfig(): TelegramLoginLibraryConfig | null {
+  const clientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim();
+  if (!clientId || !/^\d{1,16}$/.test(clientId)) return null;
+
+  const clientIdNumber = Number(clientId);
+  if (!Number.isSafeInteger(clientIdNumber) || clientIdNumber <= 0) return null;
+
+  return { clientId, clientIdNumber };
+}
+
 export function isSocialProviderConfigured(provider: SocialProvider) {
   return Boolean(getSocialProviderConfig(provider));
 }
 
 export function getConfiguredSocialProviders() {
   return {
-    telegram: isSocialProviderConfigured("telegram"),
+    telegram: Boolean(getTelegramLoginLibraryConfig()),
     vk: isSocialProviderConfigured("vk")
   };
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Logo } from "@/components/Logo";
-import { getConfiguredSocialProviders, shouldRequestSocialPhone } from "@/lib/auth/social/config";
+import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 
 type RegisterPageProps = {
   searchParams?: Promise<{
@@ -27,7 +27,6 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           next={params.next}
           redirectTo={returnTo}
           socialProviders={getConfiguredSocialProviders()}
-          requestSocialPhone={shouldRequestSocialPhone()}
         />
       </div>
     </main>

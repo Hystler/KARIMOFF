@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
@@ -19,25 +19,7 @@ function importTypescriptScript(modulePath, body) {
   return result.stdout.trim();
 }
 
-test("Telegram mobile callback accepts a missing optional browser cookie but rejects mismatches", () => {
-  const output = importTypescriptScript("src/lib/auth/social/state-policy.ts", `
-    const capture = (callback) => { try { return callback(); } catch (error) { return error.code; } };
-    console.log(JSON.stringify({
-      missingTelegram: capture(() => subject.validateOAuthBrowserBinding({ provider: "telegram", cookieState: null, returnedState: "state" })),
-      matchingTelegram: capture(() => subject.validateOAuthBrowserBinding({ provider: "telegram", cookieState: "state", returnedState: "state" })),
-      mismatch: capture(() => subject.validateOAuthBrowserBinding({ provider: "telegram", cookieState: "other", returnedState: "state" })),
-      missingVk: capture(() => subject.validateOAuthBrowserBinding({ provider: "vk", cookieState: null, returnedState: "state" }))
-    }));
-  `);
-  assert.deepEqual(JSON.parse(output), {
-    missingTelegram: "missing",
-    matchingTelegram: "matched",
-    mismatch: "browser_binding_mismatch",
-    missingVk: "browser_binding_mismatch"
-  });
-});
-
-test("OAuth state failures distinguish missing, expired and replayed attempts", () => {
+test("OAuth attempt failures distinguish missing, expired and replayed attempts", () => {
   const output = importTypescriptScript("src/lib/auth/social/state-policy.ts", `
     const now = Date.parse("2026-08-19T09:00:00.000Z");
     console.log(JSON.stringify([
@@ -47,74 +29,13 @@ test("OAuth state failures distinguish missing, expired and replayed attempts", 
     ]));
   `);
   assert.deepEqual(JSON.parse(output), ["state_not_found", "state_replay", "expired_state"]);
-});
 
-test("Telegram token endpoint errors are recognized even when Telegram returns HTTP 200", () => {
-  const output = importTypescriptScript("src/lib/auth/social/telegram-protocol.ts", `
-    const capture = (params) => { try { subject.parseTelegramTokenResponse(params); return null; } catch (error) { return { code: error.code, status: error.httpStatus, provider: error.providerError }; } };
-    const success = subject.parseTelegramTokenResponse({ payload: { id_token: "x".repeat(40), token_type: "Bearer" }, ok: true, status: 200 });
-    console.log(JSON.stringify({
-      success: success.token_type,
-      invalidGrant200: capture({ payload: { error: "invalid_grant" }, ok: true, status: 200 }),
-      invalidGrant400: capture({ payload: { error: "invalid_grant" }, ok: false, status: 400 }),
-      invalidPayload: capture({ payload: { unexpected: true }, ok: true, status: 200 })
-    }));
-  `);
-  assert.deepEqual(JSON.parse(output), {
-    success: "Bearer",
-    invalidGrant200: { code: "token_rejected", status: 200, provider: "invalid_grant" },
-    invalidGrant400: { code: "token_rejected", status: 400, provider: "invalid_grant" },
-    invalidPayload: { code: "token_response_invalid", status: 200, provider: null }
-  });
-});
-
-test("Telegram server transport forces IPv4 and preserves official GET and form POST requests", () => {
-  const output = importTypescriptScript("src/lib/auth/social/telegram-http.ts", `
-    const { createServer } = await import("node:http");
-    const server = createServer((request, response) => {
-      let body = "";
-      request.setEncoding("utf8");
-      request.on("data", (chunk) => { body += chunk; });
-      request.on("end", () => {
-        response.setHeader("Content-Type", "application/json");
-        response.end(JSON.stringify({
-          method: request.method,
-          contentType: request.headers["content-type"],
-          hasBasic: String(request.headers.authorization).startsWith("Basic "),
-          fields: [...new URLSearchParams(body).keys()].sort()
-        }));
-      });
-    });
-    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const address = server.address();
-    const post = await subject.postFormJson({
-      url: "http://127.0.0.1:" + address.port + "/token",
-      body: new URLSearchParams({ grant_type: "authorization_code", code: "code", redirect_uri: "https://example.test/callback", client_id: "client", code_verifier: "verifier" }),
-      headers: { Authorization: "Basic test", "Content-Type": "application/x-www-form-urlencoded" },
-      timeoutMs: 2_000
-    });
-    const get = await subject.getJson({
-      url: "http://127.0.0.1:" + address.port + "/jwks",
-      timeoutMs: 2_000
-    });
-    await new Promise((resolve) => server.close(resolve));
-    console.log(JSON.stringify({ post, get, source: await (await import("node:fs/promises")).readFile("src/lib/auth/social/telegram-http.ts", "utf8") }));
-  `);
-  const result = JSON.parse(output);
-  assert.deepEqual(result.post, {
-    ok: true,
-    payload: {
-      method: "POST",
-      contentType: "application/x-www-form-urlencoded",
-      hasBasic: true,
-      fields: ["client_id", "code", "code_verifier", "grant_type", "redirect_uri"]
-    },
-    status: 200
-  });
-  assert.equal(result.get.ok, true);
-  assert.equal(result.get.payload.method, "GET");
-  assert.match(result.source, /family: 4/);
-  assert.match(result.source, /REQUEST_TIMEOUT_\$\{phase\.toUpperCase\(\)\}/);
+  const state = read("src/lib/auth/social/state.ts");
+  const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
+  assert.match(state, /set consumed_at = now\(\)/);
+  assert.match(state, /consumed_at is null/);
+  assert.match(state, /expires_at > now\(\)/);
+  assert.match(complete, /requireBrowserBinding: true/);
 });
 
 test("Telegram phone normalization accepts Russian E.164 with and without plus", () => {
@@ -130,7 +51,7 @@ test("Telegram phone normalization accepts Russian E.164 with and without plus",
   assert.deepEqual(JSON.parse(output), ["+79991234567", "+79991234567", "+79991234567", "+79991234567", null]);
 });
 
-test("Telegram real-format RS256 claims reject signature, issuer, audience, expiry and nonce failures", () => {
+test("Telegram library ID token accepts valid claims and rejects signature, issuer, audience, expiry and nonce failures", () => {
   const output = importTypescriptScript("src/lib/auth/social/telegram-token.ts", `
     const { generateKeyPairSync, sign } = await import("node:crypto");
     const primary = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -170,61 +91,79 @@ test("Telegram real-format RS256 claims reject signature, issuer, audience, expi
   });
 });
 
-test("identity decisions create a customer only for a new verified provider phone", () => {
+test("identity decisions create or link only from a verified provider identity", () => {
   const output = importTypescriptScript("src/lib/auth/social/linking-rules.ts", `
     const base = { existingIdentityUserId: null, providerPhone: "+79991234567", providerPhoneVerified: true, phoneOwner: null };
     console.log(JSON.stringify([
       subject.resolveVerifiedSocialIdentity(base),
       subject.resolveVerifiedSocialIdentity({ ...base, phoneOwner: { userId: "existing", verified: true } }),
       subject.resolveVerifiedSocialIdentity({ ...base, phoneOwner: { userId: "unverified", verified: false } }),
-      subject.resolveVerifiedSocialIdentity({ ...base, providerPhoneVerified: false }),
+      subject.resolveVerifiedSocialIdentity({ ...base, providerPhone: null, providerPhoneVerified: false }),
       subject.resolveVerifiedSocialIdentity({ ...base, existingIdentityUserId: "telegram-owner" })
     ]));
   `);
-  const [created, linked, unverified, missingVerification, existing] = JSON.parse(output);
+  const [created, linked, unverified, missingPhone, existing] = JSON.parse(output);
   assert.equal(created.kind, "create_customer");
   assert.deepEqual(linked, { kind: "verified_phone", userId: "existing" });
   assert.equal(unverified.kind, "needs_phone_confirmation");
-  assert.equal(missingVerification.kind, "needs_phone_confirmation");
+  assert.equal(missingPhone.kind, "needs_phone_confirmation");
   assert.deepEqual(existing, { kind: "existing_identity", userId: "telegram-owner" });
+
+  const identity = read("src/lib/auth/social/identity.ts");
+  assert.match(identity, /unique|identity_conflict|on conflict \(provider, provider_user_id\)/i);
+  assert.doesNotMatch(identity, /where display_name|where username/i);
 });
 
-test("callback creates and verifies the KARIMOFF session before a safe local redirect", () => {
+test("library completion validates first, creates a readable session, and returns only a safe local path", () => {
   const identity = read("src/lib/auth/social/identity.ts");
-  const callback = read("src/app/api/auth/social/[provider]/callback/route.ts");
-  const state = read("src/lib/auth/social/state.ts");
-  assert.match(identity, /insert into public\.customers/);
+  const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
+  const start = read("src/app/api/auth/social/telegram/library/start/route.ts");
+  const client = read("src/components/auth/TelegramLoginButton.tsx");
+  assert.match(complete, /verifyTelegramLibraryIdToken/);
+  assert.ok(complete.indexOf("const claims = await verifyTelegramLibraryIdToken") < complete.indexOf("const result = await completeProviderCallback"));
   assert.match(identity, /await setCustomerSession\(userId\)/);
   assert.match(identity, /const session = await getCustomerSession\(\)/);
   assert.match(identity, /session\.customerId !== userId/);
-  assert.match(callback, /telegram\.session\.created/);
-  assert.match(callback, /telegram\.session\.readback/);
-  assert.match(callback, /telegram\.redirect\.success/);
-  assert.match(callback, /NextResponse\.redirect\(getPublicRequestUrl\(request, successTarget\), 303\)/);
-  assert.match(state, /redirectTo: sanitizeSocialRedirect/);
+  assert.match(start, /sanitizeSocialRedirect/);
+  assert.match(client, /router\.replace\(payload\.returnTo/);
+  assert.doesNotMatch(client, /router\.replace\(returnTo\)/);
 });
 
-test("Telegram callback telemetry contains stages and correlation only, never OAuth secrets", () => {
+test("popup-compatible headers are limited to pages that host Telegram Login", () => {
+  const config = read("next.config.mjs");
+  assert.match(config, /same-origin-allow-popups/);
+  assert.match(config, /https:\/\/oauth\.telegram\.org/);
+  assert.match(config, /\["\/login", "\/register", "\/profile"\]/);
+  assert.match(config, /source: "\/\(\.\*\)"/);
+  assert.match(config, /Cross-Origin-Opener-Policy", value: "same-origin"/);
+});
+
+test("manual Telegram code exchange is removed from runtime while VK callback remains", () => {
+  const start = read("src/app/api/auth/social/[provider]/start/route.ts");
   const callback = read("src/app/api/auth/social/[provider]/callback/route.ts");
+  assert.equal(existsSync(join(root, "src/lib/auth/social/telegram.ts")), false);
+  assert.doesNotMatch(`${start}\n${callback}`, /exchangeTelegramCode|getTelegramAuthorizeUrl|token_exchange\.start/);
+  assert.match(start, /rawProvider === "telegram"/);
+  assert.match(callback, /official JavaScript Login Library/);
+  assert.match(callback, /exchangeVkCode/);
+});
+
+test("Telegram telemetry has library stages and cannot log tokens or phone claims", () => {
+  const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
+  const clientComplete = read("src/app/api/auth/social/telegram/library/client-complete/route.ts");
   const telemetry = read("src/lib/auth/social/telegram-observability.ts");
-  const telegram = read("src/lib/auth/social/telegram.ts");
+  const sources = `${complete}\n${clientComplete}\n${telemetry}`;
   for (const event of [
-    "telegram.start",
-    "telegram.callback.received",
-    "telegram.token_exchange.start",
-    "telegram.token_exchange.success",
-    "telegram.token_exchange.fail",
+    "telegram.library.start",
+    "telegram.library.result",
     "telegram.id_token.valid",
     "telegram.identity.resolved",
     "telegram.session.created",
     "telegram.session.readback",
-    "telegram.redirect.success"
+    "telegram.client.completed"
   ]) {
-    assert.match(`${callback}\n${telemetry}`, new RegExp(event.replaceAll(".", "\\.")));
+    assert.match(sources, new RegExp(event.replaceAll(".", "\\.")));
   }
-  assert.match(telegram, /TELEGRAM_TOKEN_TIMEOUT_MS = 30_000/);
-  assert.match(telegram, /TELEGRAM_JWKS_RETRIES = 3/);
-  assert.match(telegram, /Authorization: `Basic/);
-  assert.match(telegram, /"Content-Type": "application\/x-www-form-urlencoded"/);
-  assert.doesNotMatch(telemetry, /authorization_code|client_secret|access_token|phone_number|cookie_value/i);
+  assert.doesNotMatch(telemetry, /idToken\??:|client_secret|access_token|phone_number\??:|cookie_value/i);
+  assert.doesNotMatch(complete, /console\.(?:info|log|error)\([^)]*(?:idToken|parsed\.data)/);
 });
