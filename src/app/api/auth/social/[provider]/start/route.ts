@@ -5,6 +5,7 @@ import { getCustomerSession } from "@/lib/customer-auth";
 import { getSocialProviderConfig } from "@/lib/auth/social/config";
 import { buildSocialResultPath } from "@/lib/auth/social/redirect";
 import { getTelegramAuthorizeUrl } from "@/lib/auth/social/telegram";
+import { logTelegramAuthEvent } from "@/lib/auth/social/telegram-observability";
 import { createOAuthAttempt, sanitizeSocialRedirect } from "@/lib/auth/social/state";
 import { isSocialProvider } from "@/lib/auth/social/types";
 import { getVkAuthorizeUrl } from "@/lib/auth/social/vk";
@@ -60,6 +61,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
           codeChallenge: attempt.codeChallenge
         })
       : getVkAuthorizeUrl({ state: attempt.state, codeChallenge: attempt.codeChallenge });
+    if (rawProvider === "telegram") {
+      logTelegramAuthEvent("telegram.start", {
+        attemptId: attempt.attemptId,
+        stage: "start"
+      });
+    }
     return NextResponse.redirect(authorizeUrl);
   } catch {
     return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({

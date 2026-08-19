@@ -17,7 +17,10 @@ type SocialAuthResultProps = {
 const errorMessages: Record<string, string> = {
   cancelled: "Вы отменили вход через Telegram.",
   validation_failed: "Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.",
-  missing_phone: "Telegram не передал номер телефона. Попробуйте ещё раз или используйте другой способ входа.",
+  missing_phone: "Telegram не передал номер телефона. Вы можете подтвердить номер другим способом.",
+  expired: "Время подтверждения истекло. Попробуйте ещё раз.",
+  link_conflict: "Этот Telegram уже связан с другим аккаунтом.",
+  technical: "Не удалось завершить вход. Попробуйте ещё раз.",
   session_expired: "Время безопасного входа истекло. Начните ещё раз.",
   unavailable: "Вход через Telegram сейчас недоступен. Используйте телефон или попробуйте позже.",
   rate_limit: "Слишком много попыток входа. Подождите немного и попробуйте ещё раз.",
@@ -70,10 +73,10 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
             <p className="mt-4 text-sm leading-6 text-karimoff-muted">
               {linked
                 ? `Аккаунт ${providerName(provider)} теперь привязан к вашему профилю KARIMOFF.`
-                : `Мы успешно получили ваши данные из ${providerName(provider)}.`}
+                : `Вы вошли через ${providerName(provider)}.`}
             </p>
             <p className="mt-1 text-sm leading-6 text-karimoff-muted">
-              {isCheckout ? "Сейчас вернём вас к оформлению заказа." : "Сейчас вернём вас на сайт."}
+              {isCheckout ? "Возвращаем вас к оформлению заказа…" : "Возвращаем вас в KARIMOFF…"}
             </p>
             <div className="mt-6 flex items-center gap-3 rounded-lg bg-karimoff-soft px-4 py-3 text-sm font-semibold text-karimoff-muted" role="status" aria-live="polite">
               <LoaderCircle className="shrink-0 animate-spin text-karimoff-orange" size={19} />

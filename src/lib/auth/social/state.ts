@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
@@ -10,10 +11,11 @@ import {
   encryptOAuthSecret,
   hashOAuthSecret,
   randomBase64Url,
-  safeSecretEqual,
   sha256Base64Url
 } from "./crypto";
+import { SocialAuthError } from "./errors";
 import { sanitizeSocialRedirect } from "./redirect";
+import { classifyOAuthAttemptFailure, validateOAuthBrowserBinding, type OAuthBrowserBinding } from "./state-policy";
 import type { SocialIdentityClaims, SocialProvider } from "./types";
 
 const OAUTH_TTL_MS = 10 * 60_000;
@@ -26,6 +28,7 @@ function secureCookie() {
 }
 
 export type ConsumedOAuthAttempt = {
+  id: string;
   provider: SocialProvider;
   state: string;
   codeVerifier: string;
@@ -33,6 +36,7 @@ export type ConsumedOAuthAttempt = {
   intent: "login" | "link";
   linkingUserId: string | null;
   redirectTo: string;
+  browserBinding: OAuthBrowserBinding;
 };
 
 export async function createOAuthAttempt(params: {
@@ -42,15 +46,17 @@ export async function createOAuthAttempt(params: {
 }) {
   const customer = await getCustomerSession();
   if (params.intent === "link" && !customer) throw new Error("Сначала войдите в профиль.");
-  const state = randomBase64Url();
+  const attemptId = randomUUID();
+  const state = randomBase64Url(32);
   const codeVerifier = randomBase64Url(48);
-  const nonce = params.provider === "telegram" ? randomBase64Url() : null;
+  const nonce = params.provider === "telegram" ? randomBase64Url(32) : null;
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
   const database = createDatabaseServerClient();
   if (!database) throw new Error("База данных не подключена.");
 
   const { error } = await database.from("oauth_login_attempts").insert({
+    id: attemptId,
     provider: params.provider,
     state_hash: hashOAuthSecret(state),
     verifier_ciphertext: encryptOAuthSecret(codeVerifier),
@@ -73,13 +79,13 @@ export async function createOAuthAttempt(params: {
     maxAge: Math.floor(OAUTH_TTL_MS / 1000)
   });
 
-  return { state, codeVerifier, nonce, codeChallenge: sha256Base64Url(codeVerifier) };
+  return { attemptId, state, codeVerifier, nonce, codeChallenge: sha256Base64Url(codeVerifier) };
 }
 
 export async function consumeOAuthAttempt(provider: SocialProvider, returnedState: string) {
   const cookieStore = await cookies();
   const cookieName = `${OAUTH_COOKIE_PREFIX}${provider}`;
-  const cookieState = cookieStore.get(cookieName)?.value ?? "";
+  const cookieState = cookieStore.get(cookieName)?.value ?? null;
   cookieStore.set(cookieName, "", {
     httpOnly: true,
     sameSite: "lax",
@@ -88,12 +94,11 @@ export async function consumeOAuthAttempt(provider: SocialProvider, returnedStat
     maxAge: 0
   });
 
-  if (!cookieState || !returnedState || !safeSecretEqual(cookieState, returnedState)) {
-    throw new Error("Сессия авторизации не совпадает. Начните вход заново.");
-  }
+  const browserBinding = validateOAuthBrowserBinding({ provider, cookieState, returnedState });
 
   const sql = getPostgresSql();
   const [attempt] = await sql<{
+    id: string;
     provider: SocialProvider;
     verifier_ciphertext: string;
     nonce_ciphertext: string | null;
@@ -107,19 +112,37 @@ export async function consumeOAuthAttempt(provider: SocialProvider, returnedStat
       and state_hash = ${hashOAuthSecret(returnedState)}
       and consumed_at is null
       and expires_at > now()
-    returning provider, verifier_ciphertext, nonce_ciphertext, intent, linking_user_id, redirect_to
+    returning id, provider, verifier_ciphertext, nonce_ciphertext, intent, linking_user_id, redirect_to
   `;
-  if (!attempt) throw new Error("Сессия авторизации истекла или уже использована.");
+  if (!attempt) {
+    const [existing] = await sql<{ consumed_at: Date | null; expires_at: Date }[]>`
+      select consumed_at, expires_at
+      from public.oauth_login_attempts
+      where provider = ${provider}
+        and state_hash = ${hashOAuthSecret(returnedState)}
+    `;
+    throw classifyOAuthAttemptFailure({
+      exists: Boolean(existing),
+      consumedAt: existing?.consumed_at ? existing.consumed_at.toISOString() : null,
+      expiresAt: existing?.expires_at ? existing.expires_at.toISOString() : null
+    });
+  }
 
-  return {
-    provider: attempt.provider,
-    state: returnedState,
-    codeVerifier: decryptOAuthSecret(attempt.verifier_ciphertext),
-    nonce: attempt.nonce_ciphertext ? decryptOAuthSecret(attempt.nonce_ciphertext) : null,
-    intent: attempt.intent,
-    linkingUserId: attempt.linking_user_id,
-    redirectTo: sanitizeSocialRedirect(attempt.redirect_to)
-  } satisfies ConsumedOAuthAttempt;
+  try {
+    return {
+      id: attempt.id,
+      provider: attempt.provider,
+      state: returnedState,
+      codeVerifier: decryptOAuthSecret(attempt.verifier_ciphertext),
+      nonce: attempt.nonce_ciphertext ? decryptOAuthSecret(attempt.nonce_ciphertext) : null,
+      intent: attempt.intent,
+      linkingUserId: attempt.linking_user_id,
+      redirectTo: sanitizeSocialRedirect(attempt.redirect_to),
+      browserBinding
+    } satisfies ConsumedOAuthAttempt;
+  } catch (error) {
+    throw new SocialAuthError({ code: "state_invalid", stage: "state", cause: error });
+  }
 }
 
 export async function createPendingSocialIdentity(claims: SocialIdentityClaims, redirectTo: string) {

@@ -1,35 +1,63 @@
 import "server-only";
 
 import { z } from "zod";
-import { normalizeRussianPhone } from "@/lib/phone";
 import { getSocialProviderConfig, shouldRequestSocialPhone } from "./config";
+import { getSocialAuthError, SocialAuthError } from "./errors";
+import { normalizeTelegramPhone, parseTelegramTokenResponse } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
 
 const TELEGRAM_ISSUER = TELEGRAM_OIDC_ISSUER;
 const TELEGRAM_TOKEN_URL = `${TELEGRAM_ISSUER}/token`;
 const TELEGRAM_JWKS_URL = `${TELEGRAM_ISSUER}/.well-known/jwks.json`;
-
-const tokenSchema = z.object({
-  id_token: z.string().min(20),
-  token_type: z.string().optional(),
-  expires_in: z.number().optional()
-});
+const TELEGRAM_TOKEN_TIMEOUT_MS = 30_000;
+const TELEGRAM_JWKS_TIMEOUT_MS = 12_000;
+const TELEGRAM_JWKS_RETRIES = 3;
 
 type TelegramJwk = Record<string, unknown> & { kid?: string; alg?: string; use?: string };
 let cachedKeys: { expiresAt: number; keys: TelegramJwk[] } | null = null;
 
-async function getTelegramKeys() {
-  if (cachedKeys && cachedKeys.expiresAt > Date.now()) return cachedKeys.keys;
-  const response = await fetch(TELEGRAM_JWKS_URL, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(8_000)
-  });
-  if (!response.ok) throw new Error("Telegram keys are unavailable.");
-  const parsed = z.object({ keys: z.array(z.record(z.string(), z.unknown())) }).parse(await response.json());
-  const keys = parsed.keys as TelegramJwk[];
-  cachedKeys = { expiresAt: Date.now() + 5 * 60_000, keys };
-  return keys;
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function getTelegramKeys(forceRefresh = false) {
+  if (!forceRefresh && cachedKeys && cachedKeys.expiresAt > Date.now()) return cachedKeys.keys;
+  let lastError: SocialAuthError | null = null;
+
+  for (let attempt = 0; attempt < TELEGRAM_JWKS_RETRIES; attempt += 1) {
+    try {
+      const response = await fetch(TELEGRAM_JWKS_URL, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(TELEGRAM_JWKS_TIMEOUT_MS)
+      });
+      if (!response.ok) {
+        throw new SocialAuthError({
+          code: "jwks_unavailable",
+          stage: "jwks",
+          httpStatus: response.status
+        });
+      }
+      const payload = await response.json().catch((error) => {
+        throw new SocialAuthError({ code: "jwks_invalid", stage: "jwks", cause: error });
+      });
+      const parsed = z.object({ keys: z.array(z.record(z.string(), z.unknown())).min(1) }).safeParse(payload);
+      if (!parsed.success) {
+        throw new SocialAuthError({ code: "jwks_invalid", stage: "jwks" });
+      }
+      const keys = parsed.data.keys as TelegramJwk[];
+      cachedKeys = { expiresAt: Date.now() + 5 * 60_000, keys };
+      return keys;
+    } catch (error) {
+      const failure = getSocialAuthError(error, "jwks");
+      lastError = failure.code === "unknown"
+        ? new SocialAuthError({ code: "jwks_unavailable", stage: "jwks", cause: error })
+        : failure;
+      if (attempt + 1 < TELEGRAM_JWKS_RETRIES) await wait(250 * 2 ** attempt);
+    }
+  }
+
+  throw lastError ?? new SocialAuthError({ code: "jwks_unavailable", stage: "jwks" });
 }
 
 export function getTelegramAuthorizeUrl(params: {
@@ -58,9 +86,12 @@ export async function exchangeTelegramCode(params: {
   code: string;
   codeVerifier: string;
   expectedNonce: string;
+  onStage?: (stage: "token_exchange.success" | "id_token.valid") => void;
 }): Promise<SocialIdentityClaims> {
   const config = getSocialProviderConfig("telegram");
-  if (!config?.clientSecret) throw new Error("Telegram authentication is not configured.");
+  if (!config?.clientSecret) {
+    throw new SocialAuthError({ code: "token_unavailable", stage: "token_exchange" });
+  }
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -69,28 +100,57 @@ export async function exchangeTelegramCode(params: {
     client_id: config.clientId,
     code_verifier: params.codeVerifier
   });
-  const response = await fetch(TELEGRAM_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body,
-    cache: "no-store",
-    signal: AbortSignal.timeout(10_000)
-  });
+  let response: Response;
+  try {
+    response = await fetch(TELEGRAM_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body,
+      cache: "no-store",
+      signal: AbortSignal.timeout(TELEGRAM_TOKEN_TIMEOUT_MS)
+    });
+  } catch (error) {
+    throw new SocialAuthError({ code: "token_unavailable", stage: "token_exchange", cause: error });
+  }
 
-  if (!response.ok) throw new Error("Telegram authorization was rejected.");
-  const token = tokenSchema.parse(await response.json());
-  const claims = verifyTelegramIdToken({
-    token: token.id_token,
-    keys: await getTelegramKeys(),
-    expectedAudience: config.clientId,
-    expectedNonce: params.expectedNonce
+  const payload = await response.json().catch((error) => {
+    throw new SocialAuthError({
+      code: "token_response_invalid",
+      stage: "token_exchange",
+      httpStatus: response.status,
+      cause: error
+    });
   });
+  const token = parseTelegramTokenResponse({ payload, ok: response.ok, status: response.status });
+  params.onStage?.("token_exchange.success");
 
-  const normalizedPhone = claims.phone_number ? normalizeRussianPhone(claims.phone_number) : "";
-  const phone = /^\+7\d{10}$/.test(normalizedPhone) ? normalizedPhone : null;
+  let keys = await getTelegramKeys();
+  let claims;
+  try {
+    claims = verifyTelegramIdToken({
+      token: token.id_token,
+      keys,
+      expectedAudience: config.clientId,
+      expectedNonce: params.expectedNonce
+    });
+  } catch (error) {
+    const failure = getSocialAuthError(error, "id_token");
+    if (failure.code !== "id_token_signing_key") throw failure;
+    keys = await getTelegramKeys(true);
+    claims = verifyTelegramIdToken({
+      token: token.id_token,
+      keys,
+      expectedAudience: config.clientId,
+      expectedNonce: params.expectedNonce
+    });
+  }
+  params.onStage?.("id_token.valid");
+
+  const phone = normalizeTelegramPhone(claims.phone_number);
 
   return {
     provider: "telegram",

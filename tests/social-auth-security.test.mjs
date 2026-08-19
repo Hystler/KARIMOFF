@@ -76,13 +76,17 @@ test("the last authentication method cannot be unlinked", () => {
   assert.match(read("src/app/profile/actions.ts"), /canUnlinkAuthenticationMethod/);
 });
 
-test("OAuth state is browser-bound, one-time and expires", () => {
+test("OAuth state is server-authoritative, one-time and expires", () => {
   const state = read("src/lib/auth/social/state.ts");
-  assert.match(state, /safeSecretEqual\(cookieState, returnedState\)/);
+  const policy = read("src/lib/auth/social/state-policy.ts");
+  assert.match(state, /validateOAuthBrowserBinding/);
+  assert.match(policy, /params\.provider === "telegram"\) return "missing"/);
+  assert.match(policy, /timingSafeEqual/);
   assert.match(state, /set consumed_at = now\(\)/);
   assert.match(state, /consumed_at is null/);
   assert.match(state, /expires_at > now\(\)/);
   assert.match(state, /encryptOAuthSecret\(codeVerifier\)/);
+  assert.match(state, /classifyOAuthAttemptFailure/);
   assert.match(state, /httpOnly: true/);
   assert.match(state, /sameSite: "lax"/);
 });

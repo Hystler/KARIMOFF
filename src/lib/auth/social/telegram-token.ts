@@ -1,10 +1,21 @@
-import { createPublicKey, verify } from "node:crypto";
+import { createPublicKey, timingSafeEqual, verify } from "node:crypto";
 import { z } from "zod";
+
+class TelegramIdTokenError extends Error {
+  readonly stage = "id_token" as const;
+  readonly code: string;
+
+  constructor(code: string, options?: { cause?: unknown }) {
+    super(code, options);
+    this.name = "TelegramIdTokenError";
+    this.code = code;
+  }
+}
 
 export const TELEGRAM_OIDC_ISSUER = "https://oauth.telegram.org";
 
 const claimsSchema = z.object({
-  iss: z.literal(TELEGRAM_OIDC_ISSUER),
+  iss: z.string(),
   aud: z.union([z.string(), z.array(z.string())]),
   sub: z.string().min(1),
   iat: z.number().int(),
@@ -21,13 +32,17 @@ const claimsSchema = z.object({
 });
 
 function decodeSegment(value: string) {
-  return JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as unknown;
+  try {
+    return JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as unknown;
+  } catch (error) {
+    throw new TelegramIdTokenError("id_token_malformed", { cause: error });
+  }
 }
 
 function safeEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
-  return leftBuffer.length === rightBuffer.length && leftBuffer.equals(rightBuffer);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 export function verifyTelegramIdToken(params: {
@@ -38,29 +53,52 @@ export function verifyTelegramIdToken(params: {
   nowSeconds?: number;
 }) {
   const segments = params.token.split(".");
-  if (segments.length !== 3) throw new Error("Telegram ID token is invalid.");
-  const header = z.object({ alg: z.literal("RS256"), kid: z.string().min(1) }).parse(decodeSegment(segments[0]));
-  const claims = claimsSchema.parse(decodeSegment(segments[1]));
+  if (segments.length !== 3) {
+    throw new TelegramIdTokenError("id_token_malformed");
+  }
+  const headerResult = z.object({ alg: z.literal("RS256"), kid: z.string().min(1) }).safeParse(decodeSegment(segments[0]));
+  const claimsResult = claimsSchema.safeParse(decodeSegment(segments[1]));
+  if (!headerResult.success || !claimsResult.success) {
+    throw new TelegramIdTokenError("id_token_malformed");
+  }
+  const header = headerResult.data;
+  const claims = claimsResult.data;
   const key = params.keys.find((candidate) => candidate.kid === header.kid && (!candidate.alg || candidate.alg === "RS256"));
-  if (!key) throw new Error("Telegram signing key is unknown.");
-  const signatureValid = verify(
-    "RSA-SHA256",
-    Buffer.from(`${segments[0]}.${segments[1]}`),
-    createPublicKey({ key: key as never, format: "jwk" }),
-    Buffer.from(segments[2], "base64url")
-  );
+  if (!key) {
+    throw new TelegramIdTokenError("id_token_signing_key");
+  }
+  let signatureValid = false;
+  try {
+    signatureValid = verify(
+      "RSA-SHA256",
+      Buffer.from(`${segments[0]}.${segments[1]}`),
+      createPublicKey({ key: key as never, format: "jwk" }),
+      Buffer.from(segments[2], "base64url")
+    );
+  } catch (error) {
+    throw new TelegramIdTokenError("id_token_signature", { cause: error });
+  }
+  if (!signatureValid) {
+    throw new TelegramIdTokenError("id_token_signature");
+  }
+  if (claims.iss !== TELEGRAM_OIDC_ISSUER) {
+    throw new TelegramIdTokenError("id_token_issuer");
+  }
   const audienceValid = Array.isArray(claims.aud)
     ? claims.aud.includes(params.expectedAudience)
     : claims.aud === params.expectedAudience;
+  if (!audienceValid) {
+    throw new TelegramIdTokenError("id_token_audience");
+  }
   const now = params.nowSeconds ?? Math.floor(Date.now() / 1000);
-  if (
-    !signatureValid ||
-    !audienceValid ||
-    claims.exp <= now ||
-    claims.iat > now + 60 ||
-    !safeEqual(claims.nonce, params.expectedNonce)
-  ) {
-    throw new Error("Telegram ID token validation failed.");
+  if (claims.exp <= now) {
+    throw new TelegramIdTokenError("id_token_expired");
+  }
+  if (claims.iat > now + 60 || claims.iat > claims.exp) {
+    throw new TelegramIdTokenError("id_token_future_iat");
+  }
+  if (!safeEqual(claims.nonce, params.expectedNonce)) {
+    throw new TelegramIdTokenError("id_token_nonce");
   }
   return claims;
 }
