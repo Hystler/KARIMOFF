@@ -12,6 +12,8 @@ const claimsSchema = z.object({
   nonce: z.string().min(1),
   id: z.union([z.string(), z.number()]).optional(),
   name: z.string().max(160).optional(),
+  given_name: z.string().max(100).optional(),
+  family_name: z.string().max(100).optional(),
   preferred_username: z.string().max(128).optional(),
   picture: z.string().url().max(2048).optional(),
   phone_number: z.string().max(32).optional(),

@@ -13,6 +13,7 @@ import {
   safeSecretEqual,
   sha256Base64Url
 } from "./crypto";
+import { sanitizeSocialRedirect } from "./redirect";
 import type { SocialIdentityClaims, SocialProvider } from "./types";
 
 const OAUTH_TTL_MS = 10 * 60_000;
@@ -22,11 +23,6 @@ const PENDING_COOKIE = "karimoff_social_pending";
 
 function secureCookie() {
   return process.env.NODE_ENV === "production";
-}
-
-function sanitizeRedirectPath(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/profile";
-  return value.slice(0, 500);
 }
 
 export type ConsumedOAuthAttempt = {
@@ -61,7 +57,7 @@ export async function createOAuthAttempt(params: {
     nonce_ciphertext: nonce ? encryptOAuthSecret(nonce) : null,
     intent: params.intent,
     linking_user_id: params.intent === "link" ? customer?.customerId ?? null : null,
-    redirect_to: sanitizeRedirectPath(params.redirectTo),
+    redirect_to: sanitizeSocialRedirect(params.redirectTo),
     expires_at: new Date(Date.now() + OAUTH_TTL_MS).toISOString(),
     ip_hash: forwardedFor ? hashPrivacyValue(forwardedFor) : null,
     user_agent_short: (requestHeaders.get("user-agent") ?? "").slice(0, 255) || null
@@ -122,7 +118,7 @@ export async function consumeOAuthAttempt(provider: SocialProvider, returnedStat
     nonce: attempt.nonce_ciphertext ? decryptOAuthSecret(attempt.nonce_ciphertext) : null,
     intent: attempt.intent,
     linkingUserId: attempt.linking_user_id,
-    redirectTo: sanitizeRedirectPath(attempt.redirect_to)
+    redirectTo: sanitizeSocialRedirect(attempt.redirect_to)
   } satisfies ConsumedOAuthAttempt;
 }
 
@@ -135,7 +131,7 @@ export async function createPendingSocialIdentity(claims: SocialIdentityClaims, 
     provider: claims.provider,
     provider_user_id: claims.providerUserId,
     claims,
-    redirect_to: sanitizeRedirectPath(redirectTo),
+    redirect_to: sanitizeSocialRedirect(redirectTo),
     expires_at: new Date(Date.now() + PENDING_TTL_MS).toISOString()
   });
   if (error) throw new Error("Не удалось продолжить привязку аккаунта.");
@@ -184,6 +180,4 @@ export async function clearPendingSocialIdentityCookie() {
   });
 }
 
-export function sanitizeSocialRedirect(value: string | null | undefined) {
-  return sanitizeRedirectPath(value);
-}
+export { sanitizeSocialRedirect } from "./redirect";

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import { useActionState, useState } from "react";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import {
@@ -8,8 +9,10 @@ import {
   initialSocialCompleteState,
   requestSocialPhoneCodeAction
 } from "@/app/login/social/complete/actions";
+import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
+import type { SocialProvider } from "@/lib/auth/social/types";
 
-export function SocialCompleteForm({ providerName, suggestedName }: { providerName: string; suggestedName: string }) {
+export function SocialCompleteForm({ provider, suggestedName }: { provider: SocialProvider; suggestedName: string }) {
   const [consent, setConsent] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [requestState, requestAction, requestPending] = useActionState(requestSocialPhoneCodeAction, initialSocialCompleteState);
@@ -19,14 +22,26 @@ export function SocialCompleteForm({ providerName, suggestedName }: { providerNa
   const codeSent = requestState.status === "code_sent" || Boolean(confirmState.phone);
   const message = confirmState.message || requestState.message;
   const isError = confirmState.status === "error" || (confirmState.status === "idle" && requestState.status === "error");
+  const providerName = provider === "telegram" ? "Telegram" : "VK ID";
 
   return (
     <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
-      <p className="text-xs font-black uppercase text-karimoff-orange">{providerName}</p>
-      <h1 className="mt-3 text-3xl font-black leading-tight">Подтвердите телефон</h1>
-      <p className="mt-4 text-sm leading-6 text-karimoff-muted">
-        Телефон нужен для заказов и безопасного объединения профилей. По имени аккаунты не связываются.
-      </p>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-11 w-11 items-center justify-center rounded-full text-white ${provider === "telegram" ? "bg-[#229ED9]" : "bg-[#0077FF]"}`}>
+          <SocialProviderIcon provider={provider} className="h-6 w-6" />
+        </span>
+        <p className="text-xs font-black uppercase text-karimoff-orange">{providerName} · ещё один шаг</p>
+      </div>
+      <h1 className="mt-5 text-3xl font-black leading-tight">Завершим вход</h1>
+      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        {provider === "telegram"
+          ? "Telegram не передал номер телефона. Попробуйте ещё раз или используйте другой способ входа."
+          : "VK ID не передал подтверждённый номер телефона."}
+      </div>
+      <div className="mt-4 flex items-start gap-3 text-sm leading-6 text-karimoff-muted">
+        <ShieldCheck className="mt-0.5 shrink-0 text-karimoff-orange" size={19} />
+        <p>Подтвердите номер по SMS, чтобы безопасно завершить вход. По имени или username аккаунты не объединяются.</p>
+      </div>
       <form action={requestAction} className="mt-7 grid gap-4">
         <label className="grid gap-2">
           <span className="text-sm font-semibold text-karimoff-muted">Имя</span>
@@ -48,7 +63,7 @@ export function SocialCompleteForm({ providerName, suggestedName }: { providerNa
           Хочу получать акции и предложения KARIMOFF
         </label>
         <button type="submit" disabled={requestPending || !consent} className="min-h-12 rounded-full bg-karimoff-orange px-6 py-3 text-sm font-bold text-white transition hover:bg-[#D95405] disabled:opacity-60">
-          {requestPending ? "Отправляем" : codeSent ? "Отправить код ещё раз" : "Получить код"}
+          {requestPending ? "Отправляем" : codeSent ? "Отправить код ещё раз" : "Получить код по SMS"}
         </button>
       </form>
 
@@ -68,7 +83,10 @@ export function SocialCompleteForm({ providerName, suggestedName }: { providerNa
         </form>
       ) : null}
 
-      {message ? <p className={`mt-5 text-sm font-semibold ${isError ? "text-red-600" : "text-karimoff-orange"}`}>{message}</p> : null}
+      {message ? <p role={isError ? "alert" : "status"} className={`mt-5 rounded-lg px-4 py-3 text-sm font-semibold ${isError ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>{message}</p> : null}
+      <p className="mt-5 text-center text-xs leading-5 text-karimoff-muted">
+        Не хотите продолжать? <Link href="/login" className="font-bold text-karimoff-orange">Выберите другой способ входа</Link>
+      </p>
     </section>
   );
 }

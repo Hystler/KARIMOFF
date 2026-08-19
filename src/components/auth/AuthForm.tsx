@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CircleAlert } from "lucide-react";
 import { useActionState, useState } from "react";
 import {
   confirmLoginAction,
@@ -19,10 +20,11 @@ type AuthFormProps = {
   next?: string;
   redirectTo?: string;
   socialProviders?: { telegram: boolean; vk: boolean };
+  requestSocialPhone?: boolean;
   socialError?: string | null;
 };
 
-export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, socialError }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, requestSocialPhone = false, socialError }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
@@ -57,11 +59,22 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
           ? "Создайте профиль, чтобы быстро оформлять заказы и копить баллы."
           : codeMode
             ? "Получите одноразовый код по SMS и войдите без пароля."
-            : "Войдите по телефону и постоянному паролю."}
+            : socialProviders.telegram || socialProviders.vk
+              ? "Выберите удобный способ — через мессенджер, по телефону или по SMS."
+              : "Войдите по телефону и постоянному паролю."}
       </p>
 
-      <SocialAuthButtons enabled={socialProviders} returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")} />
-      {socialError ? <p className="mt-4 text-sm font-semibold text-red-600">{socialError}</p> : null}
+      <SocialAuthButtons
+        enabled={socialProviders}
+        requestPhone={requestSocialPhone}
+        returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")}
+      />
+      {socialError ? (
+        <div role="alert" className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
+          <CircleAlert className="mt-0.5 shrink-0" size={18} />
+          {socialError}
+        </div>
+      ) : null}
 
       {!codeMode ? (
       <form action={passwordAction} className="mt-7 grid gap-4">

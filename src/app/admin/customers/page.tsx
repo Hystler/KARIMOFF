@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
-import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
+import { IdentityProviderBadge } from "@/components/auth/IdentityProviderBadge";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getAdminCustomers } from "@/lib/admin-customers";
 import { logoutAction } from "../login/actions";
@@ -97,13 +97,13 @@ export default async function AdminCustomersPage() {
                       <td className="px-4 py-4 text-karimoff-muted">{formatDate(customer.created_at)}</td>
                       <td className="px-4 py-4 text-karimoff-muted">{formatDate(customer.last_login_at)}</td>
                       <td className="px-4 py-4">
-                        <div className="flex -space-x-1">
+                        <div className="flex max-w-[260px] flex-wrap gap-2">
                           {customer.identities.map((identity) => (
-                            <IdentityAvatar
+                            <IdentityProviderBadge
                               key={identity.id}
-                              identityId={identity.id}
-                              label={identity.provider === "phone" ? "+7" : identity.provider === "telegram" ? "T" : "VK"}
-                              hasImage={Boolean(identity.avatarUrl)}
+                              provider={identity.provider}
+                              username={identity.username}
+                              phoneVerified={identity.phoneVerified}
                             />
                           ))}
                         </div>

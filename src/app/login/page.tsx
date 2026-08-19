@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
-import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
+import { Logo } from "@/components/Logo";
+import { getConfiguredSocialProviders, shouldRequestSocialPhone } from "@/lib/auth/social/config";
 
 type LoginPageProps = {
   searchParams?: Promise<{
     next?: string;
     redirectTo?: string;
+    returnTo?: string;
     socialError?: string;
   }>;
 };
@@ -15,23 +17,26 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const socialErrors: Record<string, string> = {
     unavailable: "Этот способ входа пока не настроен.",
     rate_limit: "Слишком много попыток. Попробуйте позже.",
-    cancelled: "Вход отменён.",
-    validation_failed: "Не удалось подтвердить безопасный вход. Попробуйте ещё раз.",
+    cancelled: "Вы отменили вход через Telegram.",
+    validation_failed: "Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.",
     session_expired: "Сессия входа истекла. Попробуйте ещё раз.",
-    start_failed: "Не удалось открыть сервис входа. Попробуйте позже."
+    start_failed: "Не удалось завершить вход. Попробуйте позже."
   };
+  const returnTo = params.redirectTo ?? params.returnTo;
 
   return (
     <main className="min-h-screen bg-karimoff-cream px-5 pb-10 pt-24 text-karimoff-black sm:pt-28">
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
-        <Link href="/" className="mb-5 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-          На сайт KARIMOFF
-        </Link>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <Logo compact />
+          <Link href="/" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">На главную</Link>
+        </div>
         <AuthForm
           mode="login"
           next={params.next}
-          redirectTo={params.redirectTo}
+          redirectTo={returnTo}
           socialProviders={getConfiguredSocialProviders()}
+          requestSocialPhone={shouldRequestSocialPhone()}
           socialError={params.socialError ? socialErrors[params.socialError] ?? "Не удалось выполнить вход." : null}
         />
       </div>

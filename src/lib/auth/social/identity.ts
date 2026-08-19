@@ -35,6 +35,8 @@ export type UserIdentityView = {
   email: string | null;
   phone: string | null;
   phoneVerified: boolean;
+  givenName: string | null;
+  familyName: string | null;
   linkedAt: string;
   lastLoginAt: string | null;
 };
@@ -173,23 +175,30 @@ export async function getUserIdentities(userId: string): Promise<UserIdentityVie
   if (!database) return [];
   const { data } = await database
     .from("user_identities")
-    .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, linked_at, last_login_at")
+    .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at")
     .eq("user_id", userId)
     .order("linked_at", { ascending: true });
 
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    provider: row.provider as UserIdentityView["provider"],
-    providerUserId: String(row.provider_user_id),
-    username: typeof row.username === "string" ? row.username : null,
-    displayName: typeof row.display_name === "string" ? row.display_name : null,
-    avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
-    email: typeof row.email === "string" ? row.email : null,
-    phone: typeof row.phone === "string" ? row.phone : null,
-    phoneVerified: Boolean(row.phone_verified),
-    linkedAt: String(row.linked_at),
-    lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
-  }));
+  return (data ?? []).map((row) => {
+    const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? row.metadata as Record<string, unknown>
+      : {};
+    return {
+      id: String(row.id),
+      provider: row.provider as UserIdentityView["provider"],
+      providerUserId: String(row.provider_user_id),
+      username: typeof row.username === "string" ? row.username : null,
+      displayName: typeof row.display_name === "string" ? row.display_name : null,
+      avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
+      email: typeof row.email === "string" ? row.email : null,
+      phone: typeof row.phone === "string" ? row.phone : null,
+      phoneVerified: Boolean(row.phone_verified),
+      givenName: typeof metadata.givenName === "string" ? metadata.givenName : null,
+      familyName: typeof metadata.familyName === "string" ? metadata.familyName : null,
+      linkedAt: String(row.linked_at),
+      lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
+    };
+  });
 }
 
 export async function syncPhoneIdentity(params: {

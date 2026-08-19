@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeAuditLog } from "@/lib/audit";
 import { completeProviderCallback } from "@/lib/auth/social/identity";
+import { buildSocialResultPath } from "@/lib/auth/social/redirect";
 import { consumeOAuthAttempt } from "@/lib/auth/social/state";
 import { exchangeTelegramCode } from "@/lib/auth/social/telegram";
 import { isSocialProvider } from "@/lib/auth/social/types";
@@ -19,13 +20,24 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
   const code = request.nextUrl.searchParams.get("code") ?? "";
   const providerError = request.nextUrl.searchParams.get("error");
   if (!state) {
-    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=cancelled"));
+    return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
+      provider: rawProvider,
+      status: "error",
+      reason: "cancelled"
+    })));
   }
 
+  let returnTo = "/profile";
   try {
     const attempt = await consumeOAuthAttempt(rawProvider, state);
+    returnTo = attempt.redirectTo;
     if (providerError || !code) {
-      return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=cancelled"));
+      return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
+        provider: rawProvider,
+        status: "error",
+        returnTo,
+        reason: "cancelled"
+      })));
     }
     const claims = rawProvider === "telegram"
       ? await exchangeTelegramCode({
@@ -40,9 +52,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
           codeVerifier: attempt.codeVerifier
         });
     const result = await completeProviderCallback(claims, attempt);
-    const destination = getPublicRequestUrl(request, result.redirectTo);
-    if (result.kind === "linked") destination.searchParams.set("identity", "linked");
-    return NextResponse.redirect(destination);
+    if (result.kind === "needs_phone") {
+      return NextResponse.redirect(getPublicRequestUrl(request, result.redirectTo));
+    }
+    return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
+      provider: rawProvider,
+      status: "success",
+      returnTo: result.redirectTo,
+      linked: result.kind === "linked"
+    })));
   } catch {
     await writeAuditLog({
       action: "customer.social_login_failed",
@@ -51,6 +69,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
       metadata: { provider: rawProvider },
       sourcePath: `/api/auth/social/${rawProvider}/callback`
     });
-    return NextResponse.redirect(getPublicRequestUrl(request, "/login?socialError=validation_failed"));
+    return NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
+      provider: rawProvider,
+      status: "error",
+      returnTo,
+      reason: "validation_failed"
+    })));
   }
 }

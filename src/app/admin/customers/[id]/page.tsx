@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
+import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getAdminCustomerById } from "@/lib/admin-customers";
 import { logoutAction } from "../../login/actions";
@@ -129,7 +130,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
               <h2 className="text-2xl font-black">Способы входа</h2>
               <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {customer.identities.map((identity) => (
-                  <article key={identity.id} className="rounded-lg border border-karimoff-line p-4">
+                  <article key={identity.id} className="rounded-lg border border-karimoff-line bg-karimoff-soft/35 p-4">
                     <div className="flex items-center gap-3">
                       <IdentityAvatar
                         identityId={identity.id}
@@ -137,17 +138,29 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                         hasImage={Boolean(identity.avatarUrl)}
                       />
                       <div className="min-w-0">
-                        <p className="font-black">{identity.provider === "phone" ? "Телефон" : identity.provider === "telegram" ? "Telegram" : "VK ID"}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-black">{identity.provider === "phone" ? "Телефон" : identity.provider === "telegram" ? "Telegram" : "VK ID"}</p>
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">Привязан к профилю</span>
+                        </div>
                         <p className="mt-1 truncate text-xs font-semibold text-karimoff-muted">{identity.displayName || identity.username || identity.phone || "Подключено"}</p>
                       </div>
                     </div>
-                    {identity.provider !== "phone" ? (
-                      <p className="mt-3 break-all font-mono text-[11px] text-karimoff-muted">
-                        {identity.provider === "telegram" && identity.username ? `@${identity.username} · ` : ""}ID {identity.providerUserId}
-                      </p>
-                    ) : null}
-                    <p className="mt-3 text-xs text-karimoff-muted">Привязан: {formatDate(identity.linkedAt)}</p>
-                    <p className="mt-1 text-xs text-karimoff-muted">Последний вход: {formatDate(identity.lastLoginAt)}</p>
+                    <dl className="mt-4 grid gap-2 border-t border-karimoff-line pt-4 text-xs">
+                      {identity.displayName ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Имя из сервиса</dt><dd className="text-right font-bold">{identity.displayName}</dd></div> : null}
+                      {identity.givenName || identity.familyName ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Имя / фамилия</dt><dd className="text-right font-bold">{[identity.givenName, identity.familyName].filter(Boolean).join(" ")}</dd></div> : null}
+                      {identity.username ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Username</dt><dd className="font-bold">@{identity.username}</dd></div> : null}
+                      {identity.provider !== "phone" ? <div className="grid gap-1"><dt className="text-karimoff-muted">{identity.provider === "telegram" ? "Telegram user ID" : "VK user ID"}</dt><dd className="break-all font-mono text-[11px]">{identity.providerUserId}</dd></div> : null}
+                      {identity.phone ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Телефон</dt><dd className="font-bold">{identity.phone}</dd></div> : null}
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-karimoff-muted">Подтверждение телефона</dt>
+                        <dd className={`inline-flex items-center gap-1.5 font-bold ${identity.phoneVerified ? "text-emerald-700" : "text-karimoff-muted"}`}>
+                          <SocialProviderIcon provider={identity.provider} className="h-3.5 w-3.5" />
+                          {identity.phoneVerified ? "Подтверждён" : "Не передан / не подтверждён"}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Первый вход / привязка</dt><dd className="text-right font-semibold">{formatDate(identity.linkedAt)}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Последний вход</dt><dd className="text-right font-semibold">{formatDate(identity.lastLoginAt)}</dd></div>
+                    </dl>
                   </article>
                 ))}
               </div>

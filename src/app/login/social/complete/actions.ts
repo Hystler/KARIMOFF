@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { completePendingIdentityRegistration } from "@/lib/auth/social/identity";
+import { buildSocialResultPath } from "@/lib/auth/social/redirect";
 import {
   clearPendingSocialIdentityCookie,
   readPendingSocialIdentity,
@@ -92,9 +93,13 @@ export async function completeSocialPhoneAction(
     });
     await clearAuthFailures("verify_code", parsed.data.phone);
     await clearPendingSocialIdentityCookie();
-    destination = sanitizeSocialRedirect(completed.redirectTo);
+    destination = buildSocialResultPath({
+      provider: completed.provider,
+      status: "success",
+      returnTo: sanitizeSocialRedirect(completed.redirectTo)
+    });
   } catch {
-    return { status: "error", message: "Не удалось безопасно связать профиль. Начните вход заново.", ...parsed.data };
+    return { status: "error", message: "Не удалось завершить вход. Попробуйте позже.", ...parsed.data };
   }
   redirect(destination);
 }

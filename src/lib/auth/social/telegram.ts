@@ -101,6 +101,9 @@ export async function exchangeTelegramCode(params: {
     email: null,
     phone,
     phoneVerified: Boolean(phone && claims.phone_number_verified),
-    metadata: {}
+    metadata: {
+      givenName: claims.given_name ?? null,
+      familyName: claims.family_name ?? null
+    }
   };
 }

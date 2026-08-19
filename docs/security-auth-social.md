@@ -44,6 +44,16 @@ Future production callback:
 
 Keep the Telegram signing algorithm at the default RS256. The default scope is `openid profile`. Phone scope is disabled unless `SOCIAL_AUTH_REQUEST_PHONE=true` is explicitly configured.
 
+## Login UX and redirects
+
+- The login page shows Telegram only when all required Telegram OIDC variables are valid. Missing configuration does not render a broken button.
+- Telegram is presented as the primary passwordless option; VK ID follows it when configured. Phone/password and SMS remain available after the `или` divider.
+- OAuth attempts persist a sanitized same-origin `returnTo`. Checkout therefore returns to `/checkout`; unsafe absolute or protocol-relative redirects fall back to `/profile`.
+- A successful callback opens `/login/social/result`, verifies that a customer session actually exists, shows a short branded confirmation, and redirects after 1.65 seconds.
+- Cancelled, expired, and invalid callbacks use a Russian-language result screen. Provider errors and tokens are never shown to the user.
+- If Telegram does not return a verified phone, the pending provider identity remains isolated until the user confirms a phone through the existing SMS flow. Accounts are never merged by name or username.
+- Telegram controls its own permission dialog. Its system copy and phone-sharing confirmation cannot be restyled by KARIMOFF.
+
 ## VK ID
 
 KARIMOFF uses VK ID OAuth 2.1 Authorization Code Flow with PKCE S256 and one-time state. The callback additionally requires the VK `device_id`. The authorization code is exchanged server-side and the profile is requested from the official `user_info` endpoint. Tokens are used only inside the callback and are not persisted.
