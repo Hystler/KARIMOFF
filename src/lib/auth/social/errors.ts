@@ -41,6 +41,7 @@ export class SocialAuthError extends Error {
   readonly stage: SocialAuthStage;
   readonly httpStatus: number | null;
   readonly providerError: string | null;
+  readonly networkError: string | null;
 
   constructor(params: {
     code: SocialAuthErrorCode;
@@ -48,6 +49,7 @@ export class SocialAuthError extends Error {
     message?: string;
     httpStatus?: number | null;
     providerError?: string | null;
+    networkError?: string | null;
     cause?: unknown;
   }) {
     super(params.message ?? params.code, { cause: params.cause });
@@ -56,12 +58,18 @@ export class SocialAuthError extends Error {
     this.stage = params.stage;
     this.httpStatus = params.httpStatus ?? null;
     this.providerError = sanitizeProviderError(params.providerError);
+    this.networkError = sanitizeNetworkError(params.networkError);
   }
 }
 
 function sanitizeProviderError(value: string | null | undefined) {
   if (!value) return null;
   return /^[a-z0-9_.-]{1,64}$/i.test(value) ? value : "provider_error";
+}
+
+function sanitizeNetworkError(value: string | null | undefined) {
+  if (!value) return null;
+  return /^[A-Z0-9_]{1,64}$/.test(value) ? value : "NETWORK_ERROR";
 }
 
 export function getSocialAuthError(error: unknown, fallbackStage: SocialAuthStage = "callback") {
@@ -71,6 +79,7 @@ export function getSocialAuthError(error: unknown, fallbackStage: SocialAuthStag
     stage?: SocialAuthStage;
     httpStatus?: number | null;
     providerError?: string | null;
+    networkError?: string | null;
   };
   if (typeof candidate?.code === "string" && typeof candidate?.stage === "string") {
     return new SocialAuthError({
@@ -78,6 +87,7 @@ export function getSocialAuthError(error: unknown, fallbackStage: SocialAuthStag
       stage: candidate.stage,
       httpStatus: candidate.httpStatus,
       providerError: candidate.providerError,
+      networkError: candidate.networkError,
       cause: error
     });
   }

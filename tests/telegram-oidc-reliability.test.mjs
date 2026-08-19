@@ -68,6 +68,46 @@ test("Telegram token endpoint errors are recognized even when Telegram returns H
   });
 });
 
+test("Telegram token transport preserves the official form POST without the global fetch connect timeout", () => {
+  const output = importTypescriptScript("src/lib/auth/social/telegram-http.ts", `
+    const { createServer } = await import("node:http");
+    const server = createServer((request, response) => {
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => { body += chunk; });
+      request.on("end", () => {
+        response.setHeader("Content-Type", "application/json");
+        response.end(JSON.stringify({
+          method: request.method,
+          contentType: request.headers["content-type"],
+          hasBasic: String(request.headers.authorization).startsWith("Basic "),
+          fields: [...new URLSearchParams(body).keys()].sort()
+        }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const result = await subject.postFormJson({
+      url: "http://127.0.0.1:" + address.port + "/token",
+      body: new URLSearchParams({ grant_type: "authorization_code", code: "code", redirect_uri: "https://example.test/callback", client_id: "client", code_verifier: "verifier" }),
+      headers: { Authorization: "Basic test", "Content-Type": "application/x-www-form-urlencoded" },
+      timeoutMs: 2_000
+    });
+    await new Promise((resolve) => server.close(resolve));
+    console.log(JSON.stringify(result));
+  `);
+  assert.deepEqual(JSON.parse(output), {
+    ok: true,
+    payload: {
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      hasBasic: true,
+      fields: ["client_id", "code", "code_verifier", "grant_type", "redirect_uri"]
+    },
+    status: 200
+  });
+});
+
 test("Telegram phone normalization accepts Russian E.164 with and without plus", () => {
   const output = importTypescriptScript("src/lib/auth/social/telegram-protocol.ts", `
     console.log(JSON.stringify([
@@ -149,7 +189,9 @@ test("callback creates and verifies the KARIMOFF session before a safe local red
   assert.match(identity, /const session = await getCustomerSession\(\)/);
   assert.match(identity, /session\.customerId !== userId/);
   assert.match(callback, /telegram\.session\.created/);
+  assert.match(callback, /telegram\.session\.readback/);
   assert.match(callback, /telegram\.redirect\.success/);
+  assert.match(callback, /NextResponse\.redirect\(getPublicRequestUrl\(request, successTarget\), 303\)/);
   assert.match(state, /redirectTo: sanitizeSocialRedirect/);
 });
 
@@ -160,10 +202,13 @@ test("Telegram callback telemetry contains stages and correlation only, never OA
   for (const event of [
     "telegram.start",
     "telegram.callback.received",
+    "telegram.token_exchange.start",
     "telegram.token_exchange.success",
+    "telegram.token_exchange.fail",
     "telegram.id_token.valid",
     "telegram.identity.resolved",
     "telegram.session.created",
+    "telegram.session.readback",
     "telegram.redirect.success"
   ]) {
     assert.match(`${callback}\n${telemetry}`, new RegExp(event.replaceAll(".", "\\.")));

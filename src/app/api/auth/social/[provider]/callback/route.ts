@@ -26,6 +26,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
   let returnTo = "/profile";
   let attemptId: string = randomUUID();
   let stage: SocialAuthStage = "callback";
+  let tokenExchangeStartedAt: number | null = null;
   try {
     if (!state) {
       throw new SocialAuthError({
@@ -56,6 +57,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
       throw new SocialAuthError({ code: "missing_code", stage: "callback" });
     }
     stage = "token_exchange";
+    const tokenExchangeStartTimestamp = Date.now();
+    tokenExchangeStartedAt = tokenExchangeStartTimestamp;
+    if (rawProvider === "telegram") {
+      logTelegramAuthEvent("telegram.token_exchange.start", {
+        attemptId,
+        stage: "token_exchange"
+      });
+    }
     const claims = rawProvider === "telegram"
       ? await exchangeTelegramCode({
           code,
@@ -65,7 +74,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
             if (telegramStage === "token_exchange.success") {
               logTelegramAuthEvent("telegram.token_exchange.success", {
                 attemptId,
-                stage: "token_exchange"
+                stage: "token_exchange",
+                durationMs: Date.now() - tokenExchangeStartTimestamp
               });
               stage = "id_token";
             } else {
@@ -106,13 +116,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
         attemptId,
         stage: "session"
       });
+      logTelegramAuthEvent("telegram.session.readback", {
+        attemptId,
+        stage: "session"
+      });
     }
-    const response = NextResponse.redirect(getPublicRequestUrl(request, buildSocialResultPath({
-      provider: rawProvider,
-      status: "success",
-      returnTo: result.redirectTo,
-      linked: result.kind === "linked"
-    })));
+    const successTarget = result.kind === "authenticated"
+      ? result.redirectTo
+      : buildSocialResultPath({
+          provider: rawProvider,
+          status: "success",
+          returnTo: result.redirectTo,
+          linked: result.kind === "linked"
+        });
+    const response = NextResponse.redirect(getPublicRequestUrl(request, successTarget), 303);
     if (rawProvider === "telegram") {
       logTelegramAuthEvent("telegram.redirect.success", {
         attemptId,
@@ -123,11 +140,23 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
   } catch (error) {
     const failure = getSocialAuthError(error, stage);
     if (rawProvider === "telegram") {
+      if (failure.stage === "token_exchange") {
+        logTelegramAuthEvent("telegram.token_exchange.fail", {
+          attemptId,
+          stage: failure.stage,
+          errorCode: failure.code,
+          httpStatus: failure.httpStatus,
+          networkError: failure.networkError,
+          providerError: failure.providerError,
+          durationMs: tokenExchangeStartedAt ? Date.now() - tokenExchangeStartedAt : null
+        });
+      }
       logTelegramAuthEvent("telegram.failed", {
         attemptId,
         stage: failure.stage,
         errorCode: failure.code,
         httpStatus: failure.httpStatus,
+        networkError: failure.networkError,
         providerError: failure.providerError
       });
     }
@@ -141,6 +170,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pro
         stage: failure.stage,
         error_code: failure.code,
         ...(failure.httpStatus ? { http_status: failure.httpStatus } : {}),
+        ...(failure.networkError ? { network_error: failure.networkError } : {}),
         ...(failure.providerError ? { provider_error: failure.providerError } : {})
       },
       sourcePath: `/api/auth/social/${rawProvider}/callback`

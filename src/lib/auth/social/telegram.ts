@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { getSocialProviderConfig, shouldRequestSocialPhone } from "./config";
 import { getSocialAuthError, SocialAuthError } from "./errors";
+import { getSafeNetworkErrorCode, postFormJson } from "./telegram-http";
 import { normalizeTelegramPhone, parseTelegramTokenResponse } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
@@ -100,32 +101,28 @@ export async function exchangeTelegramCode(params: {
     client_id: config.clientId,
     code_verifier: params.codeVerifier
   });
-  let response: Response;
+  let response: Awaited<ReturnType<typeof postFormJson>>;
   try {
-    response = await fetch(TELEGRAM_TOKEN_URL, {
-      method: "POST",
+    response = await postFormJson({
+      url: TELEGRAM_TOKEN_URL,
       headers: {
         Accept: "application/json",
         Authorization: `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded"
       },
       body,
-      cache: "no-store",
-      signal: AbortSignal.timeout(TELEGRAM_TOKEN_TIMEOUT_MS)
+      timeoutMs: TELEGRAM_TOKEN_TIMEOUT_MS
     });
   } catch (error) {
-    throw new SocialAuthError({ code: "token_unavailable", stage: "token_exchange", cause: error });
-  }
-
-  const payload = await response.json().catch((error) => {
     throw new SocialAuthError({
-      code: "token_response_invalid",
+      code: "token_unavailable",
       stage: "token_exchange",
-      httpStatus: response.status,
+      networkError: getSafeNetworkErrorCode(error),
       cause: error
     });
-  });
-  const token = parseTelegramTokenResponse({ payload, ok: response.ok, status: response.status });
+  }
+
+  const token = parseTelegramTokenResponse(response);
   params.onStage?.("token_exchange.success");
 
   let keys = await getTelegramKeys();

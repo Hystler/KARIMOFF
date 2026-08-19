@@ -9,7 +9,10 @@ export type TelegramAuthEvent =
   | "telegram.identity.resolved"
   | "telegram.redirect.success"
   | "telegram.session.created"
+  | "telegram.session.readback"
   | "telegram.start"
+  | "telegram.token_exchange.fail"
+  | "telegram.token_exchange.start"
   | "telegram.token_exchange.success";
 
 type TelegramAuthEventDetails = {
@@ -18,6 +21,8 @@ type TelegramAuthEventDetails = {
   browserBinding?: OAuthBrowserBinding;
   errorCode?: string;
   httpStatus?: number | null;
+  durationMs?: number | null;
+  networkError?: string | null;
   providerError?: string | null;
   resolution?: "authenticated" | "linked" | "needs_phone";
 };
@@ -32,6 +37,8 @@ export function logTelegramAuthEvent(event: TelegramAuthEvent, details: Telegram
     ...(details.browserBinding ? { browser_binding: details.browserBinding } : {}),
     ...(details.errorCode ? { error_code: details.errorCode } : {}),
     ...(details.httpStatus ? { http_status: details.httpStatus } : {}),
+    ...(typeof details.durationMs === "number" ? { duration_ms: Math.max(0, Math.round(details.durationMs)) } : {}),
+    ...(details.networkError ? { network_error: details.networkError } : {}),
     ...(details.providerError ? { provider_error: details.providerError } : {}),
     ...(details.resolution ? { resolution: details.resolution } : {})
   };

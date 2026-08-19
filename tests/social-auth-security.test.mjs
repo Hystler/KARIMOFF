@@ -89,6 +89,10 @@ test("OAuth state is server-authoritative, one-time and expires", () => {
   assert.match(state, /classifyOAuthAttemptFailure/);
   assert.match(state, /httpOnly: true/);
   assert.match(state, /sameSite: "lax"/);
+  const customerSession = read("src/lib/customer-auth.ts");
+  assert.match(customerSession, /sameSite: "lax"/);
+  assert.match(customerSession, /path: "\/"/);
+  assert.doesNotMatch(customerSession, /domain:/);
 });
 
 test("social redirects preserve the external reverse-proxy origin", () => {
