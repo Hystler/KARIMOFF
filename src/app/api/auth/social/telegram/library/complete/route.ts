@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
     });
     logTelegramAuthEvent("telegram.id_token.valid", {
       attemptId: correlationId,
-      stage: "id_token"
+      stage: "id_token",
+      phonePresent: Boolean(claims.phone),
+      phoneVerified: claims.phoneVerified
     });
 
     stage = "identity";

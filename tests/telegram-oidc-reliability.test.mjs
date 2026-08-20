@@ -45,10 +45,17 @@ test("Telegram phone normalization accepts Russian E.164 with and without plus",
       subject.normalizeTelegramPhone("79991234567"),
       subject.normalizeTelegramPhone("89991234567"),
       subject.normalizeTelegramPhone("9991234567"),
-      subject.normalizeTelegramPhone("+441234567890")
+      subject.normalizeTelegramPhone("+441234567890"),
+      subject.isTelegramPhoneVerified("+79991234567", undefined),
+      subject.isTelegramPhoneVerified("+79991234567", true),
+      subject.isTelegramPhoneVerified("+79991234567", false),
+      subject.isTelegramPhoneVerified(null, undefined)
     ]));
   `);
-  assert.deepEqual(JSON.parse(output), ["+79991234567", "+79991234567", "+79991234567", "+79991234567", null]);
+  assert.deepEqual(JSON.parse(output), [
+    "+79991234567", "+79991234567", "+79991234567", "+79991234567", null,
+    true, true, false, false
+  ]);
 });
 
 test("Telegram library ID token accepts valid claims and rejects signature, issuer, audience, expiry and nonce failures", () => {
@@ -180,5 +187,7 @@ test("Telegram telemetry has library stages and cannot log tokens or phone claim
     assert.match(sources, new RegExp(event.replaceAll(".", "\\.")));
   }
   assert.doesNotMatch(telemetry, /idToken\??:|client_secret|access_token|phone_number\??:|cookie_value/i);
+  assert.match(telemetry, /phone_present/);
+  assert.match(telemetry, /phone_verified/);
   assert.doesNotMatch(complete, /console\.(?:info|log|error)\([^)]*(?:idToken|parsed\.data)/);
 });

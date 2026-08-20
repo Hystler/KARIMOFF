@@ -21,6 +21,8 @@ type TelegramAuthEventDetails = {
   durationMs?: number | null;
   networkError?: string | null;
   providerError?: string | null;
+  phonePresent?: boolean;
+  phoneVerified?: boolean;
   resolution?: "authenticated" | "linked" | "needs_phone";
 };
 
@@ -37,6 +39,8 @@ export function logTelegramAuthEvent(event: TelegramAuthEvent, details: Telegram
     ...(typeof details.durationMs === "number" ? { duration_ms: Math.max(0, Math.round(details.durationMs)) } : {}),
     ...(details.networkError ? { network_error: details.networkError } : {}),
     ...(details.providerError ? { provider_error: details.providerError } : {}),
+    ...(typeof details.phonePresent === "boolean" ? { phone_present: details.phonePresent } : {}),
+    ...(typeof details.phoneVerified === "boolean" ? { phone_verified: details.phoneVerified } : {}),
     ...(details.resolution ? { resolution: details.resolution } : {})
   };
   console.info(JSON.stringify(entry));

@@ -5,7 +5,7 @@ import { getTelegramLoginLibraryConfig } from "./config";
 import { getSocialAuthError, SocialAuthError } from "./errors";
 import { getJson, getSafeNetworkErrorCode } from "./telegram-http";
 import { TELEGRAM_RS256_JWKS_SNAPSHOT } from "./telegram-jwks-snapshot";
-import { normalizeTelegramPhone } from "./telegram-protocol";
+import { isTelegramPhoneVerified, normalizeTelegramPhone } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
 
@@ -141,7 +141,7 @@ export async function verifyTelegramLibraryIdToken(params: {
     avatarUrl: claims.picture ?? null,
     email: null,
     phone,
-    phoneVerified: Boolean(phone && claims.phone_number_verified),
+    phoneVerified: isTelegramPhoneVerified(phone, claims.phone_number_verified),
     metadata: {
       givenName: claims.given_name ?? null,
       familyName: claims.family_name ?? null,
