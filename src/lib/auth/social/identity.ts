@@ -10,12 +10,11 @@ import { LEGAL_VERSION } from "@/lib/legal";
 import { hashOAuthSecret } from "./crypto";
 import { SocialAuthError } from "./errors";
 import { resolveVerifiedSocialIdentity } from "./linking-rules";
-import type { ConsumedOAuthAttempt } from "./state";
 import { createPendingSocialIdentity } from "./state";
 import type { SocialIdentityClaims, SocialProvider } from "./types";
 
 const claimsSchema = z.object({
-  provider: z.enum(["telegram", "vk"]),
+  provider: z.enum(["telegram", "max"]),
   providerUserId: z.string().min(1).max(255),
   username: z.string().max(128).nullable(),
   displayName: z.string().max(160).nullable(),
@@ -40,6 +39,12 @@ export type UserIdentityView = {
   familyName: string | null;
   linkedAt: string;
   lastLoginAt: string | null;
+};
+
+export type SocialCompletionAttempt = {
+  intent: "login" | "link";
+  linkingUserId: string | null;
+  redirectTo: string;
 };
 
 export async function bindIdentityToUser(userId: string, rawClaims: SocialIdentityClaims) {
@@ -124,6 +129,9 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
         where phone = ${claims.phone}
         for update
       ` : [];
+      if (claims.provider === "max" && phoneOwner && !phoneOwner.phone_verified_at) {
+        return null;
+      }
       const resolution = resolveVerifiedSocialIdentity({
         existingIdentityUserId: null,
         providerPhone: claims.phone,
@@ -135,7 +143,7 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
       if (resolution.kind === "verified_phone") {
         userId = resolution.userId;
       } else if (resolution.kind === "create_customer") {
-        const customerName = claims.displayName?.trim() || "Пользователь Telegram";
+        const customerName = claims.displayName?.trim() || (claims.provider === "telegram" ? "Пользователь Telegram" : "Пользователь MAX");
         try {
           const [created] = await transaction<{ id: string }[]>`
             insert into public.customers (name, phone, phone_verified_at, last_login_at)
@@ -219,7 +227,7 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
 
 export async function completeProviderCallback(
   rawClaims: SocialIdentityClaims,
-  attempt: ConsumedOAuthAttempt,
+  attempt: SocialCompletionAttempt,
   options?: { sourcePath?: string }
 ) {
   const claims = claimsSchema.parse(rawClaims);
@@ -276,6 +284,7 @@ export async function getUserIdentities(userId: string): Promise<UserIdentityVie
     .from("user_identities")
     .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at")
     .eq("user_id", userId)
+    .in("provider", ["phone", "telegram", "max"])
     .order("linked_at", { ascending: true });
 
   return (data ?? []).map((row) => {

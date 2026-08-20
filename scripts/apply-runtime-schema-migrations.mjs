@@ -126,6 +126,89 @@ const migrations = [
         objects?.verified_phone
       );
     }
+  },
+  {
+    name: "20260820190000_add_max_social_auth",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.max_login_challenges') is not null as challenges,
+          exists (
+            select 1
+            from pg_constraint
+            where conrelid = 'public.user_identities'::regclass
+              and conname = 'user_identities_provider_check'
+              and pg_get_constraintdef(oid) like '%''max''%'
+          ) as max_identity_provider,
+          exists (
+            select 1
+            from pg_constraint
+            where conrelid = 'public.pending_social_identities'::regclass
+              and conname = 'pending_social_identities_provider_check'
+              and pg_get_constraintdef(oid) like '%''max''%'
+          ) as max_pending_provider,
+          not exists (
+            select 1
+            from unnest(array[
+              'max_login_challenges_pkey',
+              'max_login_challenges_challenge_hash_key',
+              'max_login_challenges_correlation_id_key',
+              'max_login_challenges_provider_check',
+              'max_login_challenges_hash_lengths_check',
+              'max_login_challenges_intent_check',
+              'max_login_challenges_link_check',
+              'max_login_challenges_status_check',
+              'max_login_challenges_redirect_check',
+              'max_login_challenges_identity_size_check',
+              'max_login_challenges_error_length_check'
+            ]) as expected_constraint(name)
+            where not exists (
+              select 1
+              from pg_constraint
+              where conrelid = to_regclass('public.max_login_challenges')
+                and conname = expected_constraint.name
+                and convalidated
+            )
+          ) as constraints_valid,
+          exists (
+            select 1
+            from pg_class
+            where oid = to_regclass('public.max_login_challenges')
+              and relrowsecurity
+          ) as rls_enabled,
+          to_regclass('public.max_login_challenges_pending_expiry_idx') is not null as expiry_index,
+          to_regclass('public.max_login_challenges_linking_user_idx') is not null as linking_index,
+          to_regclass('public.max_login_challenges_status_idx') is not null as status_index,
+          exists (
+            select 1
+            from pg_policies
+            where schemaname = 'public'
+              and tablename = 'max_login_challenges'
+              and policyname = 'max_login_challenges_app_all'
+              and 'karimoff_app' = any (roles)
+          ) as app_policy,
+          case
+            when to_regclass('public.max_login_challenges') is null then false
+            else has_table_privilege(
+              'karimoff_app',
+              'public.max_login_challenges',
+              'select,insert,update,delete'
+            )
+          end as app_privileges
+      `;
+      return Boolean(
+        objects?.challenges &&
+        objects?.max_identity_provider &&
+        objects?.max_pending_provider &&
+        objects?.constraints_valid &&
+        objects?.rls_enabled &&
+        objects?.expiry_index &&
+        objects?.linking_index &&
+        objects?.status_index &&
+        objects?.app_policy &&
+        objects?.app_privileges
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
@@ -170,6 +253,9 @@ try {
         )
       `;
     });
+    if (!(await migration.applied(sql))) {
+      throw new Error(`postcondition check failed for ${migration.name}`);
+    }
     console.log(`Runtime schema migration applied: ${migration.name}.`);
   }
 } catch (error) {

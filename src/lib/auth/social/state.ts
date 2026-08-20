@@ -29,7 +29,7 @@ function secureCookie() {
 
 export type ConsumedOAuthAttempt = {
   id: string;
-  provider: SocialProvider;
+  provider: "telegram";
   state: string;
   codeVerifier: string;
   nonce: string | null;
@@ -40,7 +40,7 @@ export type ConsumedOAuthAttempt = {
 };
 
 export async function createOAuthAttempt(params: {
-  provider: SocialProvider;
+  provider: "telegram";
   intent: "login" | "link";
   redirectTo?: string | null;
 }) {
@@ -83,7 +83,7 @@ export async function createOAuthAttempt(params: {
 }
 
 export async function consumeOAuthAttempt(
-  provider: SocialProvider,
+  provider: "telegram",
   returnedState: string,
   options?: { requireBrowserBinding?: boolean }
 ) {
@@ -106,7 +106,7 @@ export async function consumeOAuthAttempt(
   const sql = getPostgresSql();
   const [attempt] = await sql<{
     id: string;
-    provider: SocialProvider;
+    provider: "telegram";
     verifier_ciphertext: string;
     nonce_ciphertext: string | null;
     intent: "login" | "link";
@@ -152,7 +152,7 @@ export async function consumeOAuthAttempt(
   }
 }
 
-export async function getConsumedOAuthAttemptId(provider: SocialProvider, returnedState: string) {
+export async function getConsumedOAuthAttemptId(provider: "telegram", returnedState: string) {
   const sql = getPostgresSql();
   const [attempt] = await sql<{ id: string }[]>`
     select id

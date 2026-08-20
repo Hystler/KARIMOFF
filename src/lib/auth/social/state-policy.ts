@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-type SocialProvider = "telegram" | "vk";
+type OAuthProvider = "telegram";
 
 class OAuthStateError extends Error {
   readonly stage = "state" as const;
@@ -22,7 +22,7 @@ function equalSecret(left: string, right: string) {
 }
 
 export function validateOAuthBrowserBinding(params: {
-  provider: SocialProvider;
+  provider: OAuthProvider;
   cookieState: string | null;
   returnedState: string;
 }): OAuthBrowserBinding {
@@ -30,8 +30,7 @@ export function validateOAuthBrowserBinding(params: {
     throw new OAuthStateError("missing_state");
   }
   if (!params.cookieState) {
-    if (params.provider === "telegram") return "missing";
-    throw new OAuthStateError("browser_binding_mismatch");
+    return "missing";
   }
   if (!equalSecret(params.cookieState, params.returnedState)) {
     throw new OAuthStateError("browser_binding_mismatch");

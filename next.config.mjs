@@ -30,11 +30,13 @@ const mediaOrigins = [
   cdnPattern ? `https://${cdnPattern.hostname}${cdnPattern.port ? `:${cdnPattern.port}` : ""}` : null
 ].filter(Boolean);
 
-function buildContentSecurityPolicy({ telegramLogin = false } = {}) {
+function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false } = {}) {
   const telegramOrigin = telegramLogin ? " https://oauth.telegram.org" : "";
+  const maxBridgeOrigin = maxMiniApp ? " https://st.max.ru" : "";
+  const frameAncestors = maxMiniApp ? "https://max.ru https://*.max.ru" : "'none'";
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}${telegramOrigin}`,
+    `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}${telegramOrigin}${maxBridgeOrigin}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
     "font-src 'self' data:",
@@ -43,13 +45,14 @@ function buildContentSecurityPolicy({ telegramLogin = false } = {}) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${frameAncestors}`,
     "upgrade-insecure-requests"
   ].join("; ");
 }
 
 const contentSecurityPolicy = buildContentSecurityPolicy();
 const telegramLoginContentSecurityPolicy = buildContentSecurityPolicy({ telegramLogin: true });
+const maxMiniAppContentSecurityPolicy = buildContentSecurityPolicy({ maxMiniApp: true });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -79,7 +82,6 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
       { key: "X-DNS-Prefetch-Control", value: "off" },
       { key: "Cross-Origin-Opener-Policy", value: "same-origin" }
     ];
@@ -103,7 +105,14 @@ const nextConfig = {
           { key: "Content-Security-Policy", value: telegramLoginContentSecurityPolicy },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }
         ]
-      }))
+      })),
+      {
+        source: "/integrations/max/app",
+        headers: [
+          { key: "Content-Security-Policy", value: maxMiniAppContentSecurityPolicy },
+          { key: "Cross-Origin-Opener-Policy", value: "unsafe-none" }
+        ]
+      }
     ];
   }
 };

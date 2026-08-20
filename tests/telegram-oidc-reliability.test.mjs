@@ -161,14 +161,16 @@ test("popup-compatible headers are limited to pages that host Telegram Login", (
   assert.match(config, /Cross-Origin-Opener-Policy", value: "same-origin"/);
 });
 
-test("manual Telegram code exchange is removed from runtime while VK callback remains", () => {
-  const start = read("src/app/api/auth/social/[provider]/start/route.ts");
-  const callback = read("src/app/api/auth/social/[provider]/callback/route.ts");
+test("manual Telegram and VK callback runtimes stay removed while Telegram library remains intact", () => {
+  const start = read("src/app/api/auth/social/telegram/library/start/route.ts");
+  const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
   assert.equal(existsSync(join(root, "src/lib/auth/social/telegram.ts")), false);
-  assert.doesNotMatch(`${start}\n${callback}`, /exchangeTelegramCode|getTelegramAuthorizeUrl|token_exchange\.start/);
-  assert.match(start, /rawProvider === "telegram"/);
-  assert.match(callback, /official JavaScript Login Library/);
-  assert.match(callback, /exchangeVkCode/);
+  assert.equal(existsSync(join(root, "src/lib/auth/social/vk.ts")), false);
+  assert.equal(existsSync(join(root, "src/app/api/auth/social/[provider]/start/route.ts")), false);
+  assert.equal(existsSync(join(root, "src/app/api/auth/social/[provider]/callback/route.ts")), false);
+  assert.doesNotMatch(`${start}\n${complete}`, /exchangeTelegramCode|getTelegramAuthorizeUrl|exchangeVkCode|token_exchange\.start/);
+  assert.match(start, /getTelegramLoginLibraryConfig/);
+  assert.match(complete, /verifyTelegramLibraryIdToken/);
 });
 
 test("Telegram telemetry has library stages and cannot log tokens or phone claims", () => {

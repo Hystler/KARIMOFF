@@ -134,12 +134,12 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                     <div className="flex items-center gap-3">
                       <IdentityAvatar
                         identityId={identity.id}
-                        label={identity.provider === "phone" ? "+7" : identity.provider === "telegram" ? "T" : "VK"}
+                        label={identity.provider === "phone" ? "+7" : identity.provider === "telegram" ? "T" : "MAX"}
                         hasImage={Boolean(identity.avatarUrl)}
                       />
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-black">{identity.provider === "phone" ? "Телефон" : identity.provider === "telegram" ? "Telegram" : "VK ID"}</p>
+                          <p className="font-black">{identity.provider === "phone" ? "Телефон" : identity.provider === "telegram" ? "Telegram" : "MAX"}</p>
                           <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">Привязан к профилю</span>
                         </div>
                         <p className="mt-1 truncate text-xs font-semibold text-karimoff-muted">{identity.displayName || identity.username || identity.phone || "Подключено"}</p>
@@ -149,7 +149,7 @@ export default async function AdminCustomerDetailPage({ params }: AdminCustomerD
                       {identity.displayName ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Имя из сервиса</dt><dd className="text-right font-bold">{identity.displayName}</dd></div> : null}
                       {identity.givenName || identity.familyName ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Имя / фамилия</dt><dd className="text-right font-bold">{[identity.givenName, identity.familyName].filter(Boolean).join(" ")}</dd></div> : null}
                       {identity.username ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Username</dt><dd className="font-bold">@{identity.username}</dd></div> : null}
-                      {identity.provider !== "phone" ? <div className="grid gap-1"><dt className="text-karimoff-muted">{identity.provider === "telegram" ? "Telegram user ID" : "VK user ID"}</dt><dd className="break-all font-mono text-[11px]">{identity.providerUserId}</dd></div> : null}
+                      {identity.provider !== "phone" ? <div className="grid gap-1"><dt className="text-karimoff-muted">{identity.provider === "telegram" ? "Telegram user ID" : "MAX user ID"}</dt><dd className="break-all font-mono text-[11px]">{identity.providerUserId}</dd></div> : null}
                       {identity.phone ? <div className="flex justify-between gap-4"><dt className="text-karimoff-muted">Телефон</dt><dd className="font-bold">{identity.phone}</dd></div> : null}
                       <div className="flex items-center justify-between gap-4">
                         <dt className="text-karimoff-muted">Подтверждение телефона</dt>

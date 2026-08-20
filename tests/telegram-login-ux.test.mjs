@@ -43,7 +43,7 @@ test("Telegram is the primary human-readable login option and remains on the KAR
   assert.match(telegram, /SocialProviderIcon provider="telegram"/);
   assert.match(telegram, /router\.replace\(payload\.returnTo/);
   assert.doesNotMatch(telegram, /window\.location\s*=|oauth\.telegram\.org\/auth/);
-  assert.ok(social.indexOf("enabled.telegram") < social.indexOf("enabled.vk"));
+  assert.ok(social.indexOf("enabled.telegram") < social.indexOf("enabled.max"));
   assert.ok(authForm.indexOf("<SocialAuthButtons") < authForm.indexOf("<form action={passwordAction}"));
 });
 
@@ -63,6 +63,7 @@ test("missing provider configuration hides social controls without a client erro
   assert.match(social, /if \(!hasProviders\) return null/);
   assert.match(config, /getTelegramLoginLibraryConfig/);
   assert.match(config, /telegram: Boolean\(getTelegramLoginLibraryConfig\(\)\)/);
+  assert.match(config, /max: Boolean\(getMaxAuthConfig\(\)\)/);
 });
 
 test("Telegram cancellation, expiry and identity conflict are human-readable", () => {

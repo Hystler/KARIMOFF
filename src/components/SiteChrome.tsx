@@ -23,7 +23,7 @@ export function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
-  const isOperational = pathname === "/pos" || pathname.startsWith("/kitchen") || pathname.startsWith("/display");
+  const isOperational = pathname === "/pos" || pathname.startsWith("/kitchen") || pathname.startsWith("/display") || pathname === "/integrations/max/app";
 
   if (isAdmin || isOperational) {
     return (

@@ -1,4 +1,4 @@
-export const socialProviders = ["telegram", "vk"] as const;
+export const socialProviders = ["telegram", "max"] as const;
 
 export type SocialProvider = (typeof socialProviders)[number];
 

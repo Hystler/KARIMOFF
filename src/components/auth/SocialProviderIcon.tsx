@@ -1,5 +1,5 @@
 type SocialProviderIconProps = {
-  provider: "phone" | "telegram" | "vk";
+  provider: "phone" | "telegram" | "max";
   className?: string;
 };
 
@@ -21,20 +21,22 @@ export function SocialProviderIcon({ provider, className = "h-5 w-5" }: SocialPr
     );
   }
 
-  if (provider === "vk") {
+  if (provider === "max") {
     return (
-      <svg
+      <span
         aria-hidden="true"
-        viewBox="0 0 24 24"
-        className={className}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M3.4 7.1c.1 6.3 3.3 10.1 8.9 10.1h.3v-3.6c1.9.2 3.4 1.6 4 3.6h3.2c-.8-2.9-3-4.4-4.3-5 1.3-.8 3.3-2.6 3.8-5.1h-2.9c-.6 2.1-2.3 3.9-3.8 4.1V7.1H9.7v7.2C7.9 13.8 5.6 11.8 5.5 7.1H3.4Z"
-          fill="currentColor"
-        />
-      </svg>
+        className={`inline-block shrink-0 bg-current ${className}`}
+        style={{
+          maskImage: "url('/assets/brand/max-mark.svg')",
+          maskPosition: "center",
+          maskRepeat: "no-repeat",
+          maskSize: "contain",
+          WebkitMaskImage: "url('/assets/brand/max-mark.svg')",
+          WebkitMaskPosition: "center",
+          WebkitMaskRepeat: "no-repeat",
+          WebkitMaskSize: "contain"
+        }}
+      />
     );
   }
 

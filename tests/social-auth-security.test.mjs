@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
@@ -87,7 +87,8 @@ test("OAuth state is server-authoritative, one-time and expires", () => {
   const state = read("src/lib/auth/social/state.ts");
   const policy = read("src/lib/auth/social/state-policy.ts");
   assert.match(state, /validateOAuthBrowserBinding/);
-  assert.match(policy, /params\.provider === "telegram"\) return "missing"/);
+  assert.match(policy, /type OAuthProvider = "telegram"/);
+  assert.match(policy, /if \(!params\.cookieState\)[\s\S]*return "missing"/);
   assert.match(policy, /timingSafeEqual/);
   assert.match(state, /set consumed_at = now\(\)/);
   assert.match(state, /consumed_at is null/);
@@ -115,9 +116,9 @@ test("social redirects preserve the external reverse-proxy origin", () => {
   `);
   assert.equal(output, "https://hystler-karimoff-stand-ad9d.twc1.net/login?socialError=unavailable");
 
-  const routes = `${read("src/app/api/auth/social/[provider]/start/route.ts")}\n${read("src/app/api/auth/social/[provider]/callback/route.ts")}`;
+  const routes = `${read("src/app/api/auth/social/telegram/library/start/route.ts")}\n${read("src/app/api/auth/social/max/status/route.ts")}`;
   assert.doesNotMatch(routes, /new URL\([^\n]+request\.url/);
-  assert.match(routes, /getPublicRequestUrl/);
+  assert.match(routes, /sanitizeSocialRedirect|returnTo/);
 });
 
 test("configured app origin wins when a reverse proxy hides the public host", () => {
@@ -132,17 +133,16 @@ test("configured app origin wins when a reverse proxy hides the public host", ()
   assert.match(read(".env.example"), /^APP_ORIGIN=https:\/\//m);
 });
 
-test("VK ID uses OAuth 2.1 code flow with state and PKCE, without persisting tokens", () => {
-  const vk = read("src/lib/auth/social/vk.ts");
-  const migration = read("supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
-  assert.match(vk, /response_type: "code"/);
-  assert.match(vk, /code_challenge: params\.codeChallenge/);
-  assert.match(vk, /code_challenge_method: "s256"/);
-  assert.match(vk, /state: params\.state/);
-  assert.match(vk, /code_verifier: params\.codeVerifier/);
-  assert.match(vk, /phoneVerified: false/);
-  assert.doesNotMatch(migration, /access_token|refresh_token/);
-  assert.doesNotMatch(read(".env.example"), /VK_ID_CLIENT_SECRET/);
+test("VK runtime is retired without destructively removing historical identities", () => {
+  const migration = read("supabase/migrations/20260820190000_add_max_social_auth.sql");
+  const env = read(".env.example");
+  const socialButtons = read("src/components/auth/SocialAuthButtons.tsx");
+  assert.equal(existsSync(join(root, "src/lib/auth/social/vk.ts")), false);
+  assert.equal(existsSync(join(root, "src/app/api/auth/social/[provider]/start/route.ts")), false);
+  assert.equal(existsSync(join(root, "src/app/api/auth/social/[provider]/callback/route.ts")), false);
+  assert.doesNotMatch(env, /^VK_/m);
+  assert.doesNotMatch(socialButtons, /enabled\.vk|provider="vk"/);
+  assert.match(migration, /'phone', 'telegram', 'vk', 'max'/);
 });
 
 test("identity schema prevents duplicate provider identities and denies public access", () => {

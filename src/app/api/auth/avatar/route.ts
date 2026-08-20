@@ -3,7 +3,7 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
-const allowedHostSuffixes = [".telesco.pe", ".telegram.org", ".userapi.com", ".vkuserphoto.ru"];
+const telegramAvatarHosts = [".telesco.pe", ".telegram.org"];
 const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -11,8 +11,10 @@ function isAllowedAvatarUrl(value: string, provider: string) {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:") return false;
-    if (provider === "telegram") return allowedHostSuffixes.slice(0, 2).some((suffix) => url.hostname.endsWith(suffix));
-    if (provider === "vk") return allowedHostSuffixes.slice(2).some((suffix) => url.hostname.endsWith(suffix));
+    if (provider === "telegram") return telegramAvatarHosts.some((suffix) => url.hostname.endsWith(suffix));
+    if (provider === "max") {
+      return url.hostname === "max.ru" || url.hostname.endsWith(".max.ru") || url.hostname.endsWith(".oneme.ru");
+    }
     return false;
   } catch {
     return false;

@@ -19,11 +19,11 @@ type AuthFormProps = {
   mode: "login" | "register";
   next?: string;
   redirectTo?: string;
-  socialProviders?: { telegram: boolean; vk: boolean };
+  socialProviders?: { telegram: boolean; max: boolean };
   socialError?: string | null;
 };
 
-export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, vk: false }, socialError }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, max: false }, socialError }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
@@ -58,7 +58,7 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
           ? "Создайте профиль, чтобы быстро оформлять заказы и копить баллы."
           : codeMode
             ? "Получите одноразовый код по SMS и войдите без пароля."
-            : socialProviders.telegram || socialProviders.vk
+            : socialProviders.telegram || socialProviders.max
               ? "Выберите удобный способ — через мессенджер, по телефону или по SMS."
               : "Войдите по телефону и постоянному паролю."}
       </p>

@@ -22,12 +22,12 @@ export function SocialCompleteForm({ provider, suggestedName }: { provider: Soci
   const codeSent = requestState.status === "code_sent" || Boolean(confirmState.phone);
   const message = confirmState.message || requestState.message;
   const isError = confirmState.status === "error" || (confirmState.status === "idle" && requestState.status === "error");
-  const providerName = provider === "telegram" ? "Telegram" : "VK ID";
+  const providerName = provider === "telegram" ? "Telegram" : "MAX";
 
   return (
     <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
       <div className="flex items-center gap-3">
-        <span className={`flex h-11 w-11 items-center justify-center rounded-full text-white ${provider === "telegram" ? "bg-[#229ED9]" : "bg-[#0077FF]"}`}>
+        <span className={`flex h-11 w-11 items-center justify-center rounded-full text-white ${provider === "telegram" ? "bg-[#229ED9]" : "bg-[#471AFF]"}`}>
           <SocialProviderIcon provider={provider} className="h-6 w-6" />
         </span>
         <p className="text-xs font-black uppercase text-karimoff-orange">{providerName} · ещё один шаг</p>
@@ -36,7 +36,7 @@ export function SocialCompleteForm({ provider, suggestedName }: { provider: Soci
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
         {provider === "telegram"
           ? "Telegram не передал номер телефона. Попробуйте ещё раз или используйте другой способ входа."
-          : "VK ID не передал подтверждённый номер телефона."}
+          : "MAX не передал подтверждённый номер телефона. Завершите вход по SMS."}
       </div>
       <div className="mt-4 flex items-start gap-3 text-sm leading-6 text-karimoff-muted">
         <ShieldCheck className="mt-0.5 shrink-0 text-karimoff-orange" size={19} />

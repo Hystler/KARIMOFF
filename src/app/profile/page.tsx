@@ -7,6 +7,7 @@ import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
 import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
+import { MaxLoginButton } from "@/components/auth/MaxLoginButton";
 import { logoutCustomerAction, unlinkSocialIdentityAction, updateMarketingConsentAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const identities = await getUserIdentities(customer.id);
   const configuredProviders = getConfiguredSocialProviders();
   const params = searchParams ? await searchParams : {};
-  const providerLabels = { phone: "Телефон", telegram: "Telegram", vk: "VK ID" } as const;
+  const providerLabels = { phone: "Телефон", telegram: "Telegram", max: "MAX" } as const;
 
   return (
     <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
@@ -193,7 +194,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           {params.identity === "unlinked" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Способ входа отключён.</p> : null}
           {params.identity_error ? <p className="mt-4 text-sm font-semibold text-red-600">Нельзя отключить последний доступный способ входа.</p> : null}
           <div className="mt-5 grid gap-3">
-            {(["phone", "telegram", "vk"] as const).map((provider) => {
+            {(["phone", "telegram", "max"] as const).map((provider) => {
               const identity = identities.find((item) => item.provider === provider);
               const isConfigured = provider === "phone" || configuredProviders[provider];
               return (
@@ -201,7 +202,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                   <div className="flex min-w-0 items-center gap-3">
                     <IdentityAvatar
                       identityId={identity?.id ?? provider}
-                      label={provider === "phone" ? "+7" : provider === "telegram" ? "T" : "VK"}
+                      label={provider === "phone" ? "+7" : provider === "telegram" ? "T" : "MAX"}
                       hasImage={Boolean(identity?.avatarUrl)}
                     />
                     <div className="min-w-0">
@@ -229,10 +230,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     <span className="text-xs font-semibold text-karimoff-muted">Не подтверждён</span>
                   ) : provider === "telegram" && isConfigured ? (
                     <TelegramLoginButton intent="link" returnTo="/profile" variant="compact" />
+                  ) : provider === "max" && isConfigured ? (
+                    <MaxLoginButton intent="link" returnTo="/profile" variant="compact" />
                   ) : isConfigured ? (
-                    <Link href={`/api/auth/social/${provider}/start?intent=link&returnTo=%2Fprofile`} className="min-h-10 rounded-full border border-karimoff-orange px-4 py-2.5 text-center text-xs font-bold text-karimoff-orange transition hover:bg-karimoff-orange hover:text-white">
-                      Подключить
-                    </Link>
+                    <span className="text-xs font-semibold text-karimoff-muted">Не настроено</span>
                   ) : (
                     <span className="text-xs font-semibold text-karimoff-muted">Не настроено</span>
                   )}

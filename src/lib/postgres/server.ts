@@ -52,6 +52,7 @@ const allowedTables = new Set([
   "legal_consents",
   "loyalty_accounts",
   "loyalty_transactions",
+  "max_login_challenges",
   "order_inventory_deductions",
   "order_locations",
   "order_number_counters",

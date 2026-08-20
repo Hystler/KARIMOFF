@@ -65,6 +65,7 @@ export async function unlinkSocialIdentityAction(formData: FormData) {
       select provider
       from public.user_identities
       where user_id = ${customer.id}::uuid
+        and provider in ('phone', 'telegram', 'max')
       for update
     `;
     const [account] = await transaction<{ password_hash: string | null }[]>`

@@ -1,43 +1,15 @@
 import "server-only";
 
-import type { SocialProvider } from "./types";
-
-type ProviderConfig = {
-  clientId: string;
-  clientSecret?: string;
-  redirectUri: string;
-};
-
 export type TelegramLoginLibraryConfig = {
   clientId: string;
   clientIdNumber: number;
 };
 
-function validRedirectUri(value: string | undefined, provider: SocialProvider) {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (url.pathname !== `/api/auth/social/${provider}/callback`) return null;
-    if (process.env.NODE_ENV === "production" && url.protocol !== "https:") return null;
-    if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-export function getSocialProviderConfig(provider: SocialProvider): ProviderConfig | null {
-  if (provider === "telegram") {
-    const clientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim();
-    const clientSecret = process.env.TELEGRAM_OIDC_CLIENT_SECRET?.trim();
-    const redirectUri = validRedirectUri(process.env.TELEGRAM_OIDC_REDIRECT_URI?.trim(), "telegram");
-    return clientId && clientSecret && redirectUri ? { clientId, clientSecret, redirectUri } : null;
-  }
-
-  const clientId = process.env.VK_ID_CLIENT_ID?.trim();
-  const redirectUri = validRedirectUri(process.env.VK_ID_REDIRECT_URI?.trim(), "vk");
-  return clientId && redirectUri ? { clientId, redirectUri } : null;
-}
+export type MaxAuthConfig = {
+  botName: string;
+  botToken: string;
+  miniAppUrl: string;
+};
 
 export function getTelegramLoginLibraryConfig(): TelegramLoginLibraryConfig | null {
   const clientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim();
@@ -49,17 +21,26 @@ export function getTelegramLoginLibraryConfig(): TelegramLoginLibraryConfig | nu
   return { clientId, clientIdNumber };
 }
 
-export function isSocialProviderConfigured(provider: SocialProvider) {
-  return Boolean(getSocialProviderConfig(provider));
+export function getMaxAuthConfig(): MaxAuthConfig | null {
+  const botToken = process.env.MAX_BOT_TOKEN?.trim();
+  const botName = process.env.MAX_BOT_NAME?.trim();
+  const miniAppUrl = process.env.MAX_MINI_APP_URL?.trim();
+  if (!botToken || !botName || !miniAppUrl || !/^[A-Za-z0-9_]{3,64}$/.test(botName)) return null;
+
+  try {
+    const url = new URL(miniAppUrl);
+    if (url.protocol !== "https:" || url.pathname !== "/integrations/max/app" || url.username || url.password || url.search || url.hash) {
+      return null;
+    }
+    return { botName, botToken, miniAppUrl: url.toString() };
+  } catch {
+    return null;
+  }
 }
 
 export function getConfiguredSocialProviders() {
   return {
     telegram: Boolean(getTelegramLoginLibraryConfig()),
-    vk: isSocialProviderConfigured("vk")
+    max: Boolean(getMaxAuthConfig())
   };
-}
-
-export function shouldRequestSocialPhone() {
-  return process.env.SOCIAL_AUTH_REQUEST_PHONE === "true";
 }

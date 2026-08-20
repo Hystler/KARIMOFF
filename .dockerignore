@@ -7,6 +7,7 @@ node_modules
 
 .env
 .env.*
+*.env
 
 Dockerfile
 .dockerignore
@@ -21,6 +22,7 @@ supabase/migrations/*
 !supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql
 !supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql
 !supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql
+!supabase/migrations/20260820190000_add_max_social_auth.sql
 tests
 tmp
 

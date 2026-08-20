@@ -28,19 +28,19 @@ const errorMessages: Record<string, string> = {
 };
 
 function providerName(provider: SocialProvider) {
-  return provider === "telegram" ? "Telegram" : "VK ID";
+  return provider === "telegram" ? "Telegram" : "MAX";
 }
 
 function getErrorMessage(provider: SocialProvider, reason?: string | null) {
   if (provider === "telegram") return errorMessages[reason ?? ""] ?? "Не удалось завершить вход. Попробуйте позже.";
-  if (reason === "cancelled") return "Вы отменили вход через VK ID.";
-  return "Не удалось подтвердить вход через VK ID. Попробуйте ещё раз.";
+  if (reason === "cancelled") return "Вы отменили вход через MAX.";
+  return "Не удалось подтвердить вход через MAX. Попробуйте ещё раз.";
 }
 
 export function SocialAuthResult({ status, provider, returnTo, reason, linked = false }: SocialAuthResultProps) {
   const [seconds, setSeconds] = useState(2);
   const isCheckout = returnTo.startsWith("/checkout");
-  const retryHref = `/api/auth/social/${provider}/start?returnTo=${encodeURIComponent(returnTo)}`;
+  const retryHref = `/login?redirectTo=${encodeURIComponent(returnTo)}`;
   const loginHref = `/login?redirectTo=${encodeURIComponent(returnTo)}`;
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
       <div className={`h-1.5 w-full ${status === "success" ? "bg-emerald-500" : "bg-red-500"}`} />
       <div className="p-6 sm:p-8">
         <div className="flex items-center justify-between gap-4">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-full ${provider === "telegram" ? "bg-[#229ED9] text-white" : "bg-[#0077FF] text-white"}`}>
+          <div className={`flex h-14 w-14 items-center justify-center rounded-full ${provider === "telegram" ? "bg-[#229ED9] text-white" : "bg-[#471AFF] text-white"}`}>
             <SocialProviderIcon provider={provider} className="h-7 w-7" />
           </div>
           <div className={`flex h-10 w-10 items-center justify-center rounded-full ${status === "success" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>

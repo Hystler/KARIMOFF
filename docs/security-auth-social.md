@@ -2,97 +2,86 @@
 
 ## Admin authentication
 
-Legacy owner login no longer accepts `ADMIN_PASSWORD` or any default PIN. The only supported owner credential is:
+Legacy owner login does not accept `ADMIN_PASSWORD` or any default PIN. The supported owner credential is:
 
 - `ADMIN_PHONE`;
 - `ADMIN_PASSWORD_HASH`, a bcrypt hash with cost 12;
 - optional `ADMIN_TOTP_SECRET`.
 
-Staff passwords in `staff_users.password_hash` are also bcrypt. Existing legacy scrypt hashes remain readable for one login and are then rehashed to bcrypt automatically. Successful login rotates the database-backed session. Admin cookies are `HttpOnly`, `Secure` in production and `SameSite=Strict`; customer cookies are `HttpOnly`, `Secure` in production and `SameSite=Lax` for OAuth redirects.
+Staff passwords in `staff_users.password_hash` are also bcrypt. Legacy scrypt hashes are upgraded to bcrypt after a successful login. Login rotates the database-backed session. Admin cookies are `HttpOnly`, `Secure` in production and `SameSite=Strict`; customer cookies are `HttpOnly`, `Secure` in production and `SameSite=Lax`.
 
-Failed logins are stored without passwords and use a database rate limit with exponential temporary lockout. Password rotation invalidates legacy owner sessions because the session actor fingerprint includes the active password hash.
+Failed logins are audited without passwords and protected by a database rate limiter with temporary lockout. Password rotation invalidates legacy owner sessions because the session actor fingerprint contains the active password hash.
 
-`APP_ORIGIN` must contain the public HTTPS origin without a path. It keeps same-origin auth redirects correct when App Platform exposes an internal container host to Next.js.
+`APP_ORIGIN` must contain the public HTTPS origin without a path. It keeps same-origin auth behavior correct behind Timeweb App Platform.
 
 ### Safe owner password reset
 
-Generate a new temporary credential outside the repository:
+Generate a temporary credential outside the repository:
 
 ```bash
 npm run admin:credential:generate -- --output=/secure/path/KARIMOFF-admin-reset.env
 ```
 
-The file is created with mode `0600` and contains a random temporary password plus its bcrypt hash. Put only `ADMIN_PASSWORD_HASH` into the target Timeweb environment, redeploy, verify login, then deliver the temporary password through a separate secure channel. Never add the generated file to Git.
+The generated file has mode `0600`. Put only `ADMIN_PASSWORD_HASH` into the target environment, redeploy, verify login and transfer the temporary password through a separate secure channel. Never add the file to Git.
 
 ## Telegram Login
 
-KARIMOFF uses Telegram OIDC Authorization Code Flow with PKCE S256. The server stores a one-time, expiring state record; the PKCE verifier and nonce are encrypted with a key derived from `SESSION_SECRET`. The callback validates the state cookie, one-time database state, RS256 signature from Telegram JWKS, issuer, audience, expiration, issued-at time and nonce. The stable identity key is OIDC `sub`. Access and ID tokens are not persisted.
+Telegram remains the primary social login. The official Telegram Login JavaScript Library opens the provider flow from the KARIMOFF page with Russian UI, `profile`, `phone` and `write` scopes. The browser sends only the returned ID token and an opaque attempt ID to the server.
 
-Environment variables:
+The server validates the one-time attempt, nonce, RS256 signature from Telegram JWKS, issuer, audience, expiration and issued-at time. The stable identity key is Telegram `sub`. Provider tokens are neither logged nor persisted. A missing verified phone continues through the KARIMOFF SMS confirmation flow.
 
-- `TELEGRAM_OIDC_CLIENT_ID`
-- `TELEGRAM_OIDC_CLIENT_SECRET`
-- `TELEGRAM_OIDC_REDIRECT_URI`
+Environment:
 
-Test callback:
+- `TELEGRAM_OIDC_CLIENT_ID`.
 
-`https://hystler-karimoff-stand-ad9d.twc1.net/api/auth/social/telegram/callback`
+The existing Telegram client secret may remain server-side for compatibility, but the JavaScript Login Library never receives it.
 
-Future production callback:
+## MAX Login
 
-`https://karimoff.site/api/auth/social/telegram/callback`
+MAX does not use a fabricated OAuth or OIDC flow. KARIMOFF uses the officially documented MAX chatbot + Mini App architecture. The original browser creates a one-time login challenge and opens:
 
-Keep the Telegram signing algorithm at the default RS256. The default scope is `openid profile`. Phone scope is disabled unless `SOCIAL_AUTH_REQUEST_PHONE=true` is explicitly configured.
+`https://max.ru/<MAX_BOT_NAME>?startapp=<opaque_challenge>`
+
+The Mini App at `/integrations/max/app` receives `window.WebApp.initData` from MAX Bridge. KARIMOFF validates raw `WebAppData` on the server with the official two-stage HMAC algorithm, checks freshness and binds `start_param` to the stored challenge. `initDataUnsafe` is never trusted.
+
+For a new identity, the Mini App asks for the phone only after an explicit user action through `window.WebApp.requestContact()`. Its separate HMAC, timestamp, MAX user ID and normalized phone are validated server-side. Refusal sends the user to the existing KARIMOFF SMS completion flow instead of failing the login.
+
+The original KARIMOFF tab polls only the opaque attempt ID. After MAX completes the challenge, that same browser atomically consumes it, creates an ordinary KARIMOFF session, verifies session readback and redirects to the sanitized local `returnTo`. No session value is ever passed through a MAX URL. Automatic switching from MAX back to Safari or Chrome is not required.
+
+Environment:
+
+- `MAX_BOT_TOKEN` — server-only;
+- `MAX_BOT_NAME` — bot name used in the `max.ru` launch URL;
+- `MAX_MINI_APP_URL` — public HTTPS URL ending in `/integrations/max/app`.
+
+See [MAX integration architecture](./max-auth-integration.md).
 
 ## Login UX and redirects
 
-- The login page shows Telegram only when all required Telegram OIDC variables are valid. Missing configuration does not render a broken button.
-- Telegram is presented as the primary passwordless option; VK ID follows it when configured. Phone/password and SMS remain available after the `или` divider.
-- OAuth attempts persist a sanitized same-origin `returnTo`. Checkout therefore returns to `/checkout`; unsafe absolute or protocol-relative redirects fall back to `/profile`.
-- A successful callback opens `/login/social/result`, verifies that a customer session actually exists, shows a short branded confirmation, and redirects after 1.65 seconds.
-- Cancelled, expired, and invalid callbacks use a Russian-language result screen. Provider errors and tokens are never shown to the user.
-- If Telegram does not return a verified phone, the pending provider identity remains isolated until the user confirms a phone through the existing SMS flow. Accounts are never merged by name or username.
-- Telegram controls its own permission dialog. Its system copy and phone-sharing confirmation cannot be restyled by KARIMOFF.
-
-## VK ID
-
-KARIMOFF uses VK ID OAuth 2.1 Authorization Code Flow with PKCE S256 and one-time state. The callback additionally requires the VK `device_id`. The authorization code is exchanged server-side and the profile is requested from the official `user_info` endpoint. Tokens are used only inside the callback and are not persisted.
-
-Environment variables:
-
-- `VK_ID_CLIENT_ID`
-- `VK_ID_REDIRECT_URI`
-
-The current official VK ID web PKCE flow does not use a protected client secret. Do not invent or commit one.
-
-Test callback:
-
-`https://hystler-karimoff-stand-ad9d.twc1.net/api/auth/social/vk/callback`
-
-Future production callback:
-
-`https://karimoff.site/api/auth/social/vk/callback`
-
-VK phone data is never treated as verified automatically because the consumed response has no explicit verification claim. A user must confirm the number through the KARIMOFF SMS flow before a VK identity can be merged with an existing phone profile.
+- The login order is Telegram, MAX, `или`, phone/password, SMS.
+- A provider button is rendered only when that provider is fully configured.
+- Attempts retain a sanitized relative `returnTo`; absolute and protocol-relative redirects fall back to `/profile`.
+- The MAX origin tab remains the login coordinator and resumes a pending attempt after refresh or returning from the app.
+- Provider errors are converted to Russian user-facing messages. Tokens and raw signed payloads are never shown.
+- Display name, username and avatar never trigger account merging.
 
 ## Identity linking rules
 
 - `(provider, provider_user_id)` is globally unique.
 - One customer can have at most one identity per provider.
-- Display name, username, avatar and email never trigger automatic linking.
-- A provider phone can trigger automatic linking only when the provider explicitly marks it verified and the existing KARIMOFF phone is also verified.
-- Otherwise, KARIMOFF requires an SMS confirmation before creating or merging a profile.
-- Linking from an authenticated profile always targets the current customer and fails if the provider identity belongs to another customer.
-- The last available authentication method cannot be unlinked.
-- Provider access and refresh tokens are not stored.
+- Telegram and MAX identities are displayed in the profile and admin customer views.
+- A verified MAX phone links automatically only to a KARIMOFF customer whose matching phone is already verified.
+- A new verified MAX phone can create a new customer.
+- Missing phone and legacy unverified phone ownership require the KARIMOFF SMS confirmation flow.
+- Linking from an authenticated profile always targets the current customer and fails if the provider identity belongs to someone else.
+- The final usable authentication method cannot be unlinked.
+
+## VK retirement
+
+VK ID is removed from the social-auth runtime: there is no login button, client, callback route or required VK environment variable. The universal identity schema still accepts historical `provider='vk'` rows so existing data is not destroyed. Historical VK identities are hidden from active login, profile and admin authentication views and cannot create new login attempts.
 
 ## Data and privacy
 
-`user_identities` stores only the provider subject, minimal profile fields and linking timestamps. `oauth_login_attempts` and `pending_social_identities` contain short-lived one-time records and no provider tokens. Privacy and personal-data consent documents use legal version `2026-08-18.v2` and disclose Telegram/VK authentication claims.
+`user_identities` stores the provider subject, minimal permitted profile fields and linking timestamps. `max_login_challenges`, `oauth_login_attempts` and `pending_social_identities` are short-lived operational records. MAX raw `WebAppData`, contact payloads, bot tokens and Telegram tokens are not stored in identities.
 
-## Provider setup
-
-1. In BotFather open the KARIMOFF bot, configure Web Login / Allowed URLs for the test domain, keep RS256, add the Telegram test callback, and copy the issued Client ID and Client Secret into the test stand environment.
-2. In the VK ID cabinet create or open the KARIMOFF web application, add the VK test callback to trusted redirect URLs, and copy the application ID into `VK_ID_CLIENT_ID`.
-
-Real provider login remains hidden until all required variables for that provider are present. Automated tests use signed local fixtures and mocked VK responses; they do not imitate a successful real OAuth login on the stand.
+Privacy and personal-data consent documents disclose Telegram and MAX sign-in data. Marketing consent remains separate and social login never subscribes a customer to marketing automatically.
