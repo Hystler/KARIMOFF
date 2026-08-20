@@ -91,6 +91,21 @@ test("Telegram library ID token accepts valid claims and rejects signature, issu
   });
 });
 
+test("Telegram login validates against a bundled official RS256 key without blocking on live JWKS", () => {
+  const snapshot = read("src/lib/auth/social/telegram-jwks-snapshot.ts");
+  const library = read("src/lib/auth/social/telegram-library.ts");
+
+  assert.match(snapshot, /TELEGRAM_JWKS_SNAPSHOT_UPDATED_AT = "2026-08-20"/);
+  assert.match(snapshot, /kid: "oidc-1"/);
+  assert.match(snapshot, /alg: "RS256"/);
+  assert.match(snapshot, /key_ops: \["verify"\]/);
+  assert.doesNotMatch(snapshot, /\b(?:d|p|q|dp|dq|qi):/);
+  assert.match(library, /keys: bundledKeys/);
+  assert.match(library, /refreshTelegramKeysInBackground\(\)/);
+  assert.match(library, /if \(failure\.code !== "id_token_signing_key"\) throw failure/);
+  assert.ok(library.indexOf("return cachedKeys.keys") < library.indexOf("return fetchTelegramKeys()"));
+});
+
 test("identity decisions create or link only from a verified provider identity", () => {
   const output = importTypescriptScript("src/lib/auth/social/linking-rules.ts", `
     const base = { existingIdentityUserId: null, providerPhone: "+79991234567", providerPhoneVerified: true, phoneOwner: null };

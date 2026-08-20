@@ -3,29 +3,34 @@ import "server-only";
 import { z } from "zod";
 import { getTelegramLoginLibraryConfig } from "./config";
 import { getSocialAuthError, SocialAuthError } from "./errors";
-import { getJson } from "./telegram-http";
+import { getJson, getSafeNetworkErrorCode } from "./telegram-http";
+import { TELEGRAM_RS256_JWKS_SNAPSHOT } from "./telegram-jwks-snapshot";
 import { normalizeTelegramPhone } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
 
 const TELEGRAM_JWKS_URL = `${TELEGRAM_OIDC_ISSUER}/.well-known/jwks.json`;
-const TELEGRAM_JWKS_TIMEOUT_MS = 12_000;
-const TELEGRAM_JWKS_RETRIES = 3;
-const TELEGRAM_JWKS_TTL_MS = 5 * 60_000;
+const TELEGRAM_JWKS_TIMEOUT_MS = 5_000;
+const TELEGRAM_JWKS_RETRIES = 2;
+const TELEGRAM_JWKS_TTL_MS = 6 * 60 * 60_000;
+const TELEGRAM_JWKS_REFRESH_INTERVAL_MS = 60 * 60_000;
 
 type TelegramJwk = Record<string, unknown> & { kid?: string; alg?: string; use?: string };
 
-let cachedKeys: { expiresAt: number; keys: TelegramJwk[] } | null = null;
+const bundledKeys = TELEGRAM_RS256_JWKS_SNAPSHOT.map((key) => ({ ...key })) as TelegramJwk[];
+
+let cachedKeys: { expiresAt: number; keys: TelegramJwk[] } = {
+  expiresAt: Number.POSITIVE_INFINITY,
+  keys: bundledKeys
+};
+let lastRefreshAttemptAt = 0;
+let refreshPromise: Promise<void> | null = null;
 
 function wait(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function getTelegramKeys(forceRefresh = false) {
-  if (!forceRefresh && cachedKeys && cachedKeys.expiresAt > Date.now()) {
-    return cachedKeys.keys;
-  }
-
+async function fetchTelegramKeys() {
   let lastError: SocialAuthError | null = null;
 
   for (let attempt = 0; attempt < TELEGRAM_JWKS_RETRIES; attempt += 1) {
@@ -56,7 +61,12 @@ async function getTelegramKeys(forceRefresh = false) {
     } catch (error) {
       const failure = getSocialAuthError(error, "jwks");
       lastError = failure.code === "unknown"
-        ? new SocialAuthError({ code: "jwks_unavailable", stage: "jwks", cause: error })
+        ? new SocialAuthError({
+            code: "jwks_unavailable",
+            stage: "jwks",
+            networkError: getSafeNetworkErrorCode(error),
+            cause: error
+          })
         : failure;
       if (attempt + 1 < TELEGRAM_JWKS_RETRIES) {
         await wait(250 * 2 ** attempt);
@@ -65,6 +75,29 @@ async function getTelegramKeys(forceRefresh = false) {
   }
 
   throw lastError ?? new SocialAuthError({ code: "jwks_unavailable", stage: "jwks" });
+}
+
+function refreshTelegramKeysInBackground() {
+  const now = Date.now();
+  if (refreshPromise || now - lastRefreshAttemptAt < TELEGRAM_JWKS_REFRESH_INTERVAL_MS) return;
+  lastRefreshAttemptAt = now;
+  refreshPromise = fetchTelegramKeys()
+    .then(() => undefined)
+    .catch(() => undefined)
+    .finally(() => {
+      refreshPromise = null;
+    });
+}
+
+async function getTelegramKeys(forceRefresh = false) {
+  if (!forceRefresh && cachedKeys.keys.length > 0) {
+    if (cachedKeys.expiresAt <= Date.now() || cachedKeys.keys === bundledKeys) {
+      refreshTelegramKeysInBackground();
+    }
+    return cachedKeys.keys;
+  }
+
+  return fetchTelegramKeys();
 }
 
 export async function verifyTelegramLibraryIdToken(params: {
