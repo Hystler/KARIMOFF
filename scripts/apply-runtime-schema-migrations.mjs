@@ -225,8 +225,11 @@ const sql = postgres(databaseUrl, {
   prepare: false
 });
 
+let activeMigrationName = null;
+
 try {
   for (const migration of migrations) {
+    activeMigrationName = migration.name;
     if (await migration.applied(sql)) {
       console.log(`Runtime schema migration already applied: ${migration.name}.`);
       continue;
@@ -259,7 +262,32 @@ try {
     console.log(`Runtime schema migration applied: ${migration.name}.`);
   }
 } catch (error) {
-  console.error(`Runtime schema migration failed: ${error instanceof Error ? error.message : "unknown error"}`);
+  const message = error instanceof Error ? error.message : "unknown error";
+  console.error(`Runtime schema migration failed: ${message}`);
+  if (message.startsWith("must be owner of ")) {
+    try {
+      const [role] = await sql`select current_user as name`;
+      const owners = await sql`
+        select c.relname, pg_get_userbyid(c.relowner) as owner
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'
+          and c.relname in (
+            'customers',
+            'user_identities',
+            'oauth_login_attempts',
+            'pending_social_identities'
+          )
+        order by c.relname
+      `;
+      const summary = owners.map((row) => `${row.relname}:${row.owner}`).join(",");
+      console.error(
+        `Runtime schema migration ownership: migration=${activeMigrationName ?? "unknown"} current_role=${role?.name ?? "unknown"} tables=${summary}`
+      );
+    } catch {
+      console.error("Runtime schema migration ownership diagnostic unavailable.");
+    }
+  }
   process.exitCode = 1;
 } finally {
   await sql.end({ timeout: 2 });
