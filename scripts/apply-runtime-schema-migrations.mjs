@@ -7,10 +7,10 @@ const migrations = [
     applied: async (sql) => {
       const [column] = await sql`
         select 1
-        from information_schema.columns
-        where table_schema = 'public'
-          and table_name = 'ingredients'
-          and column_name = 'waste_percent'
+        from pg_attribute
+        where attrelid = to_regclass('public.ingredients')
+          and attname = 'waste_percent'
+          and not attisdropped
         limit 1
       `;
       return Boolean(column);
@@ -20,13 +20,9 @@ const migrations = [
     name: "20260812190000_add_evotor_cloud_integration",
     applied: async (sql) => {
       const [table] = await sql`
-        select 1
-        from information_schema.tables
-        where table_schema = 'public'
-          and table_name = 'evotor_connections'
-        limit 1
+        select to_regclass('public.evotor_connections') is not null as exists
       `;
-      return Boolean(table);
+      return Boolean(table?.exists);
     }
   },
   {
@@ -81,16 +77,19 @@ const migrations = [
           to_regclass('public.product_modifier_groups') is not null as modifier_groups,
           to_regclass('public.product_modifier_options') is not null as modifier_options,
           exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'orders' and column_name = 'is_operational'
+            select 1 from pg_attribute
+            where attrelid = to_regclass('public.orders')
+              and attname = 'is_operational' and not attisdropped
           ) as operational_orders,
           exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'orders' and column_name = 'is_test'
+            select 1 from pg_attribute
+            where attrelid = to_regclass('public.orders')
+              and attname = 'is_test' and not attisdropped
           ) as test_orders,
           exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'order_items' and column_name = 'configuration_snapshot'
+            select 1 from pg_attribute
+            where attrelid = to_regclass('public.order_items')
+              and attname = 'configuration_snapshot' and not attisdropped
           ) as item_snapshot,
           to_regprocedure('public.create_pos_order_atomic(uuid,text,text,jsonb,uuid,uuid,text,text,timestamp with time zone,boolean)') is not null as create_pos_test,
           to_regprocedure('public.create_site_order(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamp with time zone,boolean)') is not null as create_web_test
@@ -115,8 +114,9 @@ const migrations = [
           to_regclass('public.oauth_login_attempts') is not null as oauth_attempts,
           to_regclass('public.pending_social_identities') is not null as pending_identities,
           exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'customers' and column_name = 'phone_verified_at'
+            select 1 from pg_attribute
+            where attrelid = to_regclass('public.customers')
+              and attname = 'phone_verified_at' and not attisdropped
           ) as verified_phone
       `;
       return Boolean(
