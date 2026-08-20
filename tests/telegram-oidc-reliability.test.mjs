@@ -124,15 +124,16 @@ test("identity decisions create or link only from a verified provider identity",
       subject.resolveVerifiedSocialIdentity({ ...base, existingIdentityUserId: "telegram-owner" })
     ]));
   `);
-  const [created, linked, unverified, missingPhone, existing] = JSON.parse(output);
+  const [created, linked, legacyLinked, missingPhone, existing] = JSON.parse(output);
   assert.equal(created.kind, "create_customer");
   assert.deepEqual(linked, { kind: "verified_phone", userId: "existing" });
-  assert.equal(unverified.kind, "needs_phone_confirmation");
+  assert.deepEqual(legacyLinked, { kind: "verified_phone", userId: "unverified" });
   assert.equal(missingPhone.kind, "needs_phone_confirmation");
   assert.deepEqual(existing, { kind: "existing_identity", userId: "telegram-owner" });
 
   const identity = read("src/lib/auth/social/identity.ts");
   assert.match(identity, /unique|identity_conflict|on conflict \(provider, provider_user_id\)/i);
+  assert.match(identity, /phone_verified_at = case/);
   assert.doesNotMatch(identity, /where display_name|where username/i);
 });
 

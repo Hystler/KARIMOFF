@@ -53,14 +53,21 @@ test("linking rules never use names and require a verified provider phone for au
       subject.resolveSocialLoginTarget({ existingIdentityUserId: "u1", providerPhoneVerified: false, verifiedPhoneUserId: null }),
       subject.resolveSocialLoginTarget({ existingIdentityUserId: null, providerPhoneVerified: true, verifiedPhoneUserId: "u2" }),
       subject.resolveSocialLoginTarget({ existingIdentityUserId: null, providerPhoneVerified: false, verifiedPhoneUserId: "u2" }),
-      subject.resolveSocialLoginTarget({ existingIdentityUserId: null, providerPhoneVerified: true, verifiedPhoneUserId: null })
+      subject.resolveSocialLoginTarget({ existingIdentityUserId: null, providerPhoneVerified: true, verifiedPhoneUserId: null }),
+      subject.resolveVerifiedSocialIdentity({
+        existingIdentityUserId: null,
+        providerPhone: "+79991234567",
+        providerPhoneVerified: true,
+        phoneOwner: { userId: "legacy-user", verified: false }
+      })
     ]));
   `);
-  const [existing, verified, unverified, missing] = JSON.parse(output);
+  const [existing, verified, unverified, missing, legacy] = JSON.parse(output);
   assert.deepEqual(existing, { kind: "existing_identity", userId: "u1" });
   assert.deepEqual(verified, { kind: "verified_phone", userId: "u2" });
   assert.equal(unverified.kind, "needs_phone_confirmation");
   assert.equal(missing.kind, "needs_phone_confirmation");
+  assert.deepEqual(legacy, { kind: "verified_phone", userId: "legacy-user" });
   assert.doesNotMatch(read("src/lib/auth/social/identity.ts"), /find.*display.?name|where display_name/i);
 });
 

@@ -24,11 +24,10 @@ export function resolveVerifiedSocialIdentity(params: {
   if (!params.providerPhone || !params.providerPhoneVerified) {
     return { kind: "needs_phone_confirmation" as const, userId: null };
   }
-  if (params.phoneOwner?.verified) {
-    return { kind: "verified_phone" as const, userId: params.phoneOwner.userId };
-  }
   if (params.phoneOwner) {
-    return { kind: "needs_phone_confirmation" as const, userId: null };
+    // A provider-verified phone proves ownership and safely upgrades legacy
+    // customer rows created before phone_verified_at was tracked.
+    return { kind: "verified_phone" as const, userId: params.phoneOwner.userId };
   }
   return { kind: "create_customer" as const, userId: null };
 }
