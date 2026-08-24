@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
-import { getMaxAuthConfig } from "@/lib/auth/social/config";
+import { getMaxAuthConfig, logMaxAuthDiagnostics } from "@/lib/auth/social/config";
 import { createMaxLoginChallenge } from "@/lib/auth/social/max-challenge";
 import { logMaxAuthEvent } from "@/lib/auth/social/max-observability";
 import { isAllowedSameOriginRequest } from "@/lib/request-security";
@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ ok: false, error: "forbidden" }, 403);
   }
   const config = getMaxAuthConfig();
-  if (!config) return noStoreJson({ ok: false, error: "unavailable" }, 503);
+  if (!config) {
+    logMaxAuthDiagnostics("start");
+    return noStoreJson({ ok: false, error: "unavailable" }, 503);
+  }
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return noStoreJson({ ok: false, error: "invalid_request" }, 400);
 

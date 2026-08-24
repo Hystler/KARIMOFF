@@ -200,8 +200,39 @@ test("MAX UI, profile and admin expose only safe identity details", () => {
   assert.match(env, /^MAX_BOT_NAME=$/m);
   assert.match(env, /^MAX_MINI_APP_URL=https:\/\//m);
   assert.doesNotMatch(env, /^NEXT_PUBLIC_MAX_/m);
-  assert.match(config, /if \(!botToken \|\| !botName \|\| !miniAppUrl/);
+  assert.match(config, /getMaxAuthDiagnostics/);
   assert.doesNotMatch(`${profile}\n${detail}\n${list}`, /WebAppData|MAX_BOT_TOKEN|access_token/i);
+});
+
+test("MAX runtime configuration reports exact safe reasons without exposing the bot token", () => {
+  const output = importTypescriptScript("src/lib/auth/social/max-config-state.ts", `
+    const inspect = (environment) => subject.inspectMaxAuthEnvironment(environment);
+    const valid = inspect({
+      MAX_BOT_TOKEN: "test-secret-never-returned",
+      MAX_BOT_NAME: "karimoff_test_bot",
+      MAX_MINI_APP_URL: "https://stand.example.test/integrations/max/app"
+    });
+    console.log(JSON.stringify({
+      valid: valid.diagnostics,
+      missingToken: inspect({ MAX_BOT_NAME: "karimoff_test_bot", MAX_MINI_APP_URL: "https://stand.example.test/integrations/max/app" }).diagnostics,
+      invalidName: inspect({ MAX_BOT_TOKEN: "secret", MAX_BOT_NAME: "@karimoff_test_bot", MAX_MINI_APP_URL: "https://stand.example.test/integrations/max/app" }).diagnostics,
+      wrongPath: inspect({ MAX_BOT_TOKEN: "secret", MAX_BOT_NAME: "karimoff_test_bot", MAX_MINI_APP_URL: "https://stand.example.test/integrations/max/app/" }).diagnostics,
+      serialized: JSON.stringify(valid.diagnostics)
+    }));
+  `);
+  const result = JSON.parse(output);
+  assert.deepEqual(result.valid, {
+    maxConfigured: true,
+    hasBotToken: true,
+    hasBotName: true,
+    hasMiniAppUrl: true,
+    effectiveBotName: "ka..._bot",
+    reason: "configured"
+  });
+  assert.equal(result.missingToken.reason, "missing_bot_token");
+  assert.equal(result.invalidName.reason, "invalid_bot_name");
+  assert.equal(result.wrongPath.reason, "mini_app_url_path_mismatch");
+  assert.doesNotMatch(result.serialized, /test-secret-never-returned|MAX_BOT_TOKEN/);
 });
 
 test("MAX Bot API foundation uses the current read-only endpoint and never exposes the bot token", () => {

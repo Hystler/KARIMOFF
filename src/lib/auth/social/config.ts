@@ -1,15 +1,19 @@
 import "server-only";
 
+import {
+  inspectMaxAuthEnvironment,
+  type MaxAuthConfig,
+  type MaxAuthDiagnostics
+} from "@/lib/auth/social/max-config-state";
+
 export type TelegramLoginLibraryConfig = {
   clientId: string;
   clientIdNumber: number;
 };
 
-export type MaxAuthConfig = {
-  botName: string;
-  botToken: string;
-  miniAppUrl: string;
-};
+export type { MaxAuthConfig, MaxAuthDiagnostics } from "@/lib/auth/social/max-config-state";
+
+const loggedMaxDiagnostics = new Set<string>();
 
 export function getTelegramLoginLibraryConfig(): TelegramLoginLibraryConfig | null {
   const clientId = process.env.TELEGRAM_OIDC_CLIENT_ID?.trim();
@@ -22,20 +26,24 @@ export function getTelegramLoginLibraryConfig(): TelegramLoginLibraryConfig | nu
 }
 
 export function getMaxAuthConfig(): MaxAuthConfig | null {
-  const botToken = process.env.MAX_BOT_TOKEN?.trim();
-  const botName = process.env.MAX_BOT_NAME?.trim();
-  const miniAppUrl = process.env.MAX_MINI_APP_URL?.trim();
-  if (!botToken || !botName || !miniAppUrl || !/^[A-Za-z0-9_]{3,64}$/.test(botName)) return null;
+  return inspectMaxAuthEnvironment(process.env).config;
+}
 
-  try {
-    const url = new URL(miniAppUrl);
-    if (url.protocol !== "https:" || url.pathname !== "/integrations/max/app" || url.username || url.password || url.search || url.hash) {
-      return null;
-    }
-    return { botName, botToken, miniAppUrl: url.toString() };
-  } catch {
-    return null;
-  }
+export function getMaxAuthDiagnostics(): MaxAuthDiagnostics {
+  return inspectMaxAuthEnvironment(process.env).diagnostics;
+}
+
+export function logMaxAuthDiagnostics(context: "login" | "mini_app" | "start") {
+  const diagnostics = getMaxAuthDiagnostics();
+  const fingerprint = `${context}:${JSON.stringify(diagnostics)}`;
+  if (loggedMaxDiagnostics.has(fingerprint)) return diagnostics;
+  loggedMaxDiagnostics.add(fingerprint);
+  console.info(JSON.stringify({
+    event: "max.auth.configuration",
+    context,
+    ...diagnostics
+  }));
+  return diagnostics;
 }
 
 export function getConfiguredSocialProviders() {

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Logo } from "@/components/Logo";
-import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
+import { getConfiguredSocialProviders, logMaxAuthDiagnostics } from "@/lib/auth/social/config";
+
+export const dynamic = "force-dynamic";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -14,6 +16,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
+  logMaxAuthDiagnostics("login");
   const socialErrors: Record<string, string> = {
     unavailable: "Этот способ входа пока не настроен.",
     rate_limit: "Слишком много попыток. Попробуйте позже.",
