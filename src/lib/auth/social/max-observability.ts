@@ -2,6 +2,10 @@ import "server-only";
 
 export type MaxAuthEvent =
   | "max.browser.consume"
+  | "max.browser.poll"
+  | "max.browser.poll.completed"
+  | "max.browser.resume"
+  | "max.browser.status.completed"
   | "max.challenge.completed"
   | "max.contact.received"
   | "max.contact.requested"
@@ -11,7 +15,7 @@ export type MaxAuthEvent =
   | "max.miniapp.loaded"
   | "max.redirect.success"
   | "max.session.created"
-  | "max.session.readback"
+  | "max.session.readback.ok"
   | "max.contact.valid"
   | "max.webappdata.received"
   | "max.webappdata.valid";
@@ -24,6 +28,8 @@ type MaxAuthEventDetails = {
   contactHashFormat?: "base64" | "hex64" | "invalid";
   bridgePlatform?: "android" | "desktop" | "ios" | "web" | "unknown";
   bridgeVersion?: string;
+  browserTrigger?: "focus" | "initial" | "interval" | "online" | "pageshow" | "resume" | "visibility";
+  idempotent?: boolean;
   phonePresent?: boolean;
   requestContactAvailable?: boolean;
   resolution?: "authenticated" | "existing" | "linked" | "link" | "needs_phone" | "new";
@@ -41,6 +47,8 @@ export function logMaxAuthEvent(event: MaxAuthEvent, details: MaxAuthEventDetail
     ...(details.contactHashFormat ? { contact_hash_format: details.contactHashFormat } : {}),
     ...(details.bridgePlatform ? { bridge_platform: details.bridgePlatform } : {}),
     ...(details.bridgeVersion ? { bridge_version: details.bridgeVersion } : {}),
+    ...(details.browserTrigger ? { browser_trigger: details.browserTrigger } : {}),
+    ...(typeof details.idempotent === "boolean" ? { idempotent: details.idempotent } : {}),
     ...(typeof details.phonePresent === "boolean" ? { phone_present: details.phonePresent } : {}),
     ...(typeof details.requestContactAvailable === "boolean" ? { request_contact_available: details.requestContactAvailable } : {}),
     ...(details.resolution ? { resolution: details.resolution } : {})

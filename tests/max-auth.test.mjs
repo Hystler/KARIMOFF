@@ -127,6 +127,9 @@ test("MAX challenge is random, hashed, browser-bound, expiring and one-time", ()
   const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
   const start = read("src/app/api/auth/social/max/start/route.ts");
   const status = read("src/app/api/auth/social/max/status/route.ts");
+  const consume = read("src/app/api/auth/social/max/consume/route.ts");
+  const clientComplete = read("src/app/api/auth/social/max/client-complete/route.ts");
+  const customerAuth = read("src/lib/customer-auth.ts");
 
   assert.match(challenge, /randomBase64Url\(32\)/);
   assert.match(challenge, /MAX_CHALLENGE_TTL_MS = 5 \* 60_000/);
@@ -138,14 +141,25 @@ test("MAX challenge is random, hashed, browser-bound, expiring and one-time", ()
   assert.match(challenge, /for update/);
   assert.match(challenge, /status === "completed".*challenge_replay/);
   assert.match(challenge, /browser_binding_mismatch/);
-  assert.match(challenge, /used_at is null/);
   assert.match(challenge, /processing_at is null/);
   assert.match(challenge, /encryptOAuthSecret\(JSON\.stringify\(params\.claims\)\)/);
+  assert.match(challenge, /set used_at = coalesce\(used_at, now\(\)\), processing_at = null/);
+  assert.match(challenge, /export async function acknowledgeMaxChallenge/);
   assert.match(challenge, /identity_ciphertext = null/);
   assert.match(start, /startapp=\$\{attempt\.challenge\}/);
   assert.doesNotMatch(start, /phone|displayName|username|avatar/i);
-  assert.match(status, /completeProviderCallback/);
-  assert.match(status, /markMaxChallengeConsumed/);
+  assert.match(status, /getMaxBrowserChallengeStatus/);
+  assert.doesNotMatch(status, /completeProviderCallback|markMaxChallengeConsumed/);
+  assert.match(consume, /completeProviderCallback/);
+  assert.match(consume, /markMaxChallengeConsumed/);
+  assert.match(consume, /claimed\.alreadyConsumed/);
+  assert.match(clientComplete, /acknowledgeMaxChallenge/);
+  assert.match(clientComplete, /getCustomerSession/);
+  assert.match(customerAuth, /httpOnly: true/);
+  assert.match(customerAuth, /sameSite: "lax"/);
+  assert.match(customerAuth, /secure: process\.env\.NODE_ENV === "production"/);
+  assert.match(customerAuth, /path: "\/"/);
+  assert.doesNotMatch(customerAuth, /domain:/);
   assert.match(migration, /challenge_hash text not null unique/);
   assert.match(migration, /correlation_id uuid not null unique/);
   assert.match(migration, /enable row level security/);
@@ -171,16 +185,27 @@ test("MAX browser coordinator completes without depending on app-to-browser swit
   const miniApp = read("src/components/auth/MaxMiniApp.tsx");
   const complete = read("src/app/api/auth/social/max/complete/route.ts");
   const status = read("src/app/api/auth/social/max/status/route.ts");
+  const consume = read("src/app/api/auth/social/max/consume/route.ts");
+  const clientComplete = read("src/app/api/auth/social/max/client-complete/route.ts");
   const config = read("next.config.mjs");
 
   assert.match(button, /target="_blank"/);
   assert.match(button, /window\.open\("about:blank", "_blank"\)/);
   assert.match(button, /const nextAttempt = await createAttempt\(\)/);
   assert.match(button, /void beginLogin\(\)/);
-  assert.match(button, /setInterval\(poll, 2_000\)/);
-  assert.match(button, /visibilitychange/);
+  assert.match(button, /setInterval\(\(\) => poll\("interval"\), 2_000\)/);
+  assert.match(button, /document\.visibilityState !== "visible"/);
+  assert.match(button, /addEventListener\("visibilitychange", onVisibility\)/);
+  assert.match(button, /addEventListener\("pageshow", onPageShow\)/);
+  assert.match(button, /addEventListener\("focus", onFocus\)/);
+  assert.match(button, /poll\("visibility"\)/);
+  assert.match(button, /poll\("pageshow"\)/);
+  assert.match(button, /poll\("focus"\)/);
+  assert.match(button, /\/api\/auth\/social\/max\/status\?\$\{query\}/);
+  assert.match(button, /\/api\/auth\/social\/max\/consume/);
+  assert.match(button, /\/api\/auth\/social\/max\/client-complete/);
   assert.match(button, /После подтверждения вернитесь сюда — вход завершится автоматически/);
-  assert.match(button, /router\.replace\(payload\.returnTo/);
+  assert.match(button, /router\.replace\(returnTo \?\? "\/profile"\)/);
   assert.match(miniApp, /https:\/\/st\.max\.ru\/js\/max-web-app\.js/);
   assert.match(miniApp, /window\.WebApp\.requestContact\(\)/);
   assert.match(miniApp, /window\.WebApp\?\.initData/);
@@ -191,9 +216,37 @@ test("MAX browser coordinator completes without depending on app-to-browser swit
   assert.match(miniApp, /phone_denied/);
   assert.match(complete, /validateMaxWebAppData/);
   assert.match(complete, /validateMaxContact/);
-  assert.match(status, /getCustomerSession/);
+  assert.match(status, /export async function GET/);
+  assert.match(status, /getMaxBrowserChallengeStatus/);
+  assert.doesNotMatch(status, /getCustomerSession|completeProviderCallback/);
+  assert.match(consume, /export async function POST/);
+  assert.match(consume, /completeProviderCallback/);
+  assert.match(clientComplete, /getCustomerSession/);
+  assert.match(clientComplete, /acknowledgeMaxChallenge/);
   assert.match(config, /source: "\/integrations\/max\/app"/);
   assert.match(config, /https:\/\/st\.max\.ru/);
+});
+
+test("MAX completed challenge stays retryable until the browser proves its session cookie", () => {
+  const challenge = read("src/lib/auth/social/max-challenge.ts");
+  const miniAppComplete = read("src/app/api/auth/social/max/complete/route.ts");
+  const status = read("src/app/api/auth/social/max/status/route.ts");
+  const consume = read("src/app/api/auth/social/max/consume/route.ts");
+  const clientComplete = read("src/app/api/auth/social/max/client-complete/route.ts");
+
+  assert.doesNotMatch(miniAppComplete, /claimCompletedMaxChallenge|markMaxChallengeConsumed|setCustomerSession/);
+  assert.match(challenge, /alreadyConsumed: Boolean\(claimed\.used_at\)/);
+  assert.match(challenge, /status: challenge\.status === "completed" \|\| Boolean\(challenge\.used_at\)/);
+  assert.match(challenge, /set used_at = coalesce\(used_at, now\(\)\), processing_at = null/);
+  assert.match(challenge, /and used_at is not null/);
+  assert.match(challenge, /set identity_ciphertext = null/);
+  assert.match(challenge, /sanitizeSocialRedirect\(challenge\.redirect_to\)/);
+  assert.match(status, /status: result\.status/);
+  assert.doesNotMatch(status, /identity_ciphertext|customerId|phone|completeProviderCallback/);
+  assert.match(consume, /idempotent: claimed\.alreadyConsumed/);
+  assert.match(consume, /max\.session\.readback\.ok/);
+  assert.match(clientComplete, /if \(!session && !pendingIdentity\)/);
+  assert.match(clientComplete, /clearMaxChallengeCookie/);
 });
 
 test("MAX treats a validated identity separately from optional phone completion", () => {
@@ -215,6 +268,8 @@ test("MAX correlation stages are safe and cover Mini App through browser session
   const events = read("src/lib/auth/social/max-observability.ts");
   const complete = read("src/app/api/auth/social/max/complete/route.ts");
   const status = read("src/app/api/auth/social/max/status/route.ts");
+  const consume = read("src/app/api/auth/social/max/consume/route.ts");
+  const clientComplete = read("src/app/api/auth/social/max/client-complete/route.ts");
   const telemetry = read("src/app/api/auth/social/max/event/route.ts");
 
   for (const event of [
@@ -227,11 +282,15 @@ test("MAX correlation stages are safe and cover Mini App through browser session
     "max.contact.received",
     "max.contact.valid",
     "max.challenge.completed",
+    "max.browser.poll",
+    "max.browser.resume",
+    "max.browser.status.completed",
     "max.browser.consume",
     "max.session.created",
+    "max.session.readback.ok",
     "max.redirect.success"
   ]) {
-    assert.match(`${events}\n${complete}\n${status}\n${telemetry}`, new RegExp(event.replaceAll(".", "\\.")));
+    assert.match(`${events}\n${complete}\n${status}\n${consume}\n${clientComplete}\n${telemetry}`, new RegExp(event.replaceAll(".", "\\.")));
   }
   assert.doesNotMatch(events, /BOT_TOKEN|raw WebAppData|raw contact|session ID/i);
   assert.match(complete, /authDateFormat/);

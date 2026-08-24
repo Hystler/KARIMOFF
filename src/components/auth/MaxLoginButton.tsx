@@ -27,10 +27,31 @@ type LoginState =
   | { kind: "success" }
   | { kind: "error"; code: string };
 
+type BrowserTrigger = "focus" | "initial" | "interval" | "online" | "pageshow" | "resume" | "visibility";
+
+const MAX_ATTEMPT_STORAGE_KEY = "karimoff_max_attempt";
+
+function storeAttempt(attemptId: string) {
+  try {
+    window.sessionStorage.setItem(MAX_ATTEMPT_STORAGE_KEY, attemptId);
+  } catch {
+    // The authoritative browser binding remains in the secure cookie.
+  }
+}
+
+function clearStoredAttempt() {
+  try {
+    window.sessionStorage.removeItem(MAX_ATTEMPT_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable in private browser contexts.
+  }
+}
+
 function getErrorMessage(code: string) {
   if (code === "rate_limit") return "Слишком много попыток входа. Подождите немного и попробуйте снова.";
   if (code === "challenge_expired") return "Время подтверждения истекло. Начните вход ещё раз.";
   if (code === "identity_conflict") return "Этот аккаунт MAX уже связан с другим профилем.";
+  if (code === "session_missing") return "Сессия не закрепилась. Нажмите, чтобы завершить вход.";
   if (code === "unavailable") return "Вход через MAX пока не настроен. Используйте другой способ входа.";
   return "Не удалось завершить вход через MAX. Попробуйте ещё раз.";
 }
@@ -44,7 +65,8 @@ export function MaxLoginButton({
 }: MaxLoginButtonProps) {
   const router = useRouter();
   const mountedRef = useRef(true);
-  const pollingRef = useRef(false);
+  const consumeRef = useRef(false);
+  const statusRef = useRef(false);
   const expiresAtRef = useRef(0);
   const [attempt, setAttempt] = useState<MaxAttempt | null>(null);
   const [state, setState] = useState<LoginState>({ kind: "ready" });
@@ -64,7 +86,7 @@ export function MaxLoginButton({
     }
     expiresAtRef.current = Date.now() + payload.expiresInSeconds * 1000;
     setAttempt(payload);
-    window.sessionStorage.setItem("karimoff_max_attempt", payload.attemptId);
+    storeAttempt(payload.attemptId);
     return payload;
   }, [intent, returnTo]);
 
@@ -91,11 +113,11 @@ export function MaxLoginButton({
     }
   }, [createAttempt]);
 
-  const completeInBrowser = useCallback(async (currentAttempt: MaxAttempt) => {
-    if (pollingRef.current) return;
-    pollingRef.current = true;
+  const consumeInBrowser = useCallback(async (currentAttempt: MaxAttempt) => {
+    if (consumeRef.current || document.visibilityState !== "visible") return;
+    consumeRef.current = true;
     try {
-      const response = await fetch("/api/auth/social/max/status", {
+      const response = await fetch("/api/auth/social/max/consume", {
         body: JSON.stringify({ attemptId: currentAttempt.attemptId }),
         cache: "no-store",
         credentials: "same-origin",
@@ -108,27 +130,96 @@ export function MaxLoginButton({
         returnTo?: string;
         status?: "waiting" | "authenticated" | "linked" | "needs_phone";
       } | null;
-      if (response.status === 202 && payload?.status === "waiting") return;
+      if (response.status === 202 && payload?.status === "waiting") {
+        setState({ kind: "waiting" });
+        return;
+      }
       if (!response.ok || !payload?.ok || !payload.returnTo || !payload.status) {
         throw new Error(payload?.error || "technical");
       }
 
-      window.sessionStorage.removeItem("karimoff_max_attempt");
+      const acknowledgement = await fetch("/api/auth/social/max/client-complete", {
+        body: JSON.stringify({ attemptId: currentAttempt.attemptId }),
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const acknowledged = await acknowledgement.json().catch(() => null) as {
+        error?: string;
+        ok?: boolean;
+        returnTo?: string;
+      } | null;
+      if (!acknowledgement.ok || !acknowledged?.ok) {
+        throw new Error(acknowledged?.error || "session_missing");
+      }
+
+      clearStoredAttempt();
       setState({ kind: "success" });
+      const returnTo = acknowledged.returnTo ?? payload.returnTo;
       window.setTimeout(() => {
-        router.replace(payload.returnTo ?? "/profile");
+        router.replace(returnTo ?? "/profile");
         router.refresh();
       }, 700);
     } catch (error) {
       const code = error instanceof Error ? error.message : "technical";
       if (["browser_binding_mismatch", "challenge_replay"].includes(code)) {
-        window.sessionStorage.removeItem("karimoff_max_attempt");
+        clearStoredAttempt();
       }
       setState({ kind: "error", code });
     } finally {
-      pollingRef.current = false;
+      consumeRef.current = false;
     }
   }, [router]);
+
+  const checkStatus = useCallback(async (currentAttempt: MaxAttempt, reason: BrowserTrigger) => {
+    if (statusRef.current || document.visibilityState !== "visible") return;
+    statusRef.current = true;
+    try {
+      const query = new URLSearchParams({ attempt: currentAttempt.attemptId, reason });
+      const response = await fetch(`/api/auth/social/max/status?${query}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+        method: "GET"
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        ok?: boolean;
+        status?: "completed" | "expired" | "failed" | "pending";
+      } | null;
+      if (!response.ok || !payload?.ok || !payload.status) {
+        throw new Error(payload?.error || "technical");
+      }
+      if (payload.status === "pending") {
+        setState({ kind: "waiting" });
+        return;
+      }
+      if (payload.status === "expired") {
+        clearStoredAttempt();
+        setAttempt(null);
+        setState({ kind: "error", code: "challenge_expired" });
+        return;
+      }
+      if (payload.status === "failed") {
+        setState({ kind: "error", code: "technical" });
+        return;
+      }
+
+      setState({ kind: "completing" });
+      if (document.visibilityState === "visible") {
+        await consumeInBrowser(currentAttempt);
+      }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "technical";
+      if (["browser_binding_mismatch", "challenge_replay"].includes(code)) {
+        clearStoredAttempt();
+        setAttempt(null);
+      }
+      setState({ kind: "error", code });
+    } finally {
+      statusRef.current = false;
+    }
+  }, [consumeInBrowser]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -152,7 +243,7 @@ export function MaxLoginButton({
           expiresAtRef.current = Date.now() + resumed.expiresInSeconds * 1000;
           setAttempt(resumed);
           setState({ kind: payload.challenge.status === "completed" ? "completing" : "waiting" });
-          void completeInBrowser(resumed);
+          void checkStatus(resumed, "resume");
           return;
         }
         setState({ kind: "ready" });
@@ -165,34 +256,56 @@ export function MaxLoginButton({
     return () => {
       mountedRef.current = false;
     };
-  }, [completeInBrowser]);
+  }, [checkStatus]);
 
   useEffect(() => {
     if (!attempt || !["waiting", "completing"].includes(state.kind)) return;
-    const poll = () => {
+    const poll = (reason: BrowserTrigger) => {
+      if (document.visibilityState !== "visible") return;
       if (Date.now() >= expiresAtRef.current) {
+        clearStoredAttempt();
+        setAttempt(null);
         setState({ kind: "error", code: "challenge_expired" });
         return;
       }
-      void completeInBrowser(attempt);
+      void checkStatus(attempt, reason);
     };
-    const interval = window.setInterval(poll, 2_000);
+    const interval = window.setInterval(() => poll("interval"), 2_000);
     const onVisibility = () => {
-      if (document.visibilityState === "visible") poll();
+      if (document.visibilityState === "visible") poll("visibility");
     };
-    const onOnline = () => poll();
+    const onPageShow = () => poll("pageshow");
+    const onFocus = () => poll("focus");
+    const onOnline = () => poll("online");
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
     return () => {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
     };
-  }, [attempt, completeInBrowser, state.kind]);
+  }, [attempt, checkStatus, state.kind]);
 
   function handleLaunch() {
     onAttemptStart?.();
     setState({ kind: "waiting" });
+  }
+
+  function handlePrimaryAction() {
+    onAttemptStart?.();
+    const resumableError = state.kind === "error"
+      && attempt
+      && !["browser_binding_mismatch", "challenge_expired", "challenge_replay", "identity_conflict"].includes(state.code);
+    if (resumableError) {
+      setState({ kind: "completing" });
+      void checkStatus(attempt, "resume");
+      return;
+    }
+    void beginLogin();
   }
 
   const visibleState: LoginState = suppressTransientError && state.kind === "error" ? { kind: "ready" } : state;
@@ -203,9 +316,11 @@ export function MaxLoginButton({
       ? "Подтвердите вход в MAX"
       : visibleState.kind === "success"
         ? "Вход подтверждён"
-        : intent === "link"
-          ? "Подключить MAX"
-          : "Войти через MAX";
+        : visibleState.kind === "error" && attempt
+          ? "Завершить вход через MAX"
+          : intent === "link"
+            ? "Подключить MAX"
+            : "Войти через MAX";
 
   const content = (
     <>
@@ -244,10 +359,7 @@ export function MaxLoginButton({
         <button
           type="button"
           disabled={busy}
-          onClick={() => {
-            onAttemptStart?.();
-            void beginLogin();
-          }}
+          onClick={handlePrimaryAction}
           className={buttonClass}
           aria-busy={busy}
         >

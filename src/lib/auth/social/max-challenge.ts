@@ -199,17 +199,54 @@ export async function getMaxChallengeContext(challenge: string) {
 
 export type ClaimedMaxChallenge = {
   attemptId: string;
+  alreadyConsumed: boolean;
   correlationId: string;
   claims: SocialIdentityClaims;
   completion: SocialCompletionAttempt;
 };
 
-export async function claimCompletedMaxChallenge(attemptId: string) {
-  const cookieStore = await cookies();
-  const browser = parseBrowserCookie(cookieStore.get(MAX_CHALLENGE_COOKIE)?.value);
+function requireBrowserBinding(attemptId: string, cookieValue: string | undefined) {
+  const browser = parseBrowserCookie(cookieValue);
   if (!browser || browser.attemptId !== attemptId) {
     throw new MaxChallengeError("browser_binding_mismatch");
   }
+  return browser;
+}
+
+export async function getMaxBrowserChallengeStatus(attemptId: string) {
+  const cookieStore = await cookies();
+  const browser = requireBrowserBinding(attemptId, cookieStore.get(MAX_CHALLENGE_COOKIE)?.value);
+  const sql = getPostgresSql();
+  const [challenge] = await sql<Pick<MaxChallengeRow, "correlation_id" | "status" | "expires_at" | "used_at">[]>`
+    select correlation_id, status, expires_at, used_at
+    from public.max_login_challenges
+    where id = ${attemptId}::uuid
+      and browser_binding_hash = ${hashOAuthSecret(browser.binding)}
+  `;
+  if (!challenge) throw new MaxChallengeError("browser_binding_mismatch");
+  if (challenge.expires_at.getTime() <= Date.now()) {
+    return {
+      correlationId: challenge.correlation_id,
+      status: "expired" as const
+    };
+  }
+  if (challenge.status === "failed") {
+    return {
+      correlationId: challenge.correlation_id,
+      status: "failed" as const
+    };
+  }
+  return {
+    correlationId: challenge.correlation_id,
+    status: challenge.status === "completed" || Boolean(challenge.used_at)
+      ? "completed" as const
+      : "pending" as const
+  };
+}
+
+export async function claimCompletedMaxChallenge(attemptId: string) {
+  const cookieStore = await cookies();
+  const browser = requireBrowserBinding(attemptId, cookieStore.get(MAX_CHALLENGE_COOKIE)?.value);
   const sql = getPostgresSql();
   const [claimed] = await sql<MaxChallengeRow[]>`
     update public.max_login_challenges
@@ -218,7 +255,6 @@ export async function claimCompletedMaxChallenge(attemptId: string) {
       and browser_binding_hash = ${hashOAuthSecret(browser.binding)}
       and status = 'completed'
       and identity_ciphertext is not null
-      and used_at is null
       and expires_at > now()
       and (processing_at is null or processing_at < now() - make_interval(secs => ${PROCESSING_LEASE_SECONDS}))
     returning id, correlation_id, intent, linking_user_id, redirect_to, status,
@@ -228,6 +264,7 @@ export async function claimCompletedMaxChallenge(attemptId: string) {
     try {
       return {
         attemptId: claimed.id,
+        alreadyConsumed: Boolean(claimed.used_at),
         correlationId: claimed.correlation_id,
         claims: JSON.parse(decryptOAuthSecret(claimed.identity_ciphertext)) as SocialIdentityClaims,
         completion: {
@@ -253,7 +290,7 @@ export async function claimCompletedMaxChallenge(attemptId: string) {
   if (existing.expires_at.getTime() <= Date.now()) throw new MaxChallengeError("challenge_expired");
   if (existing.used_at) {
     return {
-      kind: "consumed" as const,
+      kind: "consumed_legacy" as const,
       correlationId: existing.correlation_id,
       redirectTo: sanitizeSocialRedirect(existing.redirect_to)
     };
@@ -274,11 +311,11 @@ export async function getResumableMaxChallenge() {
     where id = ${browser.attemptId}::uuid
       and browser_binding_hash = ${hashOAuthSecret(browser.binding)}
   `;
-  if (!challenge || challenge.used_at || challenge.expires_at.getTime() <= Date.now()) return null;
+  if (!challenge || challenge.expires_at.getTime() <= Date.now()) return null;
   return {
     attemptId: challenge.id,
     expiresInSeconds: Math.max(1, Math.floor((challenge.expires_at.getTime() - Date.now()) / 1000)),
-    status: challenge.status
+    status: challenge.status === "completed" || Boolean(challenge.used_at) ? "completed" : challenge.status
   };
 }
 
@@ -286,8 +323,8 @@ export async function markMaxChallengeConsumed(attemptId: string) {
   const sql = getPostgresSql();
   await sql`
     update public.max_login_challenges
-    set used_at = now(), processing_at = null, identity_ciphertext = null, updated_at = now()
-    where id = ${attemptId}::uuid and used_at is null
+    set used_at = coalesce(used_at, now()), processing_at = null, updated_at = now()
+    where id = ${attemptId}::uuid
   `;
 }
 
@@ -296,8 +333,29 @@ export async function releaseMaxChallengeClaim(attemptId: string, errorCode: str
   await sql`
     update public.max_login_challenges
     set processing_at = null, last_error_code = ${errorCode.slice(0, 80)}, updated_at = now()
-    where id = ${attemptId}::uuid and used_at is null
+    where id = ${attemptId}::uuid
   `;
+}
+
+export async function acknowledgeMaxChallenge(attemptId: string) {
+  const cookieStore = await cookies();
+  const browser = requireBrowserBinding(attemptId, cookieStore.get(MAX_CHALLENGE_COOKIE)?.value);
+  const sql = getPostgresSql();
+  const [challenge] = await sql<Pick<MaxChallengeRow, "correlation_id" | "redirect_to">[]>`
+    update public.max_login_challenges
+    set identity_ciphertext = null, processing_at = null, updated_at = now()
+    where id = ${attemptId}::uuid
+      and browser_binding_hash = ${hashOAuthSecret(browser.binding)}
+      and status = 'completed'
+      and used_at is not null
+      and expires_at > now()
+    returning correlation_id, redirect_to
+  `;
+  if (!challenge) throw new MaxChallengeError("challenge_replay");
+  return {
+    correlationId: challenge.correlation_id,
+    redirectTo: sanitizeSocialRedirect(challenge.redirect_to)
+  };
 }
 
 export async function clearMaxChallengeCookie() {

@@ -1,103 +1,68 @@
-import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { writeAuditLog } from "@/lib/audit";
-import { clearAuthFailures } from "@/lib/auth-rate-limit";
-import { completeProviderCallback } from "@/lib/auth/social/identity";
 import {
-  claimCompletedMaxChallenge,
-  clearMaxChallengeCookie,
-  markMaxChallengeConsumed,
-  MaxChallengeError,
-  releaseMaxChallengeClaim,
-  type ClaimedMaxChallenge
+  getMaxBrowserChallengeStatus,
+  MaxChallengeError
 } from "@/lib/auth/social/max-challenge";
 import { logMaxAuthEvent } from "@/lib/auth/social/max-observability";
-import { getCustomerSession } from "@/lib/customer-auth";
 import { isAllowedSameOriginRequest } from "@/lib/request-security";
 
 export const dynamic = "force-dynamic";
 
-const requestSchema = z.object({
-  attemptId: z.string().uuid()
+const querySchema = z.object({
+  attempt: z.string().uuid(),
+  reason: z.enum(["focus", "initial", "interval", "online", "pageshow", "resume", "visibility"])
+    .default("interval")
 });
 
 function noStoreJson(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   if (!isAllowedSameOriginRequest(request)) {
     return noStoreJson({ ok: false, error: "forbidden" }, 403);
   }
-  const parsed = requestSchema.safeParse(await request.json().catch(() => null));
+  const parsed = querySchema.safeParse({
+    attempt: request.nextUrl.searchParams.get("attempt"),
+    reason: request.nextUrl.searchParams.get("reason") ?? undefined
+  });
   if (!parsed.success) return noStoreJson({ ok: false, error: "invalid_request" }, 400);
 
-  let claimed: ClaimedMaxChallenge | null = null;
   try {
-    const result = await claimCompletedMaxChallenge(parsed.data.attemptId);
-    if ("kind" in result) {
-      if (result.kind === "waiting") return noStoreJson({ ok: true, status: "waiting" }, 202);
-      if (result.kind === "failed") return noStoreJson({ ok: false, error: "technical" }, 409);
-      const current = await getCustomerSession();
-      if (!current) throw new MaxChallengeError("challenge_replay");
-      logMaxAuthEvent("max.redirect.success", {
+    const result = await getMaxBrowserChallengeStatus(parsed.data.attempt);
+    if (parsed.data.reason !== "interval") {
+      logMaxAuthEvent("max.browser.poll", {
+        browserTrigger: parsed.data.reason,
         correlationId: result.correlationId,
-        stage: "redirect"
+        stage: "browser"
       });
-      await clearMaxChallengeCookie();
-      return noStoreJson({ ok: true, status: "authenticated", returnTo: result.redirectTo });
     }
-    claimed = result;
-    logMaxAuthEvent("max.browser.consume", {
-      correlationId: claimed.correlationId,
-      stage: "browser"
-    });
-
-    const resolution = await completeProviderCallback(claimed.claims, claimed.completion, {
-      sourcePath: "/api/auth/social/max/status"
-    });
-    if (resolution.kind === "authenticated") {
-      logMaxAuthEvent("max.session.created", { correlationId: claimed.correlationId, stage: "session" });
-      logMaxAuthEvent("max.session.readback", { correlationId: claimed.correlationId, stage: "session" });
+    if (["focus", "pageshow", "resume", "visibility"].includes(parsed.data.reason)) {
+      logMaxAuthEvent("max.browser.resume", {
+        browserTrigger: parsed.data.reason,
+        correlationId: result.correlationId,
+        stage: "browser"
+      });
     }
-    await markMaxChallengeConsumed(claimed.attemptId);
-    await clearMaxChallengeCookie();
-    const requestHeaders = await headers();
-    const clientKey = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    await clearAuthFailures("social_oauth", `max:${clientKey}`).catch(() => undefined);
-    logMaxAuthEvent("max.redirect.success", {
-      correlationId: claimed.correlationId,
-      stage: "redirect",
-      resolution: resolution.kind
-    });
-    return noStoreJson({
-      ok: true,
-      status: resolution.kind,
-      returnTo: resolution.redirectTo
-    });
+    if (result.status === "completed") {
+      logMaxAuthEvent("max.browser.poll.completed", {
+        browserTrigger: parsed.data.reason,
+        correlationId: result.correlationId,
+        stage: "browser"
+      });
+      logMaxAuthEvent("max.browser.status.completed", {
+        browserTrigger: parsed.data.reason,
+        correlationId: result.correlationId,
+        stage: "browser"
+      });
+    }
+    return noStoreJson({ ok: true, status: result.status });
   } catch (error) {
-    const errorCode = error instanceof MaxChallengeError
-      ? error.code
-      : (error as { code?: string })?.code === "identity_conflict"
-        ? "identity_conflict"
-        : "technical";
-    if (claimed) await releaseMaxChallengeClaim(claimed.attemptId, errorCode).catch(() => undefined);
-    await writeAuditLog({
-      action: "customer.social_login_failed",
-      actorType: "system",
-      entityType: "customer",
-      metadata: {
-        provider: "max",
-        attempt_id: claimed?.correlationId ?? parsed.data.attemptId,
-        error_code: errorCode
-      },
-      sourcePath: "/api/auth/social/max/status"
-    }).catch(() => undefined);
-    const status = errorCode === "challenge_expired" ? 410
-      : errorCode === "identity_conflict" || errorCode === "challenge_replay" ? 409
-        : errorCode === "browser_binding_mismatch" ? 403
-          : 400;
-    return noStoreJson({ ok: false, error: errorCode }, status);
+    const errorCode = error instanceof MaxChallengeError ? error.code : "technical";
+    return noStoreJson(
+      { ok: false, error: errorCode },
+      errorCode === "browser_binding_mismatch" ? 403 : 400
+    );
   }
 }
