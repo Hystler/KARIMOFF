@@ -5,11 +5,13 @@ import { checkAuthRateLimit, clearAuthFailures, recordAuthFailure } from "@/lib/
 import { getMaxAuthConfig } from "@/lib/auth/social/config";
 import {
   completeMaxLoginChallenge,
+  getMaxChallengeContext,
   MaxChallengeError
 } from "@/lib/auth/social/max-challenge";
 import { logMaxAuthEvent } from "@/lib/auth/social/max-observability";
 import {
   MaxValidationError,
+  describeMaxContact,
   validateMaxContact,
   validateMaxWebAppData
 } from "@/lib/auth/social/max-protocol";
@@ -56,6 +58,12 @@ export async function POST(request: NextRequest) {
 
   let correlationId = "unresolved";
   try {
+    const context = await getMaxChallengeContext(parsed.data.challenge);
+    correlationId = context.correlationId;
+    logMaxAuthEvent("max.webappdata.received", {
+      correlationId,
+      stage: "webappdata"
+    });
     const verified = validateMaxWebAppData({
       initData: parsed.data.initData,
       botToken: config.botToken
@@ -63,15 +71,34 @@ export async function POST(request: NextRequest) {
     if (!safeSecretEqual(verified.challenge, parsed.data.challenge)) {
       throw new MaxChallengeError("challenge_invalid");
     }
+    logMaxAuthEvent("max.webappdata.valid", {
+      correlationId,
+      stage: "webappdata"
+    });
 
     let claims = verified.claims;
     if (parsed.data.contact) {
+      const contactDetails = describeMaxContact(parsed.data.contact);
+      logMaxAuthEvent("max.contact.received", {
+        correlationId,
+        stage: "contact",
+        authDateFormat: contactDetails.authDateFormat,
+        contactHashFormat: contactDetails.hashFormat,
+        phonePresent: contactDetails.phonePresent
+      });
       const phone = validateMaxContact({
         contact: parsed.data.contact,
         botToken: config.botToken,
         userId: claims.providerUserId
       });
       claims = { ...claims, phone, phoneVerified: true };
+      logMaxAuthEvent("max.contact.valid", {
+        correlationId,
+        stage: "contact",
+        authDateFormat: contactDetails.authDateFormat,
+        contactHashFormat: contactDetails.hashFormat,
+        phonePresent: true
+      });
     }
 
     const result = await completeMaxLoginChallenge({
@@ -80,19 +107,12 @@ export async function POST(request: NextRequest) {
       contactDecision: parsed.data.contact ? "provided" : parsed.data.contactDenied ? "denied" : "not_requested"
     });
     await clearAuthFailures("social_oauth", rateLimitKey);
-    correlationId = result.correlationId;
-    logMaxAuthEvent("max.webapp.data.valid", {
+    logMaxAuthEvent("max.identity.resolved", {
       correlationId,
-      stage: "webapp_data",
-      phonePresent: Boolean(claims.phone)
+      stage: "identity",
+      phonePresent: Boolean(claims.phone),
+      resolution: result.identityResolution
     });
-    if (parsed.data.contact) {
-      logMaxAuthEvent("max.webapp.contact.valid", {
-        correlationId,
-        stage: "contact",
-        phonePresent: true
-      });
-    }
     if (result.kind === "completed") {
       logMaxAuthEvent("max.challenge.completed", {
         correlationId,
@@ -112,7 +132,9 @@ export async function POST(request: NextRequest) {
     await recordAuthFailure("social_oauth", rateLimitKey);
     logMaxAuthEvent("max.failed", {
       correlationId,
-      stage: error instanceof MaxValidationError ? "validation" : "challenge",
+      stage: error instanceof MaxValidationError
+        ? error.code.startsWith("contact_") ? "contact" : "webappdata"
+        : "challenge",
       errorCode
     });
     const status = errorCode.includes("expired") ? 410 : errorCode.includes("replay") ? 409 : 400;

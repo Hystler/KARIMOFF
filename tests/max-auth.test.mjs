@@ -84,13 +84,21 @@ test("MAX contact validation binds a fresh signed phone to the validated user", 
     };
     const capture = (callback) => { try { return callback(); } catch (error) { return error.code; } };
     const valid = subject.validateMaxContact({ contact: make(), botToken: token, userId, nowSeconds: now });
+    const milliseconds = make("79991234567", String((now - 10) * 1000));
+    const base64 = { ...make(), hash: Buffer.from(make().hash, "hex").toString("base64") };
     console.log(JSON.stringify({
       valid,
       withoutPlus: subject.validateMaxContact({ contact: make("79991234567"), botToken: token, userId, nowSeconds: now }),
+      milliseconds: subject.validateMaxContact({ contact: milliseconds, botToken: token, userId, nowSeconds: now }),
+      millisecondsFormat: subject.describeMaxContact(milliseconds).authDateFormat,
+      base64: subject.validateMaxContact({ contact: base64, botToken: token, userId, nowSeconds: now }),
+      base64Format: subject.describeMaxContact(base64).hashFormat,
       wrongUser: capture(() => subject.validateMaxContact({ contact: make("79991234567", String(now - 10), "987654321"), botToken: token, userId, nowSeconds: now })),
       invalidHash: capture(() => subject.validateMaxContact({ contact: { ...make(), hash: "0".repeat(64) }, botToken: token, userId, nowSeconds: now })),
       expired: capture(() => subject.validateMaxContact({ contact: make("79991234567", String(now - 301)), botToken: token, userId, nowSeconds: now })),
+      expiredMilliseconds: capture(() => subject.validateMaxContact({ contact: make("79991234567", String((now - 301) * 1000)), botToken: token, userId, nowSeconds: now })),
       future: capture(() => subject.validateMaxContact({ contact: make("79991234567", String(now + 61)), botToken: token, userId, nowSeconds: now })),
+      malformedTimestamp: capture(() => subject.validateMaxContact({ contact: make("79991234567", "123456789012"), botToken: token, userId, nowSeconds: now })),
       foreignPhone: capture(() => subject.validateMaxContact({ contact: make("441234567890"), botToken: token, userId, nowSeconds: now })),
       missingToken: capture(() => subject.validateMaxContact({ contact: make(), botToken: "", userId, nowSeconds: now }))
     }));
@@ -98,10 +106,16 @@ test("MAX contact validation binds a fresh signed phone to the validated user", 
   assert.deepEqual(JSON.parse(output), {
     valid: "+79991234567",
     withoutPlus: "+79991234567",
+    milliseconds: "+79991234567",
+    millisecondsFormat: "milliseconds",
+    base64: "+79991234567",
+    base64Format: "base64",
     wrongUser: "contact_hash_invalid",
     invalidHash: "contact_hash_invalid",
     expired: "contact_expired",
+    expiredMilliseconds: "contact_expired",
     future: "contact_future",
+    malformedTimestamp: "contact_invalid",
     foreignPhone: "contact_phone_invalid",
     missingToken: "bot_token_missing"
   });
@@ -162,7 +176,7 @@ test("MAX browser coordinator completes without depending on app-to-browser swit
   assert.match(button, /target="_blank"/);
   assert.match(button, /window\.open\("about:blank", "_blank"\)/);
   assert.match(button, /const nextAttempt = await createAttempt\(\)/);
-  assert.match(button, /onClick=\{\(\) => void beginLogin\(\)\}/);
+  assert.match(button, /void beginLogin\(\)/);
   assert.match(button, /setInterval\(poll, 2_000\)/);
   assert.match(button, /visibilitychange/);
   assert.match(button, /После подтверждения вернитесь сюда — вход завершится автоматически/);
@@ -172,11 +186,70 @@ test("MAX browser coordinator completes without depending on app-to-browser swit
   assert.match(miniApp, /window\.WebApp\?\.initData/);
   assert.doesNotMatch(miniApp, /initDataUnsafe/);
   assert.match(miniApp, /Подтвердить номер/);
+  assert.match(miniApp, /Продолжить по SMS/);
+  assert.match(miniApp, /contactDenied: true/);
+  assert.match(miniApp, /phone_denied/);
   assert.match(complete, /validateMaxWebAppData/);
   assert.match(complete, /validateMaxContact/);
   assert.match(status, /getCustomerSession/);
   assert.match(config, /source: "\/integrations\/max\/app"/);
   assert.match(config, /https:\/\/st\.max\.ru/);
+});
+
+test("MAX treats a validated identity separately from optional phone completion", () => {
+  const challenge = read("src/lib/auth/social/max-challenge.ts");
+  const identity = read("src/lib/auth/social/identity.ts");
+  const miniApp = read("src/components/auth/MaxMiniApp.tsx");
+
+  assert.match(challenge, /identityResolution = challenge\.intent === "link"/);
+  assert.match(challenge, /existingIdentity\?\.exists/);
+  assert.match(challenge, /params\.contactDecision === "not_requested"/);
+  assert.match(challenge, /kind: "needs_contact"/);
+  assert.match(identity, /createPendingSocialIdentity\(claims, attempt\.redirectTo\)/);
+  assert.match(miniApp, /MAX подтверждён/);
+  assert.match(miniApp, /Продолжить подтверждение по SMS|Продолжить по SMS/);
+  assert.match(miniApp, /window\.WebApp\.requestContact\(\)/);
+});
+
+test("MAX correlation stages are safe and cover Mini App through browser session", () => {
+  const events = read("src/lib/auth/social/max-observability.ts");
+  const complete = read("src/app/api/auth/social/max/complete/route.ts");
+  const status = read("src/app/api/auth/social/max/status/route.ts");
+  const telemetry = read("src/app/api/auth/social/max/event/route.ts");
+
+  for (const event of [
+    "max.login.started",
+    "max.miniapp.loaded",
+    "max.webappdata.received",
+    "max.webappdata.valid",
+    "max.identity.resolved",
+    "max.contact.requested",
+    "max.contact.received",
+    "max.contact.valid",
+    "max.challenge.completed",
+    "max.browser.consume",
+    "max.session.created",
+    "max.redirect.success"
+  ]) {
+    assert.match(`${events}\n${complete}\n${status}\n${telemetry}`, new RegExp(event.replaceAll(".", "\\.")));
+  }
+  assert.doesNotMatch(events, /BOT_TOKEN|raw WebAppData|raw contact|session ID/i);
+  assert.match(complete, /authDateFormat/);
+});
+
+test("Telegram and MAX transient UI state is provider-scoped", () => {
+  const social = read("src/components/auth/SocialAuthButtons.tsx");
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
+  const max = read("src/components/auth/MaxLoginButton.tsx");
+  const form = read("src/components/auth/AuthForm.tsx");
+
+  assert.match(social, /setActiveProvider\(provider\)/);
+  assert.match(telegram, /suppressTransientError/);
+  assert.match(max, /suppressTransientError/);
+  assert.doesNotMatch(telegram, /\? "Попробовать снова"/);
+  assert.doesNotMatch(max, /\? "Попробовать снова"/);
+  assert.match(form, /setVisibleSocialError\(null\)/);
+  assert.match(form, /currentUrl\.searchParams\.delete\("socialError"\)/);
 });
 
 test("MAX UI, profile and admin expose only safe identity details", () => {

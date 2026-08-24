@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const attempt = await createMaxLoginChallenge(parsed.data);
     await recordAuthFailure("social_oauth", rateLimitKey);
-    logMaxAuthEvent("max.challenge.created", {
+    logMaxAuthEvent("max.login.started", {
       correlationId: attempt.correlationId,
       stage: "start"
     });

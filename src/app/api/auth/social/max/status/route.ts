@@ -41,18 +41,21 @@ export async function POST(request: NextRequest) {
       if (result.kind === "failed") return noStoreJson({ ok: false, error: "technical" }, 409);
       const current = await getCustomerSession();
       if (!current) throw new MaxChallengeError("challenge_replay");
+      logMaxAuthEvent("max.redirect.success", {
+        correlationId: result.correlationId,
+        stage: "redirect"
+      });
       await clearMaxChallengeCookie();
       return noStoreJson({ ok: true, status: "authenticated", returnTo: result.redirectTo });
     }
     claimed = result;
+    logMaxAuthEvent("max.browser.consume", {
+      correlationId: claimed.correlationId,
+      stage: "browser"
+    });
 
     const resolution = await completeProviderCallback(claimed.claims, claimed.completion, {
       sourcePath: "/api/auth/social/max/status"
-    });
-    logMaxAuthEvent("max.identity.resolved", {
-      correlationId: claimed.correlationId,
-      stage: "identity",
-      resolution: resolution.kind
     });
     if (resolution.kind === "authenticated") {
       logMaxAuthEvent("max.session.created", { correlationId: claimed.correlationId, stage: "session" });
@@ -63,6 +66,11 @@ export async function POST(request: NextRequest) {
     const requestHeaders = await headers();
     const clientKey = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     await clearAuthFailures("social_oauth", `max:${clientKey}`).catch(() => undefined);
+    logMaxAuthEvent("max.redirect.success", {
+      correlationId: claimed.correlationId,
+      stage: "redirect",
+      resolution: resolution.kind
+    });
     return noStoreJson({
       ok: true,
       status: resolution.kind,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CircleAlert } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   confirmLoginAction,
   confirmRegisterAction,
@@ -29,6 +29,7 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loyaltyConsent, setLoyaltyConsent] = useState(false);
+  const [visibleSocialError, setVisibleSocialError] = useState(socialError ?? null);
   const [passwordState, passwordAction, isPasswordPending] = useActionState(
     isRegister ? registerWithPasswordAction : loginWithPasswordAction,
     initialAuthActionState
@@ -48,6 +49,14 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
   const codeStatus = confirmState.status !== "idle" ? confirmState.status : requestState.status;
   const shouldShowConfirmCode = requestState.status === "code_sent" || confirmState.status !== "idle";
 
+  useEffect(() => {
+    if (!socialError) return;
+    const currentUrl = new URL(window.location.href);
+    if (!currentUrl.searchParams.has("socialError")) return;
+    currentUrl.searchParams.delete("socialError");
+    window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+  }, [socialError]);
+
   return (
     <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
       <h1 className="text-3xl font-black leading-tight text-karimoff-black">
@@ -65,12 +74,13 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
 
       <SocialAuthButtons
         enabled={socialProviders}
+        onProviderStart={() => setVisibleSocialError(null)}
         returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")}
       />
-      {socialError ? (
+      {visibleSocialError ? (
         <div role="alert" className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
           <CircleAlert className="mt-0.5 shrink-0" size={18} />
-          {socialError}
+          {visibleSocialError}
         </div>
       ) : null}
 

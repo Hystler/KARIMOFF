@@ -7,7 +7,9 @@ import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 
 type MaxLoginButtonProps = {
   intent?: "login" | "link";
+  onAttemptStart?: () => void;
   returnTo: string;
+  suppressTransientError?: boolean;
   variant?: "full" | "compact";
 };
 
@@ -35,7 +37,9 @@ function getErrorMessage(code: string) {
 
 export function MaxLoginButton({
   intent = "login",
+  onAttemptStart,
   returnTo,
+  suppressTransientError = false,
   variant = "full"
 }: MaxLoginButtonProps) {
   const router = useRouter();
@@ -187,21 +191,21 @@ export function MaxLoginButton({
   }, [attempt, completeInBrowser, state.kind]);
 
   function handleLaunch() {
+    onAttemptStart?.();
     setState({ kind: "waiting" });
   }
 
-  const busy = ["preparing", "waiting", "completing"].includes(state.kind);
-  const label = state.kind === "preparing"
+  const visibleState: LoginState = suppressTransientError && state.kind === "error" ? { kind: "ready" } : state;
+  const busy = ["preparing", "waiting", "completing"].includes(visibleState.kind);
+  const label = visibleState.kind === "preparing"
     ? "Готовим вход через MAX…"
-    : state.kind === "waiting" || state.kind === "completing"
+    : visibleState.kind === "waiting" || visibleState.kind === "completing"
       ? "Подтвердите вход в MAX"
-      : state.kind === "success"
+      : visibleState.kind === "success"
         ? "Вход подтверждён"
-        : state.kind === "error"
-          ? "Попробовать снова"
-          : intent === "link"
-            ? "Подключить MAX"
-            : "Войти через MAX";
+        : intent === "link"
+          ? "Подключить MAX"
+          : "Войти через MAX";
 
   const content = (
     <>
@@ -210,7 +214,7 @@ export function MaxLoginButton({
         : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25"}
       >
         {busy ? <LoaderCircle className="animate-spin" size={variant === "compact" ? 17 : 23} />
-          : state.kind === "success" ? <Check size={variant === "compact" ? 17 : 23} />
+          : visibleState.kind === "success" ? <Check size={variant === "compact" ? 17 : 23} />
             : <SocialProviderIcon provider="max" className={variant === "compact" ? "h-5 w-5" : "h-6 w-6"} />
         }
       </span>
@@ -218,7 +222,7 @@ export function MaxLoginButton({
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-black leading-5">{label}</span>
           <span className="mt-0.5 block text-xs font-semibold leading-5 text-white/80">
-            {state.kind === "waiting" || state.kind === "completing" ? "После подтверждения вернитесь сюда" : "Быстрый вход через MAX"}
+            {visibleState.kind === "waiting" || visibleState.kind === "completing" ? "После подтверждения вернитесь сюда" : "Быстрый вход через MAX"}
           </span>
         </span>
       )}
@@ -231,7 +235,7 @@ export function MaxLoginButton({
 
   return (
     <div>
-      {state.kind === "ready" && attempt?.launchUrl ? (
+      {visibleState.kind === "ready" && attempt?.launchUrl ? (
         <a href={attempt.launchUrl} target="_blank" rel="noopener noreferrer" onClick={handleLaunch} className={buttonClass}>
           {content}
           {variant === "full" ? <ExternalLink className="shrink-0 text-white/75" size={18} /> : null}
@@ -240,28 +244,31 @@ export function MaxLoginButton({
         <button
           type="button"
           disabled={busy}
-          onClick={() => void beginLogin()}
+          onClick={() => {
+            onAttemptStart?.();
+            void beginLogin();
+          }}
           className={buttonClass}
           aria-busy={busy}
         >
           {content}
-          {state.kind === "error" && variant === "full" ? <RefreshCw className="shrink-0" size={18} /> : null}
+          {visibleState.kind === "error" && variant === "full" ? <RefreshCw className="shrink-0" size={18} /> : null}
         </button>
       )}
 
       {variant === "full" ? (
         <div className="mt-3 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4">
           <div className="flex items-start gap-3">
-            {state.kind === "error" ? <CircleAlert className="mt-0.5 shrink-0 text-red-600" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0 text-[#471AFF]" size={19} />}
+            {visibleState.kind === "error" ? <CircleAlert className="mt-0.5 shrink-0 text-red-600" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0 text-[#471AFF]" size={19} />}
             <div className="text-[13px] leading-5 text-karimoff-muted" aria-live="polite">
-              {state.kind === "error" ? (
-                <p className="font-semibold text-red-700">{getErrorMessage(state.code)}</p>
-              ) : state.kind === "waiting" || state.kind === "completing" ? (
+              {visibleState.kind === "error" ? (
+                <p className="font-semibold text-red-700">{getErrorMessage(visibleState.code)}</p>
+              ) : visibleState.kind === "waiting" || visibleState.kind === "completing" ? (
                 <>
                   <p className="font-bold text-karimoff-black">Подтвердите вход в MAX.</p>
                   <p className="mt-1">После подтверждения вернитесь сюда — вход завершится автоматически.</p>
                 </>
-              ) : state.kind === "success" ? (
+              ) : visibleState.kind === "success" ? (
                 <p className="font-bold text-emerald-700">Вы вошли через MAX. Возвращаем вас в KARIMOFF…</p>
               ) : (
                 <>

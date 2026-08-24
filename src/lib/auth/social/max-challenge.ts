@@ -141,14 +141,23 @@ export async function completeMaxLoginChallenge(params: {
           and provider_user_id = ${params.claims.providerUserId}
       ) as exists
     `;
-    const canCompleteWithoutPhone = challenge.intent === "link" || Boolean(existingIdentity?.exists);
+    const identityResolution = challenge.intent === "link"
+      ? "link" as const
+      : existingIdentity?.exists
+        ? "existing" as const
+        : "new" as const;
+    const canCompleteWithoutPhone = identityResolution !== "new";
     if (!canCompleteWithoutPhone && !params.claims.phoneVerified && params.contactDecision === "not_requested") {
       await transaction`
         update public.max_login_challenges
         set status = 'awaiting_phone', last_error_code = null, updated_at = now()
         where id = ${challenge.id}::uuid
       `;
-      return { kind: "needs_contact" as const, correlationId: challenge.correlation_id };
+      return {
+        kind: "needs_contact" as const,
+        correlationId: challenge.correlation_id,
+        identityResolution
+      };
     }
 
     await transaction`
@@ -160,8 +169,32 @@ export async function completeMaxLoginChallenge(params: {
           updated_at = now()
       where id = ${challenge.id}::uuid
     `;
-    return { kind: "completed" as const, correlationId: challenge.correlation_id };
+    return {
+      kind: "completed" as const,
+      correlationId: challenge.correlation_id,
+      identityResolution
+    };
   });
+}
+
+export async function getMaxChallengeContext(challenge: string) {
+  if (!/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) {
+    throw new MaxChallengeError("challenge_invalid");
+  }
+  const sql = getPostgresSql();
+  const [row] = await sql<Pick<MaxChallengeRow, "id" | "correlation_id" | "status" | "expires_at" | "used_at">[]>`
+    select id, correlation_id, status, expires_at, used_at
+    from public.max_login_challenges
+    where challenge_hash = ${hashOAuthSecret(challenge)}
+  `;
+  if (!row) throw new MaxChallengeError("challenge_invalid");
+  if (row.expires_at.getTime() <= Date.now()) throw new MaxChallengeError("challenge_expired");
+  if (row.used_at) throw new MaxChallengeError("challenge_replay");
+  return {
+    attemptId: row.id,
+    correlationId: row.correlation_id,
+    status: row.status
+  };
 }
 
 export type ClaimedMaxChallenge = {

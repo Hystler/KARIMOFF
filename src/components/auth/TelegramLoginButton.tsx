@@ -24,7 +24,9 @@ type TelegramLibraryResult = {
 
 type TelegramLoginButtonProps = {
   intent?: "login" | "link";
+  onAttemptStart?: () => void;
   returnTo: string;
+  suppressTransientError?: boolean;
   variant?: "full" | "compact";
 };
 
@@ -99,7 +101,9 @@ async function requestAttempt(key: string, intent: "login" | "link", returnTo: s
 
 export function TelegramLoginButton({
   intent = "login",
+  onAttemptStart,
   returnTo,
+  suppressTransientError = false,
   variant = "full"
 }: TelegramLoginButtonProps) {
   const router = useRouter();
@@ -199,6 +203,7 @@ export function TelegramLoginButton({
   }, [attempt, finishOnServer, prepare, resetAttempt]);
 
   function handleClick() {
+    onAttemptStart?.();
     if (state.kind === "error" && !attempt) {
       void prepare();
       return;
@@ -227,21 +232,20 @@ export function TelegramLoginButton({
     }
   }
 
-  const busy = ["preparing", "waiting", "completing"].includes(state.kind);
-  const disabled = !scriptReady || busy || state.kind === "success" || (!attempt && state.kind !== "error");
-  const label = state.kind === "waiting"
+  const visibleState: LoginState = suppressTransientError && state.kind === "error" ? { kind: "ready" } : state;
+  const busy = ["preparing", "waiting", "completing"].includes(visibleState.kind);
+  const disabled = !scriptReady || busy || visibleState.kind === "success" || (!attempt && state.kind !== "error");
+  const label = visibleState.kind === "waiting"
     ? "Подтвердите вход в Telegram"
-    : state.kind === "completing"
+    : visibleState.kind === "completing"
       ? "Завершаем вход…"
-      : state.kind === "success"
+      : visibleState.kind === "success"
         ? "Вход подтверждён"
-        : state.kind === "error"
-          ? "Попробовать снова"
-          : state.kind === "preparing"
-            ? "Готовим безопасный вход…"
-            : intent === "link"
-              ? "Подключить Telegram"
-              : "Войти через Telegram";
+        : visibleState.kind === "preparing"
+          ? "Готовим безопасный вход…"
+          : intent === "link"
+            ? "Подключить Telegram"
+            : "Войти через Telegram";
 
   return (
     <>
@@ -268,13 +272,13 @@ export function TelegramLoginButton({
           ? "flex h-5 w-5 shrink-0 items-center justify-center"
           : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25"}
         >
-          {busy ? <LoaderCircle className="animate-spin" size={variant === "compact" ? 17 : 23} /> : state.kind === "success" ? <Check size={variant === "compact" ? 17 : 23} /> : <SocialProviderIcon provider="telegram" className={variant === "compact" ? "h-5 w-5" : "h-6 w-6"} />}
+          {busy ? <LoaderCircle className="animate-spin" size={variant === "compact" ? 17 : 23} /> : visibleState.kind === "success" ? <Check size={variant === "compact" ? 17 : 23} /> : <SocialProviderIcon provider="telegram" className={variant === "compact" ? "h-5 w-5" : "h-6 w-6"} />}
         </span>
         {variant === "compact" ? label : (
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-black leading-5">{label}</span>
             <span className="mt-0.5 block text-xs font-semibold leading-5 text-white/80">
-              {state.kind === "waiting" ? "После подтверждения вернитесь сюда" : "Быстрый вход без ввода пароля"}
+              {visibleState.kind === "waiting" ? "После подтверждения вернитесь сюда" : "Быстрый вход без ввода пароля"}
             </span>
           </span>
         )}
@@ -283,16 +287,16 @@ export function TelegramLoginButton({
       {variant === "full" ? (
         <div className="mt-4 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4">
           <div className="flex items-start gap-3">
-            {state.kind === "error" ? <CircleAlert className="mt-0.5 shrink-0 text-red-600" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0 text-[#188CC4]" size={19} />}
+            {visibleState.kind === "error" ? <CircleAlert className="mt-0.5 shrink-0 text-red-600" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0 text-[#188CC4]" size={19} />}
             <div className="text-[13px] leading-5 text-karimoff-muted" aria-live="polite">
-              {state.kind === "error" ? (
-                <p className="font-semibold text-red-700">{getErrorMessage(state.code)}</p>
-              ) : state.kind === "waiting" || state.kind === "completing" ? (
+              {visibleState.kind === "error" ? (
+                <p className="font-semibold text-red-700">{getErrorMessage(visibleState.code)}</p>
+              ) : visibleState.kind === "waiting" || visibleState.kind === "completing" ? (
                 <>
                   <p className="font-bold text-karimoff-black">Подтвердите вход в Telegram.</p>
                   <p className="mt-1">После подтверждения вернитесь сюда — вход завершится автоматически.</p>
                 </>
-              ) : state.kind === "success" ? (
+              ) : visibleState.kind === "success" ? (
                 <p className="font-bold text-emerald-700">Вы вошли через Telegram. Возвращаем вас в KARIMOFF…</p>
               ) : (
                 <>

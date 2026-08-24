@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SocialIdentityClaims } from "./types";
 
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
+const BASE64_HASH_PATTERN = /^[A-Za-z0-9+/]{43}=$/;
+const BASE64URL_HASH_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
 const MAX_INIT_DATA_AGE_SECONDS = 60 * 60;
 const MAX_CONTACT_AGE_SECONDS = 5 * 60;
@@ -60,6 +62,13 @@ function equalHex(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function decodeContactHash(value: string) {
+  if (HASH_PATTERN.test(value)) return Buffer.from(value.toLowerCase(), "hex");
+  if (BASE64_HASH_PATTERN.test(value)) return Buffer.from(value, "base64");
+  if (BASE64URL_HASH_PATTERN.test(value)) return Buffer.from(`${value}=`, "base64url");
+  return null;
+}
+
 function decodeValue(value: string) {
   try {
     return decodeURIComponent(value.replace(/\+/g, " "));
@@ -90,6 +99,19 @@ function parseTimestamp(value: string | undefined, code: MaxValidationErrorCode)
   const timestamp = Number(value);
   if (!Number.isSafeInteger(timestamp) || timestamp <= 0) throw new MaxValidationError(code);
   return timestamp;
+}
+
+function parseContactTimestamp(value: string) {
+  // MAX Bridge documents authDate as a timestamp string. Accept the two
+  // standard Unix encodings while preserving the raw signed value verbatim.
+  if (!/^\d{10}(?:\d{3})?$/.test(value)) {
+    throw new MaxValidationError("contact_invalid");
+  }
+  const rawTimestamp = Number(value);
+  if (!Number.isSafeInteger(rawTimestamp) || rawTimestamp <= 0) {
+    throw new MaxValidationError("contact_invalid");
+  }
+  return value.length === 13 ? Math.floor(rawTimestamp / 1000) : rawTimestamp;
 }
 
 function assertFreshTimestamp(params: {
@@ -228,10 +250,14 @@ export function validateMaxContact(params: {
 }) {
   if (!params.botToken) throw new MaxValidationError("bot_token_missing");
   const { contact } = params;
-  if (!contact || typeof contact !== "object" || !HASH_PATTERN.test(contact.hash)) {
+  if (!contact || typeof contact !== "object") {
     throw new MaxValidationError("contact_invalid");
   }
-  const authDate = parseTimestamp(contact.authDate, "contact_invalid");
+  const receivedHash = decodeContactHash(contact.hash);
+  if (!receivedHash || receivedHash.length !== 32) {
+    throw new MaxValidationError("contact_hash_invalid");
+  }
+  const authDate = parseContactTimestamp(contact.authDate);
   assertFreshTimestamp({
     timestamp: authDate,
     nowSeconds: params.nowSeconds ?? Math.floor(Date.now() / 1000),
@@ -249,9 +275,25 @@ export function validateMaxContact(params: {
     `phone=${phoneWithoutPlus}`,
     `userId=${params.userId}`
   ].join("\n");
-  const expectedHash = createHmac("sha256", params.botToken).update(data).digest("hex");
-  if (!equalHex(contact.hash, expectedHash)) {
+  const expectedHash = createHmac("sha256", params.botToken).update(data).digest();
+  if (receivedHash.length !== expectedHash.length || !timingSafeEqual(receivedHash, expectedHash)) {
     throw new MaxValidationError("contact_hash_invalid");
   }
   return normalizedPhone;
+}
+
+export function describeMaxContact(contact: MaxContactPayload) {
+  return {
+    authDateFormat: /^\d{10}$/.test(contact.authDate)
+      ? "seconds" as const
+      : /^\d{13}$/.test(contact.authDate)
+        ? "milliseconds" as const
+        : "invalid" as const,
+    hashFormat: HASH_PATTERN.test(contact.hash)
+      ? "hex64" as const
+      : BASE64_HASH_PATTERN.test(contact.hash) || BASE64URL_HASH_PATTERN.test(contact.hash)
+        ? "base64" as const
+        : "invalid" as const,
+    phonePresent: Boolean(contact.phone)
+  };
 }
