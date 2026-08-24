@@ -205,6 +205,8 @@ test("MAX UI, profile and admin expose only safe identity details", () => {
 });
 
 test("MAX runtime configuration reports exact safe reasons without exposing the bot token", () => {
+  const loginPage = read("src/app/login/page.tsx");
+  const configSource = read("src/lib/auth/social/config.ts");
   const output = importTypescriptScript("src/lib/auth/social/max-config-state.ts", `
     const inspect = (environment) => subject.inspectMaxAuthEnvironment(environment);
     const valid = inspect({
@@ -233,6 +235,9 @@ test("MAX runtime configuration reports exact safe reasons without exposing the 
   assert.equal(result.invalidName.reason, "invalid_bot_name");
   assert.equal(result.wrongPath.reason, "mini_app_url_path_mismatch");
   assert.doesNotMatch(result.serialized, /test-secret-never-returned|MAX_BOT_TOKEN/);
+  assert.match(loginPage, /export const dynamic = "force-dynamic"/);
+  assert.match(configSource, /event: "max\.auth\.configuration"/);
+  assert.doesNotMatch(configSource, /botToken[},]/);
 });
 
 test("MAX Bot API foundation uses the current read-only endpoint and never exposes the bot token", () => {
