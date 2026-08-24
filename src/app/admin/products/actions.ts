@@ -79,6 +79,7 @@ function toPayload(data: ProductFormInput) {
 function revalidateProductViews() {
   revalidatePath("/");
   revalidatePath("/menu");
+  revalidatePath("/menu/[slug]", "page");
   revalidatePath("/admin/products");
 }
 

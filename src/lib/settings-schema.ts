@@ -25,7 +25,6 @@ export const siteSettingsSchema = z.object({
   franchise_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
   about_hero_image_url: z.string().trim().max(500, "Ссылка на фон слишком длинная").optional(),
   telegram_url: z.string().trim().max(500, "Ссылка Telegram слишком длинная").optional(),
-  instagram_url: z.string().trim().max(500, "Ссылка Instagram слишком длинная").optional(),
   tiktok_url: z.string().trim().max(500, "Ссылка TikTok слишком длинная").optional()
 });
 

@@ -6,11 +6,15 @@ import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import type {
   Product,
+  ProductCompositionItem,
   ProductImage,
   ProductModifierGroup,
   ProductModifierGroupOption,
   ProductModifierOption
 } from "./product-types";
+
+const PRODUCT_SELECT =
+  "id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens";
 
 export const fallbackProducts: Product[] = demoProducts;
 
@@ -34,9 +38,7 @@ function enrichWithFallback(product: Product): Product {
 
   return {
     ...product,
-    description: product.description || fallback.description,
-    image_url: isPlaceholderImage(product.image_url) ? fallback.image_url : product.image_url,
-    weight: product.weight || fallback.weight || null
+    image_url: isPlaceholderImage(product.image_url) ? fallback.image_url : product.image_url
   };
 }
 
@@ -277,20 +279,87 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
 
   const { data, error } = await database
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error || !data?.length) {
+  if (error) {
     if (error && process.env.NODE_ENV !== "production") {
-      console.warn("Products fallback is used:", error.message);
+      console.warn("Products could not be loaded:", error.message);
     }
-    return fallbackProducts.slice(0, limit);
+    return [];
+  }
+
+  if (!data?.length) {
+    return [];
   }
 
   return attachProductDetails(data.map((row) => normalizeProduct(row)));
+}
+
+export async function getActiveProductBySlug(slug: string): Promise<Product | null> {
+  const database = createDatabaseServerClient();
+
+  if (!database) {
+    return fallbackBySlug.get(slug) ?? null;
+  }
+
+  const { data, error } = await database
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error && process.env.NODE_ENV !== "production") {
+      console.warn("Product detail could not be loaded:", error.message);
+    }
+    return null;
+  }
+
+  const [product] = await attachProductDetails([normalizeProduct(data)]);
+  return product ?? null;
+}
+
+export async function getPublicProductComposition(productId: string): Promise<ProductCompositionItem[]> {
+  const database = createDatabaseServerClient();
+
+  if (!database) {
+    return [];
+  }
+
+  const { data: lines, error } = await database
+    .from("product_ingredients")
+    .select("ingredient_id, sort_order")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true });
+
+  if (error || !lines?.length) {
+    return [];
+  }
+
+  const ingredientIds = Array.from(new Set(lines.map((line) => String(line.ingredient_id))));
+  const { data: ingredients, error: ingredientsError } = await database
+    .from("ingredients")
+    .select("id, name")
+    .in("id", ingredientIds);
+
+  if (ingredientsError || !ingredients) {
+    return [];
+  }
+
+  const names = new Map(ingredients.map((ingredient) => [String(ingredient.id), String(ingredient.name)]));
+
+  return lines.flatMap((line) => {
+    const ingredientId = String(line.ingredient_id);
+    const name = names.get(ingredientId);
+    return name
+      ? [{ ingredient_id: ingredientId, name, sort_order: Number(line.sort_order ?? 100) }]
+      : [];
+  });
 }
 
 export async function getAdminProducts() {
@@ -306,7 +375,7 @@ export async function getAdminProducts() {
 
   const { data, error } = await database
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
+    .select(PRODUCT_SELECT)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -332,7 +401,7 @@ export async function getAdminProductById(id: string) {
 
   const { data, error } = await database
     .from("products")
-    .select("id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens")
+    .select(PRODUCT_SELECT)
     .eq("id", id)
     .maybeSingle();
 

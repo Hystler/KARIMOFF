@@ -107,6 +107,13 @@ const nextConfig = {
         ]
       })),
       {
+        source: "/admin/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }
+        ]
+      },
+      {
         source: "/integrations/max/app",
         headers: [
           { key: "Content-Security-Policy", value: maxMiniAppContentSecurityPolicy },

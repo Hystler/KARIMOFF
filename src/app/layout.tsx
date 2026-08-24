@@ -8,7 +8,8 @@ export const metadata: Metadata = {
   title: "KARIMOFF | Бургерная",
   description:
     "KARIMOFF — бургерная с ресторанным вкусом по цене обычного перекуса.",
-  metadataBase: new URL("https://karimoff.vercel.app")
+  metadataBase: new URL("https://karimoff.site"),
+  alternates: { canonical: "/" }
 };
 
 export const dynamic = "force-dynamic";

@@ -45,6 +45,12 @@ export type ProductModifierGroup = {
   options: ProductModifierGroupOption[];
 };
 
+export type ProductCompositionItem = {
+  ingredient_id: string;
+  name: string;
+  sort_order: number;
+};
+
 export type Product = {
   id: string;
   created_at?: string;

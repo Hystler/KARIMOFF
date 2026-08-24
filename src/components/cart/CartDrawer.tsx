@@ -9,7 +9,7 @@ import {
   getSameDayOrderSlots,
   moscowOrderSlotToIso
 } from "@/lib/order-time";
-import { getCartLineUnitPrice, useCart } from "./CartProvider";
+import { getCartLineUnitPrice, useCart, type CartLine } from "./CartProvider";
 import { CartLineCustomizer } from "./CartLineCustomizer";
 import { ScheduledTimeSlider } from "./ScheduledTimeSlider";
 
@@ -26,6 +26,43 @@ type CheckoutSettings = {
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
+}
+
+function selectedGroupLabels(line: CartLine) {
+  const options = new Map(
+    (line.product.modifier_groups ?? []).flatMap((group) =>
+      group.options.map((option) => [option.id, option.label] as const)
+    )
+  );
+  return line.customization.modifierOptionIds
+    .map((optionId) => options.get(optionId))
+    .filter((label): label is string => Boolean(label));
+}
+
+function CartCustomizationSummary({ line, compact = false }: { line: CartLine; compact?: boolean }) {
+  const groups = selectedGroupLabels(line);
+  const spacing = compact ? "mt-1" : "mt-2";
+
+  return (
+    <>
+      {line.customization.removed.length ? (
+        <p className={`${spacing} text-xs font-semibold leading-5 text-amber-700`}>
+          Без: {line.customization.removed.map((item) => item.name).join(", ")}
+        </p>
+      ) : null}
+      {line.customization.extras.length ? (
+        <p className="mt-1 text-xs font-semibold leading-5 text-karimoff-orange">
+          Добавить: {line.customization.extras.map((item) => `${item.name} × ${item.quantity}`).join(", ")}
+        </p>
+      ) : null}
+      {groups.length ? (
+        <p className="mt-1 text-xs font-semibold leading-5 text-karimoff-black">{groups.join(" · ")}</p>
+      ) : null}
+      {line.customization.note ? (
+        <p className="mt-1 text-xs leading-5 text-karimoff-muted">Комментарий: {line.customization.note}</p>
+      ) : null}
+    </>
+  );
 }
 
 export function CartDrawer() {
@@ -53,7 +90,9 @@ export function CartDrawer() {
           extras: line.customization.extras.map((item) => ({
             ingredient_id: item.ingredient_id,
             quantity: item.quantity
-          }))
+          })),
+          modifier_option_ids: line.customization.modifierOptionIds,
+          note: line.customization.note
         }))
       ),
     [lines]
@@ -383,16 +422,7 @@ export function CartDrawer() {
                         <span className="text-karimoff-muted">
                           {line.product.name} × {line.quantity}
                         </span>
-                        {line.customization.removed.length ? (
-                          <p className="mt-1 text-xs font-semibold text-amber-700">
-                            Без: {line.customization.removed.map((item) => item.name).join(", ")}
-                          </p>
-                        ) : null}
-                        {line.customization.extras.length ? (
-                          <p className="mt-1 text-xs font-semibold text-karimoff-orange">
-                            Добавить: {line.customization.extras.map((item) => `${item.name} × ${item.quantity}`).join(", ")}
-                          </p>
-                        ) : null}
+                        <CartCustomizationSummary line={line} compact />
                       </div>
                       <span className="shrink-0 font-black text-karimoff-black">
                         {formatPrice(getCartLineUnitPrice(line) * line.quantity)} ₽
@@ -426,16 +456,7 @@ export function CartDrawer() {
                     <div>
                       <h3 className="text-lg font-black text-karimoff-black">{line.product.name}</h3>
                       <p className="mt-1 text-sm font-bold text-karimoff-orange">{formatPrice(getCartLineUnitPrice(line))} ₽</p>
-                      {line.customization.removed.length ? (
-                        <p className="mt-2 text-xs font-semibold leading-5 text-amber-700">
-                          Без: {line.customization.removed.map((item) => item.name).join(", ")}
-                        </p>
-                      ) : null}
-                      {line.customization.extras.length ? (
-                        <p className="mt-1 text-xs font-semibold leading-5 text-karimoff-orange">
-                          Добавить: {line.customization.extras.map((item) => `${item.name} × ${item.quantity}`).join(", ")}
-                        </p>
-                      ) : null}
+                      <CartCustomizationSummary line={line} />
                     </div>
                     <button
                       type="button"

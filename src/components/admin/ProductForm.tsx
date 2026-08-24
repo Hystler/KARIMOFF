@@ -40,6 +40,20 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
         </label>
       </div>
 
+      <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
+        Короткое описание для гостя
+        <textarea
+          name="description"
+          rows={4}
+          defaultValue={product?.description ?? ""}
+          className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-karimoff-orange"
+          placeholder="Честно опишите вкус и особенности блюда в 1–3 предложениях"
+        />
+        <span className="text-xs font-medium leading-5 text-karimoff-muted">
+          Это текст для карточки и страницы товара. Фактический состав редактируется отдельно в блоке «Состав и себестоимость».
+        </span>
+      </label>
+
       <div className="grid gap-5 md:grid-cols-3">
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Категория
@@ -147,18 +161,10 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
             </label>
           ))}
         </div>
+        <p className="text-xs font-medium leading-5 text-karimoff-muted">
+          Заполняйте только подтверждённые значения. Пустые поля на сайте показываются как «Данные уточняются», а не как нули.
+        </p>
       </fieldset>
-
-      <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
-        Описание
-        <textarea
-          name="description"
-          rows={5}
-          defaultValue={product?.description ?? ""}
-          className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-karimoff-orange"
-          placeholder="Короткое описание позиции"
-        />
-      </label>
 
       <label className="flex items-center gap-3 text-sm font-semibold text-karimoff-black">
         <input
