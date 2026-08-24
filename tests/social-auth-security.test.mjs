@@ -85,18 +85,21 @@ test("the last authentication method cannot be unlinked", () => {
 
 test("OAuth state is server-authoritative, one-time and expires", () => {
   const state = read("src/lib/auth/social/state.ts");
-  const policy = read("src/lib/auth/social/state-policy.ts");
-  assert.match(state, /validateOAuthBrowserBinding/);
-  assert.match(policy, /type OAuthProvider = "telegram"/);
-  assert.match(policy, /if \(!params\.cookieState\)[\s\S]*return "missing"/);
-  assert.match(policy, /timingSafeEqual/);
-  assert.match(state, /set consumed_at = now\(\)/);
-  assert.match(state, /consumed_at is null/);
+  const migration = read("supabase/migrations/20260824120000_add_telegram_browser_consume.sql");
+  assert.match(state, /randomBase64Url\(32\)/);
+  assert.match(state, /state_hash[\s\S]*hashOAuthSecret\(browserBinding\)/);
+  assert.match(state, /requireTelegramBrowserBinding/);
+  assert.match(state, /status = 'provider_verified'/);
+  assert.match(state, /status = 'completed'/);
+  assert.match(state, /browser_consumed_at = coalesce\(browser_consumed_at, now\(\)\)/);
   assert.match(state, /expires_at > now\(\)/);
-  assert.match(state, /encryptOAuthSecret\(codeVerifier\)/);
-  assert.match(state, /classifyOAuthAttemptFailure/);
+  assert.match(state, /encryptOAuthSecret\(randomBase64Url\(48\)\)/);
   assert.match(state, /httpOnly: true/);
   assert.match(state, /sameSite: "lax"/);
+  assert.match(state, /path: "\/"/);
+  assert.match(migration, /identity_ciphertext/);
+  assert.match(migration, /browser_consumed_at/);
+  assert.match(migration, /status in \('pending', 'provider_verified', 'completed', 'failed'\)/);
   const customerSession = read("src/lib/customer-auth.ts");
   assert.match(customerSession, /sameSite: "lax"/);
   assert.match(customerSession, /path: "\/"/);

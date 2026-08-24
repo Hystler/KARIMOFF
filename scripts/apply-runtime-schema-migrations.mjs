@@ -209,6 +209,74 @@ const migrations = [
         objects?.app_privileges
       );
     }
+  },
+  {
+    name: "20260824120000_add_telegram_browser_consume",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          not exists (
+            select 1
+            from unnest(array[
+              'status',
+              'identity_ciphertext',
+              'provider_verified_at',
+              'completed_at',
+              'processing_at',
+              'browser_consumed_at',
+              'completion_result',
+              'resolved_user_id',
+              'last_error_code'
+            ]) as expected_column(name)
+            where not exists (
+              select 1
+              from pg_attribute
+              where attrelid = to_regclass('public.oauth_login_attempts')
+                and attname = expected_column.name
+                and not attisdropped
+            )
+          ) as lifecycle_columns,
+          not exists (
+            select 1
+            from unnest(array[
+              'oauth_login_attempts_status_check',
+              'oauth_login_attempts_completion_result_check',
+              'oauth_login_attempts_payload_size_check',
+              'oauth_login_attempts_error_length_check',
+              'oauth_login_attempts_resolved_user_fk'
+            ]) as expected_constraint(name)
+            where not exists (
+              select 1
+              from pg_constraint
+              where conrelid = to_regclass('public.oauth_login_attempts')
+                and conname = expected_constraint.name
+                and convalidated
+            )
+          ) as constraints_valid,
+          to_regclass('public.oauth_login_attempts_telegram_status_idx') is not null as status_index,
+          exists (
+            select 1
+            from pg_class
+            where oid = to_regclass('public.oauth_login_attempts')
+              and relrowsecurity
+          ) as rls_enabled,
+          case
+            when to_regclass('public.oauth_login_attempts') is null then false
+            else has_table_privilege(
+              'karimoff_app',
+              'public.oauth_login_attempts',
+              'select,insert,update,delete'
+            )
+          end as app_privileges
+      `;
+      return Boolean(
+        objects?.lifecycle_columns &&
+        objects?.constraints_valid &&
+        objects?.status_index &&
+        objects?.rls_enabled &&
+        objects?.app_privileges
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

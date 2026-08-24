@@ -61,12 +61,16 @@ export async function POST(request: NextRequest) {
       attemptId: attempt.attemptId,
       stage: "start"
     });
+    logTelegramAuthEvent("telegram.login.started", {
+      attemptId: attempt.attemptId,
+      stage: "start"
+    });
 
     return noStoreJson({
       ok: true,
-      attemptId: attempt.state,
+      attemptId: attempt.attemptId,
       clientId: config.clientIdNumber,
-      expiresInSeconds: 600,
+      expiresInSeconds: attempt.expiresInSeconds,
       nonce: attempt.nonce,
       returnTo
     });

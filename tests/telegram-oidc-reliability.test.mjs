@@ -19,7 +19,7 @@ function importTypescriptScript(modulePath, body) {
   return result.stdout.trim();
 }
 
-test("OAuth attempt failures distinguish missing, expired and replayed attempts", () => {
+test("Telegram attempt separates provider verification from active-browser consumption", () => {
   const output = importTypescriptScript("src/lib/auth/social/state-policy.ts", `
     const now = Date.parse("2026-08-19T09:00:00.000Z");
     console.log(JSON.stringify([
@@ -32,10 +32,15 @@ test("OAuth attempt failures distinguish missing, expired and replayed attempts"
 
   const state = read("src/lib/auth/social/state.ts");
   const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
-  assert.match(state, /set consumed_at = now\(\)/);
-  assert.match(state, /consumed_at is null/);
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  assert.match(state, /status = 'provider_verified'/);
+  assert.match(state, /status = 'completed'/);
+  assert.match(state, /identity_ciphertext = \$\{identityCiphertext\}/);
+  assert.match(state, /browser_consumed_at = coalesce\(browser_consumed_at, now\(\)\)/);
   assert.match(state, /expires_at > now\(\)/);
-  assert.match(complete, /requireBrowserBinding: true/);
+  assert.match(complete, /completeTelegramProviderAttempt/);
+  assert.doesNotMatch(complete, /completeProviderCallback|setCustomerSession/);
+  assert.match(consume, /completeProviderCallback/);
 });
 
 test("Telegram phone normalization accepts Russian E.164 with and without plus", () => {
@@ -137,19 +142,81 @@ test("identity decisions create or link only from a verified provider identity",
   assert.doesNotMatch(identity, /where display_name|where username/i);
 });
 
-test("library completion validates first, creates a readable session, and returns only a safe local path", () => {
+test("library completion validates first while active-browser consume creates and reads back the session", () => {
   const identity = read("src/lib/auth/social/identity.ts");
   const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  const clientComplete = read("src/app/api/auth/social/telegram/client-complete/route.ts");
   const start = read("src/app/api/auth/social/telegram/library/start/route.ts");
   const client = read("src/components/auth/TelegramLoginButton.tsx");
   assert.match(complete, /verifyTelegramLibraryIdToken/);
-  assert.ok(complete.indexOf("const claims = await verifyTelegramLibraryIdToken") < complete.indexOf("const result = await completeProviderCallback"));
+  assert.ok(complete.indexOf("const claims = await verifyTelegramLibraryIdToken") < complete.lastIndexOf("await completeTelegramProviderAttempt"));
+  assert.doesNotMatch(complete, /completeProviderCallback|setCustomerSession/);
+  assert.match(consume, /completeProviderCallback/);
+  assert.match(consume, /telegram\.session\.readback\.ok/);
   assert.match(identity, /await setCustomerSession\(userId\)/);
   assert.match(identity, /const session = await getCustomerSession\(\)/);
   assert.match(identity, /session\.customerId !== userId/);
   assert.match(start, /sanitizeSocialRedirect/);
-  assert.match(client, /router\.replace\(payload\.returnTo/);
+  assert.match(clientComplete, /acknowledgeTelegramAttempt/);
+  assert.match(client, /router\.replace\(nextPath/);
   assert.doesNotMatch(client, /router\.replace\(returnTo\)/);
+});
+
+test("Telegram browser coordinator pauses while hidden and resumes on pageshow, focus and visibility", () => {
+  const client = read("src/components/auth/TelegramLoginButton.tsx");
+  const status = read("src/app/api/auth/social/telegram/status/route.ts");
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  assert.match(client, /document\.visibilityState !== "visible"/);
+  assert.match(client, /window\.addEventListener\("pageshow", onPageShow\)/);
+  assert.match(client, /window\.addEventListener\("focus", onFocus\)/);
+  assert.match(client, /document\.addEventListener\("visibilitychange", onVisibility\)/);
+  assert.match(client, /if \(document\.visibilityState === "visible"\) poll\("visibility"\)/);
+  assert.match(client, /\/api\/auth\/social\/telegram\/status/);
+  assert.match(client, /\/api\/auth\/social\/telegram\/consume/);
+  assert.match(status, /export async function GET/);
+  assert.doesNotMatch(status, /completeProviderCallback|setCustomerSession|markTelegramAttemptConsumed/);
+  assert.match(consume, /markTelegramAttemptPrepared/);
+});
+
+test("Telegram consume is browser-bound, leased and idempotent until cookie acknowledgement", () => {
+  const state = read("src/lib/auth/social/state.ts");
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  const acknowledgement = read("src/app/api/auth/social/telegram/client-complete/route.ts");
+  assert.match(state, /processing_at is null or processing_at < now\(\) - make_interval/);
+  assert.match(state, /if \(existing\.browser_consumed_at\)/);
+  assert.match(state, /preparedResult: claimed\.completion_result/);
+  assert.match(state, /resolvedUserId: claimed\.resolved_user_id/);
+  assert.match(consume, /result\.kind === "waiting"/);
+  assert.match(consume, /getCustomerSession\(\)/);
+  assert.match(consume, /readPendingSocialIdentity\(\)/);
+  assert.match(consume, /preparedSessionIsReadable/);
+  assert.match(consume, /currentSession\.customerId === claimed\.resolvedUserId/);
+  assert.match(state, /proof\.sessionUserId !== attempt\.resolved_user_id/);
+  assert.match(acknowledgement, /clearTelegramAttemptCookie/);
+  assert.ok(acknowledgement.indexOf("acknowledgeTelegramAttempt") < acknowledgement.indexOf("clearTelegramAttemptCookie"));
+});
+
+test("existing Telegram identity signs in without phone while new missing-phone identity keeps SMS fallback", () => {
+  const identity = read("src/lib/auth/social/identity.ts");
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  assert.ok(identity.indexOf("let userId = existingIdentity?.user_id ?? null") < identity.indexOf("if (!userId) {"));
+  assert.match(identity, /if \(!userId\) return null/);
+  assert.match(identity, /createPendingSocialIdentity\(claims, attempt\.redirectTo\)/);
+  assert.match(consume, /status === "needs_phone" \? "\/login\/social\/complete"/);
+});
+
+test("Telegram lifecycle migration is applied by the standalone runtime without touching MAX", () => {
+  const runtime = read("scripts/apply-runtime-schema-migrations.mjs");
+  const dockerfile = read("Dockerfile");
+  const migration = read("supabase/migrations/20260824120000_add_telegram_browser_consume.sql");
+  const maxChallenge = read("src/lib/auth/social/max-challenge.ts");
+  assert.match(runtime, /20260824120000_add_telegram_browser_consume/);
+  assert.match(runtime, /objects\?\.lifecycle_columns/);
+  assert.match(dockerfile, /20260824120000_add_telegram_browser_consume\.sql/);
+  assert.match(migration, /enable row level security|oauth_login_attempts/);
+  assert.match(migration, /to karimoff_app/);
+  assert.match(maxChallenge, /getMaxBrowserChallengeStatus/);
 });
 
 test("popup-compatible headers are limited to pages that host Telegram Login", () => {
@@ -175,17 +242,25 @@ test("manual Telegram and VK callback runtimes stay removed while Telegram libra
 
 test("Telegram telemetry has library stages and cannot log tokens or phone claims", () => {
   const complete = read("src/app/api/auth/social/telegram/library/complete/route.ts");
-  const clientComplete = read("src/app/api/auth/social/telegram/library/client-complete/route.ts");
+  const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  const status = read("src/app/api/auth/social/telegram/status/route.ts");
+  const clientComplete = read("src/app/api/auth/social/telegram/client-complete/route.ts");
   const telemetry = read("src/lib/auth/social/telegram-observability.ts");
-  const sources = `${complete}\n${clientComplete}\n${telemetry}`;
+  const sources = `${complete}\n${consume}\n${status}\n${clientComplete}\n${telemetry}`;
   for (const event of [
+    "telegram.login.started",
     "telegram.library.start",
     "telegram.library.result",
     "telegram.id_token.valid",
+    "telegram.provider.verified",
+    "telegram.challenge.completed",
+    "telegram.browser.resume",
+    "telegram.browser.status.completed",
+    "telegram.browser.consume",
     "telegram.identity.resolved",
     "telegram.session.created",
-    "telegram.session.readback",
-    "telegram.client.completed"
+    "telegram.session.readback.ok",
+    "telegram.redirect.success"
   ]) {
     assert.match(sources, new RegExp(event.replaceAll(".", "\\.")));
   }

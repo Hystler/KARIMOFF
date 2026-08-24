@@ -7,13 +7,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 
 const TELEGRAM_LIBRARY_URL = "https://oauth.telegram.org/js/telegram-login.js?5";
+const TELEGRAM_ATTEMPT_STORAGE_KEY = "karimoff_telegram_attempt";
 
 type TelegramAttempt = {
   attemptId: string;
-  clientId: number;
+  clientId?: number;
   expiresInSeconds: number;
-  nonce: string;
-  returnTo: string;
+  nonce?: string;
+  returnTo?: string;
 };
 
 type TelegramLibraryResult = {
@@ -38,6 +39,8 @@ type LoginState =
   | { kind: "success" }
   | { kind: "error"; code: string };
 
+type BrowserTrigger = "focus" | "initial" | "interval" | "online" | "pageshow" | "resume" | "visibility";
+
 declare global {
   interface Window {
     Telegram?: {
@@ -59,11 +62,36 @@ declare global {
 
 const attemptRequests = new Map<string, Promise<TelegramAttempt>>();
 
+function storeAttempt(attemptId: string) {
+  try {
+    window.sessionStorage.setItem(TELEGRAM_ATTEMPT_STORAGE_KEY, attemptId);
+  } catch {
+    // The authoritative browser binding remains in the HttpOnly cookie.
+  }
+}
+
+function readStoredAttempt() {
+  try {
+    return window.sessionStorage.getItem(TELEGRAM_ATTEMPT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearStoredAttempt() {
+  try {
+    window.sessionStorage.removeItem(TELEGRAM_ATTEMPT_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable in private browser contexts.
+  }
+}
+
 function getErrorMessage(code: string) {
   if (code === "cancelled" || code === "popup_closed") return "Вы отменили вход через Telegram.";
-  if (code === "expired") return "Время подтверждения истекло. Попробуйте ещё раз.";
-  if (code === "link_conflict") return "Этот Telegram уже связан с другим аккаунтом.";
+  if (code === "expired" || code === "expired_state") return "Время подтверждения истекло. Попробуйте ещё раз.";
+  if (code === "identity_conflict" || code === "link_conflict") return "Этот Telegram уже связан с другим аккаунтом.";
   if (code === "rate_limit") return "Слишком много попыток входа. Подождите немного и попробуйте ещё раз.";
+  if (code === "session_missing") return "Вход подтверждён, но сессия не закрепилась. Нажмите, чтобы завершить вход.";
   if (code === "unavailable") return "Вход через Telegram сейчас недоступен. Используйте другой способ входа.";
   return "Не удалось завершить вход. Попробуйте ещё раз.";
 }
@@ -86,7 +114,7 @@ async function requestAttempt(key: string, intent: "login" | "link", returnTo: s
     method: "POST"
   }).then(async (response) => {
     const payload = await response.json().catch(() => null) as (TelegramAttempt & { ok?: boolean; error?: string }) | null;
-    if (!response.ok || !payload?.ok) {
+    if (!response.ok || !payload?.ok || !payload.attemptId || !payload.clientId || !payload.nonce) {
       throw new Error(payload?.error || "start_failed");
     }
     return payload;
@@ -108,41 +136,150 @@ export function TelegramLoginButton({
 }: TelegramLoginButtonProps) {
   const router = useRouter();
   const mountedRef = useRef(true);
-  const processingRef = useRef(false);
+  const providerResultRef = useRef(false);
+  const consumeRef = useRef(false);
+  const statusRef = useRef(false);
+  const expiresAtRef = useRef(0);
   const [scriptReady, setScriptReady] = useState(false);
   const [attempt, setAttempt] = useState<TelegramAttempt | null>(null);
   const [state, setState] = useState<LoginState>({ kind: "preparing" });
   const attemptKey = useMemo(() => `${intent}:${returnTo}`, [intent, returnTo]);
 
   const prepare = useCallback(async (preserveState = false) => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current) return null;
     if (!preserveState) setState({ kind: "preparing" });
     try {
       const nextAttempt = await requestAttempt(attemptKey, intent, returnTo);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return null;
+      expiresAtRef.current = Date.now() + nextAttempt.expiresInSeconds * 1000;
       setAttempt(nextAttempt);
       if (!preserveState) setState({ kind: "ready" });
+      return nextAttempt;
     } catch (error) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return null;
       setState({ kind: "error", code: error instanceof Error ? error.message : "technical" });
+      return null;
     }
   }, [attemptKey, intent, returnTo]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const resetAttempt = useCallback(() => {
+  const resetAttempt = useCallback((clearBrowserReference = true) => {
     attemptRequests.delete(attemptKey);
+    if (clearBrowserReference) clearStoredAttempt();
     setAttempt(null);
-    processingRef.current = false;
+    providerResultRef.current = false;
+    consumeRef.current = false;
+    statusRef.current = false;
   }, [attemptKey]);
 
-  const finishOnServer = useCallback(async (idToken: string, currentAttempt: TelegramAttempt) => {
+  const consumeInActiveBrowser = useCallback(async (currentAttempt: TelegramAttempt) => {
+    if (consumeRef.current || document.visibilityState !== "visible") return;
+    consumeRef.current = true;
     setState({ kind: "completing" });
+    try {
+      const response = await fetch("/api/auth/social/telegram/consume", {
+        body: JSON.stringify({ attemptId: currentAttempt.attemptId }),
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        ok?: boolean;
+        returnTo?: string;
+        status?: "authenticated" | "linked" | "needs_phone" | "waiting";
+      } | null;
+      if (response.status === 202 && payload?.status === "waiting") {
+        setState({ kind: "waiting" });
+        return;
+      }
+      if (!response.ok || !payload?.ok || !payload.returnTo || !payload.status) {
+        throw new Error(payload?.error || "technical");
+      }
+
+      const acknowledgement = await fetch("/api/auth/social/telegram/client-complete", {
+        body: JSON.stringify({ attemptId: currentAttempt.attemptId }),
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const acknowledged = await acknowledgement.json().catch(() => null) as {
+        error?: string;
+        ok?: boolean;
+        returnTo?: string;
+      } | null;
+      if (!acknowledgement.ok || !acknowledged?.ok) {
+        throw new Error(acknowledged?.error || "session_missing");
+      }
+
+      attemptRequests.delete(attemptKey);
+      clearStoredAttempt();
+      setState({ kind: "success" });
+      const nextPath = acknowledged.returnTo ?? payload.returnTo;
+      window.setTimeout(() => {
+        router.replace(nextPath ?? "/profile");
+        router.refresh();
+      }, 700);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "technical";
+      if (["browser_binding_mismatch", "expired_state", "state_replay"].includes(code)) {
+        resetAttempt();
+      }
+      setState({ kind: "error", code });
+    } finally {
+      consumeRef.current = false;
+    }
+  }, [attemptKey, resetAttempt, router]);
+
+  const checkStatus = useCallback(async (currentAttempt: TelegramAttempt, reason: BrowserTrigger) => {
+    if (statusRef.current || document.visibilityState !== "visible") return;
+    statusRef.current = true;
+    try {
+      const query = new URLSearchParams({ attempt: currentAttempt.attemptId, reason });
+      const response = await fetch(`/api/auth/social/telegram/status?${query}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+        method: "GET"
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        ok?: boolean;
+        status?: "completed" | "expired" | "failed" | "pending";
+      } | null;
+      if (!response.ok || !payload?.ok || !payload.status) {
+        throw new Error(payload?.error || "technical");
+      }
+      if (payload.status === "pending") {
+        setState({ kind: "waiting" });
+        return;
+      }
+      if (payload.status === "expired") {
+        resetAttempt();
+        setState({ kind: "error", code: "expired" });
+        return;
+      }
+      if (payload.status === "failed") {
+        setState({ kind: "error", code: "technical" });
+        return;
+      }
+
+      setState({ kind: "completing" });
+      if (document.visibilityState === "visible") {
+        await consumeInActiveBrowser(currentAttempt);
+      }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "technical";
+      if (["browser_binding_mismatch", "expired_state", "state_replay"].includes(code)) {
+        resetAttempt();
+      }
+      setState({ kind: "error", code });
+    } finally {
+      statusRef.current = false;
+    }
+  }, [consumeInActiveBrowser, resetAttempt]);
+
+  const finishProviderVerification = useCallback(async (idToken: string, currentAttempt: TelegramAttempt) => {
     try {
       const response = await fetch("/api/auth/social/telegram/library/complete", {
         body: JSON.stringify({ attemptId: currentAttempt.attemptId, idToken }),
@@ -154,41 +291,28 @@ export function TelegramLoginButton({
       const payload = await response.json().catch(() => null) as {
         error?: string;
         ok?: boolean;
-        returnTo?: string;
-        status?: "authenticated" | "linked" | "needs_phone";
+        status?: "completed";
       } | null;
-      if (!response.ok || !payload?.ok || !payload.returnTo || !payload.status) {
+      if (!response.ok || !payload?.ok || payload.status !== "completed") {
         throw new Error(payload?.error || "technical");
       }
 
-      attemptRequests.delete(attemptKey);
-      setState({ kind: "success" });
-
-      if (payload.status !== "needs_phone") {
-        void fetch("/api/auth/social/telegram/library/client-complete", {
-          body: JSON.stringify({ attemptId: currentAttempt.attemptId }),
-          cache: "no-store",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          keepalive: true,
-          method: "POST"
-        }).catch(() => undefined);
+      setState({ kind: document.visibilityState === "visible" ? "completing" : "waiting" });
+      if (document.visibilityState === "visible") {
+        await checkStatus(currentAttempt, "initial");
       }
-
-      window.setTimeout(() => {
-        router.replace(payload.returnTo ?? "/profile");
-        router.refresh();
-      }, 900);
     } catch (error) {
       const code = error instanceof Error ? error.message : "technical";
       resetAttempt();
       setState({ kind: "error", code });
       window.setTimeout(() => void prepare(true), 0);
+    } finally {
+      providerResultRef.current = false;
     }
-  }, [attemptKey, prepare, resetAttempt, router]);
+  }, [checkStatus, prepare, resetAttempt]);
 
   const handleLibraryResult = useCallback((result: TelegramLibraryResult) => {
-    if (processingRef.current) return;
+    if (providerResultRef.current) return;
     window.Telegram?.Login?.close();
 
     if (result.error || !result.id_token || !attempt) {
@@ -198,20 +322,104 @@ export function TelegramLoginButton({
       return;
     }
 
-    processingRef.current = true;
-    void finishOnServer(result.id_token, attempt);
-  }, [attempt, finishOnServer, prepare, resetAttempt]);
+    providerResultRef.current = true;
+    void finishProviderVerification(result.id_token, attempt);
+  }, [attempt, finishProviderVerification, prepare, resetAttempt]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!scriptReady) return;
+    let cancelled = false;
+    const initialize = async () => {
+      const storedAttempt = readStoredAttempt();
+      if (storedAttempt) {
+        try {
+          const response = await fetch("/api/auth/social/telegram/resume", {
+            body: JSON.stringify({ attemptId: storedAttempt }),
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "POST"
+          });
+          const payload = await response.json().catch(() => null) as {
+            attempt?: { attemptId: string; expiresInSeconds: number; status: "completed" | "failed" | "pending" } | null;
+            ok?: boolean;
+          } | null;
+          if (!cancelled && response.ok && payload?.ok && payload.attempt) {
+            const resumed: TelegramAttempt = {
+              attemptId: payload.attempt.attemptId,
+              expiresInSeconds: payload.attempt.expiresInSeconds
+            };
+            expiresAtRef.current = Date.now() + resumed.expiresInSeconds * 1000;
+            setAttempt(resumed);
+            setState({ kind: payload.attempt.status === "completed" ? "completing" : "waiting" });
+            void checkStatus(resumed, "resume");
+            return;
+          }
+        } catch {
+          // A stale local reference is replaced with a fresh server attempt below.
+        }
+        clearStoredAttempt();
+      }
+      if (!cancelled) void prepare();
+    };
+    void initialize();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkStatus, prepare, scriptReady]);
+
+  useEffect(() => {
+    if (!attempt || !["waiting", "completing"].includes(state.kind)) return;
+    const poll = (reason: BrowserTrigger) => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() >= expiresAtRef.current) {
+        resetAttempt();
+        setState({ kind: "error", code: "expired" });
+        return;
+      }
+      void checkStatus(attempt, reason);
+    };
+    const interval = window.setInterval(() => poll("interval"), 2_000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") poll("visibility");
+    };
+    const onPageShow = () => poll("pageshow");
+    const onFocus = () => poll("focus");
+    const onOnline = () => poll("online");
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [attempt, checkStatus, resetAttempt, state.kind]);
 
   function handleClick() {
     onAttemptStart?.();
-    if (state.kind === "error" && !attempt) {
+    if (state.kind === "error" && attempt) {
+      setState({ kind: "completing" });
+      void checkStatus(attempt, "resume");
+      return;
+    }
+    if (!attempt || !attempt.clientId || !attempt.nonce || !window.Telegram?.Login?.auth) {
       void prepare();
       return;
     }
-    if (!attempt || !window.Telegram?.Login?.auth || ["waiting", "completing", "success"].includes(state.kind)) {
-      return;
-    }
+    if (["waiting", "completing", "success"].includes(state.kind)) return;
 
+    storeAttempt(attempt.attemptId);
     setState({ kind: "waiting" });
     try {
       const opening = window.Telegram.Login.auth({
@@ -244,8 +452,8 @@ export function TelegramLoginButton({
         : visibleState.kind === "preparing"
           ? "Готовим безопасный вход…"
           : intent === "link"
-            ? "Подключить Telegram"
-            : "Войти через Telegram";
+              ? "Подключить Telegram"
+              : "Войти через Telegram";
 
   return (
     <>
@@ -253,10 +461,7 @@ export function TelegramLoginButton({
         id="telegram-login-library"
         src={TELEGRAM_LIBRARY_URL}
         strategy="afterInteractive"
-        onReady={() => {
-          setScriptReady(true);
-          void prepare();
-        }}
+        onReady={() => setScriptReady(true)}
         onError={() => setState({ kind: "error", code: "unavailable" })}
       />
       <button
@@ -278,7 +483,7 @@ export function TelegramLoginButton({
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-black leading-5">{label}</span>
             <span className="mt-0.5 block text-xs font-semibold leading-5 text-white/80">
-              {visibleState.kind === "waiting" ? "После подтверждения вернитесь сюда" : "Быстрый вход без ввода пароля"}
+              {visibleState.kind === "waiting" || visibleState.kind === "completing" ? "После подтверждения вернитесь сюда" : "Быстрый вход без ввода пароля"}
             </span>
           </span>
         )}
@@ -291,13 +496,18 @@ export function TelegramLoginButton({
             <div className="text-[13px] leading-5 text-karimoff-muted" aria-live="polite">
               {visibleState.kind === "error" ? (
                 <p className="font-semibold text-red-700">{getErrorMessage(visibleState.code)}</p>
-              ) : visibleState.kind === "waiting" || visibleState.kind === "completing" ? (
+              ) : visibleState.kind === "waiting" ? (
                 <>
-                  <p className="font-bold text-karimoff-black">Подтвердите вход в Telegram.</p>
+                  <p className="font-bold text-karimoff-black">Ждём подтверждение в Telegram.</p>
                   <p className="mt-1">После подтверждения вернитесь сюда — вход завершится автоматически.</p>
                 </>
+              ) : visibleState.kind === "completing" ? (
+                <>
+                  <p className="font-bold text-karimoff-black">Вход подтверждён.</p>
+                  <p className="mt-1">Завершаем вход…</p>
+                </>
               ) : visibleState.kind === "success" ? (
-                <p className="font-bold text-emerald-700">Вы вошли через Telegram. Возвращаем вас в KARIMOFF…</p>
+                <p className="font-bold text-emerald-700">Готово. Вы вошли через Telegram.</p>
               ) : (
                 <>
                   <p className="font-bold text-karimoff-black">Вход выполняется через официальный Telegram.</p>

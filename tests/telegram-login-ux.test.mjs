@@ -41,7 +41,7 @@ test("Telegram is the primary human-readable login option and remains on the KAR
   assert.match(telegram, /Подтвердите вход в Telegram/);
   assert.match(telegram, /После подтверждения вернитесь сюда — вход завершится автоматически/);
   assert.match(telegram, /SocialProviderIcon provider="telegram"/);
-  assert.match(telegram, /router\.replace\(payload\.returnTo/);
+  assert.match(telegram, /router\.replace\(nextPath/);
   assert.doesNotMatch(telegram, /window\.location\s*=|oauth\.telegram\.org\/auth/);
   assert.ok(social.indexOf("enabled.telegram") < social.indexOf("enabled.max"));
   assert.ok(authForm.indexOf("<SocialAuthButtons") < authForm.indexOf("<form action={passwordAction}"));
@@ -78,11 +78,12 @@ test("Telegram cancellation, expiry and identity conflict are human-readable", (
 test("missing Telegram phone continues through safe SMS confirmation", () => {
   const complete = read("src/components/auth/SocialCompleteForm.tsx");
   const action = read("src/app/login/social/complete/actions.ts");
-  const libraryRoute = read("src/app/api/auth/social/telegram/library/complete/route.ts");
+  const consumeRoute = read("src/app/api/auth/social/telegram/consume/route.ts");
   assert.match(complete, /Telegram не передал номер телефона/);
   assert.match(complete, /Подтвердите номер по SMS/);
   assert.match(complete, /По имени или username аккаунты не объединяются/);
-  assert.match(libraryRoute, /status: result\.kind/);
+  assert.match(consumeRoute, /status: resolution\.kind/);
+  assert.match(consumeRoute, /readPendingSocialIdentity/);
   assert.match(action, /Не удалось завершить вход\. Попробуйте позже\./);
 });
 

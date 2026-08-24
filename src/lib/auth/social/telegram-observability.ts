@@ -3,18 +3,26 @@ import "server-only";
 import type { OAuthBrowserBinding } from "./state-policy";
 
 export type TelegramAuthEvent =
+  | "telegram.browser.consume"
+  | "telegram.browser.resume"
+  | "telegram.browser.status.completed"
+  | "telegram.challenge.completed"
   | "telegram.client.completed"
   | "telegram.failed"
   | "telegram.id_token.valid"
   | "telegram.identity.resolved"
   | "telegram.library.result"
   | "telegram.library.start"
+  | "telegram.login.started"
+  | "telegram.provider.verified"
+  | "telegram.redirect.success"
   | "telegram.session.created"
-  | "telegram.session.readback";
+  | "telegram.session.readback.ok";
 
 type TelegramAuthEventDetails = {
   attemptId: string;
   stage: string;
+  browserTrigger?: "focus" | "initial" | "interval" | "online" | "pageshow" | "resume" | "visibility";
   browserBinding?: OAuthBrowserBinding;
   errorCode?: string;
   httpStatus?: number | null;
@@ -34,6 +42,7 @@ export function logTelegramAuthEvent(event: TelegramAuthEvent, details: Telegram
     stage: details.stage,
     timestamp: new Date().toISOString(),
     ...(details.browserBinding ? { browser_binding: details.browserBinding } : {}),
+    ...(details.browserTrigger ? { browser_trigger: details.browserTrigger } : {}),
     ...(details.errorCode ? { error_code: details.errorCode } : {}),
     ...(details.httpStatus ? { http_status: details.httpStatus } : {}),
     ...(typeof details.durationMs === "number" ? { duration_ms: Math.max(0, Math.round(details.durationMs)) } : {}),

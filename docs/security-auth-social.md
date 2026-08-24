@@ -28,13 +28,13 @@ The generated file has mode `0600`. Put only `ADMIN_PASSWORD_HASH` into the targ
 
 Telegram remains the primary social login. The official Telegram Login JavaScript Library opens the provider flow from the KARIMOFF page with Russian UI, `profile`, `phone` and `write` scopes. The browser sends only the returned ID token and an opaque attempt ID to the server.
 
-The server validates the one-time attempt, nonce, RS256 signature from Telegram JWKS, issuer, audience, expiration and issued-at time. The stable identity key is Telegram `sub`. Provider tokens are neither logged nor persisted. A missing verified phone continues through the KARIMOFF SMS confirmation flow.
+The server validates the browser-bound one-time attempt, nonce, RS256 signature from Telegram JWKS, issuer, audience, expiration and issued-at time. Provider verification only marks the short-lived attempt completed and stores encrypted minimal claims; it does not create a browser session. The active origin page performs a read-only status check after `pageshow`, `focus` or returning to visible, then atomically consumes the attempt, verifies session readback and follows the safe local `returnTo`. A hidden Safari page cannot consume an attempt. The stable identity key is Telegram `sub`. Provider tokens are neither logged nor persisted. A missing verified phone continues through the KARIMOFF SMS confirmation flow, while an existing Telegram identity does not require the phone again.
 
 Environment:
 
 - `TELEGRAM_OIDC_CLIENT_ID`.
 
-The existing Telegram client secret may remain server-side for compatibility, but the JavaScript Login Library never receives it.
+The existing Telegram client secret may remain server-side for compatibility, but the JavaScript Login Library never receives it. See [Telegram Login reliability](./telegram-login-reliability.md).
 
 ## MAX Login
 
@@ -61,7 +61,7 @@ See [MAX integration architecture](./max-auth-integration.md).
 - The login order is Telegram, MAX, `или`, phone/password, SMS.
 - A provider button is rendered only when that provider is fully configured.
 - Attempts retain a sanitized relative `returnTo`; absolute and protocol-relative redirects fall back to `/profile`.
-- The MAX origin tab remains the login coordinator and resumes a pending attempt after refresh or returning from the app.
+- The MAX and Telegram origin tabs remain their own login coordinators and resume pending attempts after refresh or returning from an app.
 - Provider errors are converted to Russian user-facing messages. Tokens and raw signed payloads are never shown.
 - Display name, username and avatar never trigger account merging.
 

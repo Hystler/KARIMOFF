@@ -39,6 +39,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026081412000
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql ./supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql ./supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260820190000_add_max_social_auth.sql ./supabase/migrations/20260820190000_add_max_social_auth.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260824120000_add_telegram_browser_consume.sql ./supabase/migrations/20260824120000_add_telegram_browser_consume.sql
 
 USER nextjs
 
