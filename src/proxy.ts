@@ -4,7 +4,10 @@ import {
   isReadOnlyRequest,
   MAINTENANCE_MESSAGE
 } from "@/lib/maintenance";
-import { isAdminHostAllowed, isAdminPath, requestHostname } from "@/lib/admin-host";
+
+function isAdminPath(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/api/admin" || pathname.startsWith("/api/admin/");
+}
 
 function adminResponseHeaders(response: NextResponse) {
   response.headers.set("Cache-Control", "private, no-store");
@@ -16,20 +19,6 @@ export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (isAdminPath(pathname)) {
-    const allowed = isAdminHostAllowed({
-      host: requestHostname(request.headers, request.nextUrl.host),
-      appOrigin: process.env.APP_ORIGIN,
-      nodeEnv: process.env.NODE_ENV,
-      testOrderMode: process.env.TEST_ORDER_MODE
-    });
-
-    if (!allowed) {
-      if (pathname === "/api/admin" || pathname.startsWith("/api/admin/")) {
-        return NextResponse.json({ error: "Not Found" }, { status: 404 });
-      }
-      return NextResponse.rewrite(new URL("/_admin-not-found", request.url));
-    }
-
     if (!isMaintenanceMode() || isReadOnlyRequest(request.method)) {
       return adminResponseHeaders(NextResponse.next());
     }

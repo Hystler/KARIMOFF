@@ -85,39 +85,17 @@ test("retired social network and protected admin contact do not enter public run
   assert.doesNotMatch(settings, /\.select\("\*"\)/);
 });
 
-test("admin surface is limited to control host with an explicit test-stand exception", () => {
-  const moduleUrl = pathToFileURL(join(root, "src/lib/admin-host.ts")).href;
-  const result = runTypeScript(`
-    const admin = await import(${JSON.stringify(moduleUrl)});
-    const base = { appOrigin: "https://hystler-karimoff-stand-ad9d.twc1.net", nodeEnv: "production", testOrderMode: "true" };
-    console.log(JSON.stringify({
-      publicHost: admin.isAdminHostAllowed({ ...base, host: "karimoff.site" }),
-      publicWww: admin.isAdminHostAllowed({ ...base, host: "www.karimoff.site" }),
-      control: admin.isAdminHostAllowed({ ...base, host: "control.karimoff.site" }),
-      stand: admin.isAdminHostAllowed({ ...base, host: "hystler-karimoff-stand-ad9d.twc1.net" }),
-      otherStand: admin.isAdminHostAllowed({ ...base, host: "other.twc1.net" }),
-      adminPath: admin.isAdminPath("/admin/analytics"),
-      adminApi: admin.isAdminPath("/api/admin/analytics/report/export"),
-      publicPath: admin.isAdminPath("/menu")
-    }));
-  `);
-  assert.deepEqual(result, {
-    publicHost: false,
-    publicWww: false,
-    control: true,
-    stand: true,
-    otherStand: false,
-    adminPath: true,
-    adminApi: true,
-    publicPath: false
-  });
+test("admin remains available on the primary host and excluded from indexing", () => {
   const proxy = read("src/proxy.ts");
   const layout = read("src/app/admin/layout.tsx");
   const sitemap = read("src/app/sitemap.ts");
-  assert.match(proxy, /\/_admin-not-found/);
+  const robots = read("src/app/robots.ts");
+  assert.match(proxy, /pathname === "\/admin"/);
   assert.match(proxy, /X-Robots-Tag/);
   assert.match(layout, /index: false, follow: false/);
+  assert.doesNotMatch(layout, /headers\(\)|notFound\(\)/);
   assert.doesNotMatch(sitemap, /\/admin/);
+  assert.match(robots, /"\/admin\/"/);
 });
 
 test("Telegram, MAX, password, SMS, and safe return paths remain wired", () => {

@@ -6,13 +6,17 @@ Legacy owner login does not accept `ADMIN_PASSWORD` or any default PIN. The supp
 
 - `ADMIN_PHONE`;
 - `ADMIN_PASSWORD_HASH`, a bcrypt hash with cost 12;
-- optional `ADMIN_TOTP_SECRET`.
+- reserved `ADMIN_TOTP_SECRET` verification hook.
 
 Staff passwords in `staff_users.password_hash` are also bcrypt. Legacy scrypt hashes are upgraded to bcrypt after a successful login. Login rotates the database-backed session. Admin cookies are `HttpOnly`, `Secure` in production and `SameSite=Strict`; customer cookies are `HttpOnly`, `Secure` in production and `SameSite=Lax`.
 
 Failed logins are audited without passwords and protected by a database rate limiter with temporary lockout. Password rotation invalidates legacy owner sessions because the session actor fingerprint contains the active password hash.
 
 `APP_ORIGIN` must contain the public HTTPS origin without a path. It keeps same-origin auth behavior correct behind Timeweb App Platform.
+
+### TOTP readiness
+
+The owner login can validate a six-digit TOTP code with a one-step clock window, and failed codes use the same audited rate limit and temporary lockout as a failed password. This is not yet a complete production second-factor feature. KARIMOFF does not currently provide owner enrollment with a displayed/confirmed QR secret, single-use recovery codes, recovery-code rotation, or a protected reset ceremony. Keep `ADMIN_TOTP_SECRET` unset until those recovery and enrollment paths are implemented and tested. Staff accounts do not currently enroll individual TOTP factors.
 
 ### Safe owner password reset
 

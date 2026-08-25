@@ -182,6 +182,33 @@ test("admin rate limiting has exponential temporary lockout and session rotation
   assert.match(adminAuth, /secure: process\.env\.NODE_ENV === "production"/);
 });
 
+test("owner TOTP validates RFC 6238 codes but remains disabled pending recovery support", () => {
+  const output = importTypescriptScript("src/lib/totp.ts", `
+    const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+    console.log(JSON.stringify({
+      knownVector: subject.verifyTotpCode({ secret, code: "287082", nowMs: 59_000 }),
+      adjacentWindow: subject.verifyTotpCode({ secret, code: "287082", nowMs: 89_000 }),
+      wrongCode: subject.verifyTotpCode({ secret, code: "287083", nowMs: 59_000 }),
+      malformed: subject.verifyTotpCode({ secret, code: "28 7082", nowMs: 59_000 })
+    }));
+  `);
+  assert.deepEqual(JSON.parse(output), {
+    knownVector: true,
+    adjacentWindow: true,
+    wrongCode: false,
+    malformed: false
+  });
+  const adminAuth = read("src/lib/admin-auth.ts");
+  const loginPage = read("src/app/admin/login/page.tsx");
+  const loginAction = read("src/app/admin/login/actions.ts");
+  const securityDocs = read("docs/security-auth-social.md");
+  assert.match(adminAuth, /ADMIN_TOTP_SECRET/);
+  assert.match(loginPage, /isAdminTotpConfigured/);
+  assert.match(loginAction, /checkAuthRateLimit\("admin_login"/);
+  assert.match(loginAction, /recordAuthFailure\("admin_login"/);
+  assert.match(securityDocs, /Keep `ADMIN_TOTP_SECRET` unset/);
+});
+
 test("404 is brand-safe, responsive and respects reduced motion", () => {
   const page = read("src/app/not-found.tsx");
   const css = read("src/app/globals.css");
