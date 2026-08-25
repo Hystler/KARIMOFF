@@ -20,13 +20,9 @@ const migrations = [
     name: "20260812153000_add_production_accounting",
     applied: async (sql) => {
       const [table] = await sql`
-        select 1
-        from information_schema.tables
-        where table_schema = 'public'
-          and table_name = 'production_recipes'
-        limit 1
+        select to_regclass('public.production_recipes') is not null as exists
       `;
-      return Boolean(table);
+      return Boolean(table?.exists);
     }
   },
   {
