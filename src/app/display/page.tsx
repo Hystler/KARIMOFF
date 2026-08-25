@@ -34,7 +34,9 @@ export default async function DisplayPage({
   } catch {
     return <OperationsUnavailable title="Табло временно недоступно" message="Заказы не изменены. Проверьте связь и повторите." />;
   }
+  const displayTestOrders = process.env.TEST_ORDER_MODE === "true";
   const publicOrders: PublicDisplayOrder[] = orders
+    .filter((order) => order.isTest === displayTestOrders)
     .filter((order) => isOrderVisibleToKitchen(order, sla))
     .map((order) => ({
       id: order.id,

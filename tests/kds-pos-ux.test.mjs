@@ -12,6 +12,7 @@ const pos = read("src/components/operations/PosWorkspace.tsx");
 const customizer = read("src/components/operations/PosProductCustomizer.tsx");
 const kitchen = read("src/components/operations/KitchenWorkspace.tsx");
 const display = read("src/components/operations/PickupDisplay.tsx");
+const displayPage = read("src/app/display/page.tsx");
 const queries = read("src/lib/order-flow/queries.ts");
 const service = read("src/lib/order-flow/service.ts");
 const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
@@ -143,6 +144,8 @@ test("test orders run through KDS but skip stock and business analytics", () => 
   assert.doesNotMatch(testBranch, /inventory|set_order_status_staff_atomic|loyalty|fiscal/);
   assert.match(migration, /where o\.id is null or not o\.is_test/);
   assert.match(pos, /Тестовый режим: заказы видны кухне/);
+  assert.match(displayPage, /process\.env\.TEST_ORDER_MODE === "true"/);
+  assert.match(displayPage, /order\.isTest === displayTestOrders/);
 });
 
 test("structured modifiers are server-validated and snapshot effective ingredients", () => {
