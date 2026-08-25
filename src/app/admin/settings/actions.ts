@@ -6,6 +6,7 @@ import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { siteSettingsSchema } from "@/lib/settings-schema";
+import { sanitizePublicContactPhone } from "@/lib/settings";
 import { uploadImageToStorage } from "@/lib/storage-images";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
@@ -93,7 +94,6 @@ export async function updateSiteSettingsAction(formData: FormData) {
     franchise_hero_image_url: formData.get("franchise_hero_image_url"),
     about_hero_image_url: formData.get("about_hero_image_url"),
     telegram_url: formData.get("telegram_url"),
-    instagram_url: formData.get("instagram_url"),
     tiktok_url: formData.get("tiktok_url")
   });
 
@@ -115,11 +115,10 @@ export async function updateSiteSettingsAction(formData: FormData) {
     {
       id: "main",
       ...parsed.data,
-      phone: normalizeOptionalPhone(parsed.data.phone),
+      phone: sanitizePublicContactPhone(normalizeOptionalPhone(parsed.data.phone)),
       address: parsed.data.address || null,
       working_hours: parsed.data.working_hours || null,
       telegram_url: parsed.data.telegram_url || null,
-      instagram_url: parsed.data.instagram_url || null,
       tiktok_url: parsed.data.tiktok_url || null,
       hero_title: parsed.data.hero_title || null,
       hero_subtitle: parsed.data.hero_subtitle || null,

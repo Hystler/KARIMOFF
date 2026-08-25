@@ -21,6 +21,36 @@ export type ProductModifierOption = {
   sort_order: number;
 };
 
+export type ProductModifierGroupOption = {
+  id: string;
+  label: string;
+  modifier_type: "remove" | "add" | "replace";
+  ingredient_id: string | null;
+  replacement_ingredient_id: string | null;
+  quantity_delta: number;
+  unit: "g" | "ml" | "pcs";
+  price_delta: number;
+  kitchen_note: string | null;
+  is_default: boolean;
+  sort_order: number;
+};
+
+export type ProductModifierGroup = {
+  id: string;
+  name: string;
+  selection_type: "single" | "multi";
+  min_selections: number;
+  max_selections: number;
+  sort_order: number;
+  options: ProductModifierGroupOption[];
+};
+
+export type ProductCompositionItem = {
+  ingredient_id: string;
+  name: string;
+  sort_order: number;
+};
+
 export type Product = {
   id: string;
   created_at?: string;
@@ -42,4 +72,5 @@ export type Product = {
   allergens?: string[] | null;
   images?: ProductImage[];
   modifier_options?: ProductModifierOption[];
+  modifier_groups?: ProductModifierGroup[];
 };

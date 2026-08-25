@@ -3,18 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { economicsKeys, normalizeEconomicsRow } from "@/lib/economics";
 import { createDatabaseServerClient } from "@/lib/database/server";
-
-export type EconomicsSaveState = {
-  message: string | null;
-  status: "idle" | "success" | "error";
-};
-
-export const initialEconomicsSaveState: EconomicsSaveState = {
-  message: null,
-  status: "idle"
-};
+import type { EconomicsSaveState } from "@/lib/economics-input";
+import { validateEconomicsFormData } from "@/lib/economics-validation";
+import { logOperationalError, logOperationalEvent } from "@/lib/observability";
 
 async function requireAdmin() {
   const isAuthed = await isAdminAuthenticated();
@@ -36,29 +28,39 @@ export async function saveEconomicsSettingsAction(
     return { status: "error", message: "База данных не подключена." };
   }
 
-  const values = normalizeEconomicsRow(
-    Object.fromEntries(
-      economicsKeys.map((key) => {
-        const raw = String(formData.get(key) || "0").replace(",", ".");
-        return [key, Number(raw) || 0];
-      })
-    )
-  );
-
-  const { error } = await database.from("economics_settings").upsert(
-    {
-      id: "main",
-      ...values
-    },
-    { onConflict: "id" }
-  );
-
-  if (error) {
-    return { status: "error", message: error.message };
+  const validation = validateEconomicsFormData(formData);
+  if (!validation.success) {
+    return {
+      status: "error",
+      message: "Проверьте выделенные поля.",
+      fieldErrors: validation.fieldErrors
+    };
   }
 
-  revalidatePath("/admin/economics");
+  try {
+    const { error } = await database.from("economics_settings").upsert(
+      {
+        id: "main",
+        ...validation.values
+      },
+      { onConflict: "id" }
+    );
 
-  return { status: "success", message: "Сохранено." };
+    if (error) {
+      logOperationalError("economics.settings_save_failed", { reason: "database_write" });
+      return { status: "error", message: "Не удалось сохранить вводные. Попробуйте ещё раз." };
+    }
+
+    revalidatePath("/admin/economics");
+    logOperationalEvent("economics.settings_saved");
+
+    return {
+      status: "success",
+      message: "Вводные сохранены.",
+      values: validation.values
+    };
+  } catch {
+    logOperationalError("economics.settings_save_failed", { reason: "unexpected" });
+    return { status: "error", message: "Не удалось сохранить вводные. Попробуйте ещё раз." };
+  }
 }
-

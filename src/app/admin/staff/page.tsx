@@ -4,14 +4,20 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { createStaffAction, toggleStaffAction } from "./actions";
 
-const roleLabels = { admin: "Администратор", manager: "Управляющий", cook: "Повар" } as const;
+const roleLabels = {
+  owner: "Владелец",
+  admin: "Администратор",
+  manager: "Управляющий",
+  cashier: "Кассир",
+  cook: "Повар"
+} as const;
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   const actor = await getCurrentStaff();
   if (!actor) redirect("/admin/login");
-  if (actor.role !== "admin") redirect("/admin");
+  if (!["owner", "admin"].includes(actor.role)) redirect("/admin");
 
   const params = await searchParams;
   const database = createDatabaseServerClient();
@@ -40,8 +46,10 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
           <label className="admin-field">Роль
             <select name="role" defaultValue="cook">
               <option value="cook">Повар</option>
+              <option value="cashier">Кассир</option>
               <option value="manager">Управляющий</option>
               <option value="admin">Администратор</option>
+              <option value="owner">Владелец</option>
             </select>
           </label>
           <label className="admin-field">Временный пароль<input name="password" type="password" minLength={10} required placeholder="От 10 символов" /></label>

@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function EditProductionRecipePage({ params, searchParams }: PageProps) {
   const staff = await getCurrentStaff();
-  if (!staff || staff.role === "cook") redirect("/admin/login");
+  if (!staff || !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin/login");
   const { id } = await params;
   const currentSearchParams = searchParams ? await searchParams : {};
   const workspace = await getProductionRecipeById(id);

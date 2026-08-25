@@ -17,8 +17,8 @@ collection, or real online payments until the following items are complete.
   commit or print it.
 - Generate independent high-entropy `SESSION_SECRET` and
   `AUTH_RATE_LIMIT_SECRET` values in the deployment environment.
-- Configure `ADMIN_TOTP_SECRET` in the deployment environment and enroll the
-  owner before granting other people access to the admin area.
+- Complete owner TOTP enrollment, one-time recovery codes, secure reset and
+  recovery testing. Keep `ADMIN_TOTP_SECRET` unset until that flow is complete.
 - Verify the Supabase Storage bucket policies and retain service-role upload
   access only. Public read is acceptable only for intentionally public media.
 - Define backup frequency, restore testing, retention, incident response, and

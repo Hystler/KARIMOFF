@@ -5,7 +5,25 @@ import {
   MAINTENANCE_MESSAGE
 } from "@/lib/maintenance";
 
+function isAdminPath(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/api/admin" || pathname.startsWith("/api/admin/");
+}
+
+function adminResponseHeaders(response: NextResponse) {
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  return response;
+}
+
 export function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  if (isAdminPath(pathname)) {
+    if (!isMaintenanceMode() || isReadOnlyRequest(request.method)) {
+      return adminResponseHeaders(NextResponse.next());
+    }
+  }
+
   if (!isMaintenanceMode() || isReadOnlyRequest(request.method)) {
     return NextResponse.next();
   }
@@ -36,5 +54,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|assets/).*)"]
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets/).*)"]
 };

@@ -16,6 +16,7 @@ import {
   Plug,
   Settings,
   ShoppingBag,
+  SquareTerminal,
   Users,
   UtensilsCrossed,
   WalletCards,
@@ -28,26 +29,33 @@ import { logoutAction } from "@/app/admin/login/actions";
 import type { CurrentStaff } from "@/lib/admin-auth";
 
 const navigation = [
-  { href: "/admin", label: "Обзор", icon: LayoutDashboard, roles: ["admin", "manager"] },
-  { href: "/admin/kitchen", label: "Кухня", icon: ChefHat, roles: ["admin", "manager", "cook"] },
-  { href: "/admin/orders", label: "Заказы", icon: ShoppingBag, roles: ["admin", "manager"] },
-  { href: "/admin/products", label: "Меню", icon: UtensilsCrossed, roles: ["admin", "manager"] },
-  { href: "/admin/ingredients", label: "Ингредиенты", icon: PackageOpen, roles: ["admin", "manager"] },
-  { href: "/admin/inventory", label: "Склад", icon: Boxes, roles: ["admin", "manager"] },
-  { href: "/admin/production", label: "Производство", icon: Factory, roles: ["admin", "manager"] },
-  { href: "/admin/customers", label: "Пользователи", icon: Users, roles: ["admin", "manager"] },
-  { href: "/admin/economics", label: "Экономика", icon: BarChart3, roles: ["admin", "manager"] },
-  { href: "/admin/analytics/sales", label: "Продажи", icon: ChartNoAxesCombined, roles: ["admin", "manager"] },
-  { href: "/admin/integrations/evotor", label: "Эвотор", icon: Plug, roles: ["admin", "manager"] },
-  { href: "/admin/loyalty", label: "Лояльность", icon: WalletCards, roles: ["admin", "manager"] },
-  { href: "/admin/leads", label: "Заявки", icon: FileText, roles: ["admin", "manager"] },
-  { href: "/admin/vacancies", label: "Вакансии", icon: BriefcaseBusiness, roles: ["admin", "manager"] },
-  { href: "/admin/cookies", label: "Cookies", icon: Cookie, roles: ["admin", "manager"] },
-  { href: "/admin/staff", label: "Сотрудники", icon: Users, roles: ["admin"] },
-  { href: "/admin/settings", label: "Настройки", icon: Settings, roles: ["admin", "manager"] }
+  { href: "/admin", label: "Обзор", icon: LayoutDashboard, roles: ["owner", "admin", "manager"] },
+  { href: "/pos", label: "Касса POS", icon: SquareTerminal, roles: ["owner", "admin", "manager", "cashier"] },
+  { href: "/kitchen", label: "Кухня", icon: ChefHat, roles: ["owner", "admin", "manager", "cashier", "cook"] },
+  { href: "/admin/orders", label: "Заказы", icon: ShoppingBag, roles: ["owner", "admin", "manager", "cashier"] },
+  { href: "/admin/products", label: "Меню", icon: UtensilsCrossed, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/ingredients", label: "Ингредиенты", icon: PackageOpen, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/inventory", label: "Склад", icon: Boxes, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/production", label: "Производство", icon: Factory, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/customers", label: "Пользователи", icon: Users, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/economics", label: "Экономика", icon: BarChart3, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/analytics", label: "Аналитика", icon: ChartNoAxesCombined, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/integrations/evotor", label: "Эвотор", icon: Plug, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/loyalty", label: "Лояльность", icon: WalletCards, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/leads", label: "Заявки", icon: FileText, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/vacancies", label: "Вакансии", icon: BriefcaseBusiness, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/cookies", label: "Cookies", icon: Cookie, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/staff", label: "Сотрудники", icon: Users, roles: ["owner", "admin"] },
+  { href: "/admin/settings", label: "Настройки", icon: Settings, roles: ["owner", "admin", "manager"] }
 ] as const;
 
-const roleLabels = { admin: "Администратор", manager: "Управляющий", cook: "Повар" };
+const roleLabels = {
+  owner: "Владелец",
+  admin: "Администратор",
+  manager: "Управляющий",
+  cashier: "Кассир",
+  cook: "Повар"
+};
 
 export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
   const pathname = usePathname();
@@ -59,7 +67,7 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
       {isOpen ? <button type="button" className="admin-sidebar-overlay" aria-label="Закрыть меню" onClick={() => setIsOpen(false)} /> : null}
       <aside className={`admin-sidebar ${isOpen ? "admin-sidebar-open" : ""}`}>
         <div className="flex h-[72px] items-center justify-between border-b border-white/10 px-5">
-          <Link href={staff.role === "cook" ? "/admin/kitchen" : "/admin"} className="text-xl font-black text-white">
+          <Link href={staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} className="text-xl font-black text-white">
             KARIM<span className="text-karimoff-orange">O</span>FF
           </Link>
           <button type="button" onClick={() => setIsOpen(false)} className="admin-sidebar-close" aria-label="Закрыть">

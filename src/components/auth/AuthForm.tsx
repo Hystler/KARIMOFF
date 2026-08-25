@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { CircleAlert } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
 import {
   confirmLoginAction,
   confirmRegisterAction,
@@ -11,20 +12,24 @@ import {
   requestRegisterCodeAction
 } from "@/app/auth/actions";
 import { PhoneInput } from "@/components/forms/PhoneInput";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { initialAuthActionState } from "@/lib/customer-schema";
 
 type AuthFormProps = {
   mode: "login" | "register";
   next?: string;
   redirectTo?: string;
+  socialProviders?: { telegram: boolean; max: boolean };
+  socialError?: string | null;
 };
 
-export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
+export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram: false, max: false }, socialError }: AuthFormProps) {
   const isRegister = mode === "register";
   const [codeMode, setCodeMode] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loyaltyConsent, setLoyaltyConsent] = useState(false);
+  const [visibleSocialError, setVisibleSocialError] = useState(socialError ?? null);
   const [passwordState, passwordAction, isPasswordPending] = useActionState(
     isRegister ? registerWithPasswordAction : loginWithPasswordAction,
     initialAuthActionState
@@ -44,6 +49,14 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
   const codeStatus = confirmState.status !== "idle" ? confirmState.status : requestState.status;
   const shouldShowConfirmCode = requestState.status === "code_sent" || confirmState.status !== "idle";
 
+  useEffect(() => {
+    if (!socialError) return;
+    const currentUrl = new URL(window.location.href);
+    if (!currentUrl.searchParams.has("socialError")) return;
+    currentUrl.searchParams.delete("socialError");
+    window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+  }, [socialError]);
+
   return (
     <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
       <h1 className="text-3xl font-black leading-tight text-karimoff-black">
@@ -54,8 +67,22 @@ export function AuthForm({ mode, next, redirectTo }: AuthFormProps) {
           ? "Создайте профиль, чтобы быстро оформлять заказы и копить баллы."
           : codeMode
             ? "Получите одноразовый код по SMS и войдите без пароля."
-            : "Войдите по телефону и постоянному паролю."}
+            : socialProviders.telegram || socialProviders.max
+              ? "Выберите удобный способ — через мессенджер, по телефону или по SMS."
+              : "Войдите по телефону и постоянному паролю."}
       </p>
+
+      <SocialAuthButtons
+        enabled={socialProviders}
+        onProviderStart={() => setVisibleSocialError(null)}
+        returnTo={redirectTo || (next === "checkout" ? "/checkout" : "/profile")}
+      />
+      {visibleSocialError ? (
+        <div role="alert" className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-700">
+          <CircleAlert className="mt-0.5 shrink-0" size={18} />
+          {visibleSocialError}
+        </div>
+      ) : null}
 
       {!codeMode ? (
       <form action={passwordAction} className="mt-7 grid gap-4">

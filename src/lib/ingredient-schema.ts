@@ -51,7 +51,12 @@ export const productIngredientFormSchema = z.object({
   is_extra_available: z.coerce.boolean().default(false),
   extra_quantity: z.coerce.number().min(0, "Порция добавки не может быть отрицательной").default(0),
   extra_price: z.coerce.number().min(0, "Доплата не может быть отрицательной").default(0),
-  max_extra_quantity: z.coerce.number().int().min(1).max(10).default(1)
+  max_extra_quantity: z.coerce.number().int().min(1).max(10).default(1),
+  preparation_step: z.string().trim().max(500, "Шаг приготовления слишком длинный").optional(),
+  preparation_note: z.string().trim().max(500, "Заметка слишком длинная").optional(),
+  preparation_image_url: z.string().trim().url("Укажите корректную ссылку на фото").max(2000).optional().or(z.literal("")),
+  station: z.enum(["grill", "fryer", "assembly", "drinks", "packing"]).optional().or(z.literal("")),
+  preparation_time_seconds: z.coerce.number().int().min(0).max(14_400).optional()
 });
 
 export type IngredientFormInput = z.infer<typeof ingredientFormSchema>;

@@ -11,12 +11,13 @@ export type AdminOrderItem = {
   unit_price: number;
   quantity: number;
   line_total: number;
+  item_note: string | null;
   modifiers: AdminOrderItemModifier[];
 };
 
 export type AdminOrderItemModifier = {
   id: string;
-  modifier_type: "remove" | "add";
+  modifier_type: "remove" | "add" | "replace";
   ingredient_name: string;
   quantity: number;
   unit: string;
@@ -28,6 +29,9 @@ export type AdminOrder = {
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  display_number: string;
+  source: "web" | "pos" | "mobile" | "kiosk" | "aggregator";
+  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_out" | "cancelled";
   delivery_type: "pickup" | "delivery";
   address: string | null;
   comment: string | null;
@@ -41,6 +45,8 @@ export type AdminOrder = {
   assigned_staff_id: string | null;
   assigned_staff_name: string | null;
   total: number;
+  is_test: boolean;
+  is_operational: boolean;
   items: AdminOrderItem[];
 };
 
@@ -55,6 +61,19 @@ function normalizeOrder(
     created_at: String(row.created_at),
     customer_name: String(row.customer_name ?? ""),
     customer_phone: String(row.customer_phone ?? ""),
+    display_number: row.display_number ? String(row.display_number) : "Архив",
+    source:
+      row.source === "pos" || row.source === "mobile" || row.source === "kiosk" || row.source === "aggregator"
+        ? row.source
+        : "web",
+    kitchen_status:
+      row.kitchen_status === "accepted" ||
+      row.kitchen_status === "cooking" ||
+      row.kitchen_status === "ready" ||
+      row.kitchen_status === "handed_out" ||
+      row.kitchen_status === "cancelled"
+        ? row.kitchen_status
+        : "new",
     delivery_type: row.delivery_type === "delivery" ? "delivery" : "pickup",
     address: typeof row.address === "string" ? row.address : null,
     comment: typeof row.comment === "string" ? row.comment : null,
@@ -85,6 +104,8 @@ function normalizeOrder(
     assigned_staff_id: assignedStaffId,
     assigned_staff_name: assignedStaffId ? staffNames.get(assignedStaffId) ?? null : null,
     total: Number(row.total ?? 0),
+    is_test: Boolean(row.is_test),
+    is_operational: Boolean(row.is_operational),
     items
   };
 }
@@ -101,6 +122,7 @@ function normalizeItem(
     unit_price: Number(row.unit_price ?? 0),
     quantity: Number(row.quantity ?? 0),
     line_total: Number(row.line_total ?? 0),
+    item_note: typeof row.item_note === "string" ? row.item_note : null,
     modifiers
   };
 }
@@ -108,7 +130,7 @@ function normalizeItem(
 function normalizeModifier(row: Record<string, unknown>): AdminOrderItemModifier {
   return {
     id: String(row.id),
-    modifier_type: row.modifier_type === "add" ? "add" : "remove",
+    modifier_type: row.modifier_type === "add" || row.modifier_type === "replace" ? row.modifier_type : "remove",
     ingredient_name: String(row.ingredient_name ?? ""),
     quantity: Number(row.quantity ?? 0),
     unit: String(row.unit ?? ""),
@@ -116,7 +138,7 @@ function normalizeModifier(row: Record<string, unknown>): AdminOrderItemModifier
   };
 }
 
-export async function getAdminOrders() {
+export async function getAdminOrders(locationIds: string[] | null = null) {
   const database = createDatabaseServerClient();
 
   if (!database) {
@@ -127,10 +149,19 @@ export async function getAdminOrders() {
     };
   }
 
-  const { data: ordersData, error: ordersError } = await database
+  if (locationIds !== null && !locationIds.length) {
+    return {
+      orders: [] as AdminOrder[],
+      notConfigured: false,
+      error: null as string | null
+    };
+  }
+
+  let ordersQuery = database
     .from("orders")
-    .select("id, created_at, customer_name, customer_phone, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total")
-    .order("created_at", { ascending: false });
+    .select("id, created_at, customer_name, customer_phone, display_number, source, kitchen_status, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total, is_test, is_operational");
+  if (locationIds !== null) ordersQuery = ordersQuery.in("location_id", locationIds);
+  const { data: ordersData, error: ordersError } = await ordersQuery.order("created_at", { ascending: false });
 
   if (ordersError) {
     return {
@@ -154,7 +185,7 @@ export async function getAdminOrders() {
     await Promise.all([
       database
         .from("order_items")
-        .select("id, order_id, product_id, product_name, unit_price, quantity, line_total")
+        .select("id, order_id, product_id, product_name, unit_price, quantity, line_total, item_note")
         .in("order_id", orderIds),
       database.from("staff_users").select("id, name")
     ]);

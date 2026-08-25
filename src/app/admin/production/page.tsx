@@ -42,7 +42,7 @@ function formatRunDate(value: string) {
 
 export default async function ProductionPage({ searchParams }: PageProps) {
   const staff = await getCurrentStaff();
-  if (!staff || staff.role === "cook") redirect("/admin/login");
+  if (!staff || !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin/login");
   const params = searchParams ? await searchParams : {};
   const workspace = await getProductionWorkspace();
   const activeRecipes = workspace.recipes.filter((recipe) => recipe.is_active);

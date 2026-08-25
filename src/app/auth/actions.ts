@@ -4,9 +4,6 @@ import { redirect } from "next/navigation";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { writeAuditLog } from "@/lib/audit";
 import {
-  createVerificationCode,
-  getVerificationExpiresAt,
-  hashVerificationCode,
   normalizePhone,
   setCustomerSession
 } from "@/lib/customer-auth";
@@ -27,77 +24,15 @@ import {
   isChecked,
   recordLegalConsents
 } from "@/lib/legal-consents";
-import { hashPassword, verifyPassword } from "@/lib/password-auth";
+import { hashPassword, passwordNeedsRehash, verifyPassword } from "@/lib/password-auth";
 import { getPhoneLookupCandidates } from "@/lib/phone";
-import { sendVerificationCode } from "@/lib/verification/send-code";
+import {
+  consumeCustomerVerificationCode,
+  issueCustomerVerificationCode
+} from "@/lib/verification/customer-codes";
 import { createDatabaseServerClient } from "@/lib/database/server";
-
-async function saveVerificationCode(phone: string, code: string) {
-  const database = createDatabaseServerClient();
-
-  if (!database) {
-    return { ok: false, message: "База данных не подключена." };
-  }
-
-  const normalizedPhone = normalizePhone(phone);
-  const { error } = await database.from("verification_codes").insert({
-    phone: normalizedPhone,
-    code_hash: hashVerificationCode(normalizedPhone, code),
-    expires_at: getVerificationExpiresAt()
-  });
-
-  if (error) {
-    return { ok: false, message: "Не удалось сохранить код подтверждения." };
-  }
-
-  const sent = await sendVerificationCode(normalizedPhone, code);
-
-  if (!sent.ok) {
-    return { ok: false, message: "Сервис отправки кода пока не настроен." };
-  }
-
-  return { ok: true, message: "Код отправлен. В dev-режиме он выведен в консоль сервера." };
-}
-
-async function verifyCode(phone: string, code: string) {
-  const database = createDatabaseServerClient();
-
-  if (!database) {
-    return { ok: false, message: "База данных не подключена." };
-  }
-
-  const normalizedPhone = normalizePhone(phone);
-  const { data, error } = await database
-    .from("verification_codes")
-    .select("id, code_hash, expires_at, used_at")
-    .eq("phone", normalizedPhone)
-    .is("used_at", null)
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) {
-    return { ok: false, message: "Код не найден или истёк." };
-  }
-
-  const expectedHash = hashVerificationCode(normalizedPhone, code);
-
-  if (String(data.code_hash) !== expectedHash) {
-    return { ok: false, message: "Неверный код подтверждения." };
-  }
-
-  const { error: updateError } = await database
-    .from("verification_codes")
-    .update({ used_at: new Date().toISOString() })
-    .eq("id", data.id);
-
-  if (updateError) {
-    return { ok: false, message: "Не удалось подтвердить код." };
-  }
-
-  return { ok: true, message: "" };
-}
+import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
+import { syncPhoneIdentity } from "@/lib/auth/social/identity";
 
 function sanitizeRedirectPath(path?: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) {
@@ -161,6 +96,7 @@ export async function requestRegisterCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = registerRequestSchema.safeParse({
@@ -176,7 +112,6 @@ export async function requestRegisterCodeAction(
     return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
   }
 
-  const code = createVerificationCode();
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const limit = await checkAuthRateLimit("send_code", normalizedPhone);
 
@@ -185,7 +120,7 @@ export async function requestRegisterCodeAction(
   }
 
   await recordAuthFailure("send_code", normalizedPhone);
-  const saved = await saveVerificationCode(normalizedPhone, code);
+  const saved = await issueCustomerVerificationCode(normalizedPhone);
 
   if (!saved.ok) {
     return { status: "error", message: saved.message, phone: normalizedPhone, name: parsed.data.name };
@@ -203,6 +138,7 @@ export async function registerWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = passwordRegisterSchema.safeParse({
@@ -257,7 +193,7 @@ export async function registerWithPasswordAction(
     .insert({
       name: parsed.data.name,
       phone: normalizedPhone,
-      password_hash: hashPassword(parsed.data.password),
+      password_hash: await hashPassword(parsed.data.password),
       last_login_at: new Date().toISOString()
     })
     .select("id")
@@ -269,6 +205,7 @@ export async function registerWithPasswordAction(
   }
 
   const customerId = String(data.id);
+  await syncPhoneIdentity({ userId: customerId, phone: normalizedPhone, displayName: parsed.data.name, verified: false });
   const consents = await saveRegistrationConsents(customerId, formData, "/register");
 
   if (!consents.ok) {
@@ -297,6 +234,7 @@ export async function confirmRegisterAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = registerConfirmSchema.safeParse({
@@ -321,7 +259,7 @@ export async function confirmRegisterAction(
   if (!limit.allowed) {
     return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone, name: parsed.data.name };
   }
-  const verification = await verifyCode(normalizedPhone, parsed.data.code);
+  const verification = await consumeCustomerVerificationCode(normalizedPhone, parsed.data.code);
 
   if (!verification.ok) {
     await recordAuthFailure("verify_code", normalizedPhone);
@@ -346,6 +284,7 @@ export async function confirmRegisterAction(
       {
         name: parsed.data.name,
         phone: normalizedPhone,
+        phone_verified_at: new Date().toISOString(),
         last_login_at: new Date().toISOString()
       },
       { onConflict: "phone" }
@@ -358,6 +297,7 @@ export async function confirmRegisterAction(
   }
 
   const customerId = String(data.id);
+  await syncPhoneIdentity({ userId: customerId, phone: normalizedPhone, displayName: parsed.data.name, verified: true });
   const consents = await saveRegistrationConsents(customerId, formData, "/register");
 
   if (!consents.ok) {
@@ -385,6 +325,7 @@ export async function requestLoginCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = loginRequestSchema.safeParse({
@@ -418,9 +359,8 @@ export async function requestLoginCodeAction(
     return { status: "error", message: "Профиль не найден. Зарегистрируйтесь.", phone: normalizedPhone };
   }
 
-  const code = createVerificationCode();
   await recordAuthFailure("send_code", normalizedPhone);
-  const saved = await saveVerificationCode(normalizedPhone, code);
+  const saved = await issueCustomerVerificationCode(normalizedPhone);
 
   if (!saved.ok) {
     return { status: "error", message: saved.message, phone: normalizedPhone };
@@ -437,6 +377,7 @@ export async function loginWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = passwordLoginSchema.safeParse({
@@ -476,7 +417,7 @@ export async function loginWithPasswordAction(
     };
   }
 
-  if (!verifyPassword(parsed.data.password, String(data.password_hash))) {
+  if (!(await verifyPassword(parsed.data.password, String(data.password_hash)))) {
     await recordAuthFailure("customer_login", normalizedPhone);
     await writeAuditLog({
       action: "customer.login_failed",
@@ -488,7 +429,14 @@ export async function loginWithPasswordAction(
   }
 
   await clearAuthFailures("customer_login", normalizedPhone);
-  await database.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await database
+    .from("customers")
+    .update({
+      last_login_at: new Date().toISOString(),
+      ...(passwordNeedsRehash(String(data.password_hash)) ? { password_hash: await hashPassword(parsed.data.password) } : {})
+    })
+    .eq("id", data.id);
+  await syncPhoneIdentity({ userId: String(data.id), phone: normalizedPhone, displayName: null, verified: false });
   await writeAuditLog({
     action: "customer.login",
     actorId: String(data.id),
@@ -506,6 +454,7 @@ export async function confirmLoginAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  await assertTrustedRequestOrigin();
   void _previousState;
 
   const parsed = loginConfirmSchema.safeParse({
@@ -525,7 +474,7 @@ export async function confirmLoginAction(
   if (!limit.allowed) {
     return { status: "error", message: limit.message ?? "Слишком много попыток.", phone: normalizedPhone };
   }
-  const verification = await verifyCode(normalizedPhone, parsed.data.code);
+  const verification = await consumeCustomerVerificationCode(normalizedPhone, parsed.data.code);
 
   if (!verification.ok) {
     await recordAuthFailure("verify_code", normalizedPhone);
@@ -556,7 +505,11 @@ export async function confirmLoginAction(
   }
 
   await clearAuthFailures("verify_code", normalizedPhone);
-  await database.from("customers").update({ last_login_at: new Date().toISOString() }).eq("id", data.id);
+  await database
+    .from("customers")
+    .update({ phone_verified_at: new Date().toISOString(), last_login_at: new Date().toISOString() })
+    .eq("id", data.id);
+  await syncPhoneIdentity({ userId: String(data.id), phone: normalizedPhone, displayName: null, verified: true });
   await writeAuditLog({
     action: "customer.login",
     actorId: String(data.id),

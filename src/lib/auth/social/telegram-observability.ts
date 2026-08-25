@@ -1,0 +1,56 @@
+import "server-only";
+
+import type { OAuthBrowserBinding } from "./state-policy";
+
+export type TelegramAuthEvent =
+  | "telegram.browser.consume"
+  | "telegram.browser.resume"
+  | "telegram.browser.status.completed"
+  | "telegram.challenge.completed"
+  | "telegram.client.completed"
+  | "telegram.failed"
+  | "telegram.id_token.valid"
+  | "telegram.identity.resolved"
+  | "telegram.library.result"
+  | "telegram.library.start"
+  | "telegram.login.started"
+  | "telegram.provider.verified"
+  | "telegram.redirect.success"
+  | "telegram.session.created"
+  | "telegram.session.readback.ok";
+
+type TelegramAuthEventDetails = {
+  attemptId: string;
+  stage: string;
+  browserTrigger?: "focus" | "initial" | "interval" | "online" | "pageshow" | "resume" | "visibility";
+  browserBinding?: OAuthBrowserBinding;
+  errorCode?: string;
+  httpStatus?: number | null;
+  durationMs?: number | null;
+  networkError?: string | null;
+  providerError?: string | null;
+  phonePresent?: boolean;
+  phoneVerified?: boolean;
+  resolution?: "authenticated" | "linked" | "needs_phone";
+};
+
+export function logTelegramAuthEvent(event: TelegramAuthEvent, details: TelegramAuthEventDetails) {
+  const entry = {
+    event,
+    provider: "telegram",
+    attempt_id: details.attemptId,
+    stage: details.stage,
+    timestamp: new Date().toISOString(),
+    ...(details.browserBinding ? { browser_binding: details.browserBinding } : {}),
+    ...(details.browserTrigger ? { browser_trigger: details.browserTrigger } : {}),
+    ...(details.errorCode ? { error_code: details.errorCode } : {}),
+    ...(details.httpStatus ? { http_status: details.httpStatus } : {}),
+    ...(typeof details.durationMs === "number" ? { duration_ms: Math.max(0, Math.round(details.durationMs)) } : {}),
+    ...(details.networkError ? { network_error: details.networkError } : {}),
+    ...(details.providerError ? { provider_error: details.providerError } : {}),
+    ...(typeof details.phonePresent === "boolean" ? { phone_present: details.phonePresent } : {}),
+    ...(typeof details.phoneVerified === "boolean" ? { phone_verified: details.phoneVerified } : {}),
+    ...(details.resolution ? { resolution: details.resolution } : {})
+  };
+  console.info(JSON.stringify(entry));
+}

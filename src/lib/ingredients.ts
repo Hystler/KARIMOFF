@@ -39,6 +39,11 @@ export type ProductIngredientLine = {
   extra_quantity: number;
   extra_price: number;
   max_extra_quantity: number;
+  preparation_step: string | null;
+  preparation_note: string | null;
+  preparation_image_url: string | null;
+  station: string | null;
+  preparation_time_seconds: number | null;
 };
 
 export type ProductFoodCost = {
@@ -171,7 +176,7 @@ export async function getProductFoodCost(product: Product) {
     getAdminIngredients(),
     database
       .from("product_ingredients")
-      .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
+      .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity, preparation_step, preparation_note, preparation_image_url, station, preparation_time_seconds")
       .eq("product_id", product.id)
       .order("sort_order", { ascending: true })
   ]);
@@ -227,7 +232,12 @@ export async function getProductFoodCost(product: Product) {
         is_extra_available: Boolean(line.is_extra_available),
         extra_quantity: Number(line.extra_quantity ?? 0),
         extra_price: Number(line.extra_price ?? 0),
-        max_extra_quantity: Number(line.max_extra_quantity ?? 1)
+        max_extra_quantity: Number(line.max_extra_quantity ?? 1),
+        preparation_step: typeof line.preparation_step === "string" ? line.preparation_step : null,
+        preparation_note: typeof line.preparation_note === "string" ? line.preparation_note : null,
+        preparation_image_url: typeof line.preparation_image_url === "string" ? line.preparation_image_url : null,
+        station: typeof line.station === "string" ? line.station : null,
+        preparation_time_seconds: line.preparation_time_seconds === null || line.preparation_time_seconds === undefined ? null : Number(line.preparation_time_seconds)
       } satisfies ProductIngredientLine;
     })
     .filter((line): line is ProductIngredientLine => Boolean(line));
@@ -264,7 +274,7 @@ export async function getProductsFoodCosts(products: Product[]) {
 
   const { data: lineRows, error: linesError } = await database
     .from("product_ingredients")
-    .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity")
+    .select("id, product_id, ingredient_id, quantity, unit, sort_order, is_removable, is_extra_available, extra_quantity, extra_price, max_extra_quantity, preparation_step, preparation_note, preparation_image_url, station, preparation_time_seconds")
     .in("product_id", productIds)
     .order("sort_order", { ascending: true });
 
@@ -308,7 +318,15 @@ export async function getProductsFoodCosts(products: Product[]) {
       is_extra_available: Boolean(line.is_extra_available),
       extra_quantity: Number(line.extra_quantity ?? 0),
       extra_price: Number(line.extra_price ?? 0),
-      max_extra_quantity: Number(line.max_extra_quantity ?? 1)
+      max_extra_quantity: Number(line.max_extra_quantity ?? 1),
+      preparation_step: typeof line.preparation_step === "string" ? line.preparation_step : null,
+      preparation_note: typeof line.preparation_note === "string" ? line.preparation_note : null,
+      preparation_image_url: typeof line.preparation_image_url === "string" ? line.preparation_image_url : null,
+      station: typeof line.station === "string" ? line.station : null,
+      preparation_time_seconds:
+        line.preparation_time_seconds === null || line.preparation_time_seconds === undefined
+          ? null
+          : Number(line.preparation_time_seconds)
     };
 
     linesByProduct.set(productId, [...(linesByProduct.get(productId) ?? []), row]);

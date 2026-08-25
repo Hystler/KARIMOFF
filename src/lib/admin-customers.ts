@@ -6,6 +6,7 @@ import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import type { CustomerOrder, CustomerOrderItem } from "@/lib/customer-data";
 import type { LoyaltyAccount, LoyaltyTransaction } from "@/lib/loyalty";
+import type { UserIdentityView } from "@/lib/auth/social/identity";
 
 export type AdminCustomerListItem = {
   id: string;
@@ -18,6 +19,7 @@ export type AdminCustomerListItem = {
   points_balance: number;
   order_count: number;
   order_total: number;
+  identities: UserIdentityView[];
 };
 
 export type AdminCustomerDetail = AdminCustomerListItem & {
@@ -27,7 +29,7 @@ export type AdminCustomerDetail = AdminCustomerListItem & {
   transactions: LoyaltyTransaction[];
 };
 
-function normalizeCustomer(row: Record<string, unknown>): Omit<AdminCustomerListItem, "avatar" | "points_balance" | "order_count" | "order_total"> {
+function normalizeCustomer(row: Record<string, unknown>): Omit<AdminCustomerListItem, "avatar" | "points_balance" | "order_count" | "order_total" | "identities"> {
   return {
     id: String(row.id),
     created_at: String(row.created_at ?? ""),
@@ -94,6 +96,27 @@ function normalizeTransaction(row: Record<string, unknown>): LoyaltyTransaction 
   };
 }
 
+function normalizeIdentity(row: Record<string, unknown>): UserIdentityView {
+  const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+    ? row.metadata as Record<string, unknown>
+    : {};
+  return {
+    id: String(row.id),
+    provider: row.provider as UserIdentityView["provider"],
+    providerUserId: String(row.provider_user_id),
+    username: typeof row.username === "string" ? row.username : null,
+    displayName: typeof row.display_name === "string" ? row.display_name : null,
+    avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
+    email: typeof row.email === "string" ? row.email : null,
+    phone: typeof row.phone === "string" ? row.phone : null,
+    phoneVerified: Boolean(row.phone_verified),
+    givenName: typeof metadata.givenName === "string" ? metadata.givenName : null,
+    familyName: typeof metadata.familyName === "string" ? metadata.familyName : null,
+    linkedAt: String(row.linked_at),
+    lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
+  };
+}
+
 export async function getAdminCustomers() {
   const database = createDatabaseServerClient();
 
@@ -121,14 +144,16 @@ export async function getAdminCustomers() {
   const customers = (customersData ?? []).map((customer) => normalizeCustomer(customer));
   const customerIds = customers.map((customer) => customer.id);
 
-  const [{ data: avatarsData, error: avatarsError }, { data: accountsData, error: accountsError }, { data: ordersData, error: ordersError }] =
+  const [{ data: avatarsData, error: avatarsError }, { data: accountsData, error: accountsError }, { data: ordersData, error: ordersError }, { data: identitiesData, error: identitiesError }] =
     customerIds.length
       ? await Promise.all([
           database.from("customer_avatars").select("customer_id, base, eyes, mouth, accessory, clothes, background").in("customer_id", customerIds),
           database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").in("customer_id", customerIds),
-          database.from("orders").select("customer_id, total").in("customer_id", customerIds)
+          database.from("orders").select("customer_id, total").in("customer_id", customerIds),
+          database.from("user_identities").select("id, user_id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at").in("user_id", customerIds).in("provider", ["phone", "telegram", "max"])
         ])
       : [
+          { data: [], error: null },
           { data: [], error: null },
           { data: [], error: null },
           { data: [], error: null }
@@ -155,6 +180,13 @@ export async function getAdminCustomers() {
       customers: [] as AdminCustomerListItem[],
       notConfigured: false,
       error: formatMissingTableError(ordersError.message, "orders")
+    };
+  }
+  if (identitiesError) {
+    return {
+      customers: [] as AdminCustomerListItem[],
+      notConfigured: false,
+      error: formatMissingTableError(identitiesError.message, "user_identities")
     };
   }
 
@@ -186,7 +218,10 @@ export async function getAdminCustomers() {
         avatar: avatars.get(customer.id) ?? defaultAvatar,
         points_balance: account?.points_balance ?? 0,
         order_count: stats?.count ?? 0,
-        order_total: stats?.total ?? 0
+        order_total: stats?.total ?? 0,
+        identities: (identitiesData ?? [])
+          .filter((identity) => String(identity.user_id) === customer.id)
+          .map((identity) => normalizeIdentity(identity))
       };
     }),
     notConfigured: false,
@@ -228,7 +263,7 @@ export async function getAdminCustomerById(id: string) {
   }
 
   const customer = normalizeCustomer(customerData);
-  const [{ data: avatarData, error: avatarError }, { data: accountData, error: accountError }, { data: ordersData, error: ordersError }, { data: transactionsData, error: transactionsError }] =
+  const [{ data: avatarData, error: avatarError }, { data: accountData, error: accountError }, { data: ordersData, error: ordersError }, { data: transactionsData, error: transactionsError }, { data: identitiesData, error: identitiesError }] =
     await Promise.all([
       database.from("customer_avatars").select("base, eyes, mouth, accessory, clothes, background").eq("customer_id", id).maybeSingle(),
       database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").eq("customer_id", id).maybeSingle(),
@@ -242,7 +277,13 @@ export async function getAdminCustomerById(id: string) {
         .select("id, created_at, customer_id, order_id, type, points, description")
         .eq("customer_id", id)
         .order("created_at", { ascending: false })
-        .limit(100)
+        .limit(100),
+      database
+        .from("user_identities")
+        .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at")
+        .eq("user_id", id)
+        .in("provider", ["phone", "telegram", "max"])
+        .order("linked_at", { ascending: true })
     ]);
 
   if (avatarError) {
@@ -274,6 +315,13 @@ export async function getAdminCustomerById(id: string) {
       customer: null as AdminCustomerDetail | null,
       notConfigured: false,
       error: formatMissingTableError(transactionsError.message, "loyalty_transactions")
+    };
+  }
+  if (identitiesError) {
+    return {
+      customer: null as AdminCustomerDetail | null,
+      notConfigured: false,
+      error: formatMissingTableError(identitiesError.message, "user_identities")
     };
   }
 
@@ -312,6 +360,7 @@ export async function getAdminCustomerById(id: string) {
       points_balance: account?.points_balance ?? 0,
       order_count: orders.length,
       order_total: orders.reduce((sum, order) => sum + order.total, 0),
+      identities: (identitiesData ?? []).map((identity) => normalizeIdentity(identity)),
       orders,
       transactions: (transactionsData ?? []).map((transaction) => normalizeTransaction(transaction))
     },

@@ -16,10 +16,12 @@
     "db:test": "node scripts/supabase-db-test.mjs",
     "db:audit": "node scripts/supabase-security-audit.mjs",
     "data:migrate": "node scripts/apply-runtime-data-migrations.mjs",
-    "db:runtime:migrate": "node scripts/apply-runtime-schema-migrations.mjs"
+    "db:runtime:migrate": "node scripts/apply-runtime-schema-migrations.mjs",
+    "admin:credential:generate": "node scripts/generate-admin-credential.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
+    "bcryptjs": "^3.0.3",
     "framer-motion": "^12.23.12",
     "lucide-react": "^1.27.0",
     "next": "^16.2.11",

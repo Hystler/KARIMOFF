@@ -6,13 +6,14 @@ import test from "node:test";
 const read = (path) => readFileSync(join(process.cwd(), path), "utf8");
 const migration = read("supabase/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
 const productIterationMigration = read("supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql");
+const orderFlowMigration = read("supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql");
 const orderAction = read("src/app/actions/orders.ts");
 const cart = read("src/components/cart/CartProvider.tsx");
 const cartDrawer = read("src/components/cart/CartDrawer.tsx");
 const cartCustomizer = read("src/components/cart/CartLineCustomizer.tsx");
 const productCustomizer = read("src/components/products/ProductCustomizer.tsx");
 const ingredients = read("src/lib/ingredients.ts");
-const kitchen = read("src/components/admin/KitchenBoard.tsx");
+const kitchen = read("src/components/operations/KitchenWorkspace.tsx");
 const sms = read("src/lib/verification/send-code.ts");
 const registerProvider = read("src/lib/cash-register/provider.ts");
 const evotorClient = read("src/lib/integrations/evotor/client.ts");
@@ -59,8 +60,11 @@ test("ingredient waste adjusts food cost and order usage", () => {
 });
 
 test("kitchen displays modifiers and uses atomic status RPC", () => {
-  assert.match(kitchen, /modifier\.modifier_type === "remove" \? "БЕЗ" : "ДОБАВИТЬ"/);
+  assert.match(kitchen, /if \(type === "remove"\) return "БЕЗ"/);
+  assert.match(kitchen, /if \(type === "replace"\) return "ЗАМЕНА"/);
   assert.match(migration, /create or replace function public\.set_order_status_staff_atomic/);
+  assert.match(orderFlowMigration, /create or replace function public\.set_order_kitchen_status_atomic/);
+  assert.match(orderFlowMigration, /select public\.set_order_status_staff_atomic/);
   assert.match(migration, /for update/);
   assert.match(migration, /order_inventory_deductions/);
 });

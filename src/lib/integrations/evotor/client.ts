@@ -6,6 +6,7 @@ const API_BASE_URL = "https://api.evotor.ru/";
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 3;
 const MAX_PAGES = 100;
+const MAX_ERROR_BODY_BYTES = 16 * 1024;
 
 const pageSchema = z.object({
   items: z.array(z.unknown()).default([]),
@@ -15,16 +16,22 @@ const pageSchema = z.object({
 export class EvotorApiError extends Error {
   public readonly status: number;
   public readonly retryable: boolean;
+  public readonly endpoint: string;
+  public readonly providerCode: string | null;
 
   constructor(
     message: string,
     status: number,
-    retryable: boolean
+    retryable: boolean,
+    endpoint = "GET unknown",
+    providerCode: string | null = null
   ) {
     super(message);
     this.name = "EvotorApiError";
     this.status = status;
     this.retryable = retryable;
+    this.endpoint = endpoint;
+    this.providerCode = providerCode;
   }
 }
 
@@ -44,6 +51,30 @@ function retryDelay(response: Response | null, attempt: number) {
   const reset = Number(response?.headers.get("x-ratelimit-reset"));
   if (Number.isFinite(reset) && reset >= 0) return Math.min(Math.max(250, reset * 1000), 30_000);
   return Math.min(500 * 2 ** attempt, 5_000);
+}
+
+function shortText(value: unknown) {
+  return typeof value === "string" ? value.trim().slice(0, 300) : "";
+}
+
+async function safeProviderError(response: Response) {
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_ERROR_BODY_BYTES) return { code: null, message: "" };
+
+  const body = await response.text();
+  if (Buffer.byteLength(body, "utf8") > MAX_ERROR_BODY_BYTES) return { code: null, message: "" };
+  try {
+    const payload = JSON.parse(body) as unknown;
+    const error = Array.isArray(payload) ? payload[0] : payload;
+    if (!error || typeof error !== "object") return { code: null, message: "" };
+    const record = error as Record<string, unknown>;
+    return {
+      code: shortText(record.code) || shortText(record.error) || null,
+      message: shortText(record.message) || shortText(record.description)
+    };
+  } catch {
+    return { code: null, message: "" };
+  }
 }
 
 export class EvotorClient {
@@ -87,6 +118,7 @@ export class EvotorClient {
   }
 
   private async request(url: URL) {
+    const endpoint = `GET ${url.pathname}`;
     let lastResponse: Response | null = null;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       let response: Response;
@@ -105,7 +137,7 @@ export class EvotorClient {
         if (attempt + 1 >= MAX_ATTEMPTS) {
           throw new EvotorApiError(error instanceof Error && error.name === "TimeoutError"
             ? "Evotor request timed out."
-            : "Evotor API is unavailable.", 503, true);
+            : "Evotor API is unavailable.", 503, true, endpoint);
         }
         await this.sleep(retryDelay(null, attempt));
         continue;
@@ -115,15 +147,18 @@ export class EvotorClient {
       if (response.ok) return response.json();
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable || attempt + 1 >= MAX_ATTEMPTS) {
-        const message = response.status === 401 || response.status === 403
+        const providerError = await safeProviderError(response);
+        const message = response.status === 401
           ? "Evotor rejected the application token."
+          : response.status === 403
+            ? `Evotor denied access to ${endpoint}. Check the application's REST API permissions.${providerError.message ? ` ${providerError.message}` : ""}`
           : response.status === 429
             ? "Evotor rate limit was exceeded."
             : `Evotor API returned HTTP ${response.status}.`;
-        throw new EvotorApiError(message, response.status, retryable);
+        throw new EvotorApiError(message, response.status, retryable, endpoint, providerError.code);
       }
       await this.sleep(retryDelay(response, attempt));
     }
-    throw new EvotorApiError("Evotor API request failed.", lastResponse?.status ?? 503, true);
+    throw new EvotorApiError("Evotor API request failed.", lastResponse?.status ?? 503, true, endpoint);
   }
 }

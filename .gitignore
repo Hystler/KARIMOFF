@@ -5,7 +5,9 @@ dist
 .vercel
 .npm-cache
 .env
+.env.*
 .env*.local
+*.env
 .DS_Store
 npm-debug.log*
 yarn-debug.log*

@@ -8,9 +8,10 @@ import {
   Store
 } from "lucide-react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getEvotorAdminData } from "@/lib/integrations/evotor/repository";
-import { checkEvotorAction, syncEvotorAction } from "./actions";
+import { checkEvotorAction, incrementalEvotorAction, syncEvotorAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ const statusLabels: Record<string, string> = {
 export default async function EvotorIntegrationPage({ searchParams }: PageProps) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
-  if (staff.role === "cook") redirect("/admin/kitchen");
+  if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");
 
   const params = searchParams ? await searchParams : {};
   const data = await getEvotorAdminData();
@@ -55,6 +56,9 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           <h1>Эвотор</h1>
           <p>Подключения облака, магазины, кассы и безопасная синхронизация продаж.</p>
         </div>
+        <Link href="/admin/integrations/evotor/reconciliation" className="admin-secondary-button">
+          <Cable size={17} /> Сопоставление продаж
+        </Link>
       </header>
 
       {params.queued ? (
@@ -109,8 +113,12 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
                   <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                     <div><dt className="text-karimoff-muted">Последний sync</dt><dd className="mt-1 font-bold">{formatDate(connection.last_sync_at)}</dd></div>
                     <div><dt className="text-karimoff-muted">Успешный sync</dt><dd className="mt-1 font-bold">{formatDate(connection.last_success_at)}</dd></div>
-                    <div><dt className="text-karimoff-muted">Магазины</dt><dd className="mt-1 font-bold">{connection.stores_count}</dd></div>
-                    <div><dt className="text-karimoff-muted">Чеки</dt><dd className="mt-1 font-bold">{connection.receipts_count}</dd></div>
+                    <div><dt className="text-karimoff-muted">Cursor документов</dt><dd className="mt-1 font-bold">{formatDate(connection.last_cursor_at)}</dd></div>
+                    <div><dt className="text-karimoff-muted">Последний запуск</dt><dd className="mt-1 font-bold">{formatDate(connection.last_sync_started_at)}</dd></div>
+                    <div><dt className="text-karimoff-muted">Новых чеков</dt><dd className="mt-1 font-bold">{connection.last_imported_receipts}</dd></div>
+                    <div><dt className="text-karimoff-muted">Изменённых чеков</dt><dd className="mt-1 font-bold">{connection.last_updated_receipts}</dd></div>
+                    <div><dt className="text-karimoff-muted">Ошибок / retries</dt><dd className="mt-1 font-bold">{connection.failed_items} / {connection.retry_count}</dd></div>
+                    <div><dt className="text-karimoff-muted">Всего чеков</dt><dd className="mt-1 font-bold">{connection.receipts_count}</dd></div>
                   </dl>
                   {connection.last_error_message ? (
                     <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -125,10 +133,16 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
                       <Cable size={17} /> Проверить подключение
                     </button>
                   </form>
-                  <form action={syncEvotorAction}>
+                  <form action={incrementalEvotorAction}>
                     <input type="hidden" name="connection_id" value={connection.id} />
                     <button className="admin-primary-button" type="submit" disabled={!enabled || !callbackReady}>
-                      <RefreshCw size={17} /> Синхронизировать
+                      <RefreshCw size={17} /> Проверить новые продажи
+                    </button>
+                  </form>
+                  <form action={syncEvotorAction}>
+                    <input type="hidden" name="connection_id" value={connection.id} />
+                    <button className="admin-secondary-button" type="submit" disabled={!enabled || !callbackReady}>
+                      <RefreshCw size={17} /> Полная синхронизация
                     </button>
                   </form>
                 </div>
@@ -180,13 +194,15 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           </div>
           <div className="overflow-x-auto">
             <table className="admin-table min-w-[720px]">
-              <thead><tr><th>Создана</th><th>Тип</th><th>Статус</th><th>Итог</th></tr></thead>
+              <thead><tr><th>Создана</th><th>Тип</th><th>Статус</th><th>Новые / обновлены</th><th>Попытки</th><th>Окно</th></tr></thead>
               <tbody>{data.events.map((event) => (
                 <tr key={event.id}>
                   <td>{formatDate(event.created_at)}</td>
                   <td className="font-bold">{event.sync_type}</td>
                   <td>{event.status}</td>
-                  <td className="text-karimoff-muted">{Object.entries(event.result_counts ?? {}).map(([key, value]) => `${key}: ${value}`).join(", ") || "—"}</td>
+                  <td>{event.imported_count} / {event.updated_count}</td>
+                  <td>{event.retry_count}</td>
+                  <td className="text-karimoff-muted">{event.cursor_before || event.cursor_after ? `${formatDate(event.cursor_before)} → ${formatDate(event.cursor_after)}` : "—"}</td>
                 </tr>
               ))}</tbody>
             </table>

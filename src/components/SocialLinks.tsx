@@ -2,7 +2,7 @@ import type { SiteSettings } from "@/lib/settings";
 import type { ReactNode } from "react";
 
 type SocialLinksProps = {
-  settings: Pick<SiteSettings, "telegram_url" | "instagram_url" | "tiktok_url">;
+  settings: Pick<SiteSettings, "telegram_url" | "tiktok_url">;
 };
 
 const iconClassName = "h-5 w-5";
@@ -30,16 +30,6 @@ function TelegramIcon() {
   );
 }
 
-function InstagramIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4.2" y="4.2" width="15.6" height="15.6" rx="4.2" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M16.8 7.3h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function TikTokIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClassName} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -53,9 +43,6 @@ export function SocialLinks({ settings }: SocialLinksProps) {
   const links = [
     settings.telegram_url
       ? { label: "Telegram", href: getTelegramHref(settings.telegram_url), fallbackHref: settings.telegram_url, icon: <TelegramIcon /> }
-      : null,
-    settings.instagram_url
-      ? { label: "Instagram", href: settings.instagram_url, fallbackHref: settings.instagram_url, icon: <InstagramIcon /> }
       : null,
     settings.tiktok_url
       ? { label: "TikTok", href: settings.tiktok_url, fallbackHref: settings.tiktok_url, icon: <TikTokIcon /> }

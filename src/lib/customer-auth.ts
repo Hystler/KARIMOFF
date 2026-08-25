@@ -58,6 +58,17 @@ export async function setCustomerSession(customerId: string) {
     throw new Error("Database is not configured.");
   }
 
+  const cookieStore = await cookies();
+  const previousToken = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+
+  if (previousToken) {
+    await database
+      .from("app_sessions")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("token_hash", hashToken(previousToken))
+      .eq("subject_type", "customer");
+  }
+
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
   const headerStore = await headers();
@@ -73,7 +84,6 @@ export async function setCustomerSession(customerId: string) {
     throw new Error("Customer session could not be created.");
   }
 
-  const cookieStore = await cookies();
   cookieStore.set(CUSTOMER_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",

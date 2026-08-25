@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { RepeatOrderButton } from "@/components/profile/RepeatOrderButton";
 import { getCustomerProfileData } from "@/lib/customer-data";
-import { logoutCustomerAction, updateMarketingConsentAction } from "./actions";
+import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
+import { getUserIdentities } from "@/lib/auth/social/identity";
+import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
+import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
+import { MaxLoginButton } from "@/components/auth/MaxLoginButton";
+import { logoutCustomerAction, unlinkSocialIdentityAction, updateMarketingConsentAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +37,18 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
-export default async function ProfilePage() {
+type ProfilePageProps = { searchParams?: Promise<{ identity?: string; identity_error?: string }> };
+
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const { customer, account, avatar, orders, transactions, marketingConsent, error } = await getCustomerProfileData();
 
   if (!customer) {
     redirect("/login");
   }
+  const identities = await getUserIdentities(customer.id);
+  const configuredProviders = getConfiguredSocialProviders();
+  const params = searchParams ? await searchParams : {};
+  const providerLabels = { phone: "Телефон", telegram: "Telegram", max: "MAX" } as const;
 
   return (
     <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
@@ -172,6 +183,65 @@ export default async function ProfilePage() {
             )}
           </section>
         </div>
+
+        <section className="mt-8 max-w-3xl rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-6">
+          <div>
+            <p className="text-sm font-semibold text-karimoff-orange">Безопасность</p>
+            <h2 className="mt-2 text-2xl font-black">Способы входа</h2>
+            <p className="mt-2 text-sm leading-6 text-karimoff-muted">Привязки относятся к одному профилю. Токены сервисов не сохраняются.</p>
+          </div>
+          {params.identity === "linked" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Способ входа подключён.</p> : null}
+          {params.identity === "unlinked" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Способ входа отключён.</p> : null}
+          {params.identity_error ? <p className="mt-4 text-sm font-semibold text-red-600">Нельзя отключить последний доступный способ входа.</p> : null}
+          <div className="mt-5 grid gap-3">
+            {(["phone", "telegram", "max"] as const).map((provider) => {
+              const identity = identities.find((item) => item.provider === provider);
+              const isConfigured = provider === "phone" || configuredProviders[provider];
+              return (
+                <article key={provider} className="flex flex-col gap-4 rounded-lg border border-karimoff-line p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <IdentityAvatar
+                      identityId={identity?.id ?? provider}
+                      label={provider === "phone" ? "+7" : provider === "telegram" ? "T" : "MAX"}
+                      hasImage={Boolean(identity?.avatarUrl)}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-black">{providerLabels[provider]}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-karimoff-muted">
+                        {identity
+                          ? identity.username
+                            ? `@${identity.username}`
+                            : identity.displayName || identity.phone || "Подключено"
+                          : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
+                      </p>
+                    </div>
+                  </div>
+                  {identity ? (
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">Подключено</span>
+                      {provider !== "phone" ? (
+                        <form action={unlinkSocialIdentityAction}>
+                          <input type="hidden" name="provider" value={provider} />
+                          <button type="submit" className="min-h-10 rounded-full border border-karimoff-line px-4 text-xs font-bold transition hover:border-red-300 hover:text-red-600">Отключить</button>
+                        </form>
+                      ) : null}
+                    </div>
+                  ) : provider === "phone" ? (
+                    <span className="text-xs font-semibold text-karimoff-muted">Не подтверждён</span>
+                  ) : provider === "telegram" && isConfigured ? (
+                    <TelegramLoginButton intent="link" returnTo="/profile" variant="compact" />
+                  ) : provider === "max" && isConfigured ? (
+                    <MaxLoginButton intent="link" returnTo="/profile" variant="compact" />
+                  ) : isConfigured ? (
+                    <span className="text-xs font-semibold text-karimoff-muted">Не настроено</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-karimoff-muted">Не настроено</span>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="mt-8 max-w-3xl rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
           <h2 className="text-2xl font-black">Сообщения KARIMOFF</h2>

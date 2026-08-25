@@ -1,23 +1,46 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { Logo } from "@/components/Logo";
+import { getConfiguredSocialProviders, logMaxAuthDiagnostics } from "@/lib/auth/social/config";
+
+export const dynamic = "force-dynamic";
 
 type LoginPageProps = {
   searchParams?: Promise<{
     next?: string;
     redirectTo?: string;
+    returnTo?: string;
+    socialError?: string;
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
+  logMaxAuthDiagnostics("login");
+  const socialErrors: Record<string, string> = {
+    unavailable: "Этот способ входа пока не настроен.",
+    rate_limit: "Слишком много попыток. Попробуйте позже.",
+    cancelled: "Вы отменили вход через Telegram.",
+    validation_failed: "Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.",
+    session_expired: "Сессия входа истекла. Попробуйте ещё раз.",
+    start_failed: "Не удалось завершить вход. Попробуйте позже."
+  };
+  const returnTo = params.redirectTo ?? params.returnTo;
 
   return (
     <main className="min-h-screen bg-karimoff-cream px-5 pb-10 pt-24 text-karimoff-black sm:pt-28">
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
-        <Link href="/" className="mb-5 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-          На сайт KARIMOFF
-        </Link>
-        <AuthForm mode="login" next={params.next} redirectTo={params.redirectTo} />
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <Logo compact />
+          <Link href="/" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">На главную</Link>
+        </div>
+        <AuthForm
+          mode="login"
+          next={params.next}
+          redirectTo={returnTo}
+          socialProviders={getConfiguredSocialProviders()}
+          socialError={params.socialError ? socialErrors[params.socialError] ?? "Не удалось выполнить вход." : null}
+        />
       </div>
     </main>
   );

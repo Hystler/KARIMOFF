@@ -43,7 +43,7 @@ test("inventory rows are locked and negative balances are rejected", () => {
 
 test("personal-data consent is mandatory and marketing remains optional", () => {
   assert.match(orderAction, /if \(!isChecked\(formData\.get\("personal_data_consent"\)\)\)/);
-  assert.match(orderAction, /p_marketing_granted: isChecked\(formData\.get\("marketing_consent"\)\)/);
+  assert.match(orderAction, /marketingGranted: isChecked\(formData\.get\("marketing_consent"\)\)/);
   assert.match(leadAction, /if \(!isChecked\(formData\.get\("personal_data_consent"\)\)\)/);
   assert.match(authForm, /const \[marketingConsent, setMarketingConsent\] = useState\(false\)/);
   assert.doesNotMatch(authForm, /name="marketing_consent"[\s\S]{0,120}defaultChecked/);

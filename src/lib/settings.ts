@@ -3,6 +3,10 @@ import "server-only";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { LEGAL_CONTACTS } from "@/lib/legal";
+
+const SITE_SETTINGS_SELECT =
+  "id, site_name, phone, address, working_hours, delivery_enabled, pickup_enabled, theme, loyalty_enabled, loyalty_percent, loyalty_redemption_limit_percent, payments_enabled, hero_title, hero_subtitle, home_hero_image_url, menu_hero_image_url, business_hero_image_url, careers_hero_image_url, franchise_hero_image_url, about_hero_image_url, telegram_url, tiktok_url";
 
 export type SiteTheme = "light" | "dark";
 
@@ -28,14 +32,13 @@ export type SiteSettings = {
   franchise_hero_image_url: string | null;
   about_hero_image_url: string | null;
   telegram_url: string | null;
-  instagram_url: string | null;
   tiktok_url: string | null;
 };
 
 export const fallbackSiteSettings: SiteSettings = {
   id: "main",
   site_name: "KARIMOFF",
-  phone: null,
+  phone: LEGAL_CONTACTS.supportPhone,
   address: null,
   working_hours: null,
   delivery_enabled: true,
@@ -54,12 +57,27 @@ export const fallbackSiteSettings: SiteSettings = {
   franchise_hero_image_url: null,
   about_hero_image_url: null,
   telegram_url: "https://t.me/juikaifui",
-  instagram_url: "https://www.instagram.com/_guikaifui_/",
   tiktok_url: "https://www.tiktok.com/@karimich_11.0"
 };
 
 function optionalString(row: Record<string, unknown>, key: string) {
   return typeof row[key] === "string" && row[key].length > 0 ? String(row[key]) : null;
+}
+
+function phoneDigits(value: string | null | undefined) {
+  return (value ?? "").replace(/\D/g, "");
+}
+
+export function sanitizePublicContactPhone(value: string | null | undefined) {
+  const configured = value?.trim() || null;
+  const configuredDigits = phoneDigits(configured);
+  const adminDigits = phoneDigits(process.env.ADMIN_PHONE);
+
+  if (!configuredDigits || (adminDigits && configuredDigits === adminDigits)) {
+    return LEGAL_CONTACTS.supportPhone;
+  }
+
+  return configured;
 }
 
 function normalizeSettings(row: Record<string, unknown> | null | undefined): SiteSettings {
@@ -70,7 +88,7 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
   return {
     id: String(row.id ?? "main"),
     site_name: String(row.site_name ?? fallbackSiteSettings.site_name),
-    phone: typeof row.phone === "string" && row.phone.length > 0 ? row.phone : null,
+    phone: sanitizePublicContactPhone(typeof row.phone === "string" ? row.phone : null),
     address: typeof row.address === "string" && row.address.length > 0 ? row.address : null,
     working_hours: typeof row.working_hours === "string" && row.working_hours.length > 0 ? row.working_hours : null,
     delivery_enabled: row.delivery_enabled !== false,
@@ -92,7 +110,6 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     franchise_hero_image_url: resolvePublicMediaUrl(optionalString(row, "franchise_hero_image_url")),
     about_hero_image_url: resolvePublicMediaUrl(optionalString(row, "about_hero_image_url")),
     telegram_url: optionalString(row, "telegram_url"),
-    instagram_url: optionalString(row, "instagram_url"),
     tiktok_url: optionalString(row, "tiktok_url")
   };
 }
@@ -104,7 +121,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     return fallbackSiteSettings;
   }
 
-  const { data, error } = await database.from("site_settings").select("*").eq("id", "main").maybeSingle();
+  const { data, error } = await database.from("site_settings").select(SITE_SETTINGS_SELECT).eq("id", "main").maybeSingle();
 
   if (error || !data) {
     if (error && process.env.NODE_ENV !== "production") {
@@ -127,7 +144,7 @@ export async function getAdminSiteSettings() {
     };
   }
 
-  const { data, error } = await database.from("site_settings").select("*").eq("id", "main").maybeSingle();
+  const { data, error } = await database.from("site_settings").select(SITE_SETTINGS_SELECT).eq("id", "main").maybeSingle();
 
   return {
     settings: normalizeSettings(data),

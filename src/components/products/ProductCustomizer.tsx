@@ -1,12 +1,18 @@
 "use client";
 
 import { Check, ShoppingBasket } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useCart } from "@/components/cart/CartProvider";
+import {
+  getDefaultCartCustomization,
+  isCartCustomizationValid,
+  useCart
+} from "@/components/cart/CartProvider";
 import type { Product } from "@/lib/product-types";
 
 export function ProductCustomizer({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const router = useRouter();
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
@@ -19,7 +25,12 @@ export function ProductCustomizer({ product }: { product: Product }) {
     <button
       type="button"
       onClick={() => {
-        addItem(product);
+        const customization = getDefaultCartCustomization(product);
+        if (!isCartCustomizationValid(product, customization)) {
+          router.push(`/menu/${encodeURIComponent(product.slug)}`);
+          return;
+        }
+        addItem(product, customization);
         setIsAdded(true);
       }}
       className={`product-cta overflow-hidden ${isAdded ? "product-cta-added" : ""}`}

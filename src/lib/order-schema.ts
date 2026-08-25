@@ -15,7 +15,9 @@ export const orderCartLineSchema = z.object({
       })
     )
     .max(20)
-    .default([])
+    .default([]),
+  modifier_option_ids: z.array(z.string().uuid()).max(20).default([]),
+  note: z.string().trim().max(300).default("")
 });
 
 export const createOrderSchema = z.object({

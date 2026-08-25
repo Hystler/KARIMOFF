@@ -225,14 +225,10 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                   Если поле пустое, иконка не показывается. Telegram можно указать как https://t.me/username или tg://resolve?domain=username.
                 </p>
               </div>
-              <div className="mt-5 grid gap-5 md:grid-cols-3">
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
                 <label className="grid gap-2 text-sm font-semibold">
                   Telegram
                   <input name="telegram_url" defaultValue={settings.telegram_url ?? ""} placeholder="https://t.me/username" className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
-                </label>
-                <label className="grid gap-2 text-sm font-semibold">
-                  Instagram
-                  <input name="instagram_url" defaultValue={settings.instagram_url ?? ""} placeholder="https://instagram.com/username" className="rounded-lg border border-karimoff-line px-4 py-3 text-sm outline-none focus:border-karimoff-orange" />
                 </label>
                 <label className="grid gap-2 text-sm font-semibold">
                   TikTok

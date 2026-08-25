@@ -133,6 +133,40 @@ test("Evotor client does not retry 401 and retries 429/500 only as safe GET", ()
   });
 });
 
+test("Evotor client distinguishes revoked tokens from missing REST permissions", () => {
+  const fixture = testModule("src/lib/integrations/evotor/client.ts");
+  let result;
+  try {
+    result = runTypeScript(`
+    const { EvotorClient } = await import(${JSON.stringify(fixture.url)});
+    const { z } = await import("zod");
+    const client = new EvotorClient("safe-test-token", {
+      fetchImpl: async (_url, options) => {
+        const authorization = String(options?.headers?.Authorization ?? "");
+        return Response.json([{ code: "forbidden", message: "Missing store read permission", token: authorization }], { status: 403 });
+      }
+    });
+    try {
+      await client.get("/stores", z.object({}));
+    } catch (error) {
+      console.log(JSON.stringify({
+        status: error.status,
+        endpoint: error.endpoint,
+        providerCode: error.providerCode,
+        message: error.message
+      }));
+    }
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.equal(result.status, 403);
+  assert.equal(result.endpoint, "GET /stores");
+  assert.equal(result.providerCode, "forbidden");
+  assert.match(result.message, /REST API permissions/);
+  assert.doesNotMatch(JSON.stringify(result), /safe-test-token|Bearer/);
+});
+
 test("receipt parsing keeps fiscal analytics but strips customer and device identifiers", () => {
   const fixture = testModule("src/lib/integrations/evotor/receipts.ts", { removeTypeImport: true });
   let result;
@@ -178,9 +212,18 @@ test("Evotor tables are private and imported receipts never mutate inventory", (
   assert.doesNotMatch(sync, /inventory_items|inventory_movements|order_inventory_deductions/);
 });
 
+test("connection check reads stores and devices but skips sales data", () => {
+  assert.match(sync, /const stores = await fetchEvotorStores\(client\)/);
+  assert.match(sync, /const devices = await fetchEvotorDevices\(client\)/);
+  assert.match(sync, /const isFullCatalogSync = \["initial", "installation", "manual"\]\.includes/);
+  assert.match(sync, /const employees = isFullCatalogSync && !isConnectionCheck[\s\S]+fetchEvotorEmployees/);
+  assert.match(sync, /if \(!isConnectionCheck\) \{[\s\S]+fetchEvotorDocuments/);
+  assert.match(sync, /when \$\{status\} = 401 then 'revoked'/);
+});
+
 test("admin actions require staff permissions and never expose a token", () => {
   assert.match(adminAction, /getCurrentStaff/);
-  assert.match(adminAction, /staff\.role === "cook"/);
+  assert.match(adminAction, /\["owner", "admin", "manager"\]\.includes\(staff\.role\)/);
   assert.match(adminAction, /consumeEvotorRateLimitKey/);
   assert.doesNotMatch(adminAction, /encrypted_token|EVOTOR_TOKEN_ENCRYPTION_KEY/);
 });

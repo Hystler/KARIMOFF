@@ -30,20 +30,29 @@ const mediaOrigins = [
   cdnPattern ? `https://${cdnPattern.hostname}${cdnPattern.port ? `:${cdnPattern.port}` : ""}` : null
 ].filter(Boolean);
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
-  "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  `media-src 'self' ${mediaOrigins.join(" ")}`,
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests"
-].join("; ");
+function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false } = {}) {
+  const telegramOrigin = telegramLogin ? " https://oauth.telegram.org" : "";
+  const maxBridgeOrigin = maxMiniApp ? " https://st.max.ru" : "";
+  const frameAncestors = maxMiniApp ? "https://max.ru https://*.max.ru" : "'none'";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}${telegramOrigin}${maxBridgeOrigin}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
+    "font-src 'self' data:",
+    `connect-src 'self'${telegramOrigin}`,
+    `media-src 'self' ${mediaOrigins.join(" ")}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    `frame-ancestors ${frameAncestors}`,
+    "upgrade-insecure-requests"
+  ].join("; ");
+}
+
+const contentSecurityPolicy = buildContentSecurityPolicy();
+const telegramLoginContentSecurityPolicy = buildContentSecurityPolicy({ telegramLogin: true });
+const maxMiniAppContentSecurityPolicy = buildContentSecurityPolicy({ maxMiniApp: true });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -73,7 +82,6 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
       { key: "X-DNS-Prefetch-Control", value: "off" },
       { key: "Cross-Origin-Opener-Policy", value: "same-origin" }
     ];
@@ -90,7 +98,28 @@ const nextConfig = {
         source: "/assets/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }]
       },
-      { source: "/(.*)", headers: securityHeaders }
+      { source: "/(.*)", headers: securityHeaders },
+      ...["/login", "/register", "/profile"].map((source) => ({
+        source,
+        headers: [
+          { key: "Content-Security-Policy", value: telegramLoginContentSecurityPolicy },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }
+        ]
+      })),
+      {
+        source: "/admin/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }
+        ]
+      },
+      {
+        source: "/integrations/max/app",
+        headers: [
+          { key: "Content-Security-Policy", value: maxMiniAppContentSecurityPolicy },
+          { key: "Cross-Origin-Opener-Policy", value: "unsafe-none" }
+        ]
+      }
     ];
   }
 };

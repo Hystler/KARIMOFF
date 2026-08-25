@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import type { Product, ProductModifierOption } from "@/lib/product-types";
+import type { Product, ProductModifierGroup, ProductModifierOption } from "@/lib/product-types";
 
 export type CartRemovedIngredient = {
   ingredient_id: string;
@@ -26,13 +26,18 @@ export type CartExtra = {
 export type CartCustomization = {
   removed: CartRemovedIngredient[];
   extras: CartExtra[];
+  modifierOptionIds: string[];
+  note: string;
+};
+
+type CartProduct = Pick<Product, "id" | "name" | "slug" | "price" | "image_url"> & {
+  modifier_options?: ProductModifierOption[];
+  modifier_groups?: ProductModifierGroup[];
 };
 
 export type CartLine = {
   lineId: string;
-  product: Pick<Product, "id" | "name" | "slug" | "price" | "image_url"> & {
-    modifier_options?: ProductModifierOption[];
-  };
+  product: CartProduct;
   quantity: number;
   customization: CartCustomization;
 };
@@ -43,7 +48,7 @@ type CartContextValue = {
   totalItems: number;
   totalPrice: number;
   addAnimationKey: number;
-  addItem: (product: Product, customization?: CartCustomization) => void;
+  addItem: (product: Product, customization?: CartCustomization, quantity?: number) => void;
   updateCustomization: (lineId: string, customization: CartCustomization) => void;
   increment: (lineId: string) => void;
   decrement: (lineId: string) => void;
@@ -55,17 +60,49 @@ type CartContextValue = {
 };
 
 const STORAGE_KEY = "karimoff_cart";
-const EMPTY_CUSTOMIZATION: CartCustomization = { removed: [], extras: [] };
 const CartContext = createContext<CartContextValue | null>(null);
 
-function toCartProduct(product: Product): CartLine["product"] {
+export function getDefaultCartCustomization(product: Product | CartProduct): CartCustomization {
+  return {
+    removed: [],
+    extras: [],
+    modifierOptionIds: (product.modifier_groups ?? [])
+      .flatMap((group) => group.options.filter((option) => option.is_default).map((option) => option.id))
+      .sort(),
+    note: ""
+  };
+}
+
+export function isCartCustomizationValid(product: Product | CartProduct, customization: CartCustomization) {
+  const selected = new Set(customization.modifierOptionIds);
+  return (product.modifier_groups ?? []).every((group) => {
+    const count = group.options.filter((option) => selected.has(option.id)).length;
+    return count >= group.min_selections && count <= group.max_selections;
+  });
+}
+
+function normalizeCustomization(customization: Partial<CartCustomization>): CartCustomization {
+  return {
+    removed: Array.isArray(customization.removed) ? [...customization.removed] : [],
+    extras: Array.isArray(customization.extras)
+      ? customization.extras.filter((extra) => Number(extra.quantity) > 0)
+      : [],
+    modifierOptionIds: Array.isArray(customization.modifierOptionIds)
+      ? [...new Set(customization.modifierOptionIds.map(String))].sort()
+      : [],
+    note: typeof customization.note === "string" ? customization.note.trim().slice(0, 300) : ""
+  };
+}
+
+function toCartProduct(product: Product): CartProduct {
   return {
     id: product.id,
     name: product.name,
     slug: product.slug,
     price: product.price,
     image_url: product.image_url,
-    modifier_options: product.modifier_options ?? []
+    modifier_options: product.modifier_options ?? [],
+    modifier_groups: product.modifier_groups ?? []
   };
 }
 
@@ -75,21 +112,35 @@ function customizationKey(customization: CartCustomization) {
     .map((item) => `${item.ingredient_id}:${item.quantity}`)
     .sort()
     .join(",");
+  const groups = [...customization.modifierOptionIds].sort().join(",");
 
-  return `${removed}|${extras}`;
+  return `${removed}|${extras}|${groups}|${customization.note.trim()}`;
 }
 
 function makeLineId(productId: string, customization: CartCustomization) {
   return `${productId}:${customizationKey(customization)}`;
 }
 
-export function getCartLineUnitPrice(line: CartLine) {
-  const extras = line.customization.extras.reduce(
+export function getConfiguredCartUnitPrice(product: CartProduct, customization: CartCustomization) {
+  const extras = customization.extras.reduce(
     (sum, extra) => sum + extra.unit_price * extra.quantity,
     0
   );
+  const selectedOptions = new Map(
+    (product.modifier_groups ?? []).flatMap((group) =>
+      group.options.map((option) => [option.id, option] as const)
+    )
+  );
+  const groups = customization.modifierOptionIds.reduce(
+    (sum, optionId) => sum + (selectedOptions.get(optionId)?.price_delta ?? 0),
+    0
+  );
 
-  return line.product.price + extras;
+  return product.price + extras + groups;
+}
+
+export function getCartLineUnitPrice(line: CartLine) {
+  return getConfiguredCartUnitPrice(line.product, line.customization);
 }
 
 function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
@@ -97,10 +148,7 @@ function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
     return null;
   }
 
-  const customization: CartCustomization = {
-    removed: Array.isArray(line.customization?.removed) ? line.customization.removed : [],
-    extras: Array.isArray(line.customization?.extras) ? line.customization.extras : []
-  };
+  const customization = normalizeCustomization(line.customization ?? {});
 
   return {
     lineId: line.lineId || makeLineId(line.product.id, customization),
@@ -112,6 +160,9 @@ function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
       image_url: line.product.image_url ?? null,
       modifier_options: Array.isArray(line.product.modifier_options)
         ? line.product.modifier_options
+        : [],
+      modifier_groups: Array.isArray(line.product.modifier_groups)
+        ? line.product.modifier_groups
         : []
     },
     quantity: Math.max(1, Number(line.quantity ?? 1)),
@@ -173,18 +224,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [lines]
   );
 
-  const addItem = useCallback((product: Product, customization = EMPTY_CUSTOMIZATION) => {
-    const normalizedCustomization: CartCustomization = {
-      removed: [...customization.removed],
-      extras: customization.extras.filter((extra) => extra.quantity > 0)
-    };
+  const addItem = useCallback((product: Product, customization?: CartCustomization, quantity = 1) => {
+    const normalizedCustomization = normalizeCustomization(
+      customization ?? getDefaultCartCustomization(product)
+    );
+    const safeQuantity = Math.max(1, Math.min(20, Math.trunc(quantity)));
     const lineId = makeLineId(product.id, normalizedCustomization);
 
     setLines((current) => {
       const existing = current.find((line) => line.lineId === lineId);
       if (existing) {
         return current.map((line) =>
-          line.lineId === lineId ? { ...line, quantity: Math.min(20, line.quantity + 1) } : line
+          line.lineId === lineId
+            ? { ...line, quantity: Math.min(20, line.quantity + safeQuantity) }
+            : line
         );
       }
 
@@ -193,7 +246,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         {
           lineId,
           product: toCartProduct(product),
-          quantity: 1,
+          quantity: safeQuantity,
           customization: normalizedCustomization
         }
       ];
@@ -202,10 +255,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCustomization = useCallback((lineId: string, customization: CartCustomization) => {
-    const normalizedCustomization: CartCustomization = {
-      removed: [...customization.removed],
-      extras: customization.extras.filter((extra) => extra.quantity > 0)
-    };
+    const normalizedCustomization = normalizeCustomization(customization);
 
     setLines((current) => {
       const target = current.find((line) => line.lineId === lineId);
