@@ -22,6 +22,7 @@ const reconciliationPage = read("src/app/admin/integrations/evotor/reconciliatio
 const kitchenSettingsAction = read("src/app/admin/kitchen/actions.ts");
 const evotorSync = read("src/lib/integrations/evotor/sync.ts");
 const evotorRepository = read("src/lib/integrations/evotor/repository.ts");
+const evotorRecovery = read("src/lib/integrations/evotor/recovery.ts");
 const evotorScheduler = read("src/lib/integrations/evotor/scheduler.ts");
 const analyticsDashboard = read("src/lib/analytics/dashboard.ts");
 const analyticsSales = read("src/lib/analytics/sales.ts");
@@ -157,8 +158,10 @@ test("pickup display receives only explicitly public order fields", () => {
 test("Evotor sync has cursor overlap, retries, and rolling reconciliation", () => {
   assert.match(migration, /create table if not exists public\.evotor_sync_cursors/);
   assert.match(evotorSync, /cursor\.getTime\(\) - overlap \* 1000/);
-  assert.match(evotorSync, /event\.retry_count < 4/);
-  assert.match(evotorSync, /15 \* 2 \*\* event\.retry_count/);
+  assert.match(evotorSync, /classifyEvotorFailure\(failureContext\(error\)\)/);
+  assert.match(evotorSync, /evotorRetryDelaySeconds\(nextFailureCount\)/);
+  assert.match(evotorRecovery, /RETRY_CEILING_SECONDS = 15 \* 60/);
+  assert.match(evotorRepository, /connection\.status in \('connected', 'error'\)/);
   assert.match(evotorRepository, /new Date\(now\.getTime\(\) - 72 \* 60 \* 60 \* 1000\)/);
   assert.match(evotorScheduler, /EVOTOR_INCREMENTAL_INTERVAL_SECONDS/);
   assert.match(evotorScheduler, /EVOTOR_RECONCILIATION_INTERVAL_HOURS/);

@@ -38,6 +38,10 @@ function testModule(path, { removeTypeImport = false } = {}) {
   const directory = mkdtempSync(join(cacheDirectory, "karimoff-evotor-test-"));
   const file = join(directory, "module.ts");
   let source = read(path).replace('import "server-only";\n', "");
+  if (source.includes('from "./errors"')) {
+    source = source.replace('from "./errors"', 'from "./errors.ts"');
+    writeFileSync(join(directory, "errors.ts"), read("src/lib/integrations/evotor/errors.ts"));
+  }
   if (removeTypeImport) {
     source = source.replace(/import type \{ EvotorDocument, EvotorReceipt \} from "\.\/types";\n/, "");
   }
@@ -119,7 +123,22 @@ test("Evotor client does not retry 401 and retries 429/500 only as safe GET", ()
     });
     let serverStatus = 0;
     try { await serverError.get("/stores/one", z.object({})); } catch (error) { serverStatus = error.status; }
-    console.log(JSON.stringify({ unauthorizedCalls, unauthorizedStatus, rateCalls, serverCalls, serverStatus }));
+
+    let timeoutCalls = 0;
+    const timeout = new EvotorClient("safe-test-token", {
+      fetchImpl: async () => {
+        timeoutCalls += 1;
+        const error = new Error("synthetic timeout");
+        error.name = "TimeoutError";
+        throw error;
+      },
+      sleep: async () => {}
+    });
+    let timeoutResult = null;
+    try { await timeout.get("/stores/one", z.object({})); } catch (error) {
+      timeoutResult = { status: error.status, retryable: error.retryable, message: error.message };
+    }
+    console.log(JSON.stringify({ unauthorizedCalls, unauthorizedStatus, rateCalls, serverCalls, serverStatus, timeoutCalls, timeoutResult }));
     `);
   } finally {
     fixture.cleanup();
@@ -129,7 +148,13 @@ test("Evotor client does not retry 401 and retries 429/500 only as safe GET", ()
     unauthorizedStatus: 401,
     rateCalls: 2,
     serverCalls: 3,
-    serverStatus: 500
+    serverStatus: 500,
+    timeoutCalls: 3,
+    timeoutResult: {
+      status: 503,
+      retryable: true,
+      message: "Evotor request timed out."
+    }
   });
 });
 
@@ -218,7 +243,8 @@ test("connection check reads stores and devices but skips sales data", () => {
   assert.match(sync, /const isFullCatalogSync = \["initial", "installation", "manual"\]\.includes/);
   assert.match(sync, /const employees = isFullCatalogSync && !isConnectionCheck[\s\S]+fetchEvotorEmployees/);
   assert.match(sync, /if \(!isConnectionCheck\) \{[\s\S]+fetchEvotorDocuments/);
-  assert.match(sync, /when \$\{status\} = 401 then 'revoked'/);
+  assert.match(sync, /classifyEvotorFailure\(failureContext\(error\)\)/);
+  assert.match(sync, /status = \$\{classification\.connectionStatus\}/);
 });
 
 test("admin actions require staff permissions and never expose a token", () => {

@@ -10,6 +10,7 @@ import {
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentStaff } from "@/lib/admin-auth";
+import { evotorRecoveryState } from "@/lib/integrations/evotor/recovery";
 import { getEvotorAdminData } from "@/lib/integrations/evotor/repository";
 import { checkEvotorAction, incrementalEvotorAction, syncEvotorAction } from "./actions";
 
@@ -29,11 +30,23 @@ function formatDate(value: string | null) {
   return value ? dateTime.format(new Date(value)) : "Ещё не было";
 }
 
-const statusLabels: Record<string, string> = {
-  connected: "Подключён",
-  error: "Ошибка",
-  revoked: "Токен отозван",
-  uninstalled: "Приложение удалено"
+const statusPresentation = {
+  connected: {
+    label: "Подключён",
+    className: "bg-emerald-50 text-emerald-800"
+  },
+  degraded: {
+    label: "Временная ошибка, повторим автоматически",
+    className: "bg-amber-50 text-amber-800"
+  },
+  auth_error: {
+    label: "Требуется переподключение",
+    className: "bg-red-50 text-red-700"
+  },
+  disabled: {
+    label: "Отключён",
+    className: "bg-zinc-100 text-zinc-700"
+  }
 };
 
 export default async function EvotorIntegrationPage({ searchParams }: PageProps) {
@@ -95,18 +108,16 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
         {data.connections.map((connection) => {
           const stores = data.stores.filter((item) => item.connection_id === connection.id);
           const devices = data.devices.filter((item) => item.connection_id === connection.id);
+          const recoveryState = evotorRecoveryState(connection.status);
+          const presentation = statusPresentation[recoveryState];
           return (
             <article key={connection.id} className="admin-card p-5 sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ${
-                      connection.status === "connected"
-                        ? "bg-emerald-50 text-emerald-800"
-                        : "bg-red-50 text-red-700"
-                    }`}>
-                      {connection.status === "connected" ? <CheckCircle2 size={15} /> : <CircleAlert size={15} />}
-                      {statusLabels[connection.status] ?? connection.status}
+                    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ${presentation.className}`}>
+                      {recoveryState === "connected" ? <CheckCircle2 size={15} /> : <CircleAlert size={15} />}
+                      {presentation.label}
                     </span>
                     <span className="text-sm text-karimoff-muted">Установлено {formatDate(connection.installed_at)}</span>
                   </div>
@@ -117,11 +128,17 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
                     <div><dt className="text-karimoff-muted">Последний запуск</dt><dd className="mt-1 font-bold">{formatDate(connection.last_sync_started_at)}</dd></div>
                     <div><dt className="text-karimoff-muted">Новых чеков</dt><dd className="mt-1 font-bold">{connection.last_imported_receipts}</dd></div>
                     <div><dt className="text-karimoff-muted">Изменённых чеков</dt><dd className="mt-1 font-bold">{connection.last_updated_receipts}</dd></div>
-                    <div><dt className="text-karimoff-muted">Ошибок / retries</dt><dd className="mt-1 font-bold">{connection.failed_items} / {connection.retry_count}</dd></div>
+                    <div><dt className="text-karimoff-muted">Ошибок подряд</dt><dd className="mt-1 font-bold">{connection.consecutive_failures}</dd></div>
+                    <div><dt className="text-karimoff-muted">Следующая попытка</dt><dd className="mt-1 font-bold">{recoveryState === "degraded" ? formatDate(connection.next_retry_at) : "Не требуется"}</dd></div>
+                    <div><dt className="text-karimoff-muted">Последняя ошибка</dt><dd className="mt-1 font-bold">{formatDate(connection.last_error_at)}</dd></div>
                     <div><dt className="text-karimoff-muted">Всего чеков</dt><dd className="mt-1 font-bold">{connection.receipts_count}</dd></div>
                   </dl>
                   {connection.last_error_message ? (
-                    <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    <p className={`mt-4 rounded-md px-4 py-3 text-sm font-semibold ${
+                      recoveryState === "degraded"
+                        ? "bg-amber-50 text-amber-800"
+                        : "bg-red-50 text-red-700"
+                    }`}>
                       {connection.last_error_message}
                     </p>
                   ) : null}

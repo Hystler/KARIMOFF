@@ -8,8 +8,10 @@ import { decryptEvotorToken } from "./crypto";
 import { fetchEvotorDevices } from "./devices";
 import { fetchEvotorDocuments } from "./documents";
 import { fetchEvotorEmployees } from "./employees";
+import { EvotorConfigurationError } from "./errors";
 import { fetchEvotorProducts } from "./products";
 import { parseEvotorReceipt, sanitizeEvotorPayload } from "./receipts";
+import { classifyEvotorFailure, evotorRetryDelaySeconds } from "./recovery";
 import { fetchEvotorStores } from "./stores";
 import type {
   EvotorDevice,
@@ -61,7 +63,22 @@ function receiptSourceHash(receipt: EvotorReceipt) {
 
 function safeMessage(error: unknown) {
   if (error instanceof EvotorApiError) return error.message.slice(0, 500);
+  if (error instanceof EvotorConfigurationError) return error.message.slice(0, 500);
   return "Evotor synchronization failed.";
+}
+
+function failureContext(error: unknown) {
+  if (error instanceof EvotorConfigurationError) {
+    return { source: "configuration" as const };
+  }
+  if (error instanceof EvotorApiError) {
+    return {
+      source: "api" as const,
+      status: error.status,
+      retryable: error.retryable
+    };
+  }
+  return { source: "unknown" as const };
 }
 
 function displayName(employee: EvotorEmployee) {
@@ -425,6 +442,7 @@ export async function processEvotorSyncEvent(eventId: string) {
     period_to: string | null;
     encrypted_token: string;
     retry_count: number;
+    connection_retry_count: number;
   }[]>`
     update public.evotor_sync_events e
     set status = 'running', started_at = now()
@@ -433,8 +451,12 @@ export async function processEvotorSyncEvent(eventId: string) {
       and e.connection_id = c.id
       and e.status = 'pending'
       and e.available_at <= now()
+      and (
+        c.status in ('connected', 'error')
+        or e.requested_by not in ('scheduler', 'app-background-worker', 'timeweb-scheduler')
+      )
     returning e.id, e.connection_id, e.sync_type, e.period_from, e.period_to,
-      e.retry_count, c.encrypted_token
+      e.retry_count, c.encrypted_token, c.retry_count as connection_retry_count
   `;
   if (!claimed[0]) return { skipped: true } as const;
 
@@ -539,29 +561,30 @@ export async function processEvotorSyncEvent(eventId: string) {
   } catch (error) {
     const message = safeMessage(error);
     const status = error instanceof EvotorApiError ? error.status : null;
-    const retryable = error instanceof EvotorApiError ? error.retryable : false;
-    const shouldRetry = retryable && event.retry_count < 4;
-    const retryDelaySeconds = Math.min(300, 15 * 2 ** event.retry_count);
+    const classification = classifyEvotorFailure(failureContext(error));
+    const retryable = classification.kind === "transient";
+    const nextFailureCount = event.connection_retry_count + 1;
+    const retryDelaySeconds = evotorRetryDelaySeconds(nextFailureCount);
+    const nextRetryAt = retryable
+      ? new Date(Date.now() + retryDelaySeconds * 1000)
+      : null;
     await sql.begin(async (transaction) => {
       await transaction`
         update public.evotor_sync_events
-        set status = ${shouldRetry ? "pending" : "failed"},
-            finished_at = ${shouldRetry ? null : new Date().toISOString()},
+        set status = ${retryable ? "pending" : "failed"},
+            started_at = case when ${retryable} then null else started_at end,
+            finished_at = ${retryable ? null : new Date().toISOString()},
             retry_count = retry_count + 1,
             failed_count = failed_count + 1,
             available_at = case
-              when ${shouldRetry} then now() + make_interval(secs => ${retryDelaySeconds})
+              when ${retryable} then ${nextRetryAt?.toISOString() ?? null}::timestamptz
               else available_at
             end
         where id = ${event.id}::uuid
       `;
       await transaction`
         update public.evotor_connections
-        set status = case
-              when ${status} = 401 then 'revoked'
-              when ${shouldRetry} then status
-              else 'error'
-            end,
+        set status = ${classification.connectionStatus},
             last_sync_at = now(), last_error_at = now(), last_error_message = ${message},
             failed_items = failed_items + 1,
             retry_count = retry_count + 1
@@ -583,10 +606,22 @@ export async function processEvotorSyncEvent(eventId: string) {
       actorType: "system",
       entityType: "evotor_connection",
       entityId: event.connection_id,
-      metadata: { event_id: event.id, sync_type: event.sync_type, http_status: status, retryable },
+      metadata: {
+        event_id: event.id,
+        sync_type: event.sync_type,
+        http_status: status,
+        retryable,
+        failure_kind: classification.kind,
+        next_retry_at: nextRetryAt?.toISOString() ?? null
+      },
       sourcePath: "/api/integrations/evotor"
     });
-    return { skipped: false, error: message, retryScheduled: shouldRetry } as const;
+    return {
+      skipped: false,
+      error: message,
+      retryScheduled: retryable,
+      nextRetryAt: nextRetryAt?.toISOString() ?? null
+    } as const;
   }
 }
 

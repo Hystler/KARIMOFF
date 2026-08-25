@@ -52,6 +52,8 @@ export async function registerEvotorConnection(userId: string, token: string) {
             token_fingerprint = ${fingerprint},
             status = 'connected',
             installed_at = coalesce(installed_at, now()),
+            failed_items = 0,
+            retry_count = 0,
             last_error_at = null,
             last_error_message = null
         where id = ${connectionId}::uuid
@@ -137,12 +139,23 @@ export async function queueDueEvotorSyncs(params: {
 }) {
   const sql = getPostgresSql();
   const now = params.now ?? new Date();
+  await recoverStaleEvotorSyncEvents(now);
   const bucketMs = params.syncType === "incremental" ? 60_000 : 3_600_000;
   const bucket = Math.floor(now.getTime() / bucketMs);
   const connections = await sql<{ id: string }[]>`
     select id
     from public.evotor_connections connection
-    where connection.status = 'connected'
+    where connection.status in ('connected', 'error')
+      and (
+        connection.status = 'connected'
+        or connection.last_error_at is null
+        or connection.last_error_at + make_interval(
+          secs => least(
+            900,
+            (30 * power(2, least(greatest(connection.retry_count - 1, 0), 5)))::integer
+          )
+        ) <= ${now.toISOString()}::timestamptz
+      )
       and not exists (
         select 1
         from public.evotor_sync_events event
@@ -171,6 +184,40 @@ export async function queueDueEvotorSyncs(params: {
   return eventIds;
 }
 
+export async function recoverStaleEvotorSyncEvents(now = new Date()) {
+  const sql = getPostgresSql();
+  return sql<{ id: string }[]>`
+    with recovered as (
+      update public.evotor_sync_events
+      set status = 'pending',
+          started_at = null,
+          finished_at = null,
+          retry_count = retry_count + 1,
+          failed_count = failed_count + 1,
+          available_at = ${new Date(now.getTime() + 30_000).toISOString()}::timestamptz
+      where status = 'running'
+        and started_at < ${new Date(now.getTime() - 15 * 60_000).toISOString()}::timestamptz
+        and exists (
+          select 1
+          from public.evotor_connections connection
+          where connection.id = evotor_sync_events.connection_id
+            and connection.status in ('connected', 'error')
+        )
+      returning connection_id
+    )
+    update public.evotor_connections connection
+    set status = 'error',
+        last_error_at = ${now.toISOString()}::timestamptz,
+        last_error_message = 'Предыдущая синхронизация была прервана и будет повторена автоматически.',
+        failed_items = failed_items + 1,
+        retry_count = retry_count + 1
+    from (select distinct connection_id from recovered) stale
+    where connection.id = stale.connection_id
+      and connection.status in ('connected', 'error')
+    returning connection.id
+  `;
+}
+
 export async function findEvotorConnectionByUserId(userId: string) {
   const sql = getPostgresSql();
   const rows = await sql<{ id: string }[]>`
@@ -196,6 +243,8 @@ export async function getEvotorConnectionOverview() {
     last_updated_receipts: number;
     failed_items: number;
     retry_count: number;
+    consecutive_failures: number;
+    next_retry_at: string | null;
     stores_count: number;
     devices_count: number;
     receipts_count: number;
@@ -204,10 +253,30 @@ export async function getEvotorConnectionOverview() {
       c.last_error_at, c.last_error_message, c.last_event_received_at,
       c.last_sync_started_at, c.last_cursor_at, c.last_imported_receipts,
       c.last_updated_receipts, c.failed_items, c.retry_count,
+      c.retry_count as consecutive_failures,
+      coalesce(
+        pending_retry.available_at,
+        case when c.status = 'error' and c.last_error_at is not null then
+          c.last_error_at + make_interval(
+            secs => least(
+              900,
+              (30 * power(2, least(greatest(c.retry_count - 1, 0), 5)))::integer
+            )
+          )
+        end
+      ) as next_retry_at,
       (select count(*)::integer from public.evotor_stores s where s.connection_id = c.id) as stores_count,
       (select count(*)::integer from public.evotor_devices d where d.connection_id = c.id) as devices_count,
       (select count(*)::integer from public.evotor_receipts r where r.connection_id = c.id) as receipts_count
     from public.evotor_connections c
+    left join lateral (
+      select event.available_at
+      from public.evotor_sync_events event
+      where event.connection_id = c.id
+        and event.status = 'pending'
+      order by event.available_at
+      limit 1
+    ) pending_retry on true
     order by c.installed_at desc
   `;
   return rows;
