@@ -100,6 +100,8 @@ test("scheduler retries degraded connections but ignores auth and disabled state
   assert.match(repository, /recoverEvotorCryptoBlockedConnections/);
   assert.match(repository, /status = 'uninstalled'[\s\S]+last_error_message like/);
   assert.match(repository, /set status = 'error'[\s\S]+encrypted_token = \$\{connection\.encrypted_token\}/);
+  assert.match(repository, /incompatibleErrorCodes\.add\(cryptoCheck\.errorCode\)/);
+  assert.match(repository, /error_codes: Array\.from\(incompatibleErrorCodes\)\.sort\(\)\.join\(","\)/);
 });
 
 test("transient failure keeps one event pending and success restores the connection", () => {

@@ -209,9 +209,12 @@ export async function recoverEvotorCryptoBlockedConnections() {
   `;
   const recovered: string[] = [];
   let incompatibleConnections = 0;
+  const incompatibleErrorCodes = new Set<string>();
   for (const connection of blocked) {
-    if (!tryDecryptEvotorToken(connection.encrypted_token).ok) {
+    const cryptoCheck = tryDecryptEvotorToken(connection.encrypted_token);
+    if (!cryptoCheck.ok) {
       incompatibleConnections += 1;
+      incompatibleErrorCodes.add(cryptoCheck.errorCode);
       continue;
     }
     const rows = await sql<{ id: string }[]>`
@@ -231,7 +234,8 @@ export async function recoverEvotorCryptoBlockedConnections() {
   }
   if (incompatibleConnections) {
     logOperationalEvent("evotor.crypto_worker_skipped", {
-      skipped_connections: incompatibleConnections
+      skipped_connections: incompatibleConnections,
+      error_codes: Array.from(incompatibleErrorCodes).sort().join(",")
     });
   }
   return recovered;
