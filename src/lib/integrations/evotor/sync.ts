@@ -2,9 +2,14 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { writeAuditLog } from "@/lib/audit";
+import { logOperationalEvent } from "@/lib/observability";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { EvotorApiError, EvotorClient } from "./client";
-import { decryptEvotorToken } from "./crypto";
+import {
+  encryptEvotorToken,
+  fingerprintEvotorToken,
+  tryDecryptEvotorToken
+} from "./crypto";
 import { fetchEvotorDevices } from "./devices";
 import { fetchEvotorDocuments } from "./documents";
 import { fetchEvotorEmployees } from "./employees";
@@ -69,7 +74,7 @@ function safeMessage(error: unknown) {
 
 function failureContext(error: unknown) {
   if (error instanceof EvotorConfigurationError) {
-    return { source: "configuration" as const };
+    return { source: "configuration" as const, code: error.code };
   }
   if (error instanceof EvotorApiError) {
     return {
@@ -434,6 +439,32 @@ async function resolveSyncWindow(params: {
 
 export async function processEvotorSyncEvent(eventId: string) {
   const sql = getPostgresSql();
+  const candidates = await sql<{
+    id: string;
+    connection_id: string;
+    encrypted_token: string;
+  }[]>`
+    select e.id, e.connection_id, c.encrypted_token
+    from public.evotor_sync_events e
+    join public.evotor_connections c on c.id = e.connection_id
+    where e.id = ${eventId}::uuid
+      and e.status = 'pending'
+      and e.available_at <= now()
+      and (
+        c.status in ('connected', 'error')
+        or e.requested_by not in ('scheduler', 'app-background-worker', 'timeweb-scheduler')
+      )
+    limit 1
+  `;
+  if (!candidates[0]) return { skipped: true } as const;
+  const candidate = candidates[0];
+  const cryptoCheck = tryDecryptEvotorToken(candidate.encrypted_token);
+  if (!cryptoCheck.ok) {
+    logOperationalEvent("evotor.crypto_worker_skipped", {
+      error_code: cryptoCheck.errorCode
+    });
+    return { skipped: true, reason: "crypto_worker_incompatible" } as const;
+  }
   const claimed = await sql<{
     id: string;
     connection_id: string;
@@ -449,6 +480,7 @@ export async function processEvotorSyncEvent(eventId: string) {
     from public.evotor_connections c
     where e.id = ${eventId}::uuid
       and e.connection_id = c.id
+      and c.encrypted_token = ${candidate.encrypted_token}
       and e.status = 'pending'
       and e.available_at <= now()
       and (
@@ -467,8 +499,28 @@ export async function processEvotorSyncEvent(eventId: string) {
     where id = ${event.connection_id}::uuid
   `;
   try {
-    const client = new EvotorClient(decryptEvotorToken(event.encrypted_token));
+    const decryptedToken = cryptoCheck.value;
+    const client = new EvotorClient(decryptedToken.token);
     const stores = await fetchEvotorStores(client);
+    if (
+      decryptedToken.needsReencrypt &&
+      process.env.EVOTOR_TOKEN_REENCRYPT_LEGACY === "true"
+    ) {
+      const reencryptedToken = encryptEvotorToken(decryptedToken.token);
+      const tokenFingerprint = fingerprintEvotorToken(decryptedToken.token);
+      const rotated = await sql.begin(async (transaction) => transaction<{ id: string }[]>`
+        update public.evotor_connections
+        set encrypted_token = ${reencryptedToken},
+            token_fingerprint = ${tokenFingerprint}
+        where id = ${event.connection_id}::uuid
+          and encrypted_token = ${event.encrypted_token}
+        returning id
+      `);
+      logOperationalEvent("evotor.token_reencrypted", {
+        rotated: Boolean(rotated[0]),
+        from_version: decryptedToken.version
+      });
+    }
     const isConnectionCheck = event.sync_type === "check";
     const isFullCatalogSync = ["initial", "installation", "manual"].includes(event.sync_type);
     const devices = await fetchEvotorDevices(client);
@@ -582,21 +634,27 @@ export async function processEvotorSyncEvent(eventId: string) {
             end
         where id = ${event.id}::uuid
       `;
-      await transaction`
-        update public.evotor_connections
-        set status = ${classification.connectionStatus},
-            last_sync_at = now(), last_error_at = now(), last_error_message = ${message},
-            failed_items = failed_items + 1,
-            retry_count = retry_count + 1
-        where id = ${event.connection_id}::uuid
-      `;
+      if (classification.connectionStatus) {
+        await transaction`
+          update public.evotor_connections
+          set status = ${classification.connectionStatus},
+              last_sync_at = now(), last_error_at = now(), last_error_message = ${message},
+              failed_items = failed_items + 1,
+              retry_count = retry_count + 1
+          where id = ${event.connection_id}::uuid
+        `;
+      }
       await transaction`
         insert into public.evotor_sync_errors (
           connection_id, sync_event_id, scope, error_code, http_status, message, retryable
         ) values (
           ${event.connection_id}::uuid, ${event.id}::uuid,
           ${error instanceof EvotorApiError ? error.endpoint : "sync"},
-          ${error instanceof EvotorApiError ? error.providerCode ?? error.name : "SYNC_ERROR"},
+          ${error instanceof EvotorApiError
+            ? error.providerCode ?? error.name
+            : error instanceof EvotorConfigurationError
+              ? error.code
+              : "SYNC_ERROR"},
           ${status}, ${message}, ${retryable}
         )
       `;

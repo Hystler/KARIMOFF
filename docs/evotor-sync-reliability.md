@@ -51,6 +51,17 @@ Token callback и installation event запускали initial sync, а дал�
 - `EVOTOR_INCREMENTAL_INTERVAL_SECONDS` — 60–900, default 120;
 - `EVOTOR_RECONCILIATION_INTERVAL_HOURS` — 1–24, default 6.
 
+Все workers, которые используют одну таблицу `evotor_connections`, обязаны иметь одинаковый
+`EVOTOR_TOKEN_ENCRYPTION_KEY`. Worker сначала проверяет совместимость ciphertext локально и
+не claim-ит общий event при несовпадении ключа. Поэтому тестовый контейнер с ошибочным ключом
+не может перевести production connection в `uninstalled`.
+
+Существующий envelope уже versioned: `v1.<iv>.<ciphertext>.<auth-tag>`, AES-256-GCM,
+12-byte IV и 16-byte auth tag, компоненты в base64url. Для контролируемой ротации можно
+временно задать предыдущие ключи через `EVOTOR_TOKEN_PREVIOUS_ENCRYPTION_KEYS`. Автоматическую
+перезапись включает отдельный `EVOTOR_TOKEN_REENCRYPT_LEGACY=true`; её разрешают только после
+остановки старых instances, которые не знают новый primary key.
+
 ## Retry и наблюдаемость
 
 - timeout и exponential backoff для GET;

@@ -49,6 +49,8 @@
 - `EVOTOR_ENABLED=true`
 - `EVOTOR_WEBHOOK_AUTH_TOKEN` — общий Bearer token для входящих callback; не application token Эвотор.
 - `EVOTOR_TOKEN_ENCRYPTION_KEY` — ровно 32 случайных байта в base64 либо 64 hex-символа.
+- `EVOTOR_TOKEN_PREVIOUS_ENCRYPTION_KEYS` — необязательный список прежних ключей только на время контролируемой ротации;
+- `EVOTOR_TOKEN_REENCRYPT_LEGACY` — opt-in migration-on-read после вывода старых containers из эксплуатации, по умолчанию `false`.
 - `AUTH_RATE_LIMIT_SECRET` и `DATABASE_URL` — уже используются KARIMOFF.
 - `EVOTOR_SYNC_SECRET` — отдельный Bearer для защищённого Timeweb scheduler endpoint;
 - `EVOTOR_BACKGROUND_SYNC` — opt-in worker для постоянного single-instance контейнера;

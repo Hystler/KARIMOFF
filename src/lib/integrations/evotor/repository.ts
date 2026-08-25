@@ -1,8 +1,11 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
+import { logOperationalEvent } from "@/lib/observability";
 import { getPostgresSql } from "@/lib/postgres/server";
-import { encryptEvotorToken, fingerprintEvotorToken } from "./crypto";
+import { encryptEvotorToken, fingerprintEvotorToken, tryDecryptEvotorToken } from "./crypto";
+
+const TOKEN_DECRYPTION_ERROR_PREFIX = "Evotor token could not be decrypted";
 
 export type EvotorSyncType =
   | "initial"
@@ -140,10 +143,11 @@ export async function queueDueEvotorSyncs(params: {
   const sql = getPostgresSql();
   const now = params.now ?? new Date();
   await recoverStaleEvotorSyncEvents(now);
+  const recoveredConnections = await recoverEvotorCryptoBlockedConnections();
   const bucketMs = params.syncType === "incremental" ? 60_000 : 3_600_000;
   const bucket = Math.floor(now.getTime() / bucketMs);
-  const connections = await sql<{ id: string }[]>`
-    select id
+  const connections = await sql<{ id: string; encrypted_token: string }[]>`
+    select id, encrypted_token
     from public.evotor_connections connection
     where connection.status in ('connected', 'error')
       and (
@@ -166,7 +170,12 @@ export async function queueDueEvotorSyncs(params: {
     order by connection.last_success_at nulls first, connection.created_at
   `;
   const eventIds: string[] = [];
+  let incompatibleConnections = 0;
   for (const connection of connections) {
+    if (!tryDecryptEvotorToken(connection.encrypted_token).ok) {
+      incompatibleConnections += 1;
+      continue;
+    }
     const eventId = await createEvotorSyncEvent({
       connectionId: connection.id,
       syncType: params.syncType,
@@ -181,7 +190,51 @@ export async function queueDueEvotorSyncs(params: {
     });
     eventIds.push(eventId);
   }
+  if (incompatibleConnections || recoveredConnections.length) {
+    logOperationalEvent("evotor.crypto_compatibility", {
+      skipped_connections: incompatibleConnections,
+      recovered_connections: recoveredConnections.length
+    });
+  }
   return eventIds;
+}
+
+export async function recoverEvotorCryptoBlockedConnections() {
+  const sql = getPostgresSql();
+  const blocked = await sql<{ id: string; encrypted_token: string }[]>`
+    select id, encrypted_token
+    from public.evotor_connections
+    where status = 'uninstalled'
+      and last_error_message like ${`${TOKEN_DECRYPTION_ERROR_PREFIX}%`}
+  `;
+  const recovered: string[] = [];
+  let incompatibleConnections = 0;
+  for (const connection of blocked) {
+    if (!tryDecryptEvotorToken(connection.encrypted_token).ok) {
+      incompatibleConnections += 1;
+      continue;
+    }
+    const rows = await sql<{ id: string }[]>`
+      update public.evotor_connections
+      set status = 'error',
+          failed_items = 0,
+          retry_count = 0,
+          last_error_at = null,
+          last_error_message = null
+      where id = ${connection.id}::uuid
+        and encrypted_token = ${connection.encrypted_token}
+        and status = 'uninstalled'
+        and last_error_message like ${`${TOKEN_DECRYPTION_ERROR_PREFIX}%`}
+      returning id
+    `;
+    if (rows[0]) recovered.push(rows[0].id);
+  }
+  if (incompatibleConnections) {
+    logOperationalEvent("evotor.crypto_worker_skipped", {
+      skipped_connections: incompatibleConnections
+    });
+  }
+  return recovered;
 }
 
 export async function recoverStaleEvotorSyncEvents(now = new Date()) {

@@ -54,18 +54,24 @@ test("transient 500, 429, timeout, and unknown infrastructure errors remain retr
   })));
 });
 
-test("401 is permanent auth failure and configuration failures stay blocked", () => {
+test("401 is permanent auth failure while worker-local crypto errors do not poison a connection", () => {
   const result = runRecovery(`
     console.log(JSON.stringify({
       unauthorized: recovery.classifyEvotorFailure({ source: "api", status: 401, retryable: false }),
       forbidden: recovery.classifyEvotorFailure({ source: "api", status: 403, retryable: false }),
-      configuration: recovery.classifyEvotorFailure({ source: "configuration" })
+      configuration: recovery.classifyEvotorFailure({ source: "configuration" }),
+      wrongKey: recovery.classifyEvotorFailure({ source: "configuration", code: "TOKEN_DECRYPTION_FAILED" }),
+      missingKey: recovery.classifyEvotorFailure({ source: "configuration", code: "TOKEN_ENCRYPTION_KEY_MISSING" }),
+      malformedPayload: recovery.classifyEvotorFailure({ source: "configuration", code: "TOKEN_PAYLOAD_INVALID" })
     }));
   `);
   assert.deepEqual(result, {
     unauthorized: { kind: "auth", connectionStatus: "revoked" },
     forbidden: { kind: "configuration", connectionStatus: "uninstalled" },
-    configuration: { kind: "configuration", connectionStatus: "uninstalled" }
+    configuration: { kind: "configuration", connectionStatus: "uninstalled" },
+    wrongKey: { kind: "worker_configuration", connectionStatus: null },
+    missingKey: { kind: "worker_configuration", connectionStatus: null },
+    malformedPayload: { kind: "worker_configuration", connectionStatus: null }
   });
 });
 
@@ -89,6 +95,11 @@ test("scheduler retries degraded connections but ignores auth and disabled state
   assert.match(repository, /recoverStaleEvotorSyncEvents\(now\)/);
   assert.match(repository, /status = 'running'[\s\S]+started_at <[\s\S]+status = 'pending'/);
   assert.match(sync, /c\.status in \('connected', 'error'\)[\s\S]+e\.requested_by not in/);
+  assert.match(repository, /select id, encrypted_token[\s\S]+tryDecryptEvotorToken/);
+  assert.match(sync, /select e\.id, e\.connection_id, c\.encrypted_token[\s\S]+cryptoCheck[\s\S]+set status = 'running'/);
+  assert.match(repository, /recoverEvotorCryptoBlockedConnections/);
+  assert.match(repository, /status = 'uninstalled'[\s\S]+last_error_message like/);
+  assert.match(repository, /set status = 'error'[\s\S]+encrypted_token = \$\{connection\.encrypted_token\}/);
 });
 
 test("transient failure keeps one event pending and success restores the connection", () => {
@@ -106,6 +117,14 @@ test("failed attempts do not rewind cursors and receipt deduplication remains in
   assert.match(sync, /on conflict \(connection_id, external_receipt_id\) do update/);
   assert.match(repository, /syncType: params\.syncType/);
   assert.match(repository, /params\.syncType === "reconciliation"/);
+});
+
+test("legacy-key re-encryption is compare-and-swap and explicitly opt-in", () => {
+  assert.match(sync, /decryptedToken\.needsReencrypt/);
+  assert.match(sync, /EVOTOR_TOKEN_REENCRYPT_LEGACY === "true"/);
+  assert.match(sync, /set encrypted_token = \$\{reencryptedToken\}/);
+  assert.match(sync, /and encrypted_token = \$\{event\.encrypted_token\}/);
+  assert.doesNotMatch(sync, /console\.(log|info|warn|error)/);
 });
 
 test("admin UI distinguishes connected, retrying, auth error, and disabled states", () => {

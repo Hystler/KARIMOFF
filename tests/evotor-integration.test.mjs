@@ -13,7 +13,7 @@ const sync = read("src/lib/integrations/evotor/sync.ts");
 const migration = read("supabase/migrations/20260812190000_add_evotor_cloud_integration.sql");
 const adminAction = read("src/app/admin/integrations/evotor/actions.ts");
 
-function runTypeScript(source) {
+function runTypeScript(source, env = {}) {
   const result = spawnSync(process.execPath, [
     "--conditions=react-server",
     "--experimental-strip-types",
@@ -25,7 +25,8 @@ function runTypeScript(source) {
     encoding: "utf8",
     env: {
       ...process.env,
-      EVOTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64")
+      EVOTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+      ...env
     }
   });
   assert.equal(result.status, 0, result.stderr);
@@ -87,6 +88,130 @@ test("application tokens are encrypted and authenticated before storage", () => 
   assert.equal(result.decrypted, "application-token-for-test-only");
   assert.notEqual(result.encrypted, result.decrypted);
   assert.equal(result.fingerprintA, result.fingerprintB);
+});
+
+test("Evotor token envelope is strict, versioned AES-256-GCM", () => {
+  const fixture = testModule("src/lib/integrations/evotor/crypto.ts");
+  let result;
+  try {
+    result = runTypeScript(`
+      const crypto = await import(${JSON.stringify(fixture.url)});
+      const encrypted = crypto.encryptEvotorToken("application-token-for-envelope-test");
+      const envelope = crypto.inspectEvotorTokenEnvelope(encrypted);
+      console.log(JSON.stringify({
+        prefix: encrypted.split(".")[0],
+        segments: encrypted.split(".").length,
+        version: envelope.version,
+        ivBytes: envelope.iv.length,
+        tagBytes: envelope.authTag.length,
+        ciphertextPresent: envelope.encrypted.length > 0
+      }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.deepEqual(result, {
+    prefix: "v1",
+    segments: 4,
+    version: "v1",
+    ivBytes: 12,
+    tagBytes: 16,
+    ciphertextPresent: true
+  });
+});
+
+test("previous Evotor encryption key decrypts and re-encrypts idempotently with the primary key", () => {
+  const fixture = testModule("src/lib/integrations/evotor/crypto.ts");
+  let result;
+  try {
+    result = runTypeScript(`
+      const crypto = await import(${JSON.stringify(fixture.url)});
+      const previousKey = Buffer.alloc(32, 5).toString("base64");
+      const primaryKey = Buffer.alloc(32, 9).toString("base64");
+      process.env.EVOTOR_TOKEN_ENCRYPTION_KEY = previousKey;
+      const legacyPayload = crypto.encryptEvotorToken("legacy-application-token");
+      process.env.EVOTOR_TOKEN_ENCRYPTION_KEY = primaryKey;
+      process.env.EVOTOR_TOKEN_PREVIOUS_ENCRYPTION_KEYS = previousKey;
+      const legacyRead = crypto.decryptEvotorTokenEnvelope(legacyPayload);
+      const currentPayload = crypto.encryptEvotorToken(legacyRead.token);
+      delete process.env.EVOTOR_TOKEN_PREVIOUS_ENCRYPTION_KEYS;
+      const currentRead = crypto.decryptEvotorTokenEnvelope(currentPayload);
+      console.log(JSON.stringify({
+        legacySource: legacyRead.keySource,
+        legacyNeedsReencrypt: legacyRead.needsReencrypt,
+        currentSource: currentRead.keySource,
+        currentNeedsReencrypt: currentRead.needsReencrypt,
+        sameToken: currentRead.token === legacyRead.token,
+        idempotentCurrentRead: crypto.decryptEvotorToken(currentPayload) === currentRead.token
+      }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.deepEqual(result, {
+    legacySource: "previous",
+    legacyNeedsReencrypt: true,
+    currentSource: "primary",
+    currentNeedsReencrypt: false,
+    sameToken: true,
+    idempotentCurrentRead: true
+  });
+});
+
+test("an invalid optional previous key cannot break a token encrypted by the primary key", () => {
+  const fixture = testModule("src/lib/integrations/evotor/crypto.ts");
+  let result;
+  try {
+    result = runTypeScript(`
+      const crypto = await import(${JSON.stringify(fixture.url)});
+      const payload = crypto.encryptEvotorToken("current-application-token");
+      process.env.EVOTOR_TOKEN_PREVIOUS_ENCRYPTION_KEYS = "invalid-rotation-key";
+      const decrypted = crypto.decryptEvotorTokenEnvelope(payload);
+      console.log(JSON.stringify({
+        keySource: decrypted.keySource,
+        needsReencrypt: decrypted.needsReencrypt,
+        tokenMatches: decrypted.token === "current-application-token"
+      }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.deepEqual(result, {
+    keySource: "primary",
+    needsReencrypt: false,
+    tokenMatches: true
+  });
+});
+
+test("wrong keys, malformed envelopes, and bad auth tags return safe classifications", () => {
+  const fixture = testModule("src/lib/integrations/evotor/crypto.ts");
+  let result;
+  try {
+    result = runTypeScript(`
+      const crypto = await import(${JSON.stringify(fixture.url)});
+      const originalKey = Buffer.alloc(32, 3).toString("base64");
+      process.env.EVOTOR_TOKEN_ENCRYPTION_KEY = originalKey;
+      const payload = crypto.encryptEvotorToken("token-that-must-not-appear");
+      process.env.EVOTOR_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 4).toString("base64");
+      const wrongKey = crypto.tryDecryptEvotorToken(payload);
+      const malformed = crypto.tryDecryptEvotorToken("v1.not-valid");
+      const parts = payload.split(".");
+      const alteredTag = Buffer.from(parts[3], "base64url");
+      alteredTag[0] ^= 1;
+      parts[3] = alteredTag.toString("base64url");
+      process.env.EVOTOR_TOKEN_ENCRYPTION_KEY = originalKey;
+      const badTag = crypto.tryDecryptEvotorToken(parts.join("."));
+      console.log(JSON.stringify({ wrongKey, malformed, badTag }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.deepEqual(result, {
+    wrongKey: { ok: false, errorCode: "TOKEN_DECRYPTION_FAILED" },
+    malformed: { ok: false, errorCode: "TOKEN_PAYLOAD_INVALID" },
+    badTag: { ok: false, errorCode: "TOKEN_DECRYPTION_FAILED" }
+  });
+  assert.doesNotMatch(JSON.stringify(result), /token-that-must-not-appear/);
 });
 
 test("Evotor client does not retry 401 and retries 429/500 only as safe GET", () => {

@@ -2,12 +2,14 @@ export type EvotorFailureContext = {
   source: "api" | "configuration" | "unknown";
   status?: number | null;
   retryable?: boolean;
+  code?: string | null;
 };
 
 export type EvotorFailureClassification =
   | { kind: "transient"; connectionStatus: "error" }
   | { kind: "auth"; connectionStatus: "revoked" }
-  | { kind: "configuration"; connectionStatus: "uninstalled" };
+  | { kind: "configuration"; connectionStatus: "uninstalled" }
+  | { kind: "worker_configuration"; connectionStatus: null };
 
 const RETRY_BASE_SECONDS = 30;
 const RETRY_CEILING_SECONDS = 15 * 60;
@@ -16,6 +18,14 @@ export function classifyEvotorFailure(
   context: EvotorFailureContext
 ): EvotorFailureClassification {
   if (context.source === "configuration") {
+    if (
+      context.code === "TOKEN_ENCRYPTION_KEY_MISSING" ||
+      context.code === "TOKEN_ENCRYPTION_KEY_INVALID" ||
+      context.code === "TOKEN_PAYLOAD_INVALID" ||
+      context.code === "TOKEN_DECRYPTION_FAILED"
+    ) {
+      return { kind: "worker_configuration", connectionStatus: null };
+    }
     return { kind: "configuration", connectionStatus: "uninstalled" };
   }
   if (context.status === 401) {
