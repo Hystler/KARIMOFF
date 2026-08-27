@@ -2,10 +2,14 @@
 
 import { randomUUID } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { createDatabaseServerClient } from "@/lib/database/server";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
 import { createOrder } from "@/lib/order-flow/service";
+import { isYooKassaCheckoutEnabled } from "@/lib/payments/yookassa/config";
+import { safeYooKassaErrorCode } from "@/lib/payments/yookassa/errors";
+import { createYooKassaPaymentForOrder } from "@/lib/payments/yookassa/service";
 import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
 
@@ -15,9 +19,29 @@ export async function getCurrentCustomerAction() {
 
 export async function getCheckoutContextAction() {
   const [customer, settings] = await Promise.all([getCurrentCustomer(), getSiteSettings()]);
+  let receiptEmail = "";
+  if (customer) {
+    const database = createDatabaseServerClient();
+    const { data } = database
+      ? await database
+          .from("user_identities")
+          .select("email, last_login_at")
+          .eq("user_id", customer.id)
+          .order("last_login_at", { ascending: false })
+          .limit(10)
+      : { data: null };
+    const identity = (data ?? []).find((row) =>
+      typeof row.email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)
+    );
+    receiptEmail = identity?.email ? String(identity.email) : "";
+  }
 
   return {
     customer,
+    payment: {
+      enabled: isYooKassaCheckoutEnabled(),
+      receiptEmail
+    },
     settings: {
       delivery_enabled: settings.delivery_enabled,
       pickup_enabled: settings.pickup_enabled
@@ -47,6 +71,13 @@ export async function createOrderAction(
     };
   }
 
+  if (!isYooKassaCheckoutEnabled()) {
+    return {
+      status: "error",
+      message: "Онлайн-оплата временно недоступна. Попробуйте немного позже."
+    };
+  }
+
   let parsedCart: unknown;
 
   try {
@@ -64,6 +95,7 @@ export async function createOrderAction(
     requested_at: String(formData.get("requested_at") || ""),
     address: String(formData.get("address") || ""),
     comment: String(formData.get("comment") || ""),
+    receipt_email: String(formData.get("receipt_email") || ""),
     cart: parsedCart
   });
 
@@ -133,6 +165,8 @@ export async function createOrderAction(
       fulfillmentMode: parsed.data.fulfillment_mode,
       requestedAt:
         parsed.data.fulfillment_mode === "scheduled" ? parsed.data.requested_at || null : null,
+      receiptEmail: parsed.data.receipt_email,
+      requiresPayment: true,
       marketingGranted: isChecked(formData.get("marketing_consent")),
       offerAccepted: true,
       personalDataGranted: true,
@@ -140,16 +174,26 @@ export async function createOrderAction(
       userAgentShort: await getShortUserAgent()
     });
 
+    if (!order.paymentId) throw new Error("YOOKASSA_PAYMENT_ATTEMPT_MISSING");
+    const payment = await createYooKassaPaymentForOrder(order.paymentId);
+
     return {
       status: "success",
-      message: "Заказ отправлен. Мы свяжемся с вами для подтверждения.",
-      orderId: order.orderId
+      message: "Переходим к безопасной оплате в ЮKassa.",
+      orderId: order.orderId,
+      paymentConfirmationUrl: payment.confirmationUrl,
+      paymentId: order.paymentId
     };
   } catch (error) {
     const failure = error as { code?: string; message?: string };
+    const providerCode = safeYooKassaErrorCode(error);
     return {
       status: "error",
-      message: failure.code === "P0001" ? failure.message || "Проверьте заказ." : "Не удалось создать заказ."
+      message: failure.code === "P0001"
+        ? failure.message || "Проверьте заказ."
+        : providerCode.startsWith("YOOKASSA_") || providerCode === "PAYMENTS_DISABLED"
+          ? "Не удалось открыть оплату. Повторите попытку: новый заказ и второй платёж не создадутся."
+          : "Не удалось создать заказ."
     };
   }
 }

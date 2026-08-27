@@ -1,11 +1,11 @@
-import { CalendarClock, MapPin, PackageCheck, Phone, ShoppingBag } from "lucide-react";
+import { CalendarClock, CreditCard, MapPin, PackageCheck, Phone, ReceiptText, RefreshCw, ShoppingBag } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
 import { kitchenStatusLabel, orderSourceLabel, type KitchenStatus } from "@/lib/order-flow/types";
-import { updateOrderStatusAction } from "./actions";
+import { checkYooKassaPaymentStatusAction, updateOrderStatusAction } from "./actions";
 
 const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
   new: "accepted",
@@ -27,12 +27,38 @@ function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
+function formatMoney(value: string) {
+  const normalized = /^\d+(?:\.\d{1,2})?$/.test(value) ? value : "0";
+  const [whole, fraction = ""] = normalized.split(".");
+  const formatted = new Intl.NumberFormat("ru-RU").format(BigInt(whole));
+  return fraction && fraction !== "00" ? `${formatted},${fraction.padEnd(2, "0")}` : formatted;
+}
+
+const paymentStatusLabels: Record<string, string> = {
+  cancelled: "Отменено",
+  completed: "Возвращено",
+  failed: "Ошибка",
+  paid: "Оплачено",
+  partially_refunded: "Частично возвращено",
+  pending: "Ожидает",
+  refunded: "Возвращено"
+};
+
+const fiscalStatusLabels: Record<string, string> = {
+  canceled: "Ошибка регистрации",
+  cancelled: "Отменён",
+  failed: "Ошибка",
+  issued: "Зарегистрирован",
+  pending: "Регистрируется",
+  succeeded: "Зарегистрирован"
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage({
   searchParams
 }: {
-  searchParams: Promise<{ deleted?: string; error?: string; saved?: string; warning?: string }>;
+  searchParams: Promise<{ deleted?: string; error?: string; payment_checked?: string; saved?: string; warning?: string }>;
 }) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
@@ -57,6 +83,7 @@ export default async function AdminOrdersPage({
       </header>
 
       {params.saved ? <div className="admin-alert admin-alert-success">Статус заказа обновлён.</div> : null}
+      {params.payment_checked ? <div className="admin-alert admin-alert-success">Статус платежа обновлён по данным ЮKassa.</div> : null}
       {params.deleted ? <div className="admin-alert admin-alert-success">Заказ удалён.</div> : null}
       {params.error || error ? <div className="admin-alert admin-alert-error">{decodeURIComponent(params.error || error || "")}</div> : null}
       {params.warning ? <div className="admin-alert admin-alert-warning">{decodeURIComponent(params.warning)}</div> : null}
@@ -99,6 +126,56 @@ export default async function AdminOrdersPage({
                 </div>
 
                 {order.comment ? <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Комментарий: {order.comment}</p> : null}
+
+                {order.payments.length ? (
+                  <section className="mt-4 rounded-lg border border-karimoff-line bg-white p-4" aria-label="Оплата заказа">
+                    <h3 className="flex items-center gap-2 text-sm font-black">
+                      <CreditCard size={17} className="text-karimoff-orange" /> Оплата
+                    </h3>
+                    <div className="mt-3 grid gap-4">
+                      {order.payments.map((payment) => (
+                        <div key={payment.id} className="grid gap-2 border-t border-karimoff-line pt-3 first:border-0 first:pt-0 text-xs leading-5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <strong>{payment.provider === "yookassa" ? "ЮKassa" : payment.provider}</strong>
+                            <span className="rounded-md bg-karimoff-cream px-2 py-1 font-black">
+                              {paymentStatusLabels[payment.status] ?? payment.status}
+                            </span>
+                          </div>
+                          <p><span className="text-karimoff-muted">Сумма:</span> <strong>{formatMoney(payment.amount)} {payment.currency === "RUB" ? "₽" : payment.currency}</strong></p>
+                          <p><span className="text-karimoff-muted">Создан:</span> {formatDate(payment.created_at)}</p>
+                          {payment.paid_at ? <p><span className="text-karimoff-muted">Оплачен:</span> {formatDate(payment.paid_at)}</p> : null}
+                          {payment.payment_method ? <p><span className="text-karimoff-muted">Способ:</span> {payment.payment_method}</p> : null}
+                          {payment.provider_payment_id ? (
+                            <p className="break-all"><span className="text-karimoff-muted">Payment ID:</span> <code>{payment.provider_payment_id}</code></p>
+                          ) : null}
+                          <p className="flex items-center gap-2">
+                            <ReceiptText size={15} className="text-karimoff-orange" />
+                            Фискализация: {fiscalStatusLabels[payment.receipt_registration ?? "pending"] ?? payment.receipt_registration ?? "ожидает"}
+                          </p>
+                          {payment.refunds.map((refund) => (
+                            <p key={refund.id} className="rounded-md bg-rose-50 px-3 py-2 font-semibold text-rose-900">
+                              Возврат {formatMoney(refund.amount)} ₽ · {paymentStatusLabels[refund.status] ?? refund.status}
+                            </p>
+                          ))}
+                          {payment.fiscal_receipts.map((receipt) => (
+                            <p key={receipt.id} className="text-karimoff-muted">
+                              {receipt.receipt_phase === "prepayment_settlement" ? "Расчёт по предоплате" : receipt.receipt_phase === "refund" ? "Чек возврата" : "Чек предоплаты"}: {fiscalStatusLabels[receipt.status] ?? receipt.status}
+                            </p>
+                          ))}
+                          {payment.provider === "yookassa" && (staff.legacy || ["owner", "admin", "manager"].includes(staff.role)) ? (
+                            <form action={checkYooKassaPaymentStatusAction}>
+                              <input type="hidden" name="order_id" value={order.id} />
+                              <input type="hidden" name="payment_id" value={payment.id} />
+                              <button type="submit" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-karimoff-line px-3 font-bold transition hover:border-karimoff-orange hover:text-karimoff-orange">
+                                <RefreshCw size={15} /> Проверить статус
+                              </button>
+                            </form>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
 
               <div className="admin-order-items">

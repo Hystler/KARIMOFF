@@ -3,5 +3,9 @@ export async function register() {
   const { startEvotorBackgroundScheduler } = await import(
     "@/lib/integrations/evotor/scheduler"
   );
+  const { startYooKassaBackgroundScheduler } = await import(
+    "@/lib/payments/yookassa/scheduler"
+  );
   startEvotorBackgroundScheduler();
+  startYooKassaBackgroundScheduler();
 }

@@ -218,6 +218,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [isHydrated]);
 
+  useEffect(() => {
+    function clearAfterPayment() {
+      setLines([]);
+      setIsOpen(false);
+    }
+    window.addEventListener("karimoff-cart-clear-after-payment", clearAfterPayment);
+    return () => window.removeEventListener("karimoff-cart-clear-after-payment", clearAfterPayment);
+  }, []);
+
   const totalItems = useMemo(() => lines.reduce((sum, line) => sum + line.quantity, 0), [lines]);
   const totalPrice = useMemo(
     () => lines.reduce((sum, line) => sum + line.quantity * getCartLineUnitPrice(line), 0),

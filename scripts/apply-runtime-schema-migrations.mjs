@@ -286,6 +286,142 @@ const migrations = [
         objects?.app_privileges
       );
     }
+  },
+  {
+    name: "20260827120000_add_yookassa_payment_integration",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.refund_items') is not null as refund_items,
+          to_regclass('public.payments_yookassa_provider_payment_key') is not null as provider_payment_index,
+          to_regclass('public.payments_yookassa_order_key') is not null as payment_order_index,
+          to_regclass('public.payments_yookassa_reconcile_idx') is not null as payment_reconcile_index,
+          to_regclass('public.refunds_yookassa_reconcile_idx') is not null as refund_reconcile_index,
+          to_regclass('public.fiscal_receipts_yookassa_reconcile_idx') is not null as fiscal_reconcile_index,
+          to_regprocedure('public.create_site_order_with_payment(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamp with time zone,text,text)') is not null as create_order_payment,
+          to_regprocedure('public.refresh_yookassa_order_fiscal_status(uuid)') is not null as refresh_fiscal,
+          to_regprocedure('public.apply_yookassa_payment_state(uuid,text,text,boolean,numeric,text,text,text,numeric,timestamp with time zone,timestamp with time zone)') is not null as apply_payment,
+          to_regprocedure('public.apply_yookassa_refund_state(uuid,text,text,numeric,text,text)') is not null as apply_refund,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.orders'::regclass
+              and tgname = 'orders_online_payment_kitchen_guard'
+              and not tgisinternal
+          ) as kitchen_guard,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.orders'::regclass
+              and tgname = 'orders_queue_yookassa_prepayment_settlement'
+              and not tgisinternal
+          ) as settlement_trigger,
+          not exists (
+            select 1
+            from unnest(array[
+              'provider_status',
+              'receipt_registration',
+              'refundable_amount',
+              'receipt_email',
+              'request_fingerprint',
+              'next_reconcile_at',
+              'reconcile_locked_at'
+            ]) as expected_column(name)
+            where not exists (
+              select 1 from pg_attribute
+              where attrelid = 'public.payments'::regclass
+                and attname = expected_column.name
+                and not attisdropped
+            )
+          ) as payment_columns,
+          not exists (
+            select 1
+            from unnest(array[
+              'payments_yookassa_provider_status_check',
+              'payments_yookassa_receipt_registration_check',
+              'payments_yookassa_amount_currency_check',
+              'refunds_yookassa_provider_status_check',
+              'refunds_yookassa_actor_check',
+              'refunds_yookassa_reason_check',
+              'fiscal_receipts_yookassa_fingerprint_check',
+              'fiscal_receipts_yookassa_status_check'
+            ]) as expected_constraint(name)
+            where not exists (
+              select 1 from pg_constraint
+              where conname = expected_constraint.name and convalidated
+            )
+          ) as constraints_valid,
+          not exists (
+            select 1
+            from unnest(array[
+              'payments',
+              'payment_events',
+              'refunds',
+              'refund_items',
+              'fiscal_receipts'
+            ]) as expected_table(name)
+            where not exists (
+              select 1 from pg_class
+              where oid = to_regclass('public.' || expected_table.name)
+                and relrowsecurity
+            )
+          ) as rls_enabled,
+          exists (
+            select 1 from pg_attribute
+            where attrelid = 'public.fiscal_receipts'::regclass
+              and attname = 'request_fingerprint' and not attisdropped
+          ) as fiscal_fingerprint,
+          not exists (
+            select 1
+            from unnest(array[
+              'payments',
+              'payment_events',
+              'refunds',
+              'refund_items',
+              'fiscal_receipts'
+            ]) as expected_table(name)
+            where not has_table_privilege(
+              'karimoff_app',
+              'public.' || expected_table.name,
+              'select,insert,update,delete'
+            )
+          ) as app_privileges,
+          not exists (
+            select 1
+            from unnest(array[
+              'payments_yookassa_app_all',
+              'payment_events_yookassa_app_all',
+              'refunds_yookassa_app_all',
+              'refund_items_yookassa_app_all',
+              'fiscal_receipts_yookassa_app_all'
+            ]) as expected_policy(name)
+            where not exists (
+              select 1 from pg_policies
+              where schemaname = 'public'
+                and policyname = expected_policy.name
+                and 'karimoff_app' = any (roles)
+            )
+          ) as app_policies
+      `;
+      return Boolean(
+        objects?.refund_items &&
+        objects?.provider_payment_index &&
+        objects?.payment_order_index &&
+        objects?.payment_reconcile_index &&
+        objects?.refund_reconcile_index &&
+        objects?.fiscal_reconcile_index &&
+        objects?.create_order_payment &&
+        objects?.refresh_fiscal &&
+        objects?.apply_payment &&
+        objects?.apply_refund &&
+        objects?.kitchen_guard &&
+        objects?.settlement_trigger &&
+        objects?.payment_columns &&
+        objects?.constraints_valid &&
+        objects?.rls_enabled &&
+        objects?.fiscal_fingerprint &&
+        objects?.app_privileges &&
+        objects?.app_policies
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

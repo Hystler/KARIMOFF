@@ -26,6 +26,7 @@ export const createOrderSchema = z.object({
   requested_at: z.string().datetime({ offset: true }).optional().or(z.literal("")),
   address: z.string().trim().max(300).optional(),
   comment: z.string().trim().max(800).optional(),
+  receipt_email: z.string().trim().toLowerCase().email("Укажите корректную электронную почту для чека."),
   cart: z.array(orderCartLineSchema).min(1, "Корзина пуста.").max(50, "Слишком много позиций.")
 });
 
@@ -35,6 +36,8 @@ export type OrderActionState = {
   status: "idle" | "success" | "error";
   message: string;
   orderId?: string;
+  paymentConfirmationUrl?: string;
+  paymentId?: string;
 };
 
 export const initialOrderActionState: OrderActionState = {
