@@ -511,23 +511,49 @@ alter table public.customers validate constraint customers_receipt_email_check;
 alter table public.payments validate constraint payments_yookassa_receipt_snapshot_check;
 
 revoke all on function public.build_yookassa_order_receipt_snapshot(uuid)
-from public, anon, authenticated;
+from public;
 revoke all on function public.capture_yookassa_payment_receipt_snapshot()
-from public, anon, authenticated;
+from public;
 revoke all on function public.enforce_yookassa_receipt_snapshot_immutable()
-from public, anon, authenticated;
+from public;
 revoke all on function public.enforce_yookassa_payment_request_immutable()
-from public, anon, authenticated;
+from public;
 revoke all on function public.enforce_paid_yookassa_order_item_immutable()
-from public, anon, authenticated;
+from public;
 revoke all on function public.enforce_paid_yookassa_modifier_immutable()
-from public, anon, authenticated;
+from public;
 revoke all on function public.enforce_yookassa_order_total_immutable()
-from public, anon, authenticated;
+from public;
 revoke all on function public.remember_yookassa_receipt_email()
-from public, anon, authenticated;
+from public;
 revoke all on function public.refresh_yookassa_settlement_refund_snapshot()
-from public, anon, authenticated;
+from public;
+
+do $$
+declare
+  v_role text;
+  v_function text;
+begin
+  for v_role in
+    select rolname from pg_roles where rolname in ('anon', 'authenticated')
+  loop
+    foreach v_function in array array[
+      'public.build_yookassa_order_receipt_snapshot(uuid)',
+      'public.capture_yookassa_payment_receipt_snapshot()',
+      'public.enforce_yookassa_receipt_snapshot_immutable()',
+      'public.enforce_yookassa_payment_request_immutable()',
+      'public.enforce_paid_yookassa_order_item_immutable()',
+      'public.enforce_paid_yookassa_modifier_immutable()',
+      'public.enforce_yookassa_order_total_immutable()',
+      'public.remember_yookassa_receipt_email()',
+      'public.refresh_yookassa_settlement_refund_snapshot()'
+    ]
+    loop
+      execute format('revoke all on function %s from %I', v_function, v_role);
+    end loop;
+  end loop;
+end
+$$;
 
 do $$
 begin

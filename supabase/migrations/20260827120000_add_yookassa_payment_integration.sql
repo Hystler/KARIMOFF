@@ -873,19 +873,47 @@ alter table public.payment_events enable row level security;
 alter table public.refunds enable row level security;
 alter table public.fiscal_receipts enable row level security;
 
-revoke all privileges on table public.refund_items from public, anon, authenticated;
+revoke all privileges on table public.refund_items from public;
 revoke all on function public.create_site_order_with_payment(
   uuid, text, text, text, jsonb, uuid, boolean, boolean, boolean,
   text, text, text, text, timestamptz, text, text
-) from public, anon, authenticated;
+) from public;
 revoke all on function public.refresh_yookassa_order_fiscal_status(uuid)
-from public, anon, authenticated;
+from public;
 revoke all on function public.apply_yookassa_payment_state(
   uuid, text, text, boolean, numeric, text, text, text, numeric, timestamptz, timestamptz
-) from public, anon, authenticated;
+) from public;
 revoke all on function public.apply_yookassa_refund_state(
   uuid, text, text, numeric, text, text
-) from public, anon, authenticated;
+) from public;
+
+do $$
+declare
+  v_role text;
+begin
+  for v_role in
+    select rolname from pg_roles where rolname in ('anon', 'authenticated')
+  loop
+    execute format('revoke all privileges on table public.refund_items from %I', v_role);
+    execute format(
+      'revoke all on function public.create_site_order_with_payment(uuid, text, text, text, jsonb, uuid, boolean, boolean, boolean, text, text, text, text, timestamptz, text, text) from %I',
+      v_role
+    );
+    execute format(
+      'revoke all on function public.refresh_yookassa_order_fiscal_status(uuid) from %I',
+      v_role
+    );
+    execute format(
+      'revoke all on function public.apply_yookassa_payment_state(uuid, text, text, boolean, numeric, text, text, text, numeric, timestamptz, timestamptz) from %I',
+      v_role
+    );
+    execute format(
+      'revoke all on function public.apply_yookassa_refund_state(uuid, text, text, numeric, text, text) from %I',
+      v_role
+    );
+  end loop;
+end
+$$;
 
 do $$
 begin

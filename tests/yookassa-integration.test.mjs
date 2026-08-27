@@ -533,6 +533,10 @@ test("runtime migration is wired into image startup with postconditions", () => 
     /has_table_privilege\(\s*'karimoff_app',\s*to_regclass\('public\.' \|\| expected_table\.name\)/,
     "cold-start checks must handle payment tables that do not exist yet",
   );
+  assert.doesNotMatch(migration, /from public, anon, authenticated/i);
+  assert.doesNotMatch(fiscalRefinement, /from public, anon, authenticated/i);
+  assert.match(migration, /rolname in \('anon', 'authenticated'\)/);
+  assert.match(fiscalRefinement, /rolname in \('anon', 'authenticated'\)/);
   assert.match(dockerfile, /20260827143000_refine_yookassa_fiscal_operations\.sql/);
   assert.match(dockerignore, /!supabase\/migrations\/20260827143000_refine_yookassa_fiscal_operations\.sql/);
 });
