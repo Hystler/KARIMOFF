@@ -29,6 +29,8 @@ type WebOrderInput = {
   userAgentShort: string | null;
   fulfillmentMode: "asap" | "scheduled";
   requestedAt: string | null;
+  receiptEmail: string;
+  requiresPayment: boolean;
 };
 
 type PosOrderInput = {
@@ -50,6 +52,7 @@ export type CreateOrderResult = {
   orderId: string;
   total: number;
   displayNumber: string | null;
+  paymentId: string | null;
 };
 
 function firstRow(value: unknown) {
@@ -62,23 +65,31 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const isTest = process.env.TEST_ORDER_MODE === "true";
 
   if (input.source === "web") {
-    const { data, error } = await database.rpc("create_site_order", {
-      p_address: input.deliveryType === "delivery" ? input.address : null,
-      p_comment: input.comment,
-      p_customer_id: input.customerId,
-      p_delivery_type: input.deliveryType,
-      p_document_version: input.documentVersion,
-      p_idempotency_key: input.idempotencyKey,
-      p_items: input.items,
-      p_fulfillment_mode: input.fulfillmentMode,
-      p_requested_at: input.fulfillmentMode === "scheduled" ? input.requestedAt : null,
-      p_marketing_granted: input.marketingGranted,
-      p_offer_accepted: input.offerAccepted,
-      p_personal_data_granted: input.personalDataGranted,
-      p_source_path: input.sourcePath,
-      p_user_agent_short: input.userAgentShort,
-      p_is_test: isTest
-    });
+    const { data, error } = await database.rpc(
+      input.requiresPayment ? "create_site_order_with_payment" : "create_site_order",
+      {
+        p_address: input.deliveryType === "delivery" ? input.address : null,
+        p_comment: input.comment,
+        p_customer_id: input.customerId,
+        p_delivery_type: input.deliveryType,
+        p_document_version: input.documentVersion,
+        p_idempotency_key: input.idempotencyKey,
+        p_items: input.items,
+        p_fulfillment_mode: input.fulfillmentMode,
+        p_requested_at: input.fulfillmentMode === "scheduled" ? input.requestedAt : null,
+        p_marketing_granted: input.marketingGranted,
+        p_offer_accepted: input.offerAccepted,
+        p_personal_data_granted: input.personalDataGranted,
+        p_source_path: input.sourcePath,
+        p_user_agent_short: input.userAgentShort,
+        ...(input.requiresPayment
+          ? {
+              p_receipt_email: input.receiptEmail,
+              p_payment_idempotency_key: input.idempotencyKey
+            }
+          : { p_is_test: isTest })
+      }
+    );
     const order = firstRow(data);
     if (error || !order?.order_id) {
       const failure = new Error(error?.message || "Не удалось создать заказ.");
@@ -88,7 +99,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     const result = {
       orderId: String(order.order_id),
       total: Number(order.total ?? 0),
-      displayNumber: null
+      displayNumber: order.display_number ? String(order.display_number) : null,
+      paymentId: order.payment_id ? String(order.payment_id) : null
     };
     logOperationalEvent("order.created", {
       order_id: result.orderId,
@@ -120,7 +132,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
   const result = {
     orderId: String(order.order_id),
     total: Number(order.total ?? 0),
-    displayNumber: order.display_number ? String(order.display_number) : null
+    displayNumber: order.display_number ? String(order.display_number) : null,
+    paymentId: null
   };
   logOperationalEvent("order.created", {
     order_id: result.orderId,

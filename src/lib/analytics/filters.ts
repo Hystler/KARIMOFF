@@ -83,6 +83,7 @@ export function parseAnalyticsFilters(params: RawParams): AnalyticsFilters {
     terminal: limited(read(params, "terminal")),
     employee: limited(read(params, "employee")),
     payment: limited(read(params, "payment")),
+    provider: limited(read(params, "provider")),
     categories,
     category: categories[0] ?? null,
     product: limited(read(params, "product")),
@@ -131,6 +132,7 @@ export function analyticsFiltersToParams(filters: AnalyticsFilters) {
   if (filters.terminal) params.set("terminal", filters.terminal);
   if (filters.employee) params.set("employee", filters.employee);
   if (filters.payment) params.set("payment", filters.payment);
+  if (filters.provider) params.set("provider", filters.provider);
   for (const category of filters.categories.length ? filters.categories : filters.category ? [filters.category] : []) {
     params.append("category", category);
   }

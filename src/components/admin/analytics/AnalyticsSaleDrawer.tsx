@@ -105,6 +105,7 @@ export function AnalyticsSaleDrawer({ detail, closeHref }: { detail: AnalyticsSa
           <h3>Источник</h3>
           <dl className="analytics-drawer-facts">
             <div><dt>Канал</dt><dd>{getChannelLabel(sale.channel)}</dd></div>
+            <div><dt>Провайдер</dt><dd>{sale.paymentProvider === "yookassa" ? "YooKassa" : sale.paymentProvider === "evotor" ? "Evotor" : sale.paymentProvider}</dd></div>
             <div><dt>Точка</dt><dd>{sale.location}</dd></div>
             <div><dt>Касса</dt><dd>{sale.terminal ?? "Не указана"}</dd></div>
             <div><dt>{sale.channel === "web" ? "Клиент" : "Сотрудник"}</dt><dd>{sale.customer ?? sale.employee ?? "Не определён"}</dd></div>

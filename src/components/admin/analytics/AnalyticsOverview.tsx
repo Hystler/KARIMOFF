@@ -48,6 +48,13 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+function formatDuration(seconds: number | null) {
+  if (seconds === null) return "Недостаточно данных";
+  if (seconds < 60) return `${formatNumber(seconds, 0)} сек`;
+  if (seconds < 3600) return `${formatNumber(seconds / 60, 1)} мин`;
+  return `${formatNumber(seconds / 3600, 1)} ч`;
+}
+
 function Delta({ value, inverse = false }: { value: KpiValue; inverse?: boolean }) {
   const positive = value.delta.direction === "up" || value.delta.direction === "new";
   const negative = value.delta.direction === "down";
@@ -180,6 +187,39 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
         </section>
       </div>
 
+      <div className="analytics-two-column" id="payment-operations">
+        <section className="analytics-panel">
+          <header className="analytics-panel-heading compact">
+            <div><p className="admin-eyebrow">YooKassa</p><h2>Платёжная воронка</h2></div>
+          </header>
+          <div className="analytics-breakdown-list">
+            <OperationalRow label="Создано попыток" value={formatNumber(dashboard.paymentOperations.attempts)} />
+            <OperationalRow label="Оплачено" value={formatNumber(dashboard.paymentOperations.succeeded)} />
+            <OperationalRow label="Ожидает" value={formatNumber(dashboard.paymentOperations.pending)} />
+            <OperationalRow label="Отменено" value={formatNumber(dashboard.paymentOperations.canceled)} />
+            <OperationalRow label="Успешность" value={dashboard.paymentOperations.successRate === null ? "Нет данных" : formatPercent(dashboard.paymentOperations.successRate)} />
+            <OperationalRow label="Возвраты" value={`${formatNumber(dashboard.paymentOperations.refunds)} · ${formatRub(dashboard.paymentOperations.refundAmount)}`} />
+            <OperationalRow label="Частичные возвраты" value={formatNumber(dashboard.paymentOperations.partialRefunds)} />
+            <OperationalRow label="До подтверждения оплаты" value={formatDuration(dashboard.paymentOperations.averagePendingToPaidSeconds)} />
+            <OperationalRow label="От оплаты до выдачи" value={formatDuration(dashboard.paymentOperations.averagePaidToHandedOutSeconds)} />
+          </div>
+        </section>
+
+        <section className="analytics-panel">
+          <header className="analytics-panel-heading compact">
+            <div><p className="admin-eyebrow">Операционный контроль</p><h2>Фискальные чеки YooKassa</h2></div>
+          </header>
+          <p className="analytics-panel-note">Технические статусы чеков не увеличивают выручку и не являются отдельными продажами.</p>
+          <div className="analytics-breakdown-list">
+            <OperationalRow label="Чеки предоплаты" value={formatNumber(dashboard.fiscalOperations.prepaymentRegistered)} />
+            <OperationalRow label="Чеки выдачи" value={formatNumber(dashboard.fiscalOperations.closingRegistered)} />
+            <OperationalRow label="Ожидают регистрации" value={formatNumber(dashboard.fiscalOperations.pending)} />
+            <OperationalRow label="Ошибки" value={formatNumber(dashboard.fiscalOperations.errors)} />
+            <OperationalRow label="Средняя регистрация" value={formatDuration(dashboard.fiscalOperations.averageRegistrationSeconds)} />
+          </div>
+        </section>
+      </div>
+
       <section className="analytics-panel analytics-expanded-panel" id="heatmap">
         <header className="analytics-panel-heading">
           <div><p className="admin-eyebrow">Ритм точки</p><h2>День недели × час</h2><span>Локальное время ресторана</span></div>
@@ -293,4 +333,8 @@ function CompactBreakdown({ rows, showItems = false }: { rows: AnalyticsBreakdow
 
 function EmptyState({ text }: { text: string }) {
   return <div className="analytics-section-empty"><ReceiptText size={21} /><span>{text}</span></div>;
+}
+
+function OperationalRow({ label, value }: { label: string; value: string }) {
+  return <div><div><strong>{label}</strong></div><div><strong>{value}</strong></div></div>;
 }

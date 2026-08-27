@@ -24,6 +24,58 @@ export type AdminOrderItemModifier = {
   line_price_delta: number;
 };
 
+export type AdminFiscalReceipt = {
+  amount: string;
+  created_at: string;
+  fiscalized_at: string | null;
+  id: string;
+  items: AdminFiscalReceiptItem[];
+  last_error_code: string | null;
+  provider_status: string | null;
+  provider_receipt_id: string | null;
+  receipt_phase: string;
+  receipt_registration: string | null;
+  receipt_type: string;
+  status: string;
+};
+
+export type AdminFiscalReceiptItem = {
+  amount: string;
+  description: string;
+  payment_mode: string;
+  payment_subject: string;
+  quantity: number;
+  vat_code: number;
+};
+
+export type AdminRefund = {
+  amount: string;
+  completed_at: string | null;
+  created_at: string;
+  id: string;
+  provider_refund_id: string | null;
+  provider_status: string | null;
+  receipt_registration: string | null;
+  status: string;
+};
+
+export type AdminPayment = {
+  amount: string;
+  created_at: string;
+  currency: string;
+  fiscal_receipts: AdminFiscalReceipt[];
+  id: string;
+  paid_at: string | null;
+  payment_method: string | null;
+  provider: string;
+  provider_payment_id: string | null;
+  provider_status: string | null;
+  receipt_registration: string | null;
+  refundable_amount: string;
+  refunds: AdminRefund[];
+  status: string;
+};
+
 export type AdminOrder = {
   id: string;
   created_at: string;
@@ -48,12 +100,14 @@ export type AdminOrder = {
   is_test: boolean;
   is_operational: boolean;
   items: AdminOrderItem[];
+  payments: AdminPayment[];
 };
 
 function normalizeOrder(
   row: Record<string, unknown>,
   items: AdminOrderItem[],
-  staffNames: Map<string, string>
+  staffNames: Map<string, string>,
+  payments: AdminPayment[]
 ): AdminOrder {
   const assignedStaffId = row.assigned_staff_id ? String(row.assigned_staff_id) : null;
   return {
@@ -106,7 +160,8 @@ function normalizeOrder(
     total: Number(row.total ?? 0),
     is_test: Boolean(row.is_test),
     is_operational: Boolean(row.is_operational),
-    items
+    items,
+    payments
   };
 }
 
@@ -136,6 +191,37 @@ function normalizeModifier(row: Record<string, unknown>): AdminOrderItemModifier
     unit: String(row.unit ?? ""),
     line_price_delta: Number(row.line_price_delta ?? 0)
   };
+}
+
+function moneyMinorUnits(value: unknown) {
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(value ?? "0"));
+  if (!match) return BigInt(0);
+  return BigInt(match[1]) * BigInt(100) + BigInt((match[2] ?? "").padEnd(2, "0") || "0");
+}
+
+function normalizeFiscalItems(value: unknown): AdminFiscalReceiptItem[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const request = (value as { request?: unknown }).request;
+  if (!request || typeof request !== "object" || Array.isArray(request)) return [];
+  const items = (request as { items?: unknown }).items;
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((rawItem) => {
+    if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) return [];
+    const item = rawItem as Record<string, unknown>;
+    const amount = item.amount;
+    const amountValue = amount && typeof amount === "object" && !Array.isArray(amount)
+      ? (amount as { value?: unknown }).value
+      : null;
+    if (typeof item.description !== "string" || typeof amountValue !== "string") return [];
+    return [{
+      amount: amountValue,
+      description: item.description,
+      payment_mode: typeof item.payment_mode === "string" ? item.payment_mode : "unknown",
+      payment_subject: typeof item.payment_subject === "string" ? item.payment_subject : "unknown",
+      quantity: Number(item.quantity ?? 0),
+      vat_code: Number(item.vat_code ?? 0)
+    }];
+  });
 }
 
 export async function getAdminOrders(locationIds: string[] | null = null) {
@@ -181,13 +267,21 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
     };
   }
 
-  const [{ data: itemsData, error: itemsError }, { data: staffData }] =
+  const [
+    { data: itemsData, error: itemsError },
+    { data: staffData },
+    { data: paymentsData, error: paymentsError }
+  ] =
     await Promise.all([
       database
         .from("order_items")
         .select("id, order_id, product_id, product_name, unit_price, quantity, line_total, item_note")
         .in("order_id", orderIds),
-      database.from("staff_users").select("id, name")
+      database.from("staff_users").select("id, name"),
+      database
+        .from("payments")
+        .select("id, order_id, provider, provider_payment_id, status, provider_status, amount, currency, payment_method, receipt_registration, refundable_amount, created_at, paid_at")
+        .in("order_id", orderIds)
     ]);
 
   if (itemsError) {
@@ -196,6 +290,102 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
       notConfigured: false,
       error: formatMissingTableError(itemsError.message, "order_items")
     };
+  }
+  if (paymentsError) {
+    return {
+      orders: [] as AdminOrder[],
+      notConfigured: false,
+      error: formatMissingTableError(paymentsError.message, "payments")
+    };
+  }
+
+  const paymentIds = (paymentsData ?? []).map((payment) => String(payment.id));
+  const [{ data: refundsData }, { data: receiptsData }] = paymentIds.length
+    ? await Promise.all([
+        database
+          .from("refunds")
+          .select("id, payment_id, provider_refund_id, status, provider_status, amount, receipt_registration, created_at, completed_at")
+          .in("payment_id", paymentIds),
+        database
+          .from("fiscal_receipts")
+          .select("id, payment_id, provider_receipt_id, provider_status, receipt_type, status, receipt_phase, receipt_registration, amount, payload, last_error_code, created_at, fiscalized_at")
+          .in("payment_id", paymentIds)
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const refundsByPayment = new Map<string, AdminRefund[]>();
+  for (const refund of refundsData ?? []) {
+    const paymentId = String(refund.payment_id);
+    refundsByPayment.set(paymentId, [
+      ...(refundsByPayment.get(paymentId) ?? []),
+      {
+        amount: String(refund.amount ?? "0"),
+        completed_at: refund.completed_at ? String(refund.completed_at) : null,
+        created_at: String(refund.created_at),
+        id: String(refund.id),
+        provider_refund_id: refund.provider_refund_id ? String(refund.provider_refund_id) : null,
+        provider_status: refund.provider_status ? String(refund.provider_status) : null,
+        receipt_registration: refund.receipt_registration ? String(refund.receipt_registration) : null,
+        status: String(refund.status)
+      }
+    ]);
+  }
+
+  const receiptsByPayment = new Map<string, AdminFiscalReceipt[]>();
+  for (const receipt of receiptsData ?? []) {
+    const paymentId = String(receipt.payment_id);
+    receiptsByPayment.set(paymentId, [
+      ...(receiptsByPayment.get(paymentId) ?? []),
+      {
+        amount: String(receipt.amount ?? "0"),
+        created_at: String(receipt.created_at),
+        fiscalized_at: receipt.fiscalized_at ? String(receipt.fiscalized_at) : null,
+        id: String(receipt.id),
+        items: normalizeFiscalItems(receipt.payload),
+        last_error_code: receipt.last_error_code ? String(receipt.last_error_code) : null,
+        provider_status: receipt.provider_status ? String(receipt.provider_status) : null,
+        provider_receipt_id: receipt.provider_receipt_id ? String(receipt.provider_receipt_id) : null,
+        receipt_phase: String(receipt.receipt_phase),
+        receipt_registration: receipt.receipt_registration ? String(receipt.receipt_registration) : null,
+        receipt_type: String(receipt.receipt_type),
+        status: String(receipt.status)
+      }
+    ]);
+  }
+
+  const paymentsByOrder = new Map<string, AdminPayment[]>();
+  for (const payment of paymentsData ?? []) {
+    const paymentId = String(payment.id);
+    const orderId = String(payment.order_id);
+    const paymentRefunds = refundsByPayment.get(paymentId) ?? [];
+    const refundedMinor = paymentRefunds
+      .filter((refund) => refund.status === "completed")
+      .reduce((total, refund) => total + moneyMinorUnits(refund.amount), BigInt(0));
+    const paymentMinor = moneyMinorUnits(payment.amount);
+    const effectiveStatus = refundedMinor >= paymentMinor && paymentMinor > BigInt(0)
+      ? "refunded"
+      : refundedMinor > BigInt(0)
+        ? "partially_refunded"
+        : String(payment.status);
+    paymentsByOrder.set(orderId, [
+      ...(paymentsByOrder.get(orderId) ?? []),
+      {
+        amount: String(payment.amount ?? "0"),
+        created_at: String(payment.created_at),
+        currency: String(payment.currency ?? "RUB"),
+        fiscal_receipts: receiptsByPayment.get(paymentId) ?? [],
+        id: paymentId,
+        paid_at: payment.paid_at ? String(payment.paid_at) : null,
+        payment_method: payment.payment_method ? String(payment.payment_method) : null,
+        provider: String(payment.provider),
+        provider_payment_id: payment.provider_payment_id ? String(payment.provider_payment_id) : null,
+        provider_status: payment.provider_status ? String(payment.provider_status) : null,
+        receipt_registration: payment.receipt_registration ? String(payment.receipt_registration) : null,
+        refundable_amount: String(payment.refundable_amount ?? "0"),
+        refunds: paymentRefunds,
+        status: effectiveStatus
+      }
+    ]);
   }
 
   const itemIds = (itemsData ?? []).map((item) => String(item.id));
@@ -226,7 +416,8 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
     normalizeOrder(
       order,
       items.filter((item) => item.order_id === String(order.id)),
-      staffNames
+      staffNames,
+      paymentsByOrder.get(String(order.id)) ?? []
     )
   );
 

@@ -37,6 +37,7 @@ function rowToCsv(row: AnalyticsSaleRow) {
     money(row.refundAmount),
     money(row.netRevenue),
     getPaymentMethodLabel(row.paymentMethod),
+    row.paymentProvider === "yookassa" ? "YooKassa" : row.paymentProvider === "evotor" ? "Evotor" : row.paymentProvider,
     getSaleStatusLabel(row.status),
     row.included ? "Да" : "Нет"
   ].map(safeCell).join(";");
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       async start(controller) {
         controller.enqueue(encoder.encode(`\uFEFF${[
           "Дата и время", "Номер", "Канал", "Точка", "Касса", "Сотрудник / клиент",
-          "Позиции", "До скидки", "Скидка", "Возврат", "Итого", "Оплата", "Статус", "В выручке"
+          "Позиции", "До скидки", "Скидка", "Возврат", "Итого", "Оплата", "Провайдер", "Статус", "В выручке"
         ].map(safeCell).join(";")}\n`));
       },
       async pull(controller) {

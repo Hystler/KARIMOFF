@@ -78,6 +78,7 @@ const allowedTables = new Set([
   "production_run_items",
   "production_runs",
   "refunds",
+  "refund_items",
   "site_settings",
   "staff_location_access",
   "staff_users",

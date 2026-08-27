@@ -20,6 +20,8 @@ import type {
   AnalyticsFilters,
   AnalyticsGranularity,
   AnalyticsPaymentRow,
+  AnalyticsPaymentOperations,
+  AnalyticsFiscalOperations,
   AnalyticsProductRow,
   AnalyticsRange,
   AnalyticsScope,
@@ -254,9 +256,10 @@ export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<
       employee_id: string | null;
       employee_name: string | null;
       payment_method: string;
+      payment_provider: string;
     }>(`
       select distinct source, location_id, location_name, terminal_id, terminal_name,
-        employee_id, employee_name, payment_method
+        employee_id, employee_name, payment_method, payment_provider
       from public.canonical_analytics_sales s
       where ${scopeWhere.text}
     `, scopeWhere.values),
@@ -300,6 +303,9 @@ export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<
     employees: unique(saleOptions.map((row) => ({ value: row.employee_id, label: row.employee_name }))),
     payments: unique(
       saleOptions.map((row) => ({ value: row.payment_method, label: row.payment_method }))
+    ),
+    providers: unique(
+      saleOptions.map((row) => ({ value: row.payment_provider, label: row.payment_provider }))
     ),
     categories: unique(
       itemOptions.map((row) => ({ value: row.category, label: row.category }))
@@ -546,6 +552,122 @@ async function getPayments(
   return mergeBreakdowns(current, previous, paymentTotal).map((row) => ({ ...row, method: row.id }));
 }
 
+type PaymentOperationsRow = {
+  attempts: string | number;
+  canceled: string | number;
+  pending: string | number;
+  succeeded: string | number;
+  refund_amount: string | number;
+  refunds: string | number;
+  partial_refunds: string | number;
+  average_pending_to_paid_seconds: string | number | null;
+  average_paid_to_handed_out_seconds: string | number | null;
+};
+
+async function getPaymentOperations(
+  filters: AnalyticsFilters,
+  range: AnalyticsRange,
+  scope: AnalyticsScope
+): Promise<AnalyticsPaymentOperations> {
+  const where = buildSalesWhere(filters, range, scope, { alias: "s" });
+  const rows = await query<PaymentOperationsRow>(`
+    select
+      count(distinct payment.id)::integer as attempts,
+      count(distinct payment.id) filter (where payment.provider_status = 'succeeded')::integer as succeeded,
+      count(distinct payment.id) filter (where payment.provider_status = 'canceled')::integer as canceled,
+      count(distinct payment.id) filter (
+        where coalesce(payment.provider_status, 'pending') in ('pending', 'waiting_for_capture')
+      )::integer as pending,
+      coalesce(sum(refund.completed_amount), 0)::numeric as refund_amount,
+      coalesce(sum(refund.completed_count), 0)::integer as refunds,
+      coalesce(sum(refund.partial_count), 0)::integer as partial_refunds,
+      avg(extract(epoch from (payment.paid_at - coalesce(payment.provider_created_at, payment.created_at))))
+        filter (where payment.paid_at is not null) as average_pending_to_paid_seconds,
+      avg(extract(epoch from (order_row.handed_out_at - payment.paid_at)))
+        filter (where payment.paid_at is not null and order_row.handed_out_at is not null)
+        as average_paid_to_handed_out_seconds
+    from public.canonical_analytics_sales s
+    join public.payments payment
+      on s.sale_id = 'web:' || payment.order_id::text
+     and payment.provider = 'yookassa'
+    join public.orders order_row on order_row.id = payment.order_id
+    left join lateral (
+      select
+        coalesce(sum(amount) filter (where status = 'completed'), 0)::numeric as completed_amount,
+        count(*) filter (where status = 'completed')::integer as completed_count,
+        count(*) filter (
+          where status = 'completed' and metadata ->> 'refund_kind' = 'partial'
+        )::integer as partial_count
+      from public.refunds
+      where payment_id = payment.id and provider = 'yookassa'
+    ) refund on true
+    where ${where.text}
+  `, where.values);
+  const row = rows[0];
+  const attempts = number(row?.attempts);
+  const succeeded = number(row?.succeeded);
+  return {
+    attempts,
+    canceled: number(row?.canceled),
+    pending: number(row?.pending),
+    succeeded,
+    successRate: attempts > 0 ? (succeeded / attempts) * 100 : null,
+    refundAmount: number(row?.refund_amount),
+    refunds: number(row?.refunds),
+    partialRefunds: number(row?.partial_refunds),
+    averagePendingToPaidSeconds: row?.average_pending_to_paid_seconds === null
+      ? null
+      : number(row?.average_pending_to_paid_seconds),
+    averagePaidToHandedOutSeconds: row?.average_paid_to_handed_out_seconds === null
+      ? null
+      : number(row?.average_paid_to_handed_out_seconds)
+  };
+}
+
+type FiscalOperationsRow = {
+  average_registration_seconds: string | number | null;
+  closing_registered: string | number;
+  errors: string | number;
+  pending: string | number;
+  prepayment_registered: string | number;
+};
+
+async function getFiscalOperations(
+  filters: AnalyticsFilters,
+  range: AnalyticsRange,
+  scope: AnalyticsScope
+): Promise<AnalyticsFiscalOperations> {
+  const where = buildSalesWhere(filters, range, scope, { alias: "s" });
+  const rows = await query<FiscalOperationsRow>(`
+    select
+      count(*) filter (
+        where receipt.receipt_phase = 'payment_prepayment' and receipt.status = 'issued'
+      )::integer as prepayment_registered,
+      count(*) filter (
+        where receipt.receipt_phase = 'prepayment_settlement' and receipt.status = 'issued'
+      )::integer as closing_registered,
+      count(*) filter (where receipt.status in ('pending', 'processing'))::integer as pending,
+      count(*) filter (where receipt.status = 'failed')::integer as errors,
+      avg(extract(epoch from (receipt.fiscalized_at - receipt.created_at)))
+        filter (where receipt.fiscalized_at is not null) as average_registration_seconds
+    from public.canonical_analytics_sales s
+    join public.fiscal_receipts receipt
+      on s.sale_id = 'web:' || receipt.order_id::text
+     and receipt.provider = 'yookassa'
+    where ${where.text}
+  `, where.values);
+  const row = rows[0];
+  return {
+    prepaymentRegistered: number(row?.prepayment_registered),
+    closingRegistered: number(row?.closing_registered),
+    pending: number(row?.pending),
+    errors: number(row?.errors),
+    averageRegistrationSeconds: row?.average_registration_seconds === null
+      ? null
+      : number(row?.average_registration_seconds)
+  };
+}
+
 async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   if (hasItemFilters(filters)) {
     const where = itemFilteredWhere(filters, range, scope);
@@ -729,13 +851,15 @@ export async function getAnalyticsDashboard(params: {
     })
     .filter((row) => row.revenue !== 0 || row.sales !== 0);
 
-  const [products, categories, employees, locations, terminals, payments] = await Promise.all([
+  const [products, categories, employees, locations, terminals, payments, paymentOperations, fiscalOperations] = await Promise.all([
     getProducts(filters, range, comparisonRange, scope, current.revenue),
     getCategories(filters, range, comparisonRange, scope, current.revenue),
     getBreakdown(filters, range, comparisonRange, scope, "employee", current.revenue),
     getBreakdown(filters, range, comparisonRange, scope, "location", current.revenue),
     getBreakdown(filters, range, comparisonRange, scope, "terminal", current.revenue),
-    getPayments(filters, range, comparisonRange, scope)
+    getPayments(filters, range, comparisonRange, scope),
+    getPaymentOperations(filters, range, scope),
+    getFiscalOperations(filters, range, scope)
   ]);
   const intelligence = await getAnalyticsIntelligence({
     filters,
@@ -791,6 +915,8 @@ export async function getAnalyticsDashboard(params: {
     locations,
     terminals,
     payments,
+    paymentOperations,
+    fiscalOperations,
     options,
     updatedAt,
     itemFiltered: hasItemFilters(filters),

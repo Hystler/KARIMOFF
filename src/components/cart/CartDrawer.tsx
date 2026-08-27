@@ -21,6 +21,7 @@ type CustomerProfile = {
 
 type CheckoutSettings = {
   delivery_enabled: boolean;
+  online_payments_enabled: boolean;
   pickup_enabled: boolean;
 };
 
@@ -75,8 +76,10 @@ export function CartDrawer() {
   const [requestedSlotIndex, setRequestedSlotIndex] = useState(0);
   const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings>({
     delivery_enabled: true,
+    online_payments_enabled: false,
     pickup_enabled: true
   });
+  const [receiptEmail, setReceiptEmail] = useState("");
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [orderState, orderFormAction, isOrderPending] = useActionState(createOrderAction, initialOrderActionState);
@@ -122,7 +125,11 @@ export function CartDrawer() {
       return;
     }
 
-    setCheckoutSettings(context.settings);
+    setCheckoutSettings({
+      ...context.settings,
+      online_payments_enabled: context.payment.enabled
+    });
+    setReceiptEmail(context.payment.receiptEmail);
     setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
     setCustomer(context.customer);
     setCheckoutRequestId(crypto.randomUUID());
@@ -166,6 +173,10 @@ export function CartDrawer() {
 
   useEffect(() => {
     if (orderState.status === "success") {
+      if (orderState.paymentConfirmationUrl) {
+        window.location.assign(orderState.paymentConfirmationUrl);
+        return undefined;
+      }
       const timeoutId = window.setTimeout(() => {
         clearCart();
         setMode("success");
@@ -175,7 +186,7 @@ export function CartDrawer() {
     }
 
     return undefined;
-  }, [clearCart, orderState.status]);
+  }, [clearCart, orderState.paymentConfirmationUrl, orderState.status]);
 
   if (!isOpen) {
     return null;
@@ -261,6 +272,28 @@ export function CartDrawer() {
                 name="requested_at"
                 value={requestedAt}
               />
+              {checkoutSettings.online_payments_enabled ? (
+                <section className="rounded-lg border border-karimoff-line bg-white p-4">
+                  <p className="text-sm font-bold text-karimoff-black">Email для чека</p>
+                  <p className="mt-1 text-xs leading-5 text-karimoff-muted">
+                    На эту почту придёт электронный чек. После успешной оплаты мы сохраним адрес в профиле.
+                  </p>
+                  <label className="mt-3 grid gap-2 text-sm font-semibold text-karimoff-muted">
+                    Электронная почта
+                    <input
+                      type="email"
+                      name="receipt_email"
+                      value={receiptEmail}
+                      onChange={(event) => setReceiptEmail(event.target.value)}
+                      required
+                      autoComplete="email"
+                      inputMode="email"
+                      className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                      placeholder="name@example.ru"
+                    />
+                  </label>
+                </section>
+              ) : null}
               <section className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
                 <p className="text-sm font-semibold text-karimoff-orange">Ваши данные</p>
                 <div className="mt-3 grid gap-2 text-sm">
@@ -440,12 +473,18 @@ export function CartDrawer() {
                 <p className="text-sm font-semibold text-red-600">{orderState.message}</p>
               ) : null}
 
+              {!checkoutSettings.online_payments_enabled ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+                  Онлайн-оплата временно недоступна. Заказ не будет создан до перехода в ЮKassa.
+                </p>
+              ) : null}
+
               <button
                 type="submit"
-                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId}
+                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || !checkoutSettings.online_payments_enabled}
                 className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
               >
-                {isOrderPending ? "Отправляем заказ" : "Отправить заказ"}
+                {isOrderPending ? "Создаём платёж" : "Перейти к оплате"}
               </button>
             </form>
           ) : (

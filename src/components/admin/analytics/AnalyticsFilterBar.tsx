@@ -33,6 +33,13 @@ const comparisons = [
   ["previous_year", "Предыдущий год"]
 ] as const;
 
+const providerLabels: Record<string, string> = {
+  evotor: "Evotor",
+  mixed: "Несколько провайдеров",
+  unknown: "Не определён",
+  yookassa: "YooKassa"
+};
+
 type Props = {
   filters: AnalyticsFilters;
   options: AnalyticsFilterOptions;
@@ -72,7 +79,7 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
   };
 
   const hasDetailedFilters = Boolean(
-    filters.location || filters.terminal || filters.employee || filters.payment || filters.categories.length ||
+    filters.location || filters.terminal || filters.employee || filters.payment || filters.provider || filters.categories.length ||
     filters.product || filters.weekdays.length || filters.hourFrom !== null
   );
   const visibleComparisons = comparisons.filter(
@@ -169,6 +176,15 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
               options={options.payments.map((item) => ({ ...item, label: paymentMethodLabels[item.value] ?? "Не определено" }))}
               onChange={(value) => navigate({ payment: value })}
             />
+            <FilterSelect
+              label="Платёжный провайдер"
+              value={filters.provider}
+              options={options.providers.map((item) => ({
+                ...item,
+                label: providerLabels[item.value] ?? item.label
+              }))}
+              onChange={(value) => navigate({ provider: value })}
+            />
             <fieldset className="analytics-filter-group analytics-filter-group-wide">
               <legend><Tags size={14} />Категории <span>до 5</span></legend>
               <div className="analytics-check-grid">
@@ -236,7 +252,7 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                 type="button"
                 className="analytics-reset-button"
                 onClick={() => navigate({
-                  location: null, terminal: null, employee: null, payment: null, category: null,
+                  location: null, terminal: null, employee: null, payment: null, provider: null, category: null,
                   product: null, weekday: null, hourFrom: null, hourTo: null
                 })}
               >
@@ -294,9 +310,10 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
           {filters.terminal ? <FilterChip label={options.terminals.find((item) => item.value === filters.terminal)?.label ?? "Касса"} onRemove={() => navigate({ terminal: null })} /> : null}
           {filters.employee ? <FilterChip label={options.employees.find((item) => item.value === filters.employee)?.label ?? "Сотрудник"} onRemove={() => navigate({ employee: null })} /> : null}
           {filters.payment ? <FilterChip label={paymentMethodLabels[filters.payment] ?? "Способ оплаты"} onRemove={() => navigate({ payment: null })} /> : null}
+          {filters.provider ? <FilterChip label={providerLabels[filters.provider] ?? "Провайдер"} onRemove={() => navigate({ provider: null })} /> : null}
           {filters.product ? <FilterChip label={options.products.find((item) => item.value === filters.product)?.label ?? "Товар"} onRemove={() => navigate({ product: null })} /> : null}
           <button type="button" className="analytics-active-reset" onClick={() => navigate({
-            location: null, terminal: null, employee: null, payment: null, category: null,
+            location: null, terminal: null, employee: null, payment: null, provider: null, category: null,
             product: null, weekday: null, hourFrom: null, hourTo: null
           })}>Сбросить всё</button>
         </div>
