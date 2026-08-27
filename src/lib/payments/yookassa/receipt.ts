@@ -1,12 +1,14 @@
 import { multiplyMoney, moneyToMinorUnits, rubles } from "./money";
 import type {
   CreateYooKassaReceiptInput,
+  YooKassaFiscalRequestSnapshot,
   YooKassaPaymentMode,
   YooKassaReceipt,
   YooKassaReceiptItem
 } from "./types";
 
 export const YOOKASSA_FISCAL_CONFIG = Object.freeze({
+  internet: true as const,
   measure: "piece" as const,
   paymentSubject: "commodity" as const,
   vatCode: 1 as const
@@ -20,6 +22,7 @@ export type FiscalOrderModifier = {
 export type FiscalOrderItem = {
   lineTotal: string;
   modifiers?: FiscalOrderModifier[];
+  orderItemId?: string;
   productName: string;
   quantity: number;
   unitPrice: string;
@@ -88,7 +91,7 @@ export function buildPaymentReceipt(params: {
   return {
     customer: { email: validateEmail(params.email) },
     items: buildReceiptItems(params.items, "full_prepayment", params.expectedTotal),
-    internet: true
+    internet: YOOKASSA_FISCAL_CONFIG.internet
   };
 }
 
@@ -103,7 +106,7 @@ export function buildPrepaymentSettlementReceipt(params: {
     payment_id: params.paymentId,
     customer: { email: validateEmail(params.email) },
     items: buildReceiptItems(params.items, "full_payment", params.expectedTotal),
-    internet: true,
+    internet: YOOKASSA_FISCAL_CONFIG.internet,
     send: true,
     settlements: [{ type: "prepayment", amount: rubles(params.expectedTotal) }]
   };
@@ -112,16 +115,23 @@ export function buildPrepaymentSettlementReceipt(params: {
 export function buildPartialRefundReceipt(params: {
   email: string;
   expectedTotal: string;
-  handedOut: boolean;
   items: FiscalOrderItem[];
 }): YooKassaReceipt {
   return {
     customer: { email: validateEmail(params.email) },
-    items: buildReceiptItems(
-      params.items,
-      params.handedOut ? "full_payment" : "full_prepayment",
-      params.expectedTotal
-    ),
-    internet: true
+    items: buildReceiptItems(params.items, "full_prepayment", params.expectedTotal),
+    internet: YOOKASSA_FISCAL_CONFIG.internet
+  };
+}
+
+export function fiscalRequestSnapshot(
+  receipt: YooKassaReceipt | CreateYooKassaReceiptInput
+): YooKassaFiscalRequestSnapshot {
+  return {
+    internet: receipt.internet,
+    items: receipt.items,
+    ...("type" in receipt && receipt.type === "payment"
+      ? { send: receipt.send, settlements: receipt.settlements }
+      : {})
   };
 }

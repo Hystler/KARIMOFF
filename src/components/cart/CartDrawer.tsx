@@ -272,26 +272,28 @@ export function CartDrawer() {
                 name="requested_at"
                 value={requestedAt}
               />
-              <section className="rounded-lg border border-karimoff-line bg-white p-4">
-                <p className="text-sm font-bold text-karimoff-black">Электронный чек</p>
-                <p className="mt-1 text-xs leading-5 text-karimoff-muted">
-                  ЮKassa отправит ссылку на зарегистрированный чек на эту почту.
-                </p>
-                <label className="mt-3 grid gap-2 text-sm font-semibold text-karimoff-muted">
-                  Электронная почта
-                  <input
-                    type="email"
-                    name="receipt_email"
-                    value={receiptEmail}
-                    onChange={(event) => setReceiptEmail(event.target.value)}
-                    required
-                    autoComplete="email"
-                    inputMode="email"
-                    className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-                    placeholder="name@example.ru"
-                  />
-                </label>
-              </section>
+              {checkoutSettings.online_payments_enabled ? (
+                <section className="rounded-lg border border-karimoff-line bg-white p-4">
+                  <p className="text-sm font-bold text-karimoff-black">Email для чека</p>
+                  <p className="mt-1 text-xs leading-5 text-karimoff-muted">
+                    На эту почту придёт электронный чек. После успешной оплаты мы сохраним адрес в профиле.
+                  </p>
+                  <label className="mt-3 grid gap-2 text-sm font-semibold text-karimoff-muted">
+                    Электронная почта
+                    <input
+                      type="email"
+                      name="receipt_email"
+                      value={receiptEmail}
+                      onChange={(event) => setReceiptEmail(event.target.value)}
+                      required
+                      autoComplete="email"
+                      inputMode="email"
+                      className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
+                      placeholder="name@example.ru"
+                    />
+                  </label>
+                </section>
+              ) : null}
               <section className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
                 <p className="text-sm font-semibold text-karimoff-orange">Ваши данные</p>
                 <div className="mt-3 grid gap-2 text-sm">

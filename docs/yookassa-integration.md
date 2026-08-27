@@ -60,6 +60,7 @@ Payment, order, fiscal и kitchen statuses не смешиваются.
 - `vat_code=1` — без НДС;
 - `payment_subject=commodity` — товар;
 - `measure=piece`;
+- `internet=true` — интернет-расчет;
 - начальный чек до выдачи: `payment_mode=full_prepayment`;
 - чек зачета при `handed_out`: `payment_mode=full_payment`, settlement type `prepayment`.
 
@@ -67,9 +68,23 @@ Payment, order, fiscal и kitchen statuses не смешиваются.
 
 Для «Чеков от YooKassa» чек доставляется только по email, поэтому checkout требует корректный email. SMS в этом режиме не поддерживается.
 
+`timezone` не передается для текущих немаркированных блюд: справочник «Чеков от YooKassa» требует этот параметр только при наличии обязательной маркировки. Если в каталоге появятся маркированные товары, для московской точки используется официальный код зоны `2`, но только вместе с корректными mark-полями.
+
+`payment_subject=commodity` остается централизованным конфигом, а не эвристикой по названию. Текущий Evotor importer сохраняет налоговую ставку, но не сохраняет отдельный надежный признак предмета расчета, поэтому доказательно сравнить `payment_subject` последних шаурмы, бургеров, напитков и снеков с Evotor невозможно. До первого реального чека классификацию готовых блюд как товара нужно подтвердить у бухгалтера или поддержки YooKassa; код не пытается автоматически трактовать позиции по имени.
+
 Патент задается в настройках магазина YooKassa. `tax_system_code` в payload «Чеков от YooKassa» не добавляется: этот параметр относится к сценариям сторонней онлайн-кассы. Перед первым платежом владелец должен подтвердить в кабинете, что система налогообложения указана как Патент, а классификация блюд как `commodity` согласована с бухгалтером.
 
 `receipt_registration` хранится отдельно. Payment `succeeded` не подменяет подтверждение регистрации чека.
+
+### Два фискальных чека
+
+1. При создании payment передается первый receipt с `full_prepayment`. Он фиксирует 100% предоплату, но не является подтверждением выдачи блюда.
+2. Только переход `kitchen_status` в `handed_out` создает внутреннюю задачу `prepayment_settlement`. Ни `ready`, ни `payment.succeeded`, ни открытие return page не создают второй чек.
+3. Worker ждет `payment.receipt_registration=succeeded`, затем отправляет `POST /v3/receipts`: `type=payment`, исходный `payment_id`, `send=true`, строки с `full_payment`, settlement с `type=prepayment` и точной суммой выданных позиций.
+4. При network/429/5xx заказ остается выданным, а fiscal receipt остается pending/error и повторяется с тем же idempotency key. Кассир не выполняет отдельное фискальное действие.
+5. Два receipt records не являются двумя продажами: revenue, KDS и inventory берутся только из canonical order.
+
+Состав первого чека сохраняется в `payments.receipt_snapshot` при создании payment. Snapshot содержит только нормализованные позиции и modifiers, без email и provider payload. С момента создания payment DB triggers запрещают изменение суммы заказа, order items/modifiers, суммы/currency/order binding платежа и самого snapshot; после фиксации request fingerprint блокируется и замена receipt email. Закрывающий чек строится из этого immutable snapshot за вычетом уже завершенных частичных возвратов, а его сумма берется из неизменяемого `payments.amount`.
 
 ## Webhook
 
@@ -126,7 +141,8 @@ Route: `/checkout/payment/return`.
 Refund service готов server-side, но production UI отсутствует.
 
 - Full refund: `POST /refunds` без `receipt`; YooKassa использует исходные данные чека.
-- Partial refund: обязательны exact order item allocations и receipt на возвращаемые позиции.
+- Partial refund до `handed_out`: обязательны exact order item allocations и receipt на возвращаемые позиции с исходным `payment_mode=full_prepayment`.
+- Partial refund после `handed_out` программно запрещен кодом `PARTIAL_REFUND_AFTER_HANDOFF_UNSUPPORTED`; администратор получает инструкцию выполнить такой случай вручную после фискальной проверки.
 - Сумма не может превышать текущую refundable amount с учетом pending reservations.
 - POST retry использует тот же idempotence key и body fingerprint.
 - `refund.succeeded` и GET reconciliation сходятся идемпотентно.
@@ -135,13 +151,26 @@ Refund service готов server-side, но production UI отсутствует
 
 Включение refund UI требует отдельного permission/feature decision и отдельного задания.
 
+После `payment.succeeded` оплаченные quantity, цена и платные modifiers не редактируются напрямую. Уменьшение оформляется частичным возвратом до выдачи; увеличение требует отдельного платежа либо полного возврата и нового заказа. Равноценная замена не автоматизирована, поскольку она требует отдельного подтвержденного фискального сценария.
+
 ## Analytics и Evotor
 
 YooKassa webhook не создает sale или `evotor_receipt`. Analytics учитывает canonical web order один раз после завершения и подтвержденной оплаты.
 
+Analytics Hub использует тот же `canonical_analytics_sales`, дополненный normalized полем `payment_provider`. Доступны раздельные фильтры:
+
+- канал: сайт или касса;
+- платежный провайдер: YooKassa, Evotor, unknown/mixed.
+
+Для YooKassa отдельный operational block считает payment attempts, succeeded/canceled/pending, success rate, full/partial refunds, время pending→paid и paid→handed_out. Fiscal monitoring показывает зарегистрированные чеки предоплаты и зачета, pending/error и среднее время регистрации. Эти запросы читают `payments`, `refunds` и `fiscal_receipts`, а не raw `payment_events`; fiscal records никогда не суммируются как revenue.
+
+Unified sales journal показывает provider рядом с channel и canonical payment/fiscal status. Web order остается одной строкой независимо от количества фискальных документов.
+
 Текущие «Чеки от YooKassa» полностью формируются инфраструктурой YooKassa и не отправляются в физический Evotor ресторана. Evotor document возможен только при отдельном переходе на решение со сторонней онлайн-кассой и явной интеграции такой кассы с YooKassa.
 
 Если в будущем связанный Evotor document все же появится, исключение дубля возможно только по доказанному external/fiscal reference либо после manual confirmation в `analytics_sale_reconciliations`. Сходство суммы и времени не является основанием для auto-merge. Подтвержденная связь исключает Evotor copy из analytics; canonical order, KDS и inventory остаются единственными business side effects.
+
+Inventory списывается существующим order engine ровно один раз после verified paid lifecycle. YooKassa webhook и оба фискальных receipt никогда напрямую не создают inventory movement или KDS order.
 
 ## Environment
 
@@ -162,6 +191,17 @@ APP_ORIGIN=https://karimoff.site
 
 Production credentials запрещено копировать на стенд без отдельного подтверждения. Официальный безопасный вариант — отдельный test shop с отдельными `shopId` и secret key, test-origin return URL и отдельным webhook URL. При `PAYMENTS_ENABLED=false` provider create/refund не вызываются; UI сообщает, что online payment временно недоступен.
 
+Текущий test stand и production используют одну Timeweb PostgreSQL, поэтому миграции `20260827120000_add_yookassa_payment_integration.sql` и `20260827143000_refine_yookassa_fiscal_operations.sql` нельзя применять со стенда. Безопасный staging plan:
+
+1. создать отдельную PostgreSQL и роль приложения для test stand;
+2. восстановить только schema и обезличенные fixtures, без production payment/customer data;
+3. применить полный migration chain;
+4. выдать test stand отдельный `DATABASE_URL`/`POSTGRES_URL`;
+5. подключить отдельный YooKassa test shop, если он доступен в договоре;
+6. только после изоляции выполнять provider test flow.
+
+Новая refine-миграция проверена на чистой PostgreSQL 16: все 17 migration files применяются последовательно, повторное применение refine-миграции идемпотентно, snapshot/email/immutability triggers прошли транзакционный smoke. К общей Timeweb DB она не применялась.
+
 ## Production rollout checklist
 
 1. Создать или проверить test shop и пройти mocked + test-shop flow.
@@ -177,3 +217,21 @@ Production credentials запрещено копировать на стенд �
 11. Только после reconciliation и бухгалтерской проверки расширять доступ всем пользователям.
 
 До шагов 7–10 `PAYMENTS_ENABLED` остается `false`; реальные платежи и возвраты не выполняются.
+
+## Первый контролируемый платеж
+
+1. Выбрать активную позицию небольшой реальной стоимости; цену не менять ради теста после создания payment.
+2. Указать имя, реальный телефон и реальный email для чека.
+3. Создать один checkout attempt и убедиться, что в YooKassa появился ровно один payment.
+4. Оплатить и сверить provider ID, сумму, RUB, metadata order binding и `receipt_registration`.
+5. Убедиться, что webhook `payment.succeeded` обработан, order стал paid и в KDS появился ровно один A-заказ.
+6. Получить первый email-чек и проверить `full_prepayment`, `vat_code=1`, состав и сумму.
+7. Провести заказ через cooking→ready; второй чек на этих стадиях отсутствует.
+8. Нажать «Выдан», убедиться в одной задаче closing receipt и получить чек с `full_payment`/`prepayment` settlement.
+9. Проверить admin order detail: payment, оба receipt ID/status/date/items и fiscal status.
+10. Проверить Analytics Hub: Site +X, POS без изменений, total +X, sale count +1; fiscal receipts в revenue не входят.
+11. Проверить inventory deduction 1×, KDS 1× и отсутствие нового `evotor_receipt`/duplicate sale.
+12. Проверить unified journal и дождаться успешного payment/fiscal reconciliation.
+13. Только по отдельному разрешению выполнить полный refund этого заказа и сверить автоматический refund receipt YooKassa.
+
+Production enablement проходит четырьмя стадиями: миграции и code deploy при `PAYMENTS_ENABLED=false`; один controlled payment; при необходимости один controlled full refund; затем отдельное решение о включении всех пользователей.

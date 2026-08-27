@@ -25,14 +25,27 @@ export type AdminOrderItemModifier = {
 };
 
 export type AdminFiscalReceipt = {
+  amount: string;
   created_at: string;
   fiscalized_at: string | null;
   id: string;
+  items: AdminFiscalReceiptItem[];
+  last_error_code: string | null;
+  provider_status: string | null;
   provider_receipt_id: string | null;
   receipt_phase: string;
   receipt_registration: string | null;
   receipt_type: string;
   status: string;
+};
+
+export type AdminFiscalReceiptItem = {
+  amount: string;
+  description: string;
+  payment_mode: string;
+  payment_subject: string;
+  quantity: number;
+  vat_code: number;
 };
 
 export type AdminRefund = {
@@ -186,6 +199,31 @@ function moneyMinorUnits(value: unknown) {
   return BigInt(match[1]) * BigInt(100) + BigInt((match[2] ?? "").padEnd(2, "0") || "0");
 }
 
+function normalizeFiscalItems(value: unknown): AdminFiscalReceiptItem[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const request = (value as { request?: unknown }).request;
+  if (!request || typeof request !== "object" || Array.isArray(request)) return [];
+  const items = (request as { items?: unknown }).items;
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((rawItem) => {
+    if (!rawItem || typeof rawItem !== "object" || Array.isArray(rawItem)) return [];
+    const item = rawItem as Record<string, unknown>;
+    const amount = item.amount;
+    const amountValue = amount && typeof amount === "object" && !Array.isArray(amount)
+      ? (amount as { value?: unknown }).value
+      : null;
+    if (typeof item.description !== "string" || typeof amountValue !== "string") return [];
+    return [{
+      amount: amountValue,
+      description: item.description,
+      payment_mode: typeof item.payment_mode === "string" ? item.payment_mode : "unknown",
+      payment_subject: typeof item.payment_subject === "string" ? item.payment_subject : "unknown",
+      quantity: Number(item.quantity ?? 0),
+      vat_code: Number(item.vat_code ?? 0)
+    }];
+  });
+}
+
 export async function getAdminOrders(locationIds: string[] | null = null) {
   const database = createDatabaseServerClient();
 
@@ -270,7 +308,7 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
           .in("payment_id", paymentIds),
         database
           .from("fiscal_receipts")
-          .select("id, payment_id, provider_receipt_id, receipt_type, status, receipt_phase, receipt_registration, created_at, fiscalized_at")
+          .select("id, payment_id, provider_receipt_id, provider_status, receipt_type, status, receipt_phase, receipt_registration, amount, payload, last_error_code, created_at, fiscalized_at")
           .in("payment_id", paymentIds)
       ])
     : [{ data: [] }, { data: [] }];
@@ -299,9 +337,13 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
     receiptsByPayment.set(paymentId, [
       ...(receiptsByPayment.get(paymentId) ?? []),
       {
+        amount: String(receipt.amount ?? "0"),
         created_at: String(receipt.created_at),
         fiscalized_at: receipt.fiscalized_at ? String(receipt.fiscalized_at) : null,
         id: String(receipt.id),
+        items: normalizeFiscalItems(receipt.payload),
+        last_error_code: receipt.last_error_code ? String(receipt.last_error_code) : null,
+        provider_status: receipt.provider_status ? String(receipt.provider_status) : null,
         provider_receipt_id: receipt.provider_receipt_id ? String(receipt.provider_receipt_id) : null,
         receipt_phase: String(receipt.receipt_phase),
         receipt_registration: receipt.receipt_registration ? String(receipt.receipt_registration) : null,

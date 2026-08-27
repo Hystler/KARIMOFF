@@ -33,6 +33,7 @@ type SaleDatabaseRow = {
   refund_amount: string | number;
   net_revenue: string | number;
   payment_method: string;
+  payment_provider: string;
   currency: string;
   analytics_included: boolean;
   source_record_id?: string;
@@ -64,6 +65,7 @@ function mapSale(row: SaleDatabaseRow): AnalyticsSaleRow {
     refundAmount: number(row.refund_amount),
     netRevenue: number(row.net_revenue),
     paymentMethod: row.payment_method,
+    paymentProvider: row.payment_provider,
     currency: row.currency,
     included: row.analytics_included
   };
@@ -201,7 +203,7 @@ export async function getAnalyticsSalesPage(params: {
       s.order_number, s.analytics_at, s.status, s.operation_type,
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
-      s.net_revenue, s.payment_method, s.currency, s.analytics_included
+      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included
     from public.canonical_analytics_sales s
     where ${where.text}
     order by ${sortExpression(filters)}
@@ -249,7 +251,7 @@ export async function getAnalyticsSalesExportBatch(params: {
       s.order_number, s.analytics_at, s.status, s.operation_type,
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
-      s.net_revenue, s.payment_method, s.currency, s.analytics_included
+      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included
     from public.canonical_analytics_sales s
     where ${where.text} ${cursorClause}
     order by s.analytics_at desc, s.sale_id desc

@@ -47,6 +47,7 @@ export function buildSalesWhere(
   if (filters.terminal) clauses.push(`${alias}.terminal_id = ${parameters.add(filters.terminal)}`);
   if (filters.employee) clauses.push(`${alias}.employee_id = ${parameters.add(filters.employee)}`);
   if (filters.payment) clauses.push(`${alias}.payment_method = ${parameters.add(filters.payment)}`);
+  if (filters.provider) clauses.push(`${alias}.payment_provider = ${parameters.add(filters.provider)}`);
   if (filters.weekdays.length) {
     clauses.push(`extract(isodow from ${alias}.analytics_at at time zone 'Europe/Moscow')::integer = any(${parameters.add(filters.weekdays, "::integer[]")})`);
   }

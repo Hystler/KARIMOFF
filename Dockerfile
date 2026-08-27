@@ -42,6 +42,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026081817000
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260820190000_add_max_social_auth.sql ./supabase/migrations/20260820190000_add_max_social_auth.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260824120000_add_telegram_browser_consume.sql ./supabase/migrations/20260824120000_add_telegram_browser_consume.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827120000_add_yookassa_payment_integration.sql ./supabase/migrations/20260827120000_add_yookassa_payment_integration.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql ./supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql
 
 USER nextjs
 

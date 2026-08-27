@@ -4,7 +4,12 @@ import { getPostgresSql } from "@/lib/postgres/server";
 import { minorUnitsToMoney, moneyToMinorUnits } from "./money";
 import type { FiscalOrderItem, FiscalOrderModifier } from "./receipt";
 import { yooKassaReconciliationDelaySeconds } from "./retry";
-import type { YooKassaPayment, YooKassaProviderReceipt, YooKassaRefund } from "./types";
+import type {
+  YooKassaFiscalRequestSnapshot,
+  YooKassaPayment,
+  YooKassaProviderReceipt,
+  YooKassaRefund
+} from "./types";
 
 type PaymentContextRow = {
   amount: string;
@@ -19,6 +24,7 @@ type PaymentContextRow = {
   provider_payment_id: string | null;
   receipt_email: string;
   receipt_registration: string | null;
+  receipt_snapshot: unknown;
   request_fingerprint: string | null;
   status: string;
 };
@@ -75,6 +81,7 @@ export type FiscalReceiptContext = {
   providerPaymentId: string;
   providerReceiptId: string | null;
   receiptEmail: string;
+  receiptRegistration: string | null;
 };
 
 export type YooKassaRefundAllocation = {
@@ -84,7 +91,6 @@ export type YooKassaRefundAllocation = {
 
 export type YooKassaRefundContext = {
   amount: string;
-  handedOut: boolean;
   id: string;
   idempotencyKey: string;
   isFullRefund: boolean;
@@ -113,10 +119,59 @@ function normalizeItems(rows: OrderItemRow[], modifiers: ModifierRow[]) {
   return rows.map((item) => ({
     lineTotal: item.line_total,
     modifiers: modifiersByItem.get(item.id) ?? [],
+    orderItemId: item.id,
     productName: item.product_name,
     quantity: Number(item.quantity),
     unitPrice: item.unit_price
   }));
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function parseReceiptSnapshot(value: unknown): FiscalOrderItem[] | null {
+  if (!Array.isArray(value) || !value.length || value.length > 80) return null;
+  const items: FiscalOrderItem[] = [];
+  for (const rawItem of value) {
+    const item = record(rawItem);
+    if (!item) return null;
+    const orderItemId = typeof item.order_item_id === "string" ? item.order_item_id : "";
+    const productName = typeof item.product_name === "string" ? item.product_name.trim() : "";
+    const quantity = Number(item.quantity);
+    const unitPrice = typeof item.unit_price === "string" ? item.unit_price : "";
+    const lineTotal = typeof item.line_total === "string" ? item.line_total : "";
+    if (
+      !/^[0-9a-f-]{36}$/i.test(orderItemId) ||
+      !productName ||
+      !Number.isSafeInteger(quantity) ||
+      quantity <= 0
+    ) return null;
+    try {
+      if (
+        moneyToMinorUnits(unitPrice) <= BigInt(0) ||
+        moneyToMinorUnits(lineTotal) !== moneyToMinorUnits(unitPrice) * BigInt(quantity)
+      ) return null;
+    } catch {
+      return null;
+    }
+    const modifiers: FiscalOrderModifier[] = Array.isArray(item.modifiers)
+      ? item.modifiers.flatMap((rawModifier) => {
+          const modifier = record(rawModifier);
+          const ingredientName = typeof modifier?.ingredient_name === "string"
+            ? modifier.ingredient_name.trim()
+            : "";
+          const modifierType = modifier?.modifier_type;
+          return ingredientName && (modifierType === "add" || modifierType === "remove" || modifierType === "replace")
+            ? [{ ingredientName, modifierType }]
+            : [];
+        })
+      : [];
+    items.push({ lineTotal, modifiers, orderItemId, productName, quantity, unitPrice });
+  }
+  return items;
 }
 
 async function loadOrderItems(orderId: string) {
@@ -144,41 +199,38 @@ async function loadOrderItems(orderId: string) {
   return normalizeItems(items, modifiers);
 }
 
-async function loadSettlementItems(orderId: string, includedRefundIds: string[]) {
+async function loadSettlementItems(
+  orderId: string,
+  includedRefundIds: string[],
+  paymentItems: FiscalOrderItem[]
+) {
   const sql = getPostgresSql();
-  const items = await sql<OrderItemRow[]>`
-    with refunded as (
-      select refund_item.order_item_id, sum(refund_item.quantity)::numeric as quantity
-      from public.refund_items refund_item
-      join public.refunds refund on refund.id = refund_item.refund_id
-      where refund.order_id = ${orderId}::uuid
-        and refund.provider = 'yookassa'
-        and refund.status = 'completed'
-        and refund.id = any(${includedRefundIds}::uuid[])
-      group by refund_item.order_item_id
-    )
-    select
-      item.id,
-      item.product_name,
-      (item.quantity - coalesce(refunded.quantity, 0))::text as quantity,
-      item.unit_price::text as unit_price,
-      (item.unit_price * (item.quantity - coalesce(refunded.quantity, 0)))::text as line_total
-    from public.order_items item
-    left join refunded on refunded.order_item_id = item.id
-    where item.order_id = ${orderId}::uuid
-      and item.quantity - coalesce(refunded.quantity, 0) > 0
-    order by item.created_at, item.id
-  `;
-  const itemIds = items.map((item) => item.id);
-  const modifiers = itemIds.length
-    ? await sql<ModifierRow[]>`
-        select order_item_id, modifier_type, ingredient_name
-        from public.order_item_modifiers
-        where order_item_id = any(${itemIds}::uuid[])
-        order by created_at, id
+  const refundedRows = includedRefundIds.length
+    ? await sql<{ order_item_id: string; quantity: string }[]>`
+        select refund_item.order_item_id, sum(refund_item.quantity)::text as quantity
+        from public.refund_items refund_item
+        join public.refunds refund on refund.id = refund_item.refund_id
+        where refund.order_id = ${orderId}::uuid
+          and refund.provider = 'yookassa'
+          and refund.status = 'completed'
+          and refund.id = any(${includedRefundIds}::uuid[])
+        group by refund_item.order_item_id
       `
     : [];
-  return normalizeItems(items, modifiers);
+  const refundedByItem = new Map(
+    refundedRows.map((row) => [row.order_item_id, Number(row.quantity)])
+  );
+  return paymentItems.flatMap((item) => {
+    if (!item.orderItemId) throw new Error("YOOKASSA_RECEIPT_SNAPSHOT_INVALID");
+    const quantity = item.quantity - (refundedByItem.get(item.orderItemId) ?? 0);
+    if (!Number.isSafeInteger(quantity)) throw new Error("YOOKASSA_REFUND_QUANTITY_INVALID");
+    if (quantity <= 0) return [];
+    return [{
+      ...item,
+      lineTotal: minorUnitsToMoney(moneyToMinorUnits(item.unitPrice) * BigInt(quantity)),
+      quantity
+    }];
+  });
 }
 
 export async function getYooKassaPaymentContext(paymentId: string) {
@@ -194,6 +246,7 @@ export async function getYooKassaPaymentContext(paymentId: string) {
       p.confirmation_url,
       p.receipt_email,
       p.receipt_registration,
+      p.receipt_snapshot,
       p.request_fingerprint,
       p.created_at,
       o.customer_id,
@@ -206,6 +259,7 @@ export async function getYooKassaPaymentContext(paymentId: string) {
     limit 1
   `;
   if (!row) return null;
+  const snapshotItems = parseReceiptSnapshot(row.receipt_snapshot);
   return {
     amount: row.amount,
     confirmationUrl: row.confirmation_url,
@@ -214,7 +268,7 @@ export async function getYooKassaPaymentContext(paymentId: string) {
     displayNumber: row.display_number || row.order_id.slice(0, 8),
     id: row.id,
     idempotencyKey: row.idempotency_key,
-    items: await loadOrderItems(row.order_id),
+    items: snapshotItems ?? await loadOrderItems(row.order_id),
     kitchenStatus: row.kitchen_status,
     orderId: row.order_id,
     providerPaymentId: row.provider_payment_id,
@@ -225,7 +279,11 @@ export async function getYooKassaPaymentContext(paymentId: string) {
   } satisfies YooKassaPaymentContext;
 }
 
-export async function bindPaymentRequestFingerprint(paymentId: string, fingerprint: string) {
+export async function bindPaymentRequestFingerprint(
+  paymentId: string,
+  fingerprint: string,
+  receiptSnapshot: YooKassaFiscalRequestSnapshot
+) {
   const sql = getPostgresSql();
   return sql.begin(async (transaction) => {
     const [payment] = await transaction<{
@@ -248,6 +306,15 @@ export async function bindPaymentRequestFingerprint(paymentId: string, fingerpri
         where id = ${paymentId}::uuid
       `;
     }
+    await transaction`
+      update public.fiscal_receipts
+      set payload = coalesce(payload, '{}'::jsonb)
+            || ${transaction.json({ request: receiptSnapshot })}::jsonb,
+          updated_at = now()
+      where payment_id = ${paymentId}::uuid
+        and provider = 'yookassa'
+        and receipt_phase = 'payment_prepayment'
+    `;
     return payment.provider_payment_id;
   });
 }
@@ -456,16 +523,25 @@ export async function claimDueFiscalReceipts(workerId: string, limit: number) {
   const sql = getPostgresSql();
   const rows = await sql<{ id: string }[]>`
     with due as (
-      select id
-      from public.fiscal_receipts
-      where provider = 'yookassa'
-        and receipt_phase = 'prepayment_settlement'
-        and status = 'pending'
-        and next_reconcile_at is not null
-        and next_reconcile_at <= now()
-        and (reconcile_until is null or reconcile_until > now())
-        and (reconcile_locked_at is null or reconcile_locked_at < now() - interval '2 minutes')
-      order by next_reconcile_at, created_at
+      select receipt.id
+      from public.fiscal_receipts receipt
+      join public.payments payment on payment.id = receipt.payment_id
+      where receipt.provider = 'yookassa'
+        and receipt.receipt_phase = 'prepayment_settlement'
+        and receipt.status = 'pending'
+        and payment.provider = 'yookassa'
+        and payment.receipt_registration = 'succeeded'
+        and not exists (
+          select 1 from public.refunds refund
+          where refund.order_id = receipt.order_id
+            and refund.provider = 'yookassa'
+            and refund.status = 'pending'
+        )
+        and receipt.next_reconcile_at is not null
+        and receipt.next_reconcile_at <= now()
+        and (receipt.reconcile_until is null or receipt.reconcile_until > now())
+        and (receipt.reconcile_locked_at is null or receipt.reconcile_locked_at < now() - interval '2 minutes')
+      order by receipt.next_reconcile_at, receipt.created_at
       for update skip locked
       limit ${Math.max(1, Math.min(25, limit))}
     )
@@ -490,6 +566,8 @@ export async function getFiscalReceiptContext(receiptId: string) {
     provider_payment_id: string;
     provider_receipt_id: string | null;
     receipt_email: string;
+    receipt_registration: string | null;
+    receipt_snapshot: unknown;
   }[]>`
     select
       receipt.id,
@@ -500,7 +578,9 @@ export async function getFiscalReceiptContext(receiptId: string) {
       receipt.payload,
       receipt.provider_receipt_id,
       payment.provider_payment_id,
-      payment.receipt_email
+      payment.receipt_email,
+      payment.receipt_registration,
+      payment.receipt_snapshot
     from public.fiscal_receipts receipt
     join public.payments payment on payment.id = receipt.payment_id
     where receipt.id = ${receiptId}::uuid
@@ -509,6 +589,8 @@ export async function getFiscalReceiptContext(receiptId: string) {
     limit 1
   `;
   if (!row?.provider_payment_id) return null;
+  const paymentItems = parseReceiptSnapshot(row.receipt_snapshot);
+  if (!paymentItems) throw new Error("YOOKASSA_RECEIPT_SNAPSHOT_INVALID");
   const includedRefundIds = Array.isArray(row.payload?.included_refund_ids)
     ? row.payload.included_refund_ids.filter(
         (value): value is string => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value)
@@ -518,18 +600,20 @@ export async function getFiscalReceiptContext(receiptId: string) {
     amount: row.amount,
     id: row.id,
     idempotencyKey: row.idempotency_key,
-    items: await loadSettlementItems(row.order_id, includedRefundIds),
+    items: await loadSettlementItems(row.order_id, includedRefundIds, paymentItems),
     orderId: row.order_id,
     paymentId: row.payment_id,
     providerPaymentId: row.provider_payment_id,
     providerReceiptId: row.provider_receipt_id,
-    receiptEmail: row.receipt_email
+    receiptEmail: row.receipt_email,
+    receiptRegistration: row.receipt_registration
   } satisfies FiscalReceiptContext;
 }
 
 export async function bindFiscalReceiptRequestFingerprint(
   receiptId: string,
-  fingerprint: string
+  fingerprint: string,
+  receiptSnapshot: YooKassaFiscalRequestSnapshot
 ) {
   const sql = getPostgresSql();
   await sql.begin(async (transaction) => {
@@ -546,11 +630,28 @@ export async function bindFiscalReceiptRequestFingerprint(
     if (!receipt.request_fingerprint) {
       await transaction`
         update public.fiscal_receipts
-        set request_fingerprint = ${fingerprint}, updated_at = now()
+        set request_fingerprint = ${fingerprint},
+            payload = coalesce(payload, '{}'::jsonb)
+              || ${transaction.json({ request: receiptSnapshot })}::jsonb,
+            updated_at = now()
         where id = ${receiptId}::uuid
       `;
     }
   });
+}
+
+export async function releaseFiscalReceiptClaim(receiptId: string, delaySeconds = 30) {
+  const sql = getPostgresSql();
+  await sql`
+    update public.fiscal_receipts
+    set next_reconcile_at = now() + make_interval(secs => ${Math.max(5, Math.min(300, delaySeconds))}),
+        reconcile_locked_at = null,
+        reconcile_locked_by = null,
+        updated_at = now()
+    where id = ${receiptId}::uuid
+      and provider = 'yookassa'
+      and status = 'pending'
+  `;
 }
 
 export async function recordFiscalReceiptState(
@@ -648,21 +749,26 @@ export async function createYooKassaRefundAttempt(params: {
 
     const [payment] = await transaction<{
       amount: string;
+      kitchen_status: string;
       order_id: string;
       provider_payment_id: string | null;
       receipt_email: string;
+      receipt_snapshot: unknown;
       refundable_amount: string;
       status: string;
     }[]>`
       select
-        amount::text as amount,
-        order_id,
-        provider_payment_id,
-        receipt_email,
-        refundable_amount::text as refundable_amount,
-        status
-      from public.payments
-      where id = ${params.paymentId}::uuid and provider = 'yookassa'
+        payment.amount::text as amount,
+        order_row.kitchen_status,
+        payment.order_id,
+        payment.provider_payment_id,
+        payment.receipt_email,
+        payment.receipt_snapshot,
+        payment.refundable_amount::text as refundable_amount,
+        payment.status
+      from public.payments payment
+      join public.orders order_row on order_row.id = payment.order_id
+      where payment.id = ${params.paymentId}::uuid and payment.provider = 'yookassa'
       for update
     `;
     if (!payment?.provider_payment_id || !payment.receipt_email) {
@@ -715,29 +821,20 @@ export async function createYooKassaRefundAttempt(params: {
     const originalMinor = moneyToMinorUnits(payment.amount);
     const isFullRefund =
       requestedMinor === originalMinor && Number(reserved?.active_count ?? 0) === 0;
-    let itemRows: Array<{
-      id: string;
-      product_name: string;
-      quantity: number;
-      unit_price: string;
-    }> = [];
+    if (!isFullRefund && payment.kitchen_status === "handed_out") {
+      throw new Error("PARTIAL_REFUND_AFTER_HANDOFF_UNSUPPORTED");
+    }
+    let itemRows: FiscalOrderItem[] = [];
 
     if (!isFullRefund) {
       if (!allocationMap.size) throw new Error("PARTIAL_REFUND_ITEMS_REQUIRED");
       const orderItemIds = [...allocationMap.keys()];
-      itemRows = await transaction<{
-        id: string;
-        product_name: string;
-        quantity: number;
-        unit_price: string;
-      }[]>`
-        select id, product_name, quantity, unit_price::text as unit_price
-        from public.order_items
-        where order_id = ${payment.order_id}::uuid
-          and id = any(${orderItemIds}::uuid[])
-        order by created_at, id
-        for update
-      `;
+      const snapshotItems = parseReceiptSnapshot(payment.receipt_snapshot);
+      if (!snapshotItems) throw new Error("YOOKASSA_RECEIPT_SNAPSHOT_INVALID");
+      const requestedItemIds = new Set(orderItemIds);
+      itemRows = snapshotItems.filter(
+        (item) => item.orderItemId && requestedItemIds.has(item.orderItemId)
+      );
       if (itemRows.length !== allocationMap.size) throw new Error("REFUND_ORDER_ITEM_NOT_FOUND");
 
       const priorRows = await transaction<{ order_item_id: string; quantity: string }[]>`
@@ -754,10 +851,11 @@ export async function createYooKassaRefundAttempt(params: {
       );
       let allocatedMinor = BigInt(0);
       for (const item of itemRows) {
-        const quantity = allocationMap.get(item.id) ?? 0;
-        const remaining = Number(item.quantity) - (priorByItem.get(item.id) ?? 0);
+        if (!item.orderItemId) throw new Error("YOOKASSA_RECEIPT_SNAPSHOT_INVALID");
+        const quantity = allocationMap.get(item.orderItemId) ?? 0;
+        const remaining = item.quantity - (priorByItem.get(item.orderItemId) ?? 0);
         if (quantity > remaining) throw new Error("REFUND_QUANTITY_EXCEEDS_AVAILABLE");
-        allocatedMinor += moneyToMinorUnits(item.unit_price) * BigInt(quantity);
+        allocatedMinor += moneyToMinorUnits(item.unitPrice) * BigInt(quantity);
       }
       if (allocatedMinor !== requestedMinor) throw new Error("REFUND_ITEMS_TOTAL_MISMATCH");
     }
@@ -793,8 +891,9 @@ export async function createYooKassaRefundAttempt(params: {
     if (!refund) throw new Error("REFUND_ATTEMPT_NOT_CREATED");
 
     for (const item of itemRows) {
-      const quantity = allocationMap.get(item.id) ?? 0;
-      const lineAmount = minorUnitsToMoney(moneyToMinorUnits(item.unit_price) * BigInt(quantity));
+      if (!item.orderItemId) throw new Error("YOOKASSA_RECEIPT_SNAPSHOT_INVALID");
+      const quantity = allocationMap.get(item.orderItemId) ?? 0;
+      const lineAmount = minorUnitsToMoney(moneyToMinorUnits(item.unitPrice) * BigInt(quantity));
       await transaction`
         insert into public.refund_items (
           refund_id,
@@ -802,14 +901,16 @@ export async function createYooKassaRefundAttempt(params: {
           description_snapshot,
           quantity,
           unit_amount,
-          amount
+          amount,
+          metadata
         ) values (
           ${refund.id}::uuid,
-          ${item.id}::uuid,
-          ${item.product_name},
+          ${item.orderItemId}::uuid,
+          ${item.productName},
           ${quantity}::numeric,
-          ${item.unit_price}::numeric,
-          ${lineAmount}::numeric
+          ${item.unitPrice}::numeric,
+          ${lineAmount}::numeric,
+          ${transaction.json({ modifiers: item.modifiers ?? [] })}
         )
       `;
     }
@@ -851,6 +952,7 @@ async function loadRefundItems(refundId: string) {
   const rows = await sql<{
     amount: string;
     description_snapshot: string;
+    metadata: { modifiers?: unknown } | null;
     order_item_id: string;
     quantity: string;
     unit_amount: string;
@@ -860,30 +962,27 @@ async function loadRefundItems(refundId: string) {
       description_snapshot,
       quantity::text as quantity,
       unit_amount::text as unit_amount,
-      amount::text as amount
+      amount::text as amount,
+      metadata
     from public.refund_items
     where refund_id = ${refundId}::uuid
     order by created_at, id
   `;
-  const itemIds = rows.map((row) => row.order_item_id);
-  const modifiers = itemIds.length
-    ? await sql<ModifierRow[]>`
-        select order_item_id, modifier_type, ingredient_name
-        from public.order_item_modifiers
-        where order_item_id = any(${itemIds}::uuid[])
-        order by created_at, id
-      `
-    : [];
-  const modifiersByItem = new Map<string, FiscalOrderModifier[]>();
-  for (const modifier of modifiers) {
-    modifiersByItem.set(modifier.order_item_id, [
-      ...(modifiersByItem.get(modifier.order_item_id) ?? []),
-      { ingredientName: modifier.ingredient_name, modifierType: modifier.modifier_type }
-    ]);
-  }
   return rows.map((row) => ({
     lineTotal: row.amount,
-    modifiers: modifiersByItem.get(row.order_item_id) ?? [],
+    modifiers: Array.isArray(row.metadata?.modifiers)
+      ? row.metadata.modifiers.flatMap((rawModifier) => {
+          const modifier = record(rawModifier);
+          const ingredientName = typeof modifier?.ingredientName === "string"
+            ? modifier.ingredientName.trim()
+            : "";
+          const modifierType = modifier?.modifierType;
+          return ingredientName && (modifierType === "add" || modifierType === "remove" || modifierType === "replace")
+            ? [{ ingredientName, modifierType }]
+            : [];
+        })
+      : [],
+    orderItemId: row.order_item_id,
     productName: row.description_snapshot,
     quantity: Number(row.quantity),
     unitPrice: row.unit_amount
@@ -931,7 +1030,6 @@ export async function getYooKassaRefundContext(refundId: string) {
   const isFullRefund = row.metadata?.refund_kind === "full";
   return {
     amount: row.amount,
-    handedOut: row.kitchen_status === "handed_out",
     id: row.id,
     idempotencyKey: row.idempotency_key,
     isFullRefund,
@@ -947,7 +1045,11 @@ export async function getYooKassaRefundContext(refundId: string) {
   } satisfies YooKassaRefundContext;
 }
 
-export async function bindRefundRequestFingerprint(refundId: string, fingerprint: string) {
+export async function bindRefundRequestFingerprint(
+  refundId: string,
+  fingerprint: string,
+  receiptSnapshot: YooKassaFiscalRequestSnapshot | null
+) {
   const sql = getPostgresSql();
   await sql.begin(async (transaction) => {
     const [refund] = await transaction<{ request_fingerprint: string | null }[]>`
@@ -965,6 +1067,17 @@ export async function bindRefundRequestFingerprint(refundId: string, fingerprint
         update public.refunds
         set request_fingerprint = ${fingerprint}, updated_at = now()
         where id = ${refundId}::uuid
+      `;
+    }
+    if (receiptSnapshot) {
+      await transaction`
+        update public.fiscal_receipts
+        set payload = coalesce(payload, '{}'::jsonb)
+              || ${transaction.json({ request: receiptSnapshot })}::jsonb,
+            updated_at = now()
+        where refund_id = ${refundId}::uuid
+          and provider = 'yookassa'
+          and receipt_phase = 'refund'
       `;
     }
   });

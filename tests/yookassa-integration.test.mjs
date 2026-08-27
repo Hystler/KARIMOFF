@@ -8,7 +8,12 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 const migration = read("supabase/migrations/20260827120000_add_yookassa_payment_integration.sql");
+const fiscalRefinement = read("supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql");
 const analyticsMigration = read("supabase/migrations/20260812213000_add_unified_sales_analytics.sql");
+const analyticsDashboard = read("src/lib/analytics/dashboard.ts");
+const analyticsFilterBar = read("src/components/admin/analytics/AnalyticsFilterBar.tsx");
+const analyticsQuery = read("src/lib/analytics/query.ts");
+const analyticsSales = read("src/lib/analytics/sales.ts");
 const clientSource = read("src/lib/payments/yookassa/client.ts");
 const configSource = read("src/lib/payments/yookassa/config.ts");
 const repository = read("src/lib/payments/yookassa/repository.ts");
@@ -88,10 +93,16 @@ test("money and receipts use exact minor units and official YooKassa fiscal valu
         items,
         paymentId: "provider-payment"
       });
+      const partialRefund = receipt.buildPartialRefundReceipt({
+        email: "guest@example.ru",
+        expectedTotal: "651.00",
+        items
+      });
       console.log(JSON.stringify({
         exact: money.minorUnitsToMoney(money.moneyToMinorUnits("90071992547409.91")),
         payment,
-        settlement
+        settlement,
+        partialRefund
       }));
     `);
   } finally {
@@ -104,6 +115,8 @@ test("money and receipts use exact minor units and official YooKassa fiscal valu
   assert.equal(result.payment.items[0].payment_subject, "commodity");
   assert.equal(result.payment.items[0].payment_mode, "full_prepayment");
   assert.equal(result.payment.items[0].measure, "piece");
+  assert.equal(result.payment.internet, true);
+  assert.equal("timezone" in result.payment, false);
   assert.match(result.payment.items[0].description, /без Лук/);
   assert.match(result.payment.items[0].description, /\+ Сыр/);
   assert.equal(result.settlement.items[0].payment_mode, "full_payment");
@@ -111,6 +124,7 @@ test("money and receipts use exact minor units and official YooKassa fiscal valu
     type: "prepayment",
     amount: { value: "651.00", currency: "RUB" }
   }]);
+  assert.equal(result.partialRefund.items[0].payment_mode, "full_prepayment");
 });
 
 test("receipt validation rejects missing contact, invalid item count, malformed totals, and money", () => {
@@ -340,6 +354,8 @@ test("refund architecture supports exact full and partial idempotent refunds wit
   assert.match(repository, /pending_amount/);
   assert.match(repository, /payment\.refundable_amount[\s\S]+reserved\?\.pending_amount/);
   assert.match(service, /!context\.isFullRefund[\s\S]+buildPartialRefundReceipt/);
+  assert.match(repository, /PARTIAL_REFUND_AFTER_HANDOFF_UNSUPPORTED/);
+  assert.doesNotMatch(service, /handedOut:\s*context\.handedOut/);
   assert.match(service, /context\.providerRefundId[\s\S]+getRefund/);
   assert.match(migration, /apply_yookassa_refund_state/);
   assert.match(migration, /update public\.payments[\s\S]+set status = 'paid'/);
@@ -355,13 +371,62 @@ test("fiscal state is independent and prepayment settlement is queued only on ha
   assert.match(migration, /refresh_yookassa_order_fiscal_status/);
   assert.match(migration, /queue_yookassa_prepayment_settlement/);
   assert.match(migration, /new\.kitchen_status <> 'handed_out'/);
+  assert.doesNotMatch(migration, /new\.kitchen_status <> 'ready'/);
   assert.match(migration, /receipt_phase[\s\S]+'prepayment_settlement'/);
   assert.match(service, /buildPrepaymentSettlementReceipt/);
   assert.match(service, /bindFiscalReceiptRequestFingerprint/);
   assert.match(repository, /refund\.id = any\(\$\{includedRefundIds\}::uuid\[\]\)/);
+  assert.match(repository, /payment\.receipt_registration = 'succeeded'/);
+  assert.match(repository, /refund\.status = 'pending'/);
+  assert.match(service, /context\.receiptRegistration !== "succeeded"/);
+  assert.match(service, /releaseFiscalReceiptClaim/);
   assert.match(migration, /'included_refund_ids', v_completed_refund_ids/);
+  assert.match(
+    fiscalRefinement,
+    /set amount = greatest\(payment\.amount - v_completed_refund, 0\)/
+  );
+  assert.match(fiscalRefinement, /request_fingerprint is null/);
   assert.match(adminPage, /Фискализация/);
   assert.match(adminPage, /Чек/);
+});
+
+test("paid YooKassa item composition and fiscal request bodies are immutable snapshots", () => {
+  assert.match(fiscalRefinement, /add column if not exists receipt_snapshot jsonb/);
+  assert.match(fiscalRefinement, /build_yookassa_order_receipt_snapshot/);
+  assert.match(fiscalRefinement, /v_total is distinct from new\.amount/);
+  assert.match(fiscalRefinement, /payments_yookassa_receipt_snapshot_immutable/);
+  assert.match(fiscalRefinement, /payments_yookassa_request_immutable/);
+  assert.match(fiscalRefinement, /order_items_paid_yookassa_immutable/);
+  assert.match(fiscalRefinement, /order_item_modifiers_paid_yookassa_immutable/);
+  assert.match(fiscalRefinement, /orders_yookassa_total_immutable/);
+  assert.match(fiscalRefinement, /v_payment\.amount - v_completed_refund/);
+  assert.match(fiscalRefinement, /receipt_snapshot is not null/);
+  assert.match(repository, /parseReceiptSnapshot\(row\.receipt_snapshot\)/);
+  assert.match(repository, /transaction\.json\(\{ request: receiptSnapshot \}\)/);
+  assert.match(repository, /loadSettlementItems\(row\.order_id, includedRefundIds, paymentItems\)/);
+});
+
+test("receipt email is required for YooKassa and remembered only after successful payment", () => {
+  assert.match(checkoutAction, /receipt_email/);
+  assert.match(cartDrawer, /Email для чека/);
+  assert.match(cartDrawer, /На эту почту придёт электронный чек/);
+  assert.match(cartDrawer, /checkoutSettings\.online_payments_enabled/);
+  assert.match(fiscalRefinement, /add column if not exists receipt_email text/);
+  assert.match(fiscalRefinement, /new\.status not in \('paid', 'partially_refunded', 'refunded'\)/);
+  assert.match(fiscalRefinement, /payments_remember_yookassa_receipt_email/);
+});
+
+test("YooKassa operational analytics stays canonical and provider-filtered", () => {
+  assert.match(fiscalRefinement, /create or replace view public\.canonical_analytics_sales/);
+  assert.match(fiscalRefinement, /end as payment_provider/);
+  assert.match(analyticsQuery, /filters\.provider[\s\S]+payment_provider/);
+  assert.match(analyticsFilterBar, /Платёжный провайдер/);
+  assert.match(analyticsDashboard, /getPaymentOperations/);
+  assert.match(analyticsDashboard, /getFiscalOperations/);
+  assert.match(analyticsDashboard, /join public\.payments payment/);
+  assert.match(analyticsDashboard, /join public\.fiscal_receipts receipt/);
+  assert.doesNotMatch(analyticsDashboard, /payment_events/);
+  assert.match(analyticsSales, /paymentProvider: row\.payment_provider/);
 });
 
 test("YooKassa sale and an explicitly reconciled late Evotor receipt count once", () => {
@@ -373,6 +438,10 @@ test("YooKassa sale and an explicitly reconciled late Evotor receipt count once"
   assert.doesNotMatch(migration, /amount[\s\S]{0,120}closed_at[\s\S]{0,120}(auto|suggested)/i);
   assert.doesNotMatch(service, /evotor/i);
   assert.doesNotMatch(migration, /inventory_(movements|deduction)|stock_movements/);
+  assert.doesNotMatch(fiscalRefinement, /inventory_(movements|deduction)|stock_movements/);
+  assert.doesNotMatch(fiscalRefinement, /from public\.fiscal_receipts[\s\S]+net_revenue/);
+  assert.match(migration, /'order:' \|\| v_order\.id::text \|\| ':payment:succeeded'/);
+  assert.match(migration, /'yookassa:payment:' \|\| v_payment\.id::text \|\| ':settlement'/);
 });
 
 test("configuration is server-only, same-origin, and never exposes YooKassa credentials", () => {
@@ -456,4 +525,9 @@ test("runtime migration is wired into image startup with postconditions", () => 
   assert.match(runtimeMigrations, /apply_yookassa_payment_state/);
   assert.match(dockerfile, /20260827120000_add_yookassa_payment_integration\.sql/);
   assert.match(dockerignore, /!supabase\/migrations\/20260827120000_add_yookassa_payment_integration\.sql/);
+  assert.match(runtimeMigrations, /20260827143000_refine_yookassa_fiscal_operations/);
+  assert.match(runtimeMigrations, /payment_receipt_snapshot/);
+  assert.match(runtimeMigrations, /analytics_payment_provider/);
+  assert.match(dockerfile, /20260827143000_refine_yookassa_fiscal_operations\.sql/);
+  assert.match(dockerignore, /!supabase\/migrations\/20260827143000_refine_yookassa_fiscal_operations\.sql/);
 });

@@ -43,6 +43,7 @@ export type AnalyticsFilters = {
   terminal: string | null;
   employee: string | null;
   payment: string | null;
+  provider: string | null;
   categories: string[];
   category: string | null;
   product: string | null;
@@ -124,6 +125,7 @@ export type AnalyticsFilterOptions = {
   terminals: AnalyticsOption[];
   employees: AnalyticsOption[];
   payments: AnalyticsOption[];
+  providers: AnalyticsOption[];
   categories: AnalyticsOption[];
   products: AnalyticsOption[];
 };
@@ -156,6 +158,27 @@ export type AnalyticsBreakdownRow = {
 
 export type AnalyticsPaymentRow = AnalyticsBreakdownRow & {
   method: string;
+};
+
+export type AnalyticsPaymentOperations = {
+  attempts: number;
+  canceled: number;
+  pending: number;
+  succeeded: number;
+  successRate: number | null;
+  refundAmount: number;
+  refunds: number;
+  partialRefunds: number;
+  averagePendingToPaidSeconds: number | null;
+  averagePaidToHandedOutSeconds: number | null;
+};
+
+export type AnalyticsFiscalOperations = {
+  closingRegistered: number;
+  errors: number;
+  pending: number;
+  prepaymentRegistered: number;
+  averageRegistrationSeconds: number | null;
 };
 
 export type HeatmapCell = {
@@ -324,6 +347,8 @@ export type AnalyticsDashboard = {
   locations: AnalyticsBreakdownRow[];
   terminals: AnalyticsBreakdownRow[];
   payments: AnalyticsPaymentRow[];
+  paymentOperations: AnalyticsPaymentOperations;
+  fiscalOperations: AnalyticsFiscalOperations;
   options: AnalyticsFilterOptions;
   updatedAt: string | null;
   itemFiltered: boolean;
@@ -350,6 +375,7 @@ export type AnalyticsSaleRow = {
   refundAmount: number;
   netRevenue: number;
   paymentMethod: string;
+  paymentProvider: string;
   currency: string;
   included: boolean;
 };

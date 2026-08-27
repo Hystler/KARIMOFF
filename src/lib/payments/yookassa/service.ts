@@ -33,6 +33,7 @@ import {
   markYooKassaRefundFailure,
   recordFiscalReceiptState,
   recordYooKassaPaymentCreated,
+  releaseFiscalReceiptClaim,
   type YooKassaPaymentContext,
   type YooKassaRefundAllocation,
   type YooKassaRefundContext
@@ -40,7 +41,8 @@ import {
 import {
   buildPartialRefundReceipt,
   buildPaymentReceipt,
-  buildPrepaymentSettlementReceipt
+  buildPrepaymentSettlementReceipt,
+  fiscalRequestSnapshot
 } from "./receipt";
 import type {
   CreateYooKassaPaymentInput,
@@ -192,7 +194,11 @@ async function executeYooKassaPaymentForOrder(
   }
 
   const body = paymentRequest(configuration, context);
-  await bindPaymentRequestFingerprint(context.id, requestFingerprint(body));
+  await bindPaymentRequestFingerprint(
+    context.id,
+    requestFingerprint(body),
+    fiscalRequestSnapshot(body.receipt)
+  );
   const client = clientFactory(configuration);
 
   try {
@@ -306,6 +312,10 @@ export async function reconcileYooKassaFiscalReceipt(
   const configuration = requireYooKassaConfiguration();
   const context = await getFiscalReceiptContext(receiptId);
   if (!context) return { skipped: true };
+  if (context.receiptRegistration !== "succeeded") {
+    await releaseFiscalReceiptClaim(context.id);
+    return { skipped: true, reason: "prepayment_receipt_pending" };
+  }
   const client = clientFactory(configuration);
 
   try {
@@ -319,7 +329,11 @@ export async function reconcileYooKassaFiscalReceipt(
         items: context.items,
         paymentId: context.providerPaymentId
       });
-      await bindFiscalReceiptRequestFingerprint(context.id, requestFingerprint(body));
+      await bindFiscalReceiptRequestFingerprint(
+        context.id,
+        requestFingerprint(body),
+        fiscalRequestSnapshot(body)
+      );
       receipt = await client.createReceipt(body, context.idempotencyKey);
     }
     if (receipt.payment_id && receipt.payment_id !== context.providerPaymentId) {
@@ -373,7 +387,6 @@ function refundRequest(context: YooKassaRefundContext) {
           receipt: buildPartialRefundReceipt({
             email: context.receiptEmail,
             expectedTotal: context.amount,
-            handedOut: context.handedOut,
             items: context.items
           })
         }
@@ -395,7 +408,11 @@ async function executeYooKassaRefund(
   ) return { refundId: context.id, skipped: true, status: context.status };
 
   const body = refundRequest(context);
-  await bindRefundRequestFingerprint(context.id, requestFingerprint(body));
+  await bindRefundRequestFingerprint(
+    context.id,
+    requestFingerprint(body),
+    body.receipt ? fiscalRequestSnapshot(body.receipt) : null
+  );
   try {
     const client = clientFactory(configuration);
     const refund = context.providerRefundId

@@ -53,6 +53,17 @@ const fiscalStatusLabels: Record<string, string> = {
   succeeded: "Зарегистрирован"
 };
 
+const receiptPhaseLabels: Record<string, string> = {
+  payment_prepayment: "Чек предоплаты",
+  prepayment_settlement: "Чек выдачи / зачёта",
+  refund: "Чек возврата"
+};
+
+const paymentModeLabels: Record<string, string> = {
+  full_payment: "Полный расчёт",
+  full_prepayment: "Полная предоплата"
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage({
@@ -148,6 +159,12 @@ export default async function AdminOrdersPage({
                           {payment.provider_payment_id ? (
                             <p className="break-all"><span className="text-karimoff-muted">Payment ID:</span> <code>{payment.provider_payment_id}</code></p>
                           ) : null}
+                          {["paid", "partially_refunded", "refunded"].includes(payment.status) ? (
+                            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-semibold leading-5 text-amber-900">
+                              Оплаченный заказ нельзя изменить без корректировки оплаты и чека.
+                              {order.kitchen_status === "handed_out" ? " Частичный возврат после выдачи пока выполняется вручную." : ""}
+                            </p>
+                          ) : null}
                           <p className="flex items-center gap-2">
                             <ReceiptText size={15} className="text-karimoff-orange" />
                             Фискализация: {fiscalStatusLabels[payment.receipt_registration ?? "pending"] ?? payment.receipt_registration ?? "ожидает"}
@@ -158,9 +175,29 @@ export default async function AdminOrdersPage({
                             </p>
                           ))}
                           {payment.fiscal_receipts.map((receipt) => (
-                            <p key={receipt.id} className="text-karimoff-muted">
-                              {receipt.receipt_phase === "prepayment_settlement" ? "Расчёт по предоплате" : receipt.receipt_phase === "refund" ? "Чек возврата" : "Чек предоплаты"}: {fiscalStatusLabels[receipt.status] ?? receipt.status}
-                            </p>
+                            <div key={receipt.id} className="grid gap-2 border-t border-karimoff-line pt-3 text-karimoff-muted">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <strong className="text-karimoff-black">{receiptPhaseLabels[receipt.receipt_phase] ?? "Фискальный документ"}</strong>
+                                <span>{fiscalStatusLabels[receipt.status] ?? receipt.status}</span>
+                              </div>
+                              <p>Сумма: <strong className="text-karimoff-black">{formatMoney(receipt.amount)} ₽</strong></p>
+                              <p>{receipt.fiscalized_at ? `Зарегистрирован: ${formatDate(receipt.fiscalized_at)}` : `Создан: ${formatDate(receipt.created_at)}`}</p>
+                              {receipt.provider_receipt_id ? (
+                                <p className="break-all">Receipt ID: <code>{receipt.provider_receipt_id}</code></p>
+                              ) : null}
+                              {receipt.items.length ? (
+                                <div className="grid gap-1">
+                                  {receipt.items.map((item, index) => (
+                                    <p key={`${receipt.id}:${index}`}>
+                                      {item.description} × {item.quantity} · {formatMoney(item.amount)} ₽ · {paymentModeLabels[item.payment_mode] ?? item.payment_mode} · {item.payment_subject === "commodity" ? "Товар" : item.payment_subject} · {item.vat_code === 1 ? "Без НДС" : `НДС ${item.vat_code}`}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p>{receipt.receipt_phase === "refund" ? "Для полного возврата YooKassa использует состав исходного чека." : "Состав появится после формирования запроса в YooKassa."}</p>
+                              )}
+                              {receipt.last_error_code ? <p className="font-semibold text-rose-700">Требуется автоматическая повторная проверка.</p> : null}
+                            </div>
                           ))}
                           {payment.provider === "yookassa" && (staff.legacy || ["owner", "admin", "manager"].includes(staff.role)) ? (
                             <form action={checkYooKassaPaymentStatusAction}>

@@ -27,6 +27,16 @@ export type YooKassaReceipt = {
   internet: true;
 };
 
+export type YooKassaFiscalRequestSnapshot = {
+  internet: true;
+  items: YooKassaReceiptItem[];
+  send?: true;
+  settlements?: Array<{
+    type: "prepayment";
+    amount: YooKassaAmount;
+  }>;
+};
+
 export type YooKassaPayment = {
   id: string;
   status: YooKassaPaymentStatus;

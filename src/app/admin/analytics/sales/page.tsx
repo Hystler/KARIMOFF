@@ -37,6 +37,13 @@ function SortLink({ label, field, filters }: { label: string; field: AnalyticsFi
   );
 }
 
+function providerLabel(provider: string) {
+  if (provider === "yookassa") return "YooKassa";
+  if (provider === "evotor") return "Evotor";
+  if (provider === "mixed") return "Несколько";
+  return "Не определён";
+}
+
 export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
@@ -102,7 +109,7 @@ export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
                     <td>{formatRub(sale.grossAmount, 2)}</td>
                     <td>{sale.refundAmount ? formatRub(sale.refundAmount, 2) : "—"}</td>
                     <td><strong>{formatRub(sale.netRevenue, 2)}</strong></td>
-                    <td>{getPaymentMethodLabel(sale.paymentMethod)}</td>
+                    <td>{getPaymentMethodLabel(sale.paymentMethod)}<span>{providerLabel(sale.paymentProvider)}</span></td>
                     <td><span className={`analytics-sale-status analytics-sale-status-${sale.status}`}>{getSaleStatusLabel(sale.status)}</span>{!sale.included ? <small>Не входит в выручку</small> : null}</td>
                   </tr>
                 ))}</tbody>
@@ -114,7 +121,7 @@ export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
                 <Link href={linkWith(filters, { sale: sale.saleId })} key={sale.saleId} className="analytics-sale-mobile-card" scroll={false}>
                   <div><span className="analytics-source-badge">{getChannelLabel(sale.channel)}</span><span>{new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(sale.analyticsAt))}</span></div>
                   <h2>{sale.channel === "pos_evotor" ? "Чек" : "Заказ"} {sale.number}</h2>
-                  <p>{sale.location} · {sale.terminal ?? "Онлайн"}</p>
+                  <p>{sale.location} · {sale.terminal ?? "Онлайн"} · {providerLabel(sale.paymentProvider)}</p>
                   <div><strong>{formatRub(sale.netRevenue, 2)}</strong><span>{getSaleStatusLabel(sale.status)}</span></div>
                 </Link>
               ))}

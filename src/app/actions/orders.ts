@@ -22,18 +22,29 @@ export async function getCheckoutContextAction() {
   let receiptEmail = "";
   if (customer) {
     const database = createDatabaseServerClient();
-    const { data } = database
-      ? await database
-          .from("user_identities")
-          .select("email, last_login_at")
-          .eq("user_id", customer.id)
-          .order("last_login_at", { ascending: false })
-          .limit(10)
-      : { data: null };
-    const identity = (data ?? []).find((row) =>
+    const [{ data: profile }, { data: identities }] = database
+      ? await Promise.all([
+          database
+            .from("customers")
+            .select("receipt_email")
+            .eq("id", customer.id)
+            .maybeSingle(),
+          database
+            .from("user_identities")
+            .select("email, last_login_at")
+            .eq("user_id", customer.id)
+            .order("last_login_at", { ascending: false })
+            .limit(10)
+        ])
+      : [{ data: null }, { data: null }];
+    const identity = (identities ?? []).find((row) =>
       typeof row.email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)
     );
-    receiptEmail = identity?.email ? String(identity.email) : "";
+    receiptEmail = typeof profile?.receipt_email === "string"
+      ? profile.receipt_email
+      : identity?.email
+        ? String(identity.email)
+        : "";
   }
 
   return {

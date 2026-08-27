@@ -422,6 +422,105 @@ const migrations = [
         objects?.app_policies
       );
     }
+  },
+  {
+    name: "20260827143000_refine_yookassa_fiscal_operations",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          exists (
+            select 1 from pg_attribute
+            where attrelid = 'public.customers'::regclass
+              and attname = 'receipt_email' and not attisdropped
+          ) as customer_receipt_email,
+          exists (
+            select 1 from pg_attribute
+            where attrelid = 'public.payments'::regclass
+              and attname = 'receipt_snapshot' and not attisdropped
+          ) as payment_receipt_snapshot,
+          exists (
+            select 1 from pg_attribute
+            where attrelid = 'public.canonical_analytics_sales'::regclass
+              and attname = 'payment_provider' and not attisdropped
+          ) as analytics_payment_provider,
+          to_regprocedure('public.build_yookassa_order_receipt_snapshot(uuid)') is not null
+            as snapshot_function,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.payments'::regclass
+              and tgname = 'payments_capture_yookassa_receipt_snapshot'
+              and not tgisinternal
+          ) as snapshot_trigger,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.payments'::regclass
+              and tgname = 'payments_yookassa_receipt_snapshot_immutable'
+              and not tgisinternal
+          ) as immutable_trigger,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.payments'::regclass
+              and tgname = 'payments_yookassa_request_immutable'
+              and not tgisinternal
+          ) as payment_request_immutable,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.payments'::regclass
+              and tgname = 'payments_remember_yookassa_receipt_email'
+              and not tgisinternal
+          ) as email_trigger,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.order_items'::regclass
+              and tgname = 'order_items_paid_yookassa_immutable'
+              and not tgisinternal
+          ) as order_items_immutable,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.order_item_modifiers'::regclass
+              and tgname = 'order_item_modifiers_paid_yookassa_immutable'
+              and not tgisinternal
+          ) as modifiers_immutable,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.orders'::regclass
+              and tgname = 'orders_yookassa_total_immutable'
+              and not tgisinternal
+          ) as order_total_immutable,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = 'public.refunds'::regclass
+              and tgname = 'refunds_refresh_yookassa_settlement_snapshot'
+              and not tgisinternal
+          ) as refund_snapshot_trigger,
+          not exists (
+            select 1
+            from unnest(array[
+              'customers_receipt_email_check',
+              'payments_yookassa_receipt_snapshot_check'
+            ]) as expected_constraint(name)
+            where not exists (
+              select 1 from pg_constraint
+              where conname = expected_constraint.name and convalidated
+            )
+          ) as constraints_valid
+      `;
+      return Boolean(
+        objects?.customer_receipt_email &&
+        objects?.payment_receipt_snapshot &&
+        objects?.analytics_payment_provider &&
+        objects?.snapshot_function &&
+        objects?.snapshot_trigger &&
+        objects?.immutable_trigger &&
+        objects?.payment_request_immutable &&
+        objects?.email_trigger &&
+        objects?.order_items_immutable &&
+        objects?.modifiers_immutable &&
+        objects?.order_total_immutable &&
+        objects?.refund_snapshot_trigger &&
+        objects?.constraints_valid
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
