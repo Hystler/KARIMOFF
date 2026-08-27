@@ -378,10 +378,13 @@ const migrations = [
               'refund_items',
               'fiscal_receipts'
             ]) as expected_table(name)
-            where not has_table_privilege(
-              'karimoff_app',
-              'public.' || expected_table.name,
-              'select,insert,update,delete'
+            where not coalesce(
+              has_table_privilege(
+                'karimoff_app',
+                to_regclass('public.' || expected_table.name),
+                'select,insert,update,delete'
+              ),
+              false
             )
           ) as app_privileges,
           not exists (
