@@ -98,7 +98,7 @@ test("admin remains available on the primary host and excluded from indexing", (
   assert.match(robots, /"\/admin\/"/);
 });
 
-test("Telegram, MAX, password, SMS, and safe return paths remain wired", () => {
+test("Telegram, MAX, password, and safe return paths remain wired without public SMS UI", () => {
   const authForm = read("src/components/auth/AuthForm.tsx");
   const socialButtons = read("src/components/auth/SocialAuthButtons.tsx");
   const telegramButton = read("src/components/auth/TelegramLoginButton.tsx");
@@ -110,7 +110,7 @@ test("Telegram, MAX, password, SMS, and safe return paths remain wired", () => {
   assert.match(socialButtons, /TelegramLoginButton/);
   assert.match(socialButtons, /MaxLoginButton/);
   assert.match(authActions, /loginWithPasswordAction/);
-  assert.match(authActions, /requestLoginCodeAction/);
+  assert.doesNotMatch(authForm, /requestLoginCodeAction|requestRegisterCodeAction|SMS|СМС|смс/);
   assert.match(telegramButton, /returnTo/);
   assert.match(maxButton, /returnTo/);
   assert.match(telegramConsume, /claimCompletedTelegramAttempt/);

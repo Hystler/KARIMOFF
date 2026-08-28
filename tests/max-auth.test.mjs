@@ -211,8 +211,8 @@ test("MAX browser coordinator completes without depending on app-to-browser swit
   assert.match(miniApp, /window\.WebApp\?\.initData/);
   assert.doesNotMatch(miniApp, /initDataUnsafe/);
   assert.match(miniApp, /Подтвердить номер/);
-  assert.match(miniApp, /Продолжить по SMS/);
-  assert.match(miniApp, /contactDenied: true/);
+  assert.match(miniApp, /Вернуться ко входу/);
+  assert.doesNotMatch(miniApp, /SMS|СМС|смс|contactDenied/);
   assert.match(miniApp, /phone_denied/);
   assert.match(complete, /validateMaxWebAppData/);
   assert.match(complete, /validateMaxContact/);
@@ -260,7 +260,8 @@ test("MAX treats a validated identity separately from optional phone completion"
   assert.match(challenge, /kind: "needs_contact"/);
   assert.match(identity, /createPendingSocialIdentity\(claims, attempt\.redirectTo\)/);
   assert.match(miniApp, /MAX подтверждён/);
-  assert.match(miniApp, /Продолжить подтверждение по SMS|Продолжить по SMS/);
+  assert.match(miniApp, /входу по телефону с паролем/);
+  assert.doesNotMatch(miniApp, /SMS|СМС|смс/);
   assert.match(miniApp, /window\.WebApp\.requestContact\(\)/);
 });
 
@@ -383,7 +384,7 @@ test("MAX Bot API foundation uses the current read-only endpoint and never expos
   assert.match(docs, /Ministry of Digital Development certificate/);
 });
 
-test("VK runtime and configuration are absent while Telegram and phone auth remain", () => {
+test("VK runtime and configuration are absent while Telegram and password auth remain", () => {
   const env = read(".env.example");
   const providers = read("src/lib/auth/social/types.ts");
   const telegram = read("src/components/auth/TelegramLoginButton.tsx");
@@ -395,5 +396,5 @@ test("VK runtime and configuration are absent while Telegram and phone auth rema
   assert.deepEqual(providers.match(/socialProviders = \[([^\]]+)\]/)?.[1].match(/"[^"]+"/g), ["\"telegram\"", "\"max\""]);
   assert.match(telegram, /window\.Telegram\.Login\.auth/);
   assert.match(phone, /loginWithPasswordAction/);
-  assert.match(phone, /requestLoginCodeAction/);
+  assert.doesNotMatch(phone, /requestLoginCodeAction|requestRegisterCodeAction|SMS|СМС|смс/);
 });

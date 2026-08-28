@@ -18,7 +18,7 @@ type MiniAppState =
   | { kind: "needs_phone" }
   | { kind: "requesting_contact" }
   | { kind: "phone_denied"; message: string }
-  | { kind: "success"; returnUrl: string; needsSms: boolean }
+  | { kind: "success"; returnUrl: string }
   | { kind: "expired" }
   | { kind: "technical_error"; message: string };
 
@@ -77,7 +77,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
     message: "Вход через MAX пока не настроен."
   });
 
-  const sendProof = useCallback(async (options?: { contact?: MaxContact; contactDenied?: boolean }) => {
+  const sendProof = useCallback(async (options?: { contact?: MaxContact }) => {
     const initData = window.WebApp?.initData ?? "";
     const challenge = challengeFromInitData(initData);
     if (!initData || !challenge) {
@@ -89,8 +89,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
       body: JSON.stringify({
         challenge,
         initData,
-        ...(options?.contact ? { contact: options.contact } : {}),
-        ...(options?.contactDenied ? { contactDenied: true } : {})
+        ...(options?.contact ? { contact: options.contact } : {})
       }),
       cache: "no-store",
       credentials: "same-origin",
@@ -111,7 +110,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
       return;
     }
     if (!payload.returnUrl) throw new Error("technical");
-    setState({ kind: "success", returnUrl: payload.returnUrl, needsSms: Boolean(options?.contactDenied) });
+    setState({ kind: "success", returnUrl: payload.returnUrl });
   }, []);
 
   useEffect(() => {
@@ -158,17 +157,6 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
         ? "Не удалось безопасно подтвердить номер. Аккаунт MAX уже подтверждён."
         : "MAX не смог передать номер. Аккаунт MAX уже подтверждён.";
       setState({ kind: "phone_denied", message });
-    }
-  }
-
-  async function continueWithSms() {
-    try {
-      await sendProof({ contactDenied: true });
-    } catch (error) {
-      const code = error instanceof Error ? error.message : "technical";
-      setState(code.includes("expired")
-        ? { kind: "expired" }
-        : { kind: "technical_error", message: userMessage(code) });
     }
   }
 
@@ -233,7 +221,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
             <>
               <ShieldCheck className="text-[#471AFF]" size={36} aria-hidden="true" />
               <h1 className="mt-5 text-3xl font-black leading-tight">Номер не передан</h1>
-              <p className="mt-3 text-base leading-7 text-black/60">{state.message} Можно повторить запрос или продолжить подтверждение по SMS.</p>
+              <p className="mt-3 text-base leading-7 text-black/60">{state.message} Повторите запрос или вернитесь к входу по телефону с паролем.</p>
               <div className="mt-7 grid gap-3">
                 <button
                   type="button"
@@ -244,10 +232,10 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void continueWithSms()}
+                  onClick={() => returnToKarimoff(new URL("/login", window.location.origin).toString())}
                   className="min-h-12 w-full rounded-lg border border-black/15 px-5 py-3 text-sm font-black text-[#0D001A] transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#471AFF]"
                 >
-                  Продолжить по SMS
+                  Вернуться ко входу
                 </button>
               </div>
             </>
@@ -257,11 +245,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
                 <Check size={26} aria-hidden="true" />
               </span>
               <h1 className="mt-5 text-3xl font-black leading-tight">Готово</h1>
-              <p className="mt-3 text-base leading-7 text-black/60">
-                {state.needsSms
-                  ? "Аккаунт MAX подтверждён. Вернитесь в KARIMOFF, чтобы подтвердить номер по SMS."
-                  : "Вы подтвердили вход в KARIMOFF. Исходная страница завершит вход автоматически."}
-              </p>
+              <p className="mt-3 text-base leading-7 text-black/60">Вы подтвердили вход в KARIMOFF. Исходная страница завершит вход автоматически.</p>
               <button
                 type="button"
                 onClick={() => returnToKarimoff(state.returnUrl)}
