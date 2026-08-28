@@ -1,0 +1,202 @@
+{
+  "rokki": {
+    "aliases": ["rokki"],
+    "name": "Рокки",
+    "description": "Сырный удар: говяжья котлета, чеддер и хрустящие палочки моцареллы."
+  },
+  "sebastian": {
+    "aliases": ["sebastian"],
+    "name": "Себастиан",
+    "description": "Бургер с королевскими креветками, свежими овощами и соусом «Цезарь»."
+  },
+  "kantrigrand": {
+    "aliases": ["kantrigrand"],
+    "name": "КантриГранд",
+    "description": "Большой говяжий бургер с чеддером, барбекю и хрустящим огурцом."
+  },
+  "borak-abama": {
+    "aliases": ["borak-abama"],
+    "name": "Барак Обама",
+    "description": "Фирменный говяжий бургер в чёрной булочке с чеддером и барбекю."
+  },
+  "voin-drakona": {
+    "aliases": ["voin-drakona"],
+    "name": "Воин Дракона",
+    "description": "Сочный говяжий бургер с чеддером, чесночным соусом и хрустящим луком."
+  },
+  "kantribif": {
+    "aliases": ["kantribif"],
+    "name": "КантриБиф",
+    "description": "Говядина, чеддер и медово-горчичный соус — ярко, сочно и по делу."
+  },
+  "tayson": {
+    "aliases": ["tayson"],
+    "name": "Тайсон",
+    "description": "Мощный говяжий бургер с жареным беконом, чеддером и соусом «Тейсти»."
+  },
+  "firmennaya-shaurma": {
+    "aliases": ["firmennaya-shaurma"],
+    "name": "Фирменная шаурма",
+    "description": "Максимально сытная: курочка, бекон, картофель фри и сырные палочки в тандырном лаваше."
+  },
+  "shaurma-v-lepeshke-s-zapechennoy-govyadinoy": {
+    "aliases": ["shaurma-v-lepeshke-s-zapechennoy-govyadinoy", "shaurma-v-lepeshke-govyadina"],
+    "name": "Шаурма с говядиной в лепёшке",
+    "description": "Запечённая говядина, свежие овощи и чесночный соус в горячей тандырной лепёшке."
+  },
+  "shaurma-v-lepeshke-s-zapechennoy-svininoy": {
+    "aliases": ["shaurma-v-lepeshke-s-zapechennoy-svininoy", "shaurma-v-lepeshke-svinina"],
+    "name": "Шаурма со свининой в лепёшке",
+    "description": "Запечённая свинина, свежие овощи и фирменный чесночный соус в тандырной лепёшке."
+  },
+  "shaurma-v-lepeshke-s-sochnoy-kurochkoy": {
+    "aliases": ["shaurma-v-lepeshke-s-sochnoy-kurochkoy", "shaurma-v-lepeshke-kuritsa"],
+    "name": "Шаурма с курицей в лепёшке",
+    "description": "Сочная курочка, свежие овощи и чесночный соус в горячей тандырной лепёшке."
+  },
+  "shaurma-s-korolevskoy-krevetkoy-v-panirovke": {
+    "aliases": ["shaurma-s-korolevskoy-krevetkoy-v-panirovke", "shaurma-krevetka"],
+    "name": "Шаурма с королевскими креветками",
+    "description": "Королевские креветки в хрустящей панировке, свежие овощи и соус «Цезарь»."
+  },
+  "shaurma-s-zapechennoy-govyadinoy": {
+    "aliases": ["shaurma-s-zapechennoy-govyadinoy", "shaurma-zapechennaya-govyadina"],
+    "name": "Шаурма с говядиной",
+    "description": "Сытная шаурма с запечённой говядиной, свежими овощами и фирменным чесночным соусом."
+  },
+  "shaurma-s-zapechennoy-svininoy": {
+    "aliases": ["shaurma-s-zapechennoy-svininoy", "shaurma-zapechennaya-svinina"],
+    "name": "Шаурма со свининой",
+    "description": "Сочная запечённая свинина, свежие овощи и чесночный соус в тандырном лаваше."
+  },
+  "shaurma-kurinaya": {
+    "aliases": ["shaurma-kurinaya"],
+    "name": "Шаурма с курицей",
+    "description": "Классика KARIMOFF: сочная курочка, свежие овощи и фирменный чесночный соус."
+  },
+  "hot-dog-barbekyu": {
+    "aliases": ["hot-dog-barbekyu"],
+    "name": "Хот-дог Барбекю",
+    "description": "Сочная свиная колбаска, свежие овощи, лук фри и фирменный барбекю."
+  },
+  "hot-dog-itali": {
+    "aliases": ["hot-dog-itali"],
+    "name": "Хот-дог Итали",
+    "description": "Сочная колбаска с чеддером, сырным соусом и хрустящим луком."
+  },
+  "hot-dog-datskiy": {
+    "aliases": ["hot-dog-datskiy"],
+    "name": "Хот-дог Датский",
+    "description": "Американская классика: колбаска, маринованный огурец, лук фри и два соуса."
+  },
+  "aydahoboks": {
+    "aliases": ["aydahoboks", "aydahobox"],
+    "name": "Айдахо Бокс",
+    "description": "Сытный бокс с картофелем по-деревенски, курочкой, беконом и сырным соусом."
+  },
+  "boksfud": {
+    "aliases": ["boksfud", "boxfood"],
+    "name": "Бокс Фуд",
+    "description": "Картофель фри, сочная курочка, хрустящий лук и фирменный чесночный соус."
+  },
+  "krevetki-v-panirovke-korolevskie": {
+    "aliases": ["krevetki-v-panirovke-korolevskie", "krevetki-v-panirovke"],
+    "name": "Королевские креветки",
+    "description": "Королевские креветки в хрустящей панировке — яркая закуска для компании."
+  },
+  "naggetsy-6-sht": {
+    "aliases": ["naggetsy-6-sht", "naggetsy"],
+    "name": "Наггетсы",
+    "description": "Нежное куриное филе в золотистой хрустящей панировке."
+  },
+  "syrnye-palochki-12-sht": {
+    "aliases": ["syrnye-palochki-12-sht", "syrnye-palochki"],
+    "name": "Сырные палочки",
+    "description": "Тягучая моцарелла в хрустящей золотистой панировке."
+  },
+  "kartofel-po-derevenski": {
+    "aliases": ["kartofel-po-derevenski"],
+    "name": "Картофель по-деревенски",
+    "description": "Золотистые картофельные дольки: хрустящие снаружи и мягкие внутри."
+  },
+  "kartoshka-fri-200-gr": {
+    "aliases": ["kartoshka-fri-200-gr", "kartoshka-fri"],
+    "name": "Картофель фри",
+    "description": "Горячий золотистый картофель фри с аппетитным хрустом."
+  },
+  "krylyshki-barbekyu-16-sht": {
+    "aliases": ["krylyshki-barbekyu-16-sht", "krylyshki-barbekyu"],
+    "name": "Крылышки барбекю",
+    "description": "Сочные куриные крылышки в фирменном соусе барбекю."
+  },
+  "dobryy-apelsin-1-l": {
+    "aliases": ["dobryy-apelsin-1-l", "dobryy-apelsin-1l"],
+    "name": "Добрый Апельсин, 1 л",
+    "description": "Газированный напиток с ярким апельсиновым вкусом."
+  },
+  "dobryy-kola-1-l": {
+    "aliases": ["dobryy-kola-1-l", "dobryy-kola-1l"],
+    "name": "Добрый Кола, 1 л",
+    "description": "Классический вкус газированной колы."
+  },
+  "dobryy-kola-1-l-bez-sahara": {
+    "aliases": ["dobryy-kola-1-l-bez-sahara", "dobryy-kola-zero-1l"],
+    "name": "Добрый Кола без сахара, 1 л",
+    "description": "Знакомый вкус колы без сахара."
+  },
+  "dobryy-kola-0-5-bez-sahara": {
+    "aliases": ["dobryy-kola-0-5-bez-sahara", "dobryy-kola-zero-05"],
+    "name": "Добрый Кола без сахара, 0,5 л",
+    "description": "Знакомый вкус колы без сахара."
+  },
+  "dobryy-kola-0-5": {
+    "aliases": ["dobryy-kola-0-5", "dobryy-kola-05"],
+    "name": "Добрый Кола, 0,5 л",
+    "description": "Классический вкус газированной колы."
+  },
+  "dobryy-apelsin-0-5": {
+    "aliases": ["dobryy-apelsin-0-5", "dobryy-apelsin-05"],
+    "name": "Добрый Апельсин, 0,5 л",
+    "description": "Газированный напиток с ярким апельсиновым вкусом."
+  },
+  "dobryy-apelsin-zhb-0-33l": {
+    "aliases": ["dobryy-apelsin-zhb-0-33l", "dobryy-apelsin-can-033"],
+    "name": "Добрый Апельсин, 0,33 л",
+    "description": "Газированный напиток с ярким апельсиновым вкусом."
+  },
+  "dobryy-kola-zhb-0-33l-bez-sahara": {
+    "aliases": ["dobryy-kola-zhb-0-33l-bez-sahara", "dobryy-kola-zero-can-033"],
+    "name": "Добрый Кола без сахара, 0,33 л",
+    "description": "Знакомый вкус колы без сахара."
+  },
+  "ketchup": {
+    "aliases": ["ketchup"],
+    "name": "Кетчуп",
+    "description": "Насыщенный томатный соус с лёгкой кислинкой и пряной сладостью."
+  },
+  "syrnyy": {
+    "aliases": ["syrnyy"],
+    "name": "Сырный соус",
+    "description": "Нежный сливочно-сырный соус для картофеля, бургеров и закусок."
+  },
+  "chesnochnyy": {
+    "aliases": ["chesnochnyy"],
+    "name": "Фирменный чесночный соус",
+    "description": "Сливочный соус с ярким чесночным вкусом — фирменное дополнение KARIMOFF."
+  },
+  "medovaya-gorchica": {
+    "aliases": ["medovaya-gorchica"],
+    "name": "Медово-горчичный соус",
+    "description": "Мягкая горчичная пикантность и медовая сладость в одном соусе."
+  },
+  "barbekyu": {
+    "aliases": ["barbekyu"],
+    "name": "Фирменный соус барбекю",
+    "description": "Густой пряный барбекю со сладкими нотами и ароматом базилика."
+  },
+  "teysti": {
+    "aliases": ["teysti"],
+    "name": "Фирменный соус Тейсти",
+    "description": "Сливочный соус с пикантными травами для бургеров, картофеля и закусок."
+  }
+}

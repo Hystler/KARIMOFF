@@ -86,7 +86,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article
-      className="group flex h-full flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-karimoff-orange/55 hover:shadow-[0_18px_44px_rgba(18,18,20,0.12)]"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-karimoff-orange/55 hover:shadow-[0_18px_44px_rgba(18,18,20,0.12)]"
       style={{ contentVisibility: "auto", containIntrinsicSize: "430px" }}
     >
       <Link
@@ -96,18 +96,18 @@ export function ProductCard({ product }: ProductCardProps) {
       >
         <ProductImage product={product} />
       </Link>
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
+      <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
         <Link
           href={href}
-          className="flex flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
+          className="flex min-w-0 flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
         >
-          <h3 className="line-clamp-2 min-h-10 text-base font-black leading-5 text-karimoff-black transition group-hover:text-karimoff-orange sm:min-h-11 sm:text-lg sm:leading-[22px]">
+          <h3 className="line-clamp-2 min-h-10 overflow-wrap-anywhere text-base font-black leading-5 text-karimoff-black transition group-hover:text-karimoff-orange sm:min-h-11 sm:text-lg sm:leading-[22px]">
             {product.name}
           </h3>
           <p className="admin-number mt-2 text-lg font-black leading-none text-karimoff-orange sm:text-xl">
             {formatPrice(product.price)} ₽
           </p>
-          <p className="mt-2.5 line-clamp-2 min-h-10 text-[13px] leading-5 text-karimoff-muted sm:min-h-11 sm:text-sm sm:leading-[22px]">
+          <p className="mt-2.5 line-clamp-3 min-h-[60px] overflow-wrap-anywhere text-[13px] leading-5 text-karimoff-muted sm:min-h-[66px] sm:text-sm sm:leading-[22px]">
             {product.description || "Описание блюда скоро появится."}
           </p>
           <p className="mt-2 min-h-[18px] text-xs font-bold leading-[18px] text-karimoff-muted">

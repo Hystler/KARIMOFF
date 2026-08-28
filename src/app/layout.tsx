@@ -33,9 +33,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const settings = await getSiteSettings();
+  const themeBootstrap = `(() => { try { const saved = localStorage.getItem("karimoff_theme_preference_v2"); const theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; document.documentElement.dataset.theme = theme; } catch { document.documentElement.dataset.theme = ${JSON.stringify(settings.theme)}; } })();`;
 
   return (
-    <html lang="ru" data-scroll-behavior="smooth" className={`${manrope.variable} ${rubik.variable}`}>
+    <html lang="ru" data-scroll-behavior="smooth" className={`${manrope.variable} ${rubik.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+      </head>
       <body>
         <SiteChrome
           defaultTheme={settings.theme}

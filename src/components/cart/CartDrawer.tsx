@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
 import { initialOrderActionState } from "@/lib/order-schema";
 import {
@@ -81,7 +81,9 @@ export function CartDrawer() {
   });
   const [receiptEmail, setReceiptEmail] = useState("");
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
+  const [checkoutContextError, setCheckoutContextError] = useState<string | null>(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
+  const checkoutContextPending = useRef(false);
   const [orderState, orderFormAction, isOrderPending] = useActionState(createOrderAction, initialOrderActionState);
   const cartPayload = useMemo(
     () =>
@@ -112,31 +114,54 @@ export function CartDrawer() {
   }, [clientNow, fulfillmentMode, requestedSlotIndex, scheduledSlots]);
 
   const startCheckout = useCallback(async () => {
-    if (!lines.length) {
+    if (!lines.length || checkoutContextPending.current) {
       return;
     }
 
+    checkoutContextPending.current = true;
     setIsCustomerLoading(true);
-    const context = await getCheckoutContextAction();
-    setIsCustomerLoading(false);
+    setCheckoutContextError(null);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    if (!context.customer) {
-      setMode("auth");
-      return;
+    try {
+      const context = await Promise.race([
+        getCheckoutContextAction(),
+        new Promise<never>((_resolve, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("CHECKOUT_CONTEXT_TIMEOUT")), 10_000);
+        })
+      ]);
+
+      if (!context.customer) {
+        setMode("auth");
+        return;
+      }
+
+      setCheckoutSettings({
+        ...context.settings,
+        online_payments_enabled: context.payment.enabled
+      });
+      setReceiptEmail(context.payment.receiptEmail);
+      setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
+      setCustomer(context.customer);
+      setCheckoutRequestId(crypto.randomUUID());
+      setClientNow(new Date());
+      setRequestedSlotIndex(0);
+      setMode("checkout");
+    } catch {
+      setMode("cart");
+      setCheckoutContextError("Не удалось открыть оформление. Проверьте соединение и попробуйте ещё раз.");
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      checkoutContextPending.current = false;
+      setIsCustomerLoading(false);
     }
-
-    setCheckoutSettings({
-      ...context.settings,
-      online_payments_enabled: context.payment.enabled
-    });
-    setReceiptEmail(context.payment.receiptEmail);
-    setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
-    setCustomer(context.customer);
-    setCheckoutRequestId(crypto.randomUUID());
-    setClientNow(new Date());
-    setRequestedSlotIndex(0);
-    setMode("checkout");
   }, [lines.length]);
+
+  const leaveCartForAuth = useCallback(() => {
+    setCheckoutContextError(null);
+    setMode("cart");
+    closeCart();
+  }, [closeCart]);
 
   useEffect(() => {
     function handleCheckoutRequest() {
@@ -250,12 +275,14 @@ export function CartDrawer() {
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link
                   href="/login?redirectTo=%2Fcheckout"
+                  onClick={leaveCartForAuth}
                   className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-center text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
                 >
                   Войти
                 </Link>
                 <Link
                   href="/register?redirectTo=%2Fcheckout"
+                  onClick={leaveCartForAuth}
                   className="rounded-full border border-karimoff-orange bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-orange transition hover:-translate-y-0.5 hover:bg-karimoff-orange hover:text-white"
                 >
                   Зарегистрироваться
@@ -543,14 +570,20 @@ export function CartDrawer() {
             <span className="text-karimoff-orange">{formatPrice(totalPrice)} ₽</span>
           </div>
           <div className="grid gap-3">
-            {mode === "cart" || mode === "auth" ? (
+            {checkoutContextError && mode === "cart" ? (
+              <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                {checkoutContextError}
+              </p>
+            ) : null}
+            {mode === "cart" ? (
               <button
                 type="button"
                 onClick={checkout}
                 disabled={!lines.length || isCustomerLoading}
+                aria-busy={isCustomerLoading}
                 className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
               >
-                {isCustomerLoading ? "Проверяем профиль" : "Оформить заказ"}
+                {isCustomerLoading ? "Открываем оформление…" : "Оформить заказ"}
               </button>
             ) : null}
             {lines.length && mode !== "checkout" ? (

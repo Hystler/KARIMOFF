@@ -524,6 +524,19 @@ const migrations = [
         objects?.constraints_valid
       );
     }
+  },
+  {
+    name: "20260828190000_refine_public_product_copy",
+    applied: async (sql) => {
+      const [marker] = await sql`
+        select exists (
+          select 1
+          from public.audit_logs
+          where action = 'schema_migration.20260828190000_refine_public_product_copy'
+        ) as exists
+      `;
+      return Boolean(marker?.exists);
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

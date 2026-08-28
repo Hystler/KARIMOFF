@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SiteTheme } from "@/lib/settings";
 
 type ThemeContextValue = {
@@ -8,8 +8,13 @@ type ThemeContextValue = {
   toggleTheme: () => void;
 };
 
-const THEME_STORAGE_KEY = "karimoff_theme";
+export const THEME_STORAGE_KEY = "karimoff_theme_preference_v2";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function getSystemTheme(fallback: SiteTheme): SiteTheme {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return fallback;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 type ThemeProviderProps = {
   children: ReactNode;
@@ -19,6 +24,7 @@ type ThemeProviderProps = {
 
 export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProviderProps) {
   const [theme, setTheme] = useState<SiteTheme>(forceTheme ?? defaultTheme);
+  const [usesSystemTheme, setUsesSystemTheme] = useState(!forceTheme);
 
   useEffect(() => {
     if (forceTheme) {
@@ -28,27 +34,46 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
     }
 
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    const nextTheme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : defaultTheme;
+    const hasManualTheme = savedTheme === "dark" || savedTheme === "light";
+    const nextTheme = hasManualTheme ? savedTheme : getSystemTheme(defaultTheme);
     document.documentElement.dataset.theme = nextTheme;
-    const timeoutId = window.setTimeout(() => setTheme(nextTheme), 0);
+    const timeoutId = window.setTimeout(() => {
+      setTheme(nextTheme);
+      setUsesSystemTheme(!hasManualTheme);
+    }, 0);
 
     return () => window.clearTimeout(timeoutId);
   }, [defaultTheme, forceTheme]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    if (forceTheme || !usesSystemTheme || typeof window.matchMedia !== "function") return undefined;
 
-    if (!forceTheme) {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-    }
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      const nextTheme = event.matches ? "dark" : "light";
+      document.documentElement.dataset.theme = nextTheme;
+      setTheme(nextTheme);
+    };
+
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
+  }, [forceTheme, usesSystemTheme]);
+
+  const toggleTheme = useCallback(() => {
+    if (forceTheme) return;
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = nextTheme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    setUsesSystemTheme(false);
+    setTheme(nextTheme);
   }, [forceTheme, theme]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
-      toggleTheme: () => setTheme((current) => (current === "dark" ? "light" : "dark"))
+      toggleTheme
     }),
-    [theme]
+    [theme, toggleTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
