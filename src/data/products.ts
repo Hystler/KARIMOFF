@@ -1,4 +1,5 @@
 import importedProducts from "../../data/import/juikaifui-products.json";
+import publicProductCopy from "../../data/catalog/public-product-copy.json";
 import type { Product } from "@/lib/product-types";
 
 type ImportedProduct = {
@@ -13,6 +14,18 @@ type ImportedProduct = {
   is_active: boolean;
   sort_order: number;
 };
+
+type ProductCopy = {
+  aliases: string[];
+  name: string;
+  description: string;
+};
+
+const productCopyBySlug = new Map(
+  Object.values(publicProductCopy as Record<string, ProductCopy>).flatMap((copy) =>
+    copy.aliases.map((slug) => [slug, copy] as const)
+  )
+);
 
 function getProductPlaceholder(category: string) {
   if (category === "Бургеры") {
@@ -38,16 +51,20 @@ function getProductPlaceholder(category: string) {
   return "/assets/products/placeholder-snack.svg";
 }
 
-export const demoProducts: Product[] = (importedProducts as ImportedProduct[]).map((product) => ({
-  id: product.source_id ?? product.slug,
-  name: product.name,
-  slug: product.slug,
-  category: product.category,
-  description: product.description || null,
-  price: product.price,
-  image_url: product.image_url_local || getProductPlaceholder(product.category),
-  is_active: product.is_active,
-  sort_order: product.sort_order,
-  weight: product.unit || null,
-  tags: null
-}));
+export const demoProducts: Product[] = (importedProducts as ImportedProduct[]).map((product) => {
+  const copy = productCopyBySlug.get(product.slug);
+
+  return {
+    id: product.source_id ?? product.slug,
+    name: copy?.name ?? product.name,
+    slug: product.slug,
+    category: product.category,
+    description: copy?.description ?? product.description ?? null,
+    price: product.price,
+    image_url: product.image_url_local || getProductPlaceholder(product.category),
+    is_active: product.is_active,
+    sort_order: product.sort_order,
+    weight: product.unit || null,
+    tags: null
+  };
+});

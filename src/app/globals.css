@@ -259,6 +259,10 @@ button:not(:disabled),
     overflow: hidden;
   }
 
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
