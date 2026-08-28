@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Check, CircleAlert, LoaderCircle, RotateCcw, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 import type { SocialProvider } from "@/lib/auth/social/types";
 
@@ -100,9 +100,9 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
                 <RotateCcw size={18} />
                 Попробовать снова
               </a>
-              <Link href={loginHref} className="inline-flex min-h-12 items-center justify-center rounded-lg border border-karimoff-line bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange">
+              <AuthDocumentLink href={loginHref} className="inline-flex min-h-12 items-center justify-center rounded-lg border border-karimoff-line bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange">
                 Вернуться ко входу
-              </Link>
+              </AuthDocumentLink>
             </div>
           </>
         )}

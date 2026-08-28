@@ -3,6 +3,7 @@
 import { CheckCircle2, Clock3, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 
 type PaymentState = "cancelled" | "failed" | "paid" | "pending" | "timeout";
 
@@ -88,9 +89,9 @@ export function PaymentReturnStatus(props: {
         <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" aria-hidden="true" />
         <h1 className="mt-5 text-3xl font-black">Оплата прошла</h1>
         <p className="mt-3 text-base leading-7 text-karimoff-muted">Заказ {orderNumber} принят и передан на кухню.</p>
-        <Link href="/profile" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 font-bold text-white">
+        <AuthDocumentLink href="/profile" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 font-bold text-white">
           Перейти в профиль
-        </Link>
+        </AuthDocumentLink>
       </div>
     );
   }

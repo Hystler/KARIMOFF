@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { SocialCompleteForm } from "@/components/auth/SocialCompleteForm";
 import { Logo } from "@/components/Logo";
 import { readPendingSocialIdentity } from "@/lib/auth/social/state";
@@ -15,7 +15,7 @@ export default async function SocialCompletePage() {
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-5 flex items-center justify-between gap-4">
           <Logo compact />
-          <Link href="/login" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">Вернуться ко входу</Link>
+          <AuthDocumentLink href="/login" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">Вернуться ко входу</AuthDocumentLink>
         </div>
         <SocialCompleteForm
           provider={pending.provider}

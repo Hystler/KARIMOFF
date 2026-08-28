@@ -19,6 +19,24 @@ function importTypescriptScript(modulePath, body) {
   return result.stdout.trim();
 }
 
+function readProductionHeaders() {
+  const moduleUrl = pathToFileURL(join(root, "next.config.mjs")).href;
+  const result = spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", `const { default: config } = await import(${JSON.stringify(moduleUrl)}); console.log(JSON.stringify(await config.headers()));`],
+    { encoding: "utf8", env: { ...process.env, NODE_ENV: "production" } }
+  );
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+
+function parseCsp(value) {
+  return Object.fromEntries(value.split(";").map((directive) => {
+    const [name, ...tokens] = directive.trim().split(/\s+/);
+    return [name, tokens];
+  }));
+}
+
 test("Telegram attempt separates provider verification from active-browser consumption", () => {
   const output = importTypescriptScript("src/lib/auth/social/state-policy.ts", `
     const now = Date.parse("2026-08-19T09:00:00.000Z");
@@ -221,13 +239,45 @@ test("Telegram lifecycle migration is applied by the standalone runtime without 
   assert.match(maxChallenge, /getMaxBrowserChallengeStatus/);
 });
 
-test("popup-compatible headers are limited to pages that host Telegram Login", () => {
-  const config = read("next.config.mjs");
-  assert.match(config, /same-origin-allow-popups/);
-  assert.match(config, /https:\/\/oauth\.telegram\.org/);
-  assert.match(config, /\["\/login", "\/register", "\/profile"\]/);
-  assert.match(config, /source: "\/\(\.\*\)"/);
-  assert.match(config, /Cross-Origin-Opener-Policy", value: "same-origin"/);
+test("production CSP allows only the official Telegram Login origin on auth documents", () => {
+  const headers = readProductionHeaders();
+  const globalRule = headers.find((rule) => rule.source === "/(.*)");
+  const loginRule = headers.find((rule) => rule.source === "/login");
+  assert.ok(globalRule);
+  assert.ok(loginRule);
+
+  const globalCsp = globalRule.headers.find((header) => header.key === "Content-Security-Policy")?.value;
+  const loginCsp = loginRule.headers.find((header) => header.key === "Content-Security-Policy")?.value;
+  const globalCoop = globalRule.headers.find((header) => header.key === "Cross-Origin-Opener-Policy")?.value;
+  const loginCoop = loginRule.headers.find((header) => header.key === "Cross-Origin-Opener-Policy")?.value;
+  assert.ok(globalCsp);
+  assert.ok(loginCsp);
+
+  const directives = parseCsp(loginCsp);
+  assert.deepEqual(directives["script-src"], ["'self'", "'unsafe-inline'", "https://oauth.telegram.org"]);
+  assert.deepEqual(directives["connect-src"], ["'self'", "https://oauth.telegram.org"]);
+  assert.deepEqual(directives["form-action"], ["'self'"]);
+  assert.equal(directives["frame-src"], undefined);
+  assert.equal(directives["child-src"], undefined);
+  assert.ok(directives["img-src"].every((origin) => !origin.includes("telegram")));
+  assert.ok(Object.values(directives).flat().every((token) => token !== "*" && token !== "'unsafe-eval'"));
+  assert.doesNotMatch(globalCsp, /oauth\.telegram\.org/);
+  assert.equal(globalCoop, "same-origin");
+  assert.equal(loginCoop, "same-origin-allow-popups");
+});
+
+test("public auth links reload the document so route CSP and COOP take effect", () => {
+  const documentLink = read("src/components/auth/AuthDocumentLink.tsx");
+  const header = read("src/components/Header.tsx");
+  const drawer = read("src/components/cart/CartDrawer.tsx");
+  const paymentReturn = read("src/components/payments/PaymentReturnStatus.tsx");
+
+  assert.match(documentLink, /return <a href=\{href\}/);
+  assert.match(header, /<AuthDocumentLink[\s\S]*href=\{customerName \? "\/profile" : "\/login"\}/);
+  assert.match(drawer, /<AuthDocumentLink[\s\S]{0,120}href="\/login\?redirectTo=%2Fcheckout"/);
+  assert.match(drawer, /<AuthDocumentLink[\s\S]{0,120}href="\/register\?redirectTo=%2Fcheckout"/);
+  assert.match(paymentReturn, /<AuthDocumentLink href="\/profile"/);
+  assert.doesNotMatch(header, /<Link[\s\S]{0,120}href=\{customerName \? "\/profile" : "\/login"\}/);
 });
 
 test("manual Telegram and VK callback runtimes stay removed while Telegram library remains intact", () => {
