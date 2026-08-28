@@ -197,13 +197,15 @@ test("Telegram consume is browser-bound, leased and idempotent until cookie ackn
   assert.ok(acknowledgement.indexOf("acknowledgeTelegramAttempt") < acknowledgement.indexOf("clearTelegramAttemptCookie"));
 });
 
-test("existing Telegram identity signs in without phone while new missing-phone identity keeps SMS fallback", () => {
+test("existing Telegram identity signs in without phone while new missing-phone identity stays pending", () => {
   const identity = read("src/lib/auth/social/identity.ts");
   const consume = read("src/app/api/auth/social/telegram/consume/route.ts");
+  const complete = read("src/components/auth/SocialCompleteForm.tsx");
   assert.ok(identity.indexOf("let userId = existingIdentity?.user_id ?? null") < identity.indexOf("if (!userId) {"));
   assert.match(identity, /if \(!userId\) return null/);
   assert.match(identity, /createPendingSocialIdentity\(claims, attempt\.redirectTo\)/);
   assert.match(consume, /status === "needs_phone" \? "\/login\/social\/complete"/);
+  assert.doesNotMatch(complete, /SMS|СМС|смс/);
 });
 
 test("Telegram lifecycle migration is applied by the standalone runtime without touching MAX", () => {

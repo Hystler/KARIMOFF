@@ -75,16 +75,15 @@ test("Telegram cancellation, expiry and identity conflict are human-readable", (
   assert.doesNotMatch(telegram, />\s*(Success|Callback|OAuth|Token|Authorization failed)\s*</);
 });
 
-test("missing Telegram phone continues through safe SMS confirmation", () => {
+test("missing Telegram phone offers a safe password fallback without SMS UI", () => {
   const complete = read("src/components/auth/SocialCompleteForm.tsx");
-  const action = read("src/app/login/social/complete/actions.ts");
   const consumeRoute = read("src/app/api/auth/social/telegram/consume/route.ts");
-  assert.match(complete, /Telegram не передал номер телефона/);
-  assert.match(complete, /Подтвердите номер по SMS/);
-  assert.match(complete, /По имени или username аккаунты не объединяются/);
+  assert.match(complete, /не передал подтверждённый номер телефона/);
+  assert.match(complete, /По имени или username аккаунты не связываются/);
+  assert.match(complete, /Создать профиль по телефону/);
+  assert.doesNotMatch(complete, /SMS|СМС|смс/);
   assert.match(consumeRoute, /status: resolution\.kind/);
   assert.match(consumeRoute, /readPendingSocialIdentity/);
-  assert.match(action, /Не удалось завершить вход\. Попробуйте позже\./);
 });
 
 test("Telegram profile names and identity status are available to admins without exposing tokens", () => {
