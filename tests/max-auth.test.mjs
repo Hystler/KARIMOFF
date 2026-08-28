@@ -147,6 +147,7 @@ test("MAX challenge is random, hashed, browser-bound, expiring and one-time", ()
   assert.match(challenge, /export async function acknowledgeMaxChallenge/);
   assert.match(challenge, /identity_ciphertext = null/);
   assert.match(start, /startapp=\$\{attempt\.challenge\}/);
+  assert.match(start, /redirectTo: parsed\.data\.returnTo/);
   assert.doesNotMatch(start, /phone|displayName|username|avatar/i);
   assert.match(status, /getMaxBrowserChallengeStatus/);
   assert.doesNotMatch(status, /completeProviderCallback|markMaxChallengeConsumed/);

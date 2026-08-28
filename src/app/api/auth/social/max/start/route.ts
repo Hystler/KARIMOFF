@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
   if (!limit.allowed) return noStoreJson({ ok: false, error: "rate_limit" }, 429);
 
   try {
-    const attempt = await createMaxLoginChallenge(parsed.data);
+    const attempt = await createMaxLoginChallenge({
+      intent: parsed.data.intent,
+      redirectTo: parsed.data.returnTo
+    });
     await recordAuthFailure("social_oauth", rateLimitKey);
     logMaxAuthEvent("max.login.started", {
       correlationId: attempt.correlationId,
