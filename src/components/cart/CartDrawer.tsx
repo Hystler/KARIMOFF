@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { initialOrderActionState } from "@/lib/order-schema";
 import {
   getMoscowDateKey,
@@ -273,20 +274,20 @@ export function CartDrawer() {
                 Так мы подтянем имя и телефон из профиля и не попросим вводить их каждый раз.
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <Link
+                <AuthDocumentLink
                   href="/login?redirectTo=%2Fcheckout"
                   onClick={leaveCartForAuth}
                   className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-center text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
                 >
                   Войти
-                </Link>
-                <Link
+                </AuthDocumentLink>
+                <AuthDocumentLink
                   href="/register?redirectTo=%2Fcheckout"
                   onClick={leaveCartForAuth}
                   className="rounded-full border border-karimoff-orange bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-orange transition hover:-translate-y-0.5 hover:bg-karimoff-orange hover:text-white"
                 >
                   Зарегистрироваться
-                </Link>
+                </AuthDocumentLink>
               </div>
             </div>
           ) : mode === "checkout" && customer ? (

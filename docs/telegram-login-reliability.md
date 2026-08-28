@@ -30,6 +30,8 @@ Correctness does not depend on Telegram or the operating system automatically sw
 
 The popup communication required by Telegram remains enabled only on login-capable pages through `Cross-Origin-Opener-Policy: same-origin-allow-popups`, as required by the official Login Library documentation.
 
+Those CSP and COOP headers are document-level policies. Public links into `/login`, `/register` and `/profile` therefore use full document navigation instead of a soft App Router transition; otherwise the destination would inherit the stricter policy of the page where navigation began and the official Telegram script would be blocked until refresh. Ordinary public pages keep `script-src 'self'` and `Cross-Origin-Opener-Policy: same-origin`.
+
 ## Identity and phone
 
 The stable key is `(provider='telegram', provider_user_id=sub)`.

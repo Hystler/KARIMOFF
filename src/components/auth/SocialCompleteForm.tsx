@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 import type { SocialProvider } from "@/lib/auth/social/types";
 
@@ -25,12 +25,12 @@ export function SocialCompleteForm({ provider }: { provider: SocialProvider; sug
         <p>Без подтверждённого номера новый профиль не объединяется с существующим аккаунтом. По имени или username аккаунты не связываются.</p>
       </div>
       <div className="mt-7 grid gap-3">
-        <Link href="/login" className="flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 py-3 text-sm font-bold text-white transition hover:bg-[#D95405]">
+        <AuthDocumentLink href="/login" className="flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 py-3 text-sm font-bold text-white transition hover:bg-[#D95405]">
           Попробовать снова
-        </Link>
-        <Link href="/register" className="flex min-h-12 items-center justify-center rounded-full border border-karimoff-line px-6 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-black/30">
+        </AuthDocumentLink>
+        <AuthDocumentLink href="/register" className="flex min-h-12 items-center justify-center rounded-full border border-karimoff-line px-6 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-black/30">
           Создать профиль по телефону
-        </Link>
+        </AuthDocumentLink>
       </div>
     </section>
   );

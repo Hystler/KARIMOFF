@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentCustomerAction } from "@/app/actions/orders";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { cn } from "@/lib/utils";
 import { CartButton } from "./cart/CartButton";
 import { Logo } from "./Logo";
@@ -85,12 +86,12 @@ export function Header() {
         <div className="hidden items-center gap-3 lg:flex">
           <ThemeToggle />
           <CartButton />
-          <Link
+          <AuthDocumentLink
             href={customerName ? "/profile" : "/login"}
             className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
           >
             {customerName ? "Профиль" : "Войти / Регистрация"}
-          </Link>
+          </AuthDocumentLink>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -128,9 +129,9 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-2 border-t border-karimoff-line pt-4">
-              <Link href={customerName ? "/profile" : "/login"} onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
+              <AuthDocumentLink href={customerName ? "/profile" : "/login"} onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
                 {customerName ? "Профиль" : "Войти / Регистрация"}
-              </Link>
+              </AuthDocumentLink>
             </div>
           </nav>
         </div>

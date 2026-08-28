@@ -8,6 +8,7 @@ import {
   registerWithPasswordAction
 } from "@/app/auth/actions";
 import { PhoneInput } from "@/components/forms/PhoneInput";
+import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { initialAuthActionState } from "@/lib/customer-schema";
 
@@ -182,16 +183,16 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
         {isRegister ? (
           <>
             Уже есть профиль?{" "}
-            <Link href={`/login${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
+            <AuthDocumentLink href={`/login${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
               Войти
-            </Link>
+            </AuthDocumentLink>
           </>
         ) : (
           <>
             Нет профиля?{" "}
-            <Link href={`/register${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
+            <AuthDocumentLink href={`/register${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : next ? `?next=${next}` : ""}`} className="font-bold text-karimoff-orange">
               Зарегистрироваться
-            </Link>
+            </AuthDocumentLink>
           </>
         )}
       </div>

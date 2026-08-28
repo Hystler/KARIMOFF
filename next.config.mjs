@@ -24,6 +24,8 @@ function httpsMediaPattern(value) {
 
 const cdnPattern = httpsMediaPattern(process.env.S3_CDN_BASE_URL);
 const storagePattern = httpsMediaPattern(process.env.S3_PUBLIC_BASE_URL);
+const telegramLoginOrigin = "https://oauth.telegram.org";
+const telegramAuthDocumentRoutes = ["/login", "/register", "/profile"];
 const mediaOrigins = [
   "https://s3.twcstorage.ru",
   storagePattern ? `https://${storagePattern.hostname}${storagePattern.port ? `:${storagePattern.port}` : ""}` : null,
@@ -31,7 +33,7 @@ const mediaOrigins = [
 ].filter(Boolean);
 
 function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false } = {}) {
-  const telegramOrigin = telegramLogin ? " https://oauth.telegram.org" : "";
+  const telegramOrigin = telegramLogin ? ` ${telegramLoginOrigin}` : "";
   const maxBridgeOrigin = maxMiniApp ? " https://st.max.ru" : "";
   const frameAncestors = maxMiniApp ? "https://max.ru https://*.max.ru" : "'none'";
   return [
@@ -99,7 +101,8 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }]
       },
       { source: "/(.*)", headers: securityHeaders },
-      ...["/login", "/register", "/profile"].map((source) => ({
+      // CSP and COOP are document policies; links into these routes must perform a full navigation.
+      ...telegramAuthDocumentRoutes.map((source) => ({
         source,
         headers: [
           { key: "Content-Security-Policy", value: telegramLoginContentSecurityPolicy },
