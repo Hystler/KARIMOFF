@@ -6,12 +6,20 @@
   color-scheme: light;
   --background: #ffffff;
   --foreground: #121214;
+  --public-control-bg: #ffffff;
+  --public-control-border: rgba(18, 18, 20, 0.15);
+  --public-control-color: #121214;
+  --public-control-shadow: 0 12px 28px rgba(18, 18, 20, 0.10);
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
   --background: #121214;
   --foreground: #ffffff;
+  --public-control-bg: #202024;
+  --public-control-border: rgba(255, 255, 255, 0.16);
+  --public-control-color: #ffffff;
+  --public-control-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -274,8 +282,139 @@ button:not(:disabled),
 }
 
 @layer components {
+  .public-button-primary,
+  .public-button-secondary,
+  .public-button-on-dark {
+    @apply relative isolate inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-lg px-6 py-3 text-sm font-black transition duration-200;
+    letter-spacing: 0;
+    touch-action: manipulation;
+  }
+
+  .public-button-primary {
+    border: 1px solid #c94e00;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 46%),
+      #f76308;
+    color: #ffffff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      inset 0 -1px 0 rgba(102, 34, 0, 0.24),
+      0 3px 0 #b94300,
+      0 14px 30px rgba(251, 103, 10, 0.24);
+  }
+
+  .public-button-success {
+    border-color: #065f46;
+    background: #047857;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 3px 0 #065f46, 0 14px 30px rgba(4, 120, 87, 0.22);
+  }
+
+  .public-button-secondary {
+    border: 1px solid var(--public-control-border);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(18, 18, 20, 0.025)),
+      var(--public-control-bg);
+    color: var(--public-control-color);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      var(--public-control-shadow);
+  }
+
+  .public-button-on-dark {
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 12px 28px rgba(0, 0, 0, 0.20);
+  }
+
+  .public-icon-button {
+    @apply relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition duration-200 sm:h-12 sm:w-12;
+    border-color: var(--public-control-border);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(18, 18, 20, 0.025)),
+      var(--public-control-bg);
+    color: var(--public-control-color);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      var(--public-control-shadow);
+    touch-action: manipulation;
+  }
+
+  .public-filter-chip {
+    @apply shrink-0 rounded-lg border px-5 py-3 text-sm font-black transition duration-200;
+    border-color: var(--public-control-border);
+    background: var(--public-control-bg);
+    color: var(--public-control-color);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 20px rgba(18, 18, 20, 0.07);
+  }
+
+  .public-filter-chip-active {
+    border-color: #c94e00;
+    background: #f76308;
+    color: #ffffff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 3px 0 #b94300, 0 12px 26px rgba(251, 103, 10, 0.20);
+  }
+
+  @media (hover: hover) {
+    .public-button-primary:hover,
+    .public-button-secondary:hover,
+    .public-button-on-dark:hover,
+    .public-icon-button:hover,
+    .public-filter-chip:hover {
+      transform: translateY(-2px);
+    }
+
+    .public-button-primary:hover {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 46%),
+        #ff6c10;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.38),
+        inset 0 -1px 0 rgba(102, 34, 0, 0.24),
+        0 4px 0 #b94300,
+        0 18px 36px rgba(251, 103, 10, 0.30);
+    }
+
+    .public-button-success:hover {
+      border-color: #065f46;
+      background: #059669;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 4px 0 #065f46, 0 18px 34px rgba(4, 120, 87, 0.28);
+    }
+
+    .public-button-secondary:hover,
+    .public-icon-button:hover,
+    .public-filter-chip:not(.public-filter-chip-active):hover {
+      border-color: rgba(251, 103, 10, 0.62);
+      color: #fb670a;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 16px 32px rgba(18, 18, 20, 0.13);
+    }
+
+    .public-button-on-dark:hover {
+      border-color: rgba(255, 255, 255, 0.42);
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  .public-button-primary:active,
+  .public-button-secondary:active,
+  .public-button-on-dark:active,
+  .public-icon-button:active,
+  .public-filter-chip:active {
+    transform: translateY(1px);
+  }
+
+  .public-button-primary:disabled,
+  .public-button-secondary:disabled,
+  .public-button-on-dark:disabled,
+  .public-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+    transform: none;
+    box-shadow: none;
+  }
+
   .product-cta {
-    @apply mt-auto inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-3 py-2.5 text-[13px] font-black text-white shadow-[0_12px_28px_rgba(251,103,10,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#D95405] hover:shadow-[0_16px_34px_rgba(251,103,10,0.28)] active:translate-y-0 sm:px-4 sm:text-sm;
+    @apply mt-auto min-h-12 w-full px-3 text-[13px] sm:px-4 sm:text-sm;
   }
 
   .product-cta-added {

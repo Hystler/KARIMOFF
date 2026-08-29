@@ -221,7 +221,7 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
           type="button"
           onClick={addToCart}
           disabled={!valid}
-          className={`inline-flex min-h-14 flex-1 items-center justify-center gap-3 rounded-lg px-6 text-base font-black text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange disabled:cursor-not-allowed disabled:opacity-45 ${added ? "bg-emerald-700" : "bg-karimoff-orange hover:bg-[#D95405]"}`}
+          className={`public-button-primary min-h-14 flex-1 gap-3 text-base ${added ? "public-button-success" : ""}`}
           aria-live="polite"
         >
           {added ? <Check size={21} aria-hidden /> : <ShoppingBasket size={21} aria-hidden />}

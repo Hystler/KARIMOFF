@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { CustomerOrderItem } from "@/lib/customer-data";
+import type { CustomerOrderItem } from "@/lib/customer-orders";
 
 type RepeatOrderButtonProps = {
   items: CustomerOrderItem[];
@@ -29,7 +29,7 @@ export function RepeatOrderButton({ items, orderId }: RepeatOrderButtonProps) {
         window.localStorage.setItem("karimoff_cart", JSON.stringify(lines));
         router.push("/?checkout=1");
       }}
-      className="rounded-full border border-karimoff-orange bg-karimoff-orange px-4 py-2.5 text-xs font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.16)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+      className="public-button-primary min-h-10 px-4 py-2.5 text-xs"
     >
       Повторить заказ
     </button>

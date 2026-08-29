@@ -276,7 +276,7 @@ test("public auth links reload the document so route CSP and COOP take effect", 
   assert.match(header, /<AuthDocumentLink[\s\S]*href=\{customerName \? "\/profile" : "\/login"\}/);
   assert.match(drawer, /<AuthDocumentLink[\s\S]{0,120}href="\/login\?redirectTo=%2Fcheckout"/);
   assert.match(drawer, /<AuthDocumentLink[\s\S]{0,120}href="\/register\?redirectTo=%2Fcheckout"/);
-  assert.match(paymentReturn, /<AuthDocumentLink href="\/profile"/);
+  assert.match(paymentReturn, /<AuthDocumentLink href="\/profile\/orders"/);
   assert.doesNotMatch(header, /<Link[\s\S]{0,120}href=\{customerName \? "\/profile" : "\/login"\}/);
 });
 

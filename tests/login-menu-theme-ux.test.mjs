@@ -70,12 +70,39 @@ test("catalog copy migration is one-time, slug-based, and leaves business values
   assert.match(dockerfile, /20260828190000_refine_public_product_copy\.sql/);
 });
 
-test("menu cards reserve readable space without horizontal text overflow", () => {
+test("menu cards show complete guest copy and use a readable mobile layout", () => {
   const card = read("src/components/ProductCard.tsx");
+  const menu = read("src/app/menu/page.tsx");
+  const popular = read("src/components/PopularMenu.tsx");
   const styles = read("src/app/globals.css");
 
   assert.match(card, /min-w-0/);
-  assert.match(card, /line-clamp-3/);
+  assert.doesNotMatch(card, /line-clamp-[23]/);
   assert.match(card, /overflow-wrap-anywhere/);
+  assert.match(menu, /grid-cols-1 gap-4 min-\[520px\]:grid-cols-2/);
+  assert.match(popular, /grid-cols-1 gap-4 min-\[520px\]:grid-cols-2/);
+  assert.match(card, /calc\(100vw - 2\.5rem\)/);
   assert.match(styles, /\.overflow-wrap-anywhere\s*\{\s*overflow-wrap: anywhere;/);
+});
+
+test("public actions share premium accessible states without touching provider branding", () => {
+  const styles = read("src/app/globals.css");
+  const header = read("src/components/Header.tsx");
+  const product = read("src/components/products/ProductCustomizer.tsx");
+  const checkout = read("src/components/cart/CartDrawer.tsx");
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
+  const max = read("src/components/auth/MaxLoginButton.tsx");
+
+  assert.match(styles, /\.public-button-primary/);
+  assert.match(styles, /\.public-button-secondary/);
+  assert.match(styles, /\.public-icon-button/);
+  assert.match(styles, /touch-action: manipulation/);
+  assert.match(styles, /\.public-button-primary:disabled/);
+  assert.match(styles, /@media \(hover: hover\)/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(header, /public-icon-button/);
+  assert.match(product, /public-button-primary product-cta/);
+  assert.match(checkout, /public-button-primary/);
+  assert.match(telegram, /bg-\[#229ED9\]/);
+  assert.match(max, /bg-\[#471AFF\]/);
 });

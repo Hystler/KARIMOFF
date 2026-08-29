@@ -165,7 +165,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
           <button
             type="submit"
             disabled={isPending}
-            className="mt-1 min-h-12 rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+            className="public-button-primary mt-1 px-7"
           >
             {isPending ? "Отправляем" : "Отправить заявку"}
           </button>

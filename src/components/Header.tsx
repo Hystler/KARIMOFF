@@ -86,9 +86,17 @@ export function Header() {
         <div className="hidden items-center gap-3 lg:flex">
           <ThemeToggle />
           <CartButton />
+          {customerName ? (
+            <Link
+              href="/profile/orders"
+              className="inline-flex min-h-11 items-center px-2 text-sm font-bold text-karimoff-black transition hover:text-karimoff-orange"
+            >
+              Мои заказы
+            </Link>
+          ) : null}
           <AuthDocumentLink
             href={customerName ? "/profile" : "/login"}
-            className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
+            className="public-button-primary px-5 py-2.5"
           >
             {customerName ? "Профиль" : "Войти / Регистрация"}
           </AuthDocumentLink>
@@ -102,7 +110,7 @@ export function Header() {
             aria-label={isOpen ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={isOpen}
             onClick={() => setIsOpen((value) => !value)}
-            className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 rounded-full border border-karimoff-black/15 bg-white text-karimoff-black shadow-[0_10px_24px_rgba(18,18,20,0.06)] sm:h-12 sm:w-12"
+            className="public-icon-button flex-col gap-1.5"
           >
             <span className={cn("h-0.5 w-5 rounded-full bg-current transition", isOpen && "translate-y-2 rotate-45")} />
             <span className={cn("h-0.5 w-5 rounded-full bg-current transition", isOpen && "opacity-0")} />
@@ -129,7 +137,16 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-2 border-t border-karimoff-line pt-4">
-              <AuthDocumentLink href={customerName ? "/profile" : "/login"} onClick={() => setIsOpen(false)} className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_12px_28px_rgba(251,103,10,0.18)] transition hover:bg-[#D95405]">
+              {customerName ? (
+                <Link
+                  href="/profile/orders"
+                  onClick={() => setIsOpen(false)}
+                  className="mb-2 flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-karimoff-black transition hover:bg-karimoff-soft hover:text-karimoff-orange"
+                >
+                  Мои заказы
+                </Link>
+              ) : null}
+              <AuthDocumentLink href={customerName ? "/profile" : "/login"} onClick={() => setIsOpen(false)} className="public-button-primary">
                 {customerName ? "Профиль" : "Войти / Регистрация"}
               </AuthDocumentLink>
             </div>

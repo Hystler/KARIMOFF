@@ -21,14 +21,14 @@ export default function NotFound() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/menu"
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_18px_42px_rgba(251,103,10,0.24)] transition hover:-translate-y-0.5 hover:bg-[#E85B05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange active:translate-y-0"
+              className="public-button-primary min-h-[52px]"
             >
               В меню
               <ArrowRight aria-hidden="true" size={18} />
             </Link>
             <Link
               href="/"
-              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.05] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-y-0"
+              className="public-button-on-dark min-h-[52px]"
             >
               <Home aria-hidden="true" size={18} />
               На главную

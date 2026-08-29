@@ -234,14 +234,14 @@ export function CartLineCustomizer({ line }: { line: CartLine }) {
               type="button"
               onClick={saveCustomization}
               disabled={!groupsValid}
-              className="min-h-11 flex-1 rounded-full bg-karimoff-orange px-4 text-sm font-black text-white transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-45"
+              className="public-button-primary min-h-11 flex-1 px-4 py-2 text-sm"
             >
               Сохранить
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="min-h-11 rounded-full border border-karimoff-line bg-white px-4 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange"
+              className="public-button-secondary min-h-11 px-4 py-2 text-sm"
             >
               Закрыть
             </button>
