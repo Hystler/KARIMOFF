@@ -60,7 +60,7 @@ function ProductImage({ product }: { product: Product }) {
         src={src}
         alt={product.name}
         fill
-        sizes="(min-width: 1280px) 220px, (min-width: 1024px) calc((100vw - 7rem) / 4), (min-width: 640px) calc((100vw - 4rem) / 3), calc((100vw - 3.25rem) / 2)"
+        sizes="(min-width: 1280px) 220px, (min-width: 1024px) calc((100vw - 7rem) / 4), (min-width: 640px) calc((100vw - 4rem) / 3), (min-width: 520px) calc((100vw - 3.25rem) / 2), calc(100vw - 2.5rem)"
         loading="lazy"
         fetchPriority="low"
         className="object-contain transition duration-500 group-hover:scale-[1.03]"
@@ -87,7 +87,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <article
       className="group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-karimoff-orange/55 hover:shadow-[0_18px_44px_rgba(18,18,20,0.12)]"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "430px" }}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "560px" }}
     >
       <Link
         href={href}
@@ -101,13 +101,13 @@ export function ProductCard({ product }: ProductCardProps) {
           href={href}
           className="flex min-w-0 flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
         >
-          <h3 className="line-clamp-2 min-h-10 overflow-wrap-anywhere text-base font-black leading-5 text-karimoff-black transition group-hover:text-karimoff-orange sm:min-h-11 sm:text-lg sm:leading-[22px]">
+          <h3 className="overflow-wrap-anywhere text-pretty text-lg font-black leading-[1.22] text-karimoff-black transition group-hover:text-karimoff-orange sm:text-lg">
             {product.name}
           </h3>
           <p className="admin-number mt-2 text-lg font-black leading-none text-karimoff-orange sm:text-xl">
             {formatPrice(product.price)} ₽
           </p>
-          <p className="mt-2.5 line-clamp-3 min-h-[60px] overflow-wrap-anywhere text-[13px] leading-5 text-karimoff-muted sm:min-h-[66px] sm:text-sm sm:leading-[22px]">
+          <p className="mt-3 overflow-wrap-anywhere text-pretty text-sm leading-[1.65] text-karimoff-muted">
             {product.description || "Описание блюда скоро появится."}
           </p>
           <p className="mt-2 min-h-[18px] text-xs font-bold leading-[18px] text-karimoff-muted">

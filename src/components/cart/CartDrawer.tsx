@@ -6,6 +6,10 @@ import { createOrderAction, getCheckoutContextAction } from "@/app/actions/order
 import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { initialOrderActionState } from "@/lib/order-schema";
 import {
+  getOrCreateCheckoutRequestId,
+  rememberCheckoutPayment
+} from "@/lib/cart-checkout-storage";
+import {
   getMoscowDateKey,
   getSameDayOrderSlots,
   moscowOrderSlotToIso
@@ -144,7 +148,7 @@ export function CartDrawer() {
       setReceiptEmail(context.payment.receiptEmail);
       setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
       setCustomer(context.customer);
-      setCheckoutRequestId(crypto.randomUUID());
+      setCheckoutRequestId(getOrCreateCheckoutRequestId(cartPayload));
       setClientNow(new Date());
       setRequestedSlotIndex(0);
       setMode("checkout");
@@ -156,7 +160,7 @@ export function CartDrawer() {
       checkoutContextPending.current = false;
       setIsCustomerLoading(false);
     }
-  }, [lines.length]);
+  }, [cartPayload, lines.length]);
 
   const leaveCartForAuth = useCallback(() => {
     setCheckoutContextError(null);
@@ -200,6 +204,13 @@ export function CartDrawer() {
   useEffect(() => {
     if (orderState.status === "success") {
       if (orderState.paymentConfirmationUrl) {
+        if (orderState.paymentId && checkoutRequestId) {
+          rememberCheckoutPayment({
+            cartPayload,
+            idempotencyKey: checkoutRequestId,
+            paymentId: orderState.paymentId
+          });
+        }
         window.location.assign(orderState.paymentConfirmationUrl);
         return undefined;
       }
@@ -212,7 +223,7 @@ export function CartDrawer() {
     }
 
     return undefined;
-  }, [clearCart, orderState.paymentConfirmationUrl, orderState.status]);
+  }, [cartPayload, checkoutRequestId, clearCart, orderState.paymentConfirmationUrl, orderState.paymentId, orderState.status]);
 
   if (!isOpen) {
     return null;
@@ -277,14 +288,14 @@ export function CartDrawer() {
                 <AuthDocumentLink
                   href="/login?redirectTo=%2Fcheckout"
                   onClick={leaveCartForAuth}
-                  className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-center text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+                  className="public-button-primary px-5 text-center"
                 >
                   Войти
                 </AuthDocumentLink>
                 <AuthDocumentLink
                   href="/register?redirectTo=%2Fcheckout"
                   onClick={leaveCartForAuth}
-                  className="rounded-full border border-karimoff-orange bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-orange transition hover:-translate-y-0.5 hover:bg-karimoff-orange hover:text-white"
+                  className="public-button-secondary px-5 text-center"
                 >
                   Зарегистрироваться
                 </AuthDocumentLink>
@@ -510,7 +521,7 @@ export function CartDrawer() {
               <button
                 type="submit"
                 disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || !checkoutSettings.online_payments_enabled}
-                className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
+                className="public-button-primary py-4"
               >
                 {isOrderPending ? "Создаём платёж" : "Перейти к оплате"}
               </button>
@@ -582,7 +593,7 @@ export function CartDrawer() {
                 onClick={checkout}
                 disabled={!lines.length || isCustomerLoading}
                 aria-busy={isCustomerLoading}
-                className="rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-4 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
+                className="public-button-primary py-4"
               >
                 {isCustomerLoading ? "Открываем оформление…" : "Оформить заказ"}
               </button>
@@ -591,7 +602,7 @@ export function CartDrawer() {
               <button
                 type="button"
                 onClick={clearCart}
-                className="rounded-full border border-karimoff-line px-6 py-3 text-sm font-semibold transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                className="public-button-secondary"
               >
                 Очистить корзину
               </button>

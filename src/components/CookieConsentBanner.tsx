@@ -159,7 +159,7 @@ export function CookieConsentBanner() {
                   type="button"
                   disabled={isSaving}
                   onClick={() => saveConsent({ necessary: true, analytics: true, marketing: true })}
-                  className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white transition hover:bg-[#D95405] disabled:opacity-60"
+                  className="public-button-primary px-5"
                 >
                   Принять все
                 </button>
@@ -167,7 +167,7 @@ export function CookieConsentBanner() {
                   type="button"
                   disabled={isSaving}
                   onClick={() => saveConsent({ necessary: true, analytics: false, marketing: false })}
-                  className="rounded-full border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:border-karimoff-orange hover:text-karimoff-orange disabled:opacity-60"
+                  className="public-button-on-dark px-5"
                 >
                   Только необходимые
                 </button>
@@ -176,7 +176,7 @@ export function CookieConsentBanner() {
                     type="button"
                     disabled={isSaving}
                     onClick={() => saveConsent({ necessary: true, analytics, marketing })}
-                    className="rounded-full border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:border-karimoff-orange hover:text-karimoff-orange disabled:opacity-60"
+                    className="public-button-on-dark px-5"
                   >
                     Сохранить выбор
                   </button>
@@ -184,7 +184,7 @@ export function CookieConsentBanner() {
                   <button
                     type="button"
                     onClick={openSettings}
-                    className="rounded-full border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                    className="public-button-on-dark px-5"
                   >
                     Настроить
                   </button>

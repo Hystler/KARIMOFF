@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
-import { RepeatOrderButton } from "@/components/profile/RepeatOrderButton";
+import { CustomerOrdersLive } from "@/components/profile/CustomerOrdersLive";
 import { getCustomerProfileData } from "@/lib/customer-data";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
@@ -12,29 +12,19 @@ import { logoutCustomerAction, unlinkSocialIdentityAction, updateMarketingConsen
 
 export const dynamic = "force-dynamic";
 
-const statusLabels = {
-  new: "Новый",
-  in_progress: "В работе",
-  completed: "Выполнен",
-  cancelled: "Отменён"
-};
-
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "Europe/Moscow"
   }).format(new Date(date));
 }
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(value);
 }
 
 type ProfilePageProps = { searchParams?: Promise<{ identity?: string; identity_error?: string }> };
@@ -49,6 +39,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const configuredProviders = getConfiguredSocialProviders();
   const params = searchParams ? await searchParams : {};
   const providerLabels = { phone: "Телефон", telegram: "Telegram", max: "MAX" } as const;
+  const paidOrderCount = orders.filter((order) =>
+    ["paid", "partially_refunded", "refunded"].includes(order.payment_status)
+  ).length;
 
   return (
     <main className="bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
@@ -64,15 +57,21 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link
                     href="/profile/avatar"
-                    className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+                    className="public-button-primary px-5"
                   >
                     Настроить аватар
                   </Link>
                   <Link
                     href="/menu"
-                    className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
+                    className="public-button-secondary px-5"
                   >
                     В меню
+                  </Link>
+                  <Link
+                    href="/profile/orders"
+                    className="public-button-secondary px-5"
+                  >
+                    Мои заказы
                   </Link>
                 </div>
               </div>
@@ -81,7 +80,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <form action={logoutCustomerAction}>
             <button
               type="submit"
-              className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
+              className="public-button-secondary px-5"
             >
               Выйти
             </button>
@@ -105,59 +104,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{formatNumber(account?.total_earned ?? 0)}</p>
           </article>
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
-            <p className="text-sm font-semibold text-karimoff-muted">Заказов</p>
-            <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{orders.length}</p>
+            <p className="text-sm font-semibold text-karimoff-muted">Оплаченных заказов</p>
+            <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{paidOrderCount}</p>
           </article>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
-          <section className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-black">История заказов</h2>
-              <Link href="/menu" className="text-sm font-bold text-karimoff-orange">
-                В меню
-              </Link>
-            </div>
-            {orders.length === 0 ? (
-              <p className="mt-5 text-sm text-karimoff-muted">Заказов пока нет.</p>
-            ) : (
-              <div className="mt-5 grid gap-4">
-                {orders.map((order) => (
-                  <article key={order.id} className="rounded-lg border border-karimoff-line p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-black text-karimoff-black">{formatDate(order.created_at)}</p>
-                        <p className="mt-1 text-xs font-semibold text-karimoff-orange">{statusLabels[order.status]}</p>
-                        <p className="mt-1 text-xs font-semibold text-karimoff-muted">
-                          {order.fulfillment_mode === "scheduled" && order.requested_at
-                            ? `К ${formatDate(order.requested_at)}`
-                            : "Как можно скорее"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-black text-karimoff-orange">{formatPrice(order.total)} ₽</p>
-                        {order.items.length ? <RepeatOrderButton items={order.items} orderId={order.id} /> : null}
-                      </div>
-                    </div>
-                    <div className="mt-4 grid gap-2">
-                      {order.items.map((item) => (
-                        <div key={item.id}>
-                          <p className="text-sm leading-6 text-karimoff-muted">
-                            {item.product_name} × {item.quantity} — {formatPrice(item.line_total)} ₽
-                          </p>
-                          {item.modifiers.map((modifier) => (
-                            <p key={modifier.id} className="text-xs font-semibold text-karimoff-orange">
-                              {modifier.modifier_type === "remove" ? "Без" : "Добавить"}: {modifier.ingredient_name}
-                            </p>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          <CustomerOrdersLive initialOrders={orders} preview />
 
           <section className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <h2 className="text-2xl font-black">Начисления</h2>
@@ -260,7 +213,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </label>
             <button
               type="submit"
-              className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white transition hover:bg-[#D95405]"
+              className="public-button-primary px-5"
             >
               Сохранить выбор
             </button>

@@ -45,10 +45,10 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
               <Link
                 key={filter.value}
                 href={href}
-                className={`shrink-0 rounded-full border px-5 py-3 text-sm font-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange ${
+                className={`public-filter-chip ${
                   isActive
-                    ? "border-karimoff-orange bg-karimoff-orange text-white shadow-[0_14px_30px_rgba(251,103,10,0.18)]"
-                    : "border-karimoff-line bg-white text-karimoff-black hover:border-karimoff-orange hover:text-karimoff-orange"
+                    ? "public-filter-chip-active"
+                    : ""
                 }`}
               >
                 {filter.label}
@@ -56,7 +56,7 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
             );
           })}
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {visibleProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

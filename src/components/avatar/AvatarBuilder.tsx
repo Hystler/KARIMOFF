@@ -100,7 +100,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                 <button
                   type="button"
                   onClick={() => setAvatar(initialAvatar)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-karimoff-line bg-white text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
+                  className="public-icon-button h-11 w-11 sm:h-11 sm:w-11"
                   aria-label="Вернуть сохранённый образ"
                   title="Вернуть сохранённый образ"
                 >
@@ -109,7 +109,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                 <button
                   type="button"
                   onClick={shuffleAvatar}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-karimoff-orange bg-karimoff-orange text-white shadow-[0_10px_24px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
+                  className="public-button-primary h-11 min-h-11 w-11 px-0 py-0"
                   aria-label="Случайный образ"
                   title="Случайный образ"
                 >
@@ -186,7 +186,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
           <div className="sticky bottom-0 border-t border-karimoff-line bg-[#F7F4EF]/95 p-5 backdrop-blur-md sm:p-6">
             <button
               type="submit"
-              className="min-h-12 w-full rounded-full border border-karimoff-orange bg-karimoff-orange px-7 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange active:translate-y-0"
+              className="public-button-primary w-full px-7"
             >
               Сохранить персонажа
             </button>

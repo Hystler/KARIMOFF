@@ -51,7 +51,7 @@ export function PageHero({
           {ctaHref && ctaLabel ? (
             <Link
               href={ctaHref}
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 sm:mt-7 sm:w-auto"
+              className="public-button-primary mt-6 w-full sm:mt-7 sm:w-auto"
             >
               {ctaLabel}
             </Link>

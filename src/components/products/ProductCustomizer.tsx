@@ -33,7 +33,7 @@ export function ProductCustomizer({ product }: { product: Product }) {
         addItem(product, customization);
         setIsAdded(true);
       }}
-      className={`product-cta overflow-hidden ${isAdded ? "product-cta-added" : ""}`}
+      className={`public-button-primary product-cta ${isAdded ? "product-cta-added" : ""}`}
       aria-live="polite"
     >
       {isAdded ? <Check aria-hidden size={18} strokeWidth={2.8} /> : <ShoppingBasket aria-hidden size={18} strokeWidth={2.4} />}

@@ -10,6 +10,7 @@ import {
   type ReactNode
 } from "react";
 import type { Product, ProductModifierGroup, ProductModifierOption } from "@/lib/product-types";
+import { CART_STORAGE_KEY } from "@/lib/cart-checkout-storage";
 
 export type CartRemovedIngredient = {
   ingredient_id: string;
@@ -59,7 +60,6 @@ type CartContextValue = {
   checkout: () => void;
 };
 
-const STORAGE_KEY = "karimoff_cart";
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function getDefaultCartCustomization(product: Product | CartProduct): CartCustomization {
@@ -179,7 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       try {
-        const saved = window.localStorage.getItem(STORAGE_KEY);
+        const saved = window.localStorage.getItem(CART_STORAGE_KEY);
         const parsed = saved ? (JSON.parse(saved) as Partial<CartLine>[]) : [];
         setLines(parsed.map(normalizeStoredLine).filter((line): line is CartLine => Boolean(line)));
       } catch {
@@ -194,7 +194,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isHydrated) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lines));
     }
   }, [isHydrated, lines]);
 
@@ -219,7 +219,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [isHydrated]);
 
   useEffect(() => {
-    function clearAfterPayment() {
+    function clearAfterPayment(event: Event) {
+      const detail = (event as CustomEvent<{ clear?: boolean }>).detail;
+      if (detail?.clear === false) return;
       setLines([]);
       setIsOpen(false);
     }

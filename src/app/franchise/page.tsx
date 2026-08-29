@@ -184,7 +184,7 @@ export default async function FranchisePage() {
             </p>
             <Link
               href="#lead"
-              className="inline-flex rounded-full border border-karimoff-orange bg-karimoff-orange px-6 py-3.5 text-sm font-bold text-white shadow-[0_16px_34px_rgba(251,103,10,0.22)] transition hover:-translate-y-0.5 hover:bg-[#D95405]"
+              className="public-button-primary py-3.5"
             >
               Оставить заявку на знакомство
             </Link>

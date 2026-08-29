@@ -4,6 +4,10 @@ import { CheckCircle2, Clock3, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
+import {
+  finishVerifiedCheckoutPayment,
+  releaseCheckoutPayment
+} from "@/lib/cart-checkout-storage";
 
 type PaymentState = "cancelled" | "failed" | "paid" | "pending" | "timeout";
 
@@ -33,11 +37,15 @@ export function PaymentReturnStatus(props: {
 
   useEffect(() => {
     if (state !== "paid") return undefined;
-    const timeout = window.setTimeout(() => {
-      window.dispatchEvent(new Event("karimoff-cart-clear-after-payment"));
-    }, 0);
-    return () => window.clearTimeout(timeout);
-  }, [state]);
+    finishVerifiedCheckoutPayment(props.paymentId);
+    return undefined;
+  }, [props.paymentId, state]);
+
+  useEffect(() => {
+    if (state === "cancelled" || state === "failed") {
+      releaseCheckoutPayment(props.paymentId);
+    }
+  }, [props.paymentId, state]);
 
   const check = useCallback(async () => {
     if (inFlight.current || document.visibilityState === "hidden") return;
@@ -89,8 +97,8 @@ export function PaymentReturnStatus(props: {
         <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" aria-hidden="true" />
         <h1 className="mt-5 text-3xl font-black">Оплата прошла</h1>
         <p className="mt-3 text-base leading-7 text-karimoff-muted">Заказ {orderNumber} принят и передан на кухню.</p>
-        <AuthDocumentLink href="/profile" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 font-bold text-white">
-          Перейти в профиль
+        <AuthDocumentLink href="/profile/orders" className="public-button-primary mt-7">
+          Следить за заказом
         </AuthDocumentLink>
       </div>
     );
@@ -102,7 +110,7 @@ export function PaymentReturnStatus(props: {
         <XCircle className="mx-auto h-14 w-14 text-red-600" aria-hidden="true" />
         <h1 className="mt-5 text-3xl font-black">Оплата не прошла</h1>
         <p className="mt-3 text-base leading-7 text-karimoff-muted">Деньги не подтверждены. Можно вернуться к оформлению и начать новую попытку.</p>
-        <Link href="/checkout" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 font-bold text-white">
+        <Link href="/checkout" className="public-button-primary mt-7">
           Попробовать снова
         </Link>
       </div>
@@ -115,7 +123,7 @@ export function PaymentReturnStatus(props: {
         <RotateCcw className="mx-auto h-14 w-14 text-amber-600" aria-hidden="true" />
         <h1 className="mt-5 text-3xl font-black">Платёж ещё проверяется</h1>
         <p className="mt-3 text-base leading-7 text-karimoff-muted">Новый платёж автоматически не создаётся. Обновите статус этой попытки.</p>
-        <button type="button" onClick={() => { startedAt.current = null; setState("pending"); }} className="mt-7 min-h-12 rounded-full bg-karimoff-orange px-6 font-bold text-white">
+        <button type="button" onClick={() => { startedAt.current = null; setState("pending"); }} className="public-button-primary mt-7">
           Проверить ещё раз
         </button>
       </div>

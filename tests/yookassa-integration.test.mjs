@@ -281,7 +281,8 @@ test("checkout is server-priced, atomic, disabled by default, and double-click s
   assert.match(checkoutAction, /createYooKassaPaymentForOrder\(order\.paymentId\)/);
   assert.doesNotMatch(checkoutAction, /amount:\s*(formData|parsed)/);
   assert.match(cartDrawer, /name="idempotency_key" value=\{checkoutRequestId\}/);
-  assert.match(cartDrawer, /setCheckoutRequestId\(crypto\.randomUUID\(\)\)/);
+  assert.match(cartDrawer, /setCheckoutRequestId\(getOrCreateCheckoutRequestId\(cartPayload\)\)/);
+  assert.doesNotMatch(cartDrawer, /setCheckoutRequestId\(crypto\.randomUUID\(\)\)/);
   assert.match(migration, /create_site_order_with_payment[\s\S]+from public\.create_site_order/);
   assert.match(migration, /payments_yookassa_order_key/);
   assert.match(migration, /where idempotency_key = p_payment_idempotency_key[\s\S]+for update/);

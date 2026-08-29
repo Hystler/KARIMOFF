@@ -6,6 +6,10 @@ export async function register() {
   const { startYooKassaBackgroundScheduler } = await import(
     "@/lib/payments/yookassa/scheduler"
   );
+  const { startOrderNotificationScheduler } = await import(
+    "@/lib/notifications/order-status/scheduler"
+  );
   startEvotorBackgroundScheduler();
   startYooKassaBackgroundScheduler();
+  startOrderNotificationScheduler();
 }
