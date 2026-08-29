@@ -44,6 +44,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026082412000
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827120000_add_yookassa_payment_integration.sql ./supabase/migrations/20260827120000_add_yookassa_payment_integration.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql ./supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828190000_refine_public_product_copy.sql ./supabase/migrations/20260828190000_refine_public_product_copy.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828220000_add_order_status_notifications.sql ./supabase/migrations/20260828220000_add_order_status_notifications.sql
 
 USER nextjs
 

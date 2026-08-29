@@ -55,6 +55,7 @@ const allowedTables = new Set([
   "max_login_challenges",
   "order_inventory_deductions",
   "order_locations",
+  "order_notification_deliveries",
   "order_number_counters",
   "order_outbox",
   "order_status_events",

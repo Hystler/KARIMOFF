@@ -537,6 +537,33 @@ const migrations = [
       `;
       return Boolean(marker?.exists);
     }
+  },
+  {
+    name: "20260828220000_add_order_status_notifications",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.order_notification_deliveries') is not null as deliveries,
+          to_regclass('public.order_notification_due_idx') is not null as due_index,
+          exists (
+            select 1 from pg_trigger
+            where tgrelid = to_regclass('public.order_status_events')
+              and tgname = 'order_status_notification_enqueue'
+              and not tgisinternal
+          ) as enqueue_trigger,
+          exists (
+            select 1 from pg_class
+            where oid = to_regclass('public.order_notification_deliveries')
+              and relrowsecurity
+          ) as rls_enabled
+      `;
+      return Boolean(
+        objects?.deliveries &&
+        objects?.due_index &&
+        objects?.enqueue_trigger &&
+        objects?.rls_enabled
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
