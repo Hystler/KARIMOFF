@@ -13,6 +13,7 @@ test("transactional Telegram and MAX notifications are queued exactly once and d
   const scheduler = read("src/lib/notifications/order-status/scheduler.ts");
   const instrumentation = read("src/instrumentation.ts");
   const env = read(".env.example");
+  const dockerIgnore = read(".dockerignore");
 
   assert.match(migration, /unique \(order_id, identity_id, event_type\)/);
   assert.match(migration, /new\.to_status not in \('ready', 'cancelled'\)/);
@@ -30,4 +31,5 @@ test("transactional Telegram and MAX notifications are queued exactly once and d
   assert.match(instrumentation, /startOrderNotificationScheduler/);
   assert.match(env, /^ORDER_STATUS_NOTIFICATIONS_ENABLED=false$/m);
   assert.match(env, /^TELEGRAM_BOT_TOKEN=$/m);
+  assert.match(dockerIgnore, /!supabase\/migrations\/20260828220000_add_order_status_notifications\.sql/);
 });
