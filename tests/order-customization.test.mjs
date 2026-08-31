@@ -57,6 +57,8 @@ test("ingredient waste adjusts food cost and order usage", () => {
   assert.match(productIterationMigration, /1 - v_waste_percent \/ 100/);
   assert.match(ingredients, /getWasteAdjustedQuantity/);
   assert.match(ingredients, /grossQuantity \* costPerUnit/);
+  assert.match(ingredients, /missing_price_ingredients/);
+  assert.match(ingredients, /line\.cost_per_unit <= 0/);
 });
 
 test("kitchen displays modifiers and uses atomic status RPC", () => {

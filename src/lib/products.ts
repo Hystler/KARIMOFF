@@ -19,6 +19,8 @@ const PRODUCT_SELECT =
 export const fallbackProducts: Product[] = demoProducts;
 
 const fallbackBySlug = new Map(fallbackProducts.map((product) => [product.slug, product]));
+const fallbackActiveProducts = fallbackProducts.filter((product) => product.is_active);
+const fallbackActiveBySlug = new Map(fallbackActiveProducts.map((product) => [product.slug, product]));
 const fallbackByName = new Map(fallbackProducts.map((product) => [normalizeProductName(product.name), product]));
 
 function normalizeProductName(value: string) {
@@ -274,7 +276,7 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
   const database = createDatabaseServerClient();
 
   if (!database) {
-    return fallbackProducts.slice(0, limit);
+    return fallbackActiveProducts.slice(0, limit);
   }
 
   const { data, error } = await database
@@ -303,7 +305,7 @@ export async function getActiveProductBySlug(slug: string): Promise<Product | nu
   const database = createDatabaseServerClient();
 
   if (!database) {
-    return fallbackBySlug.get(slug) ?? null;
+    return fallbackActiveBySlug.get(slug) ?? null;
   }
 
   const { data, error } = await database

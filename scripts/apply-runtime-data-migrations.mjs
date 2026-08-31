@@ -15,9 +15,63 @@ function normalizeName(value) {
     .toLowerCase();
 }
 
+function getIngredientPricing(ingredient) {
+  const hasPackageSize = ingredient.package_size !== undefined;
+  const hasPackagePrice = ingredient.package_price !== undefined;
+
+  if (hasPackageSize !== hasPackagePrice) {
+    throw new Error(`Package size and price must be set together for ${ingredient.key}`);
+  }
+
+  if (!hasPackageSize) {
+    return null;
+  }
+
+  const packageSize = Number(ingredient.package_size);
+  const packagePrice = Number(ingredient.package_price);
+
+  if (!Number.isFinite(packageSize) || packageSize <= 0 || !Number.isFinite(packagePrice) || packagePrice < 0) {
+    throw new Error(`Invalid package pricing for ${ingredient.key}`);
+  }
+
+  return {
+    packageSize,
+    packagePrice,
+    costPerUnit: packagePrice / packageSize
+  };
+}
+
 function validateTechCard() {
   const ingredientKeys = new Set();
   const recipeProducts = new Set();
+  const inactiveProductSlugs = new Set();
+  const catalogProductSlugs = new Set();
+
+  for (const slug of techCard.inactive_product_slugs ?? []) {
+    const normalizedSlug = normalizeName(slug);
+    if (!normalizedSlug || inactiveProductSlugs.has(normalizedSlug)) {
+      throw new Error(`Invalid or duplicate inactive product slug: ${slug}`);
+    }
+    inactiveProductSlugs.add(normalizedSlug);
+  }
+
+  for (const product of techCard.catalog_product_defaults ?? []) {
+    const normalizedSlug = normalizeName(product.slug);
+    if (!normalizedSlug || catalogProductSlugs.has(normalizedSlug)) {
+      throw new Error(`Invalid or duplicate catalog product slug: ${product.slug}`);
+    }
+    if (
+      !product.name ||
+      !product.category ||
+      !product.description ||
+      !Number.isFinite(Number(product.price)) ||
+      Number(product.price) < 0 ||
+      !Number.isFinite(Number(product.sort_order))
+    ) {
+      throw new Error(`Invalid catalog product defaults: ${product.slug}`);
+    }
+    catalogProductSlugs.add(normalizedSlug);
+  }
 
   for (const ingredient of techCard.ingredients) {
     if (ingredientKeys.has(ingredient.key)) {
@@ -25,6 +79,13 @@ function validateTechCard() {
     }
     if (!["g", "ml", "pcs"].includes(ingredient.unit)) {
       throw new Error(`Unsupported unit for ${ingredient.key}: ${ingredient.unit}`);
+    }
+    getIngredientPricing(ingredient);
+    if (
+      ingredient.waste_percent !== undefined &&
+      (!Number.isFinite(Number(ingredient.waste_percent)) || Number(ingredient.waste_percent) < 0 || Number(ingredient.waste_percent) > 95)
+    ) {
+      throw new Error(`Invalid waste percent for ${ingredient.key}`);
     }
     ingredientKeys.add(ingredient.key);
   }
@@ -47,6 +108,15 @@ function validateTechCard() {
       if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
         throw new Error(`Invalid quantity for ${line.ingredient} in ${recipeKey}`);
       }
+    }
+  }
+
+  for (const product of techCard.catalog_product_defaults ?? []) {
+    const hasRecipe = techCard.recipes.some((recipe) =>
+      recipe.product_slugs.some((slug) => normalizeName(slug) === normalizeName(product.slug))
+    );
+    if (!hasRecipe) {
+      throw new Error(`Catalog product has no recipe: ${product.slug}`);
     }
   }
 }
@@ -106,51 +176,155 @@ try {
     }
 
     const products = await transaction`
-      select id, name, slug
+      select id, name, slug, is_active
       from public.products
       order by sort_order, name
       for update
     `;
     const productByRecipe = new Map();
     const unresolvedProducts = [];
+    const createdProducts = [];
+    const catalogProductDefaults = new Map(
+      (techCard.catalog_product_defaults ?? []).map((product) => [normalizeName(product.slug), product])
+    );
 
     for (const recipe of techCard.recipes) {
-      const product = resolveProduct(recipe, products);
+      let product = resolveProduct(recipe, products);
       if (!product) {
-        unresolvedProducts.push(recipe.product_names[0] ?? recipe.product_slugs[0]);
-      } else {
-        productByRecipe.set(recipe, product);
+        const defaults = recipe.product_slugs
+          .map((slug) => catalogProductDefaults.get(normalizeName(slug)))
+          .find(Boolean);
+
+        if (!defaults) {
+          unresolvedProducts.push(recipe.product_names[0] ?? recipe.product_slugs[0]);
+          continue;
+        }
+
+        [product] = await transaction`
+          insert into public.products (
+            slug, name, category, description, price, image_url, is_active, sort_order, weight
+          )
+          values (
+            ${defaults.slug},
+            ${defaults.name},
+            ${defaults.category},
+            ${defaults.description},
+            ${defaults.price},
+            ${defaults.image_url ?? null},
+            true,
+            ${defaults.sort_order},
+            ${defaults.weight ?? null}
+          )
+          returning id, name, slug, is_active
+        `;
+        products.push(product);
+        createdProducts.push({ id: product.id, slug: product.slug });
       }
+
+      productByRecipe.set(recipe, product);
     }
 
     if (unresolvedProducts.length) {
       throw new Error(`Products are missing: ${unresolvedProducts.join(", ")}`);
     }
 
+    const productsBySlug = new Map(products.map((product) => [normalizeName(product.slug), product]));
+    const inactiveProducts = (techCard.inactive_product_slugs ?? []).map((slug) => {
+      const exactProduct = productsBySlug.get(normalizeName(slug));
+      if (exactProduct) {
+        return exactProduct;
+      }
+
+      const recipe = techCard.recipes.find((item) =>
+        item.product_slugs.some((candidate) => normalizeName(candidate) === normalizeName(slug))
+      );
+      return recipe ? resolveProduct(recipe, products) : null;
+    });
+    const missingInactiveProducts = (techCard.inactive_product_slugs ?? []).filter(
+      (_, index) => !inactiveProducts[index]
+    );
+
+    if (missingInactiveProducts.length) {
+      throw new Error(`Products to deactivate are missing: ${missingInactiveProducts.join(", ")}`);
+    }
+
+    const previousProductAvailability = inactiveProducts.map((product) => ({
+      id: product.id,
+      slug: product.slug,
+      is_active: product.is_active
+    }));
+
+    if (inactiveProducts.length) {
+      await transaction`
+        update public.products
+        set is_active = false, updated_at = now()
+        where id = any(${inactiveProducts.map((product) => product.id)}::uuid[])
+      `;
+    }
+
     const existingIngredients = await transaction`
-      select id, name, unit, cost_per_unit, package_size, package_price
+      select id, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, sort_order
       from public.ingredients
       order by sort_order, name
       for update
     `;
     const ingredientByKey = new Map();
     let createdIngredients = 0;
+    let updatedIngredients = 0;
+    const previousIngredientPricing = [];
 
     for (const spec of techCard.ingredients) {
       let ingredient = resolveIngredient(spec, existingIngredients);
+      const pricing = getIngredientPricing(spec);
+      const wastePercent = spec.waste_percent === undefined ? null : Number(spec.waste_percent);
 
       if (!ingredient) {
         [ingredient] = await transaction`
           insert into public.ingredients (
-            name, category, unit, cost_per_unit, package_size, package_price, is_active, sort_order
+            name, category, unit, cost_per_unit, waste_percent, package_size, package_price, is_active, sort_order
           )
           values (
-            ${spec.name}, ${spec.category}, ${spec.unit}, 0, null, null, true, ${spec.sort_order}
+            ${spec.name},
+            ${spec.category},
+            ${spec.unit},
+            ${pricing?.costPerUnit ?? 0},
+            ${wastePercent ?? 0},
+            ${pricing?.packageSize ?? null},
+            ${pricing?.packagePrice ?? null},
+            true,
+            ${spec.sort_order}
           )
-          returning id, name, unit, cost_per_unit, package_size, package_price
+          returning id, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, sort_order
         `;
         existingIngredients.push(ingredient);
         createdIngredients += 1;
+      } else {
+        previousIngredientPricing.push({
+          id: ingredient.id,
+          name: ingredient.name,
+          cost_per_unit: ingredient.cost_per_unit,
+          waste_percent: ingredient.waste_percent,
+          package_size: ingredient.package_size,
+          package_price: ingredient.package_price
+        });
+
+        [ingredient] = await transaction`
+          update public.ingredients
+          set
+            name = ${spec.name},
+            category = ${spec.category},
+            cost_per_unit = ${pricing?.costPerUnit ?? ingredient.cost_per_unit},
+            waste_percent = ${wastePercent ?? ingredient.waste_percent},
+            package_size = ${pricing?.packageSize ?? ingredient.package_size},
+            package_price = ${pricing?.packagePrice ?? ingredient.package_price},
+            sort_order = ${spec.sort_order},
+            updated_at = now()
+          where id = ${ingredient.id}
+          returning id, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, sort_order
+        `;
+        const ingredientIndex = existingIngredients.findIndex((item) => item.id === ingredient.id);
+        existingIngredients[ingredientIndex] = ingredient;
+        updatedIngredients += 1;
       }
 
       ingredientByKey.set(spec.key, ingredient);
@@ -190,6 +364,9 @@ try {
     let insertedLines = 0;
     for (const recipe of techCard.recipes) {
       const product = productByRecipe.get(recipe);
+      if (!product) {
+        throw new Error(`Resolved product is missing for ${recipe.product_slugs[0]}`);
+      }
 
       for (const [lineIndex, line] of recipe.lines.entries()) {
         const ingredient = ingredientByKey.get(line.ingredient);
@@ -251,10 +428,15 @@ try {
         ${techCard.version},
         ${transaction.json({
           source_document: techCard.source_document,
-          recipe_count: techCard.recipes.length,
+          recipe_count: productByRecipe.size,
+          created_products: createdProducts,
           ingredient_count: techCard.ingredients.length,
           created_ingredients: createdIngredients,
+          updated_ingredients: updatedIngredients,
           inserted_lines: insertedLines,
+          deactivated_product_count: inactiveProducts.length,
+          previous_product_availability: previousProductAvailability,
+          previous_ingredient_pricing: previousIngredientPricing,
           previous_composition: previousComposition
         })},
         'scripts/apply-runtime-data-migrations.mjs'
@@ -263,10 +445,13 @@ try {
 
     return {
       status: "applied",
-      recipes: techCard.recipes.length,
+      recipes: productByRecipe.size,
+      createdProducts: createdProducts.length,
       ingredients: techCard.ingredients.length,
       createdIngredients,
+      updatedIngredients,
       insertedLines,
+      deactivatedProducts: inactiveProducts.length,
       previousLines: previousComposition.length
     };
   });

@@ -21,6 +21,11 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
   const [products, settings] = await Promise.all([getActiveProducts(100), getSiteSettings()]);
   const params = searchParams ? await searchParams : {};
   const activeCategory = getActiveCategory(params.category);
+  const availableCategoryFilters = menuCategoryFilters.filter(
+    (filter) =>
+      filter.value === "all" ||
+      products.some((product) => normalizeProductCategory(product.category) === filter.value)
+  );
   const visibleProducts =
     activeCategory === "all"
       ? products
@@ -37,7 +42,7 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
       />
       <section className="container-page py-8 sm:py-12">
         <div className="scrollbar-hide -mx-5 mb-7 flex gap-2 overflow-x-auto overflow-y-hidden px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {menuCategoryFilters.map((filter) => {
+          {availableCategoryFilters.map((filter) => {
             const isActive = activeCategory === filter.value;
             const href = filter.value === "all" ? "/menu" : `/menu?category=${filter.value}`;
 

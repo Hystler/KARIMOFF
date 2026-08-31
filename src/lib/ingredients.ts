@@ -49,6 +49,8 @@ export type ProductIngredientLine = {
 export type ProductFoodCost = {
   product: Product;
   lines: ProductIngredientLine[];
+  is_complete: boolean;
+  missing_price_ingredients: string[];
   food_cost: number | null;
   food_cost_percent: number | null;
   gross_profit: number | null;
@@ -90,6 +92,25 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
     return {
       product,
       lines,
+      is_complete: false,
+      missing_price_ingredients: [],
+      food_cost: null,
+      food_cost_percent: null,
+      gross_profit: null,
+      gross_margin_percent: null
+    };
+  }
+
+  const missingPriceIngredients = Array.from(
+    new Set(lines.filter((line) => line.cost_per_unit <= 0).map((line) => line.ingredient_name))
+  );
+
+  if (missingPriceIngredients.length) {
+    return {
+      product,
+      lines,
+      is_complete: false,
+      missing_price_ingredients: missingPriceIngredients,
       food_cost: null,
       food_cost_percent: null,
       gross_profit: null,
@@ -105,6 +126,8 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
   return {
     product,
     lines,
+    is_complete: true,
+    missing_price_ingredients: [],
     food_cost: foodCost,
     food_cost_percent: foodCostPercent,
     gross_profit: grossProfit,

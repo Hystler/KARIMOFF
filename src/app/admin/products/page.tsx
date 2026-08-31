@@ -56,7 +56,10 @@ function foodCostTone(value: number | null) {
 
 function ProductWarnings({ foodCost, product }: { foodCost?: ProductFoodCost; product: Product }) {
   const warnings = [
-    foodCost?.food_cost === null ? "Состав не задан" : null,
+    foodCost && foodCost.lines.length === 0 ? "Состав не задан" : null,
+    foodCost?.missing_price_ingredients.length
+      ? `Нет цены: ${foodCost.missing_price_ingredients.join(", ")}`
+      : null,
     !product.allergens?.length ? "Не заполнены аллергены" : null
   ].filter((warning): warning is string => Boolean(warning));
 
@@ -246,8 +249,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                           <dd className="mt-1 font-bold">{formatPercent(foodCost?.food_cost_percent ?? null)}</dd>
                         </div>
                         <div className="min-w-0">
-                          <dt className="text-karimoff-muted">Валовая прибыль</dt>
+                          <dt className="text-karimoff-muted">Прибыль с единицы</dt>
                           <dd className="admin-number mt-1 font-bold">{formatMoney(foodCost?.gross_profit ?? null)}</dd>
+                          <dd className="mt-1 font-bold">Маржа {formatPercent(foodCost?.gross_margin_percent ?? null)}</dd>
                         </div>
                       </dl>
 
@@ -267,7 +271,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       <th className="min-w-[310px]">Товар</th>
                       <th className="w-[120px]">Цена</th>
                       <th className="w-[165px]">Себестоимость</th>
-                      <th className="w-[150px]">Валовая прибыль</th>
+                      <th className="w-[165px]">Прибыль с единицы</th>
                       <th className="w-[110px]">Статус</th>
                       <th className="min-w-[250px]">Действия</th>
                     </tr>
@@ -308,8 +312,11 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                               {formatPercent(foodCost?.food_cost_percent ?? null)}
                             </span>
                           </td>
-                          <td className="admin-number whitespace-nowrap font-bold">
-                            {formatMoney(foodCost?.gross_profit ?? null)}
+                          <td className="whitespace-nowrap">
+                            <p className="admin-number font-bold">{formatMoney(foodCost?.gross_profit ?? null)}</p>
+                            <p className="mt-1 text-xs font-bold text-karimoff-muted">
+                              Маржа {formatPercent(foodCost?.gross_margin_percent ?? null)}
+                            </p>
                           </td>
                           <td>
                             <span

@@ -45,6 +45,23 @@ export default async function AdminEconomicsPage() {
         error: productsResult.error
       }
     : await getProductsFoodCosts(productsResult.products);
+  const activeItems = productEconomics.items.filter((item) => item.product.is_active);
+  const completeActiveItems = activeItems.filter((item) => item.is_complete);
+  const bestProfitItem = [...completeActiveItems].sort(
+    (left, right) => (right.gross_profit ?? Number.NEGATIVE_INFINITY) - (left.gross_profit ?? Number.NEGATIVE_INFINITY)
+  )[0];
+  const bestMarginItem = [...completeActiveItems].sort(
+    (left, right) =>
+      (right.gross_margin_percent ?? Number.NEGATIVE_INFINITY) -
+      (left.gross_margin_percent ?? Number.NEGATIVE_INFINITY)
+  )[0];
+  const sortedItems = [...productEconomics.items].sort((left, right) => {
+    if (left.product.is_active !== right.product.is_active) {
+      return left.product.is_active ? -1 : 1;
+    }
+
+    return (right.gross_profit ?? Number.NEGATIVE_INFINITY) - (left.gross_profit ?? Number.NEGATIVE_INFINITY);
+  });
 
   return (
     <main className="admin-page">
@@ -91,49 +108,95 @@ export default async function AdminEconomicsPage() {
           <div className="border-b border-karimoff-line p-5">
             <p className="text-sm font-semibold text-karimoff-orange">Себестоимость</p>
             <h2 className="mt-2 text-3xl font-black">Юнит-экономика товаров</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-karimoff-muted">
+              Валовая прибыль с единицы — цена продажи минус food cost. Это показатель до зарплат, аренды,
+              налогов, эквайринга и других расходов, а не чистая прибыль бизнеса.
+            </p>
           </div>
           {productEconomics.error ? (
             <div className="p-6 text-sm font-semibold text-red-600">{productEconomics.error}</div>
           ) : productEconomics.items.length === 0 ? (
             <div className="p-6 text-sm text-karimoff-muted">Товары пока не загружены.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-[920px]">
-                <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
-                  <tr>
-                    <th className="px-4 py-4 font-bold">Товар</th>
-                    <th className="px-4 py-4 font-bold">Цена</th>
-                    <th className="px-4 py-4 font-bold">Себестоимость</th>
-                    <th className="px-4 py-4 font-bold">Доля в цене</th>
-                    <th className="px-4 py-4 font-bold">Валовая прибыль</th>
-                    <th className="px-4 py-4 font-bold">Маржинальность</th>
-                    <th className="px-4 py-4 font-bold">Статус</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productEconomics.items.map((item) => (
-                    <tr key={item.product.id} className="border-b border-karimoff-line last:border-b-0">
-                      <td className="px-4 py-4">
-                        <p className="font-bold text-karimoff-black">{item.product.name}</p>
-                        <p className="mt-1 text-xs text-karimoff-muted">{item.product.category}</p>
-                      </td>
-                      <td className="px-4 py-4 font-black text-karimoff-orange">{formatRub(item.product.price)}</td>
-                      <td className="px-4 py-4">{formatRub(item.food_cost, 2)}</td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${foodCostTone(item.food_cost_percent)}`}>
-                          {formatPercent(item.food_cost_percent)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 font-bold">{formatRub(item.gross_profit, 2)}</td>
-                      <td className="px-4 py-4">{formatPercent(item.gross_margin_percent)}</td>
-                      <td className="px-4 py-4 text-xs font-semibold text-karimoff-muted">
-                        {item.food_cost === null ? "Нужно добавить состав товара" : item.food_cost_percent && item.food_cost_percent >= 40 ? "Критично" : item.food_cost_percent && item.food_cost_percent >= 30 ? "Внимание" : "Норм"}
-                      </td>
+            <>
+              <div className="grid gap-3 border-b border-karimoff-line p-5 md:grid-cols-3">
+                <article className="rounded-lg border border-karimoff-line bg-karimoff-soft p-4">
+                  <p className="text-xs font-bold uppercase text-karimoff-muted">Food cost рассчитан</p>
+                  <p className="mt-2 text-2xl font-black text-karimoff-black">
+                    {completeActiveItems.length} из {activeItems.length}
+                  </p>
+                  <p className="mt-1 text-xs text-karimoff-muted">активных позиций меню</p>
+                </article>
+                <article className="rounded-lg border border-karimoff-line bg-karimoff-soft p-4">
+                  <p className="text-xs font-bold uppercase text-karimoff-muted">Лучшая прибыль с единицы</p>
+                  <p className="mt-2 text-2xl font-black text-emerald-700">
+                    {formatRub(bestProfitItem?.gross_profit, 2)}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-karimoff-black">
+                    {bestProfitItem?.product.name ?? "Нет полного расчёта"}
+                  </p>
+                </article>
+                <article className="rounded-lg border border-karimoff-line bg-karimoff-soft p-4">
+                  <p className="text-xs font-bold uppercase text-karimoff-muted">Лучшая валовая маржа</p>
+                  <p className="mt-2 text-2xl font-black text-emerald-700">
+                    {formatPercent(bestMarginItem?.gross_margin_percent)}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-karimoff-black">
+                    {bestMarginItem?.product.name ?? "Нет полного расчёта"}
+                  </p>
+                </article>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="admin-table min-w-[980px]">
+                  <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
+                    <tr>
+                      <th className="px-4 py-4 font-bold">Товар</th>
+                      <th className="px-4 py-4 font-bold">Цена</th>
+                      <th className="px-4 py-4 font-bold">Себестоимость</th>
+                      <th className="px-4 py-4 font-bold">Food cost, %</th>
+                      <th className="px-4 py-4 font-bold">Прибыль с единицы</th>
+                      <th className="px-4 py-4 font-bold">Валовая маржа</th>
+                      <th className="px-4 py-4 font-bold">Статус</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {sortedItems.map((item) => (
+                      <tr
+                        key={item.product.id}
+                        className={`border-b border-karimoff-line last:border-b-0 ${item.product.is_active ? "" : "bg-karimoff-soft/60 opacity-70"}`}
+                      >
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-karimoff-black">{item.product.name}</p>
+                          <p className="mt-1 text-xs text-karimoff-muted">
+                            {item.product.category}{item.product.is_active ? "" : " · скрыт"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 font-black text-karimoff-orange">{formatRub(item.product.price)}</td>
+                        <td className="px-4 py-4">{formatRub(item.food_cost, 2)}</td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${foodCostTone(item.food_cost_percent)}`}>
+                            {formatPercent(item.food_cost_percent)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 font-bold">{formatRub(item.gross_profit, 2)}</td>
+                        <td className="px-4 py-4">{formatPercent(item.gross_margin_percent)}</td>
+                        <td className="px-4 py-4 text-xs font-semibold text-karimoff-muted">
+                          {item.lines.length === 0
+                            ? "Нужно добавить состав товара"
+                            : item.missing_price_ingredients.length
+                              ? `Не заполнены цены: ${item.missing_price_ingredients.join(", ")}`
+                              : item.food_cost_percent && item.food_cost_percent >= 40
+                                ? "Критично"
+                                : item.food_cost_percent && item.food_cost_percent >= 30
+                                  ? "Внимание"
+                                  : "Норм"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>

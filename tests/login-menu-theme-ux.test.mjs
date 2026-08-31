@@ -50,6 +50,19 @@ test("every imported menu item has concise guest copy separated from composition
   }
 });
 
+test("inactive drinks stay out of public menu and product detail fallbacks", () => {
+  const imported = JSON.parse(read("data/import/juikaifui-products.json"));
+  const products = read("src/lib/products.ts");
+  const drinks = imported.filter((entry) => entry.category === "Напитки");
+
+  assert.equal(drinks.length, 8);
+  assert.ok(drinks.every((entry) => entry.is_active === false));
+  assert.match(products, /const fallbackActiveProducts = fallbackProducts\.filter\(\(product\) => product\.is_active\)/);
+  assert.match(products, /return fallbackActiveProducts\.slice\(0, limit\)/);
+  assert.match(products, /return fallbackActiveBySlug\.get\(slug\) \?\? null/);
+  assert.match(read("src/app/menu/page.tsx"), /availableCategoryFilters/);
+});
+
 test("catalog copy migration is one-time, slug-based, and leaves business values intact", () => {
   const copy = JSON.parse(read("data/catalog/public-product-copy.json"));
   const migration = read("supabase/migrations/20260828190000_refine_public_product_copy.sql");

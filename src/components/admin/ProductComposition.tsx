@@ -46,6 +46,12 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
         </div>
       </div>
 
+      {foodCost.missing_price_ingredients.length ? (
+        <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-800">
+          Итоговая себестоимость пока неполная. Заполните цены: {foodCost.missing_price_ingredients.join(", ")}.
+        </div>
+      ) : null}
+
       {foodCost.lines.length === 0 ? (
         <div className="mt-6 rounded-lg border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
           Состав не задан. Добавьте ингредиенты, чтобы увидеть себестоимость товара.
