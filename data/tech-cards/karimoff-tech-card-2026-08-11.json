@@ -1,7 +1,7 @@
 {
   "version": "2026-09-01",
   "source_document": "Тех карта.docx",
-  "migration_marker": "data_migration.tech_card.20260901_food_costs",
+  "migration_marker": "data_migration.tech_card.20260901_food_costs_v2",
   "inactive_product_slugs": [
     "dobryy-apelsin-1-l",
     "dobryy-kola-1-l",
@@ -290,10 +290,10 @@
     { "product_slugs": ["dobryy-kola-zero-can-033", "dobryy-kola-zhb-0-33l-bez-sahara"], "product_names": ["Добрый Кола жб 0,33л (без сахара)"], "source_name": "Добрый Кола жб 0,33 л без сахара", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "drink_cola_zero_can", "quantity": 1 }] },
     { "product_slugs": ["krevetki-v-panirovke-korolevskie", "krevetki-v-panirovke"], "product_names": ["Креветки в панировке (королевские)", "Королевские креветки"], "source_name": "Креветки в панировке, базовая порция 6 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "breaded_shrimp", "quantity": 6 }] },
     { "product_slugs": ["naggetsy-6-sht"], "product_names": ["Наггетсы"], "source_name": "Наггетсы, базовая порция 6 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "nugget", "quantity": 6 }] },
-    { "product_slugs": ["syrnye-palochki-12-sht"], "product_names": ["Сырные палочки"], "source_name": "Сырные палочки, базовая порция 6 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "cheese_stick", "quantity": 6 }] },
+    { "product_slugs": ["syrnye-palochki-12-sht"], "product_names": ["Сырные палочки"], "source_name": "Сырные палочки, production-порция 12 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "cheese_stick", "quantity": 12 }] },
     { "product_slugs": ["kartofel-po-derevenski"], "product_names": ["Картофель по деревенски"], "source_name": "Картофель по-деревенски, базовая порция 150 г", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "country_potatoes", "quantity": 150 }] },
     { "product_slugs": ["kartoshka-fri-200-gr", "kartoshka-fri"], "product_names": ["Картошка фри", "Картофель фри"], "source_name": "Картофель фри, базовая порция 150 г", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "fries", "quantity": 150 }] },
-    { "product_slugs": ["krylyshki-barbekyu-16-sht", "krylyshki-barbekyu"], "product_names": ["Крылышки куриные Барбекю", "Крылышки барбекю"], "source_name": "Крылышки Барбекю, базовая порция 8 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "bbq_wing", "quantity": 8 }] },
+    { "product_slugs": ["krylyshki-barbekyu-16-sht", "krylyshki-barbekyu"], "product_names": ["Крылышки куриные Барбекю", "Крылышки барбекю"], "source_name": "Крылышки Барбекю, production-порция 16 шт.", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "bbq_wing", "quantity": 16 }] },
     { "product_slugs": ["ketchup"], "product_names": ["Кетчуп"], "source_name": "Кетчуп, порция 25 г", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "ketchup", "quantity": 25 }] },
     { "product_slugs": ["syrnyy"], "product_names": ["Сырный соус"], "source_name": "Сырный соус, порция 25 г", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "cheese_sauce", "quantity": 25 }] },
     { "product_slugs": ["chesnochnyy"], "product_names": ["Фирменный Чесночный соус"], "source_name": "Чесночный соус, порция 25 г", "source_kind": "catalog_purchase_unit", "lines": [{ "ingredient": "garlic_sauce", "quantity": 25 }] },

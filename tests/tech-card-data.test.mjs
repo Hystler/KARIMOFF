@@ -156,6 +156,20 @@ test("technical card does not invent paid extras", () => {
   }
 });
 
+test("standalone snack recipes match the active production portions", () => {
+  const quantityFor = (slug, ingredient) =>
+    data.recipes
+      .find((recipe) => recipe.product_slugs.includes(slug))
+      ?.lines.find((line) => line.ingredient === ingredient)?.quantity;
+
+  assert.equal(quantityFor("krevetki-v-panirovke", "breaded_shrimp"), 6);
+  assert.equal(quantityFor("naggetsy-6-sht", "nugget"), 6);
+  assert.equal(quantityFor("syrnye-palochki-12-sht", "cheese_stick"), 12);
+  assert.equal(quantityFor("kartofel-po-derevenski", "country_potatoes"), 150);
+  assert.equal(quantityFor("kartoshka-fri", "fries"), 150);
+  assert.equal(quantityFor("krylyshki-barbekyu", "bbq_wing"), 16);
+});
+
 test("runtime migration applies source pricing atomically and keeps an audit snapshot", () => {
   assert.match(runtimeMigration, /update public\.ingredients/);
   assert.match(runtimeMigration, /cost_per_unit = \$\{pricing\?\.costPerUnit/);
