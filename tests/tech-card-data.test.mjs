@@ -181,11 +181,11 @@ test("runtime migration resolves the current production aliases and creates only
     "dobryy-kola-05", "dobryy-apelsin-05", "dobryy-apelsin-can-033", "dobryy-kola-zero-can-033"
   ];
   const productionNameOverrides = {
-    "krevetki-v-panirovke": "Креветки в панировке (королевские)",
+    "krevetki-v-panirovke": "Королевские креветки",
     naggetsy: "Наггетсы",
     "syrnye-palochki": "Сырные палочки",
-    "kartoshka-fri": "Картошка фри",
-    "krylyshki-barbekyu": "Крылышки куриные Барбекю"
+    "kartoshka-fri": "Картофель фри",
+    "krylyshki-barbekyu": "Крылышки барбекю"
   };
   const productionProducts = productionSlugs.map((slug) => ({
     slug,
