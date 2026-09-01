@@ -35,7 +35,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 }
 
 function DeltaText({ value }: { value: { percent: number | null; direction: string } }) {
-  if (value.percent === null) return <span className="is-neutral">нет базы</span>;
+  if (value.percent === null) return <span className="is-neutral">нет продаж в прошлом периоде</span>;
   return (
     <span className={value.direction === "up" ? "is-positive" : value.direction === "down" ? "is-negative" : "is-neutral"}>
       {value.percent > 0 ? "+" : ""}{formatPercent(value.percent)}

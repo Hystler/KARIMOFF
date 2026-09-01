@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { buildItemWhere, buildSalesWhere } from "./query";
 import type { AnalyticsFilters, AnalyticsRange, AnalyticsScope } from "./types";
 
@@ -34,11 +35,12 @@ export async function getAnalyticsReportRows(params: {
   });
   const items = buildItemWhere(params.filters, { alias: "i", offset: sales.values.length });
   const product = params.report === "products";
+  const itemCategory = analyticsCategorySql("i");
   const key = product
     ? "coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id))"
-    : "coalesce(i.category, '__unknown__')";
-  const name = product ? "i.product_name" : "coalesce(i.category, 'Категория не указана')";
-  const category = product ? "coalesce(max(i.category), 'Категория не указана')" : name;
+    : `coalesce(${itemCategory}, '__unknown__')`;
+  const name = product ? "i.product_name" : `coalesce(${itemCategory}, 'Категория не указана')`;
+  const category = product ? `coalesce(max(${itemCategory}), 'Категория не указана')` : name;
   const mapping = product
     ? "case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end"
     : "'category'::text";

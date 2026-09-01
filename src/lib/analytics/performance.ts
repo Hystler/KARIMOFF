@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { getAnalyticsRange } from "./periods";
 
 type PlanNode = {
@@ -37,6 +38,8 @@ export class AnalyticsPerformanceQueryError extends Error {
     this.name = "AnalyticsPerformanceQueryError";
   }
 }
+
+const itemCategory = analyticsCategorySql("i");
 
 const representativeQueries: Array<{ name: string; text: string }> = [
   {
@@ -92,7 +95,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
   {
     name: "category_comparison",
     text: `
-      select coalesce(i.category, 'Категория не указана') as category,
+      select coalesce(${itemCategory}, 'Категория не указана') as category,
         coalesce(sum(i.net_revenue), 0)::numeric as revenue,
         coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
         count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
@@ -127,7 +130,7 @@ const representativeQueries: Array<{ name: string; text: string }> = [
   {
     name: "treemap",
     text: `
-      select coalesce(i.category, 'Категория не указана') as category,
+      select coalesce(${itemCategory}, 'Категория не указана') as category,
         coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
         coalesce(sum(i.net_revenue), 0)::numeric as revenue,
         coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity

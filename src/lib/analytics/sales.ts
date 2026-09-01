@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { getAnalyticsFilterOptions } from "./dashboard";
 import { buildSalesWhere } from "./query";
 import type {
@@ -106,6 +107,7 @@ export async function getAnalyticsSaleDetail(params: {
   `, values as never[]);
   const row = sales[0];
   if (!row) return null;
+  const itemCategory = analyticsCategorySql("i");
 
   const [itemRows, paymentRows] = await Promise.all([
     sql.unsafe<{
@@ -120,9 +122,9 @@ export async function getAnalyticsSaleDetail(params: {
       discount_amount: string | number;
       net_revenue: string | number;
     }[]>(`
-      select sale_item_id, product_id, source_product_id, product_name, category,
+      select sale_item_id, product_id, source_product_id, product_name, ${itemCategory} as category,
         mapping_status, quantity, unit_price, discount_amount, net_revenue
-      from public.analytics_sale_items
+      from public.analytics_sale_items i
       where sale_id = $1
       order by product_name, sale_item_id
     `, [saleId] as never[]),

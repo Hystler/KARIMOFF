@@ -35,6 +35,12 @@ function getIngredientId(formData: FormData) {
   return id;
 }
 
+function getIngredientReturnTo(formData: FormData) {
+  return formData.get("return_to") === "/admin/ingredients?view=archived"
+    ? "/admin/ingredients?view=archived"
+    : "/admin/ingredients";
+}
+
 function toPayload(formData: FormData) {
   const parsed = ingredientFormSchema.safeParse({
     name: formData.get("name"),
@@ -204,11 +210,12 @@ export async function toggleIngredientActiveAction(formData: FormData) {
 
   const id = getIngredientId(formData);
   const nextActive = String(formData.get("next_active") || "") === "true";
+  const returnTo = getIngredientReturnTo(formData);
   const database = getDatabaseOrRedirect();
   const { error } = await database.from("ingredients").update({ is_active: nextActive }).eq("id", id);
 
   if (error) {
-    redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=save`);
   }
 
   await writeAuditLog({
@@ -221,22 +228,22 @@ export async function toggleIngredientActiveAction(formData: FormData) {
     sourcePath: "/admin/ingredients"
   });
   revalidateIngredientViews();
-  redirect("/admin/ingredients?saved=1");
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}${nextActive ? "restored" : "archived"}=1`);
 }
 
-export async function deleteIngredientAction(formData: FormData) {
+export async function archiveIngredientAction(formData: FormData) {
   await requireAdmin();
 
   const id = getIngredientId(formData);
   const database = getDatabaseOrRedirect();
-  const { error } = await database.from("ingredients").delete().eq("id", id);
+  const { error } = await database.from("ingredients").update({ is_active: false }).eq("id", id);
 
   if (error) {
-    redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
+    redirect("/admin/ingredients?error=archive");
   }
 
   await writeAuditLog({
-    action: "ingredient.delete",
+    action: "ingredient.archive",
     actorRefHash: getAdminActorHash(),
     actorType: "admin",
     entityId: id,
@@ -244,5 +251,5 @@ export async function deleteIngredientAction(formData: FormData) {
     sourcePath: "/admin/ingredients"
   });
   revalidateIngredientViews();
-  redirect("/admin/ingredients?deleted=1");
+  redirect("/admin/ingredients?archived=1");
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { channelLabels } from "./channels";
 import { calculateMetricDelta, safeAverage } from "./metrics";
 import { getAnalyticsConfiguration, getAnalyticsIntelligence } from "./intelligence";
@@ -305,6 +306,7 @@ function mergeTimelineRows(
 
 export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<AnalyticsFilterOptions> {
   const scopeWhere = buildScopeWhere(scope, "s");
+  const itemCategory = analyticsCategorySql("i");
   const [saleOptions, itemOptions, history] = await Promise.all([
     query<{
       source: AnalyticsChannel;
@@ -330,7 +332,7 @@ export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<
       select distinct
         coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
         i.product_name,
-        i.category
+        ${itemCategory} as category
       from public.analytics_sale_items i
       join public.canonical_analytics_sales s on s.sale_id = i.sale_id
       where ${scopeWhere.text}
@@ -396,12 +398,13 @@ async function getProductRows(
   scope: AnalyticsScope
 ) {
   const where = itemFilteredWhere(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<ProductAggregate>(`
     with ${PRODUCT_FOOD_COST_CTE}
     select
       coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
       i.product_name,
-      max(i.category) as category,
+      max(${itemCategory}) as category,
       case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status,
       count(distinct i.source)::integer as channel_count,
       min(i.source) as single_channel,
@@ -584,11 +587,12 @@ async function getCategories(
   scope: AnalyticsScope,
   totalRevenue: number
 ) {
+  const itemCategory = analyticsCategorySql("i");
   const load = async (selectedRange: AnalyticsRange) => {
     const where = itemFilteredWhere(filters, selectedRange, scope);
     return query<BreakdownAggregate>(`
-      select coalesce(i.category, '__unknown__') as id,
-        coalesce(i.category, 'Категория не указана') as name,
+      select coalesce(${itemCategory}, '__unknown__') as id,
+        coalesce(${itemCategory}, 'Категория не указана') as name,
         coalesce(sum(i.net_revenue), 0)::numeric as revenue,
         coalesce(sum(i.gross_amount - i.discount_amount) filter (where i.operation_type = 'sale'), 0)::numeric as sale_revenue,
         count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as sales,

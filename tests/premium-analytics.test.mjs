@@ -148,7 +148,8 @@ test("premium analytics aggregates on the server and preserves stable product id
   assert.match(dashboard, /join public\.analytics_sale_items i on i\.sale_id = s\.sale_id/);
   assert.match(dashboard, /count\(distinct s\.sale_id\)/);
   assert.match(query, /at time zone 'Europe\/Moscow'/);
-  assert.match(query, /category = any/);
+  assert.match(query, /analyticsCategorySql/);
+  assert.match(query, /= any/);
   assert.doesNotMatch(hub, /food cost|gross profit|margin/i);
 });
 

@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { analyticsFiltersToParams } from "./filters";
 import { buildAverageTicketFactors, buildPareto, buildRevenueBridge, detectTransparentAnomaly } from "./intelligence-math";
 import { calculateMetricDelta, safeAverage } from "./metrics";
@@ -119,10 +120,11 @@ type CategoryAggregate = {
 
 async function loadCategoryAggregates(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<CategoryAggregate>(`
     select
-      coalesce(i.category, '__unknown__') as id,
-      coalesce(i.category, 'Категория не указана') as name,
+      coalesce(${itemCategory}, '__unknown__') as id,
+      coalesce(${itemCategory}, 'Категория не указана') as name,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
       count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
@@ -136,8 +138,9 @@ async function loadCategoryAggregates(filters: AnalyticsFilters, range: Analytic
 
 async function loadCategoryTrend(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<{ id: string; day: string; revenue: string | number }>(`
-    select coalesce(i.category, '__unknown__') as id,
+    select coalesce(${itemCategory}, '__unknown__') as id,
       to_char(date_trunc('day', s.analytics_at at time zone 'Europe/Moscow'), 'YYYY-MM-DD') as day,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue
     from public.canonical_analytics_sales s
@@ -192,6 +195,7 @@ async function getHourlyDemand(
   visibleCategories: string[]
 ): Promise<AnalyticsHourlyCategoryPoint[]> {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   const rows = await query<{
     category: string;
     hour: string | number;
@@ -199,7 +203,7 @@ async function getHourlyDemand(
     quantity: string | number;
     receipts: string | number;
   }>(`
-    select coalesce(i.category, 'Категория не указана') as category,
+    select coalesce(${itemCategory}, 'Категория не указана') as category,
       extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer as hour,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
@@ -269,10 +273,11 @@ type ProductAggregate = {
 
 async function getProductAggregates(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<ProductAggregate>(`
     select coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as key,
       i.product_name as name,
-      coalesce(max(i.category), 'Категория не указана') as category,
+      coalesce(max(${itemCategory}), 'Категория не указана') as category,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
       case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status

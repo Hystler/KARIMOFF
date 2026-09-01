@@ -191,3 +191,47 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
   assert.match(runtimeMigration, /confirmedMappings/);
   assert.match(dockerfile, /data\/analytics/);
 });
+
+test("unmapped Evotor products still receive useful analytics categories without false recipe mappings", () => {
+  const rules = JSON.parse(read("data/analytics/evotor-category-rules.json"));
+  const categorySource = read("src/lib/analytics/categories.ts");
+  const analyticsSources = [
+    "src/lib/analytics/query.ts",
+    "src/lib/analytics/dashboard.ts",
+    "src/lib/analytics/intelligence.ts",
+    "src/lib/analytics/reports.ts",
+    "src/lib/analytics/performance.ts",
+    "src/lib/analytics/sales.ts"
+  ].map(read).join("\n");
+  const intelligenceUi = read("src/components/admin/analytics/AnalyticsIntelligenceHub.tsx");
+  const overviewUi = read("src/components/admin/analytics/AnalyticsOverview.tsx");
+  const byCategory = new Map(rules.map((rule) => [rule.category, rule.contains_any]));
+
+  assert.ok(byCategory.get("Хот-Доги").includes("френчдог"));
+  assert.ok(byCategory.get("Горячие закуски").includes("наггетс"));
+  assert.ok(byCategory.get("Горячие закуски").includes("айдахо"));
+  assert.ok(byCategory.get("Шаурма").includes("шаурма"));
+  assert.match(categorySource, /analyticsCategorySql/);
+  assert.match(categorySource, /coalesce\(case/);
+  assert.equal((analyticsSources.match(/analyticsCategorySql/g) ?? []).length >= 12, true);
+  assert.match(intelligenceUi, /нет продаж в прошлом периоде/i);
+  assert.match(overviewUi, /Нет продаж в прошлом периоде/);
+  assert.doesNotMatch(intelligenceUi + overviewUi, /нет базы/i);
+});
+
+test("ingredient removal archives records and preserves historical order usage", () => {
+  const actions = read("src/app/admin/ingredients/actions.ts");
+  const page = read("src/app/admin/ingredients/page.tsx");
+  const pricesPage = read("src/app/admin/ingredients/prices/page.tsx");
+
+  assert.match(actions, /export async function archiveIngredientAction/);
+  assert.match(actions, /update\(\{ is_active: false \}\)/);
+  assert.match(actions, /action: "ingredient\.archive"/);
+  assert.doesNotMatch(actions, /from\("ingredients"\)\.delete\(/);
+  assert.doesNotMatch(actions, /ingredient\.delete/);
+  assert.match(page, /История заказов и расчётов сохранена/);
+  assert.match(page, /Вернуть в работу/);
+  assert.match(page, /view=archived/);
+  assert.match(pricesPage, /ingredients\.filter\(\(ingredient\) => ingredient\.is_active\)/);
+  assert.match(pricesPage, /activeIngredients\.map/);
+});

@@ -6,10 +6,16 @@ import { getAdminIngredients } from "@/lib/ingredients";
 import { formatInventoryQuantity, getInventoryByIngredientIds } from "@/lib/inventory";
 import { createInventoryItemAction } from "../inventory/actions";
 import { logoutAction } from "../login/actions";
-import { deleteIngredientAction, toggleIngredientActiveAction } from "./actions";
+import { archiveIngredientAction, toggleIngredientActiveAction } from "./actions";
 
 type AdminIngredientsPageProps = {
-  searchParams?: Promise<{ deleted?: string; error?: string; saved?: string }>;
+  searchParams?: Promise<{
+    archived?: string;
+    error?: string;
+    restored?: string;
+    saved?: string;
+    view?: string;
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -23,12 +29,20 @@ function getMessage(params: Awaited<NonNullable<AdminIngredientsPageProps["searc
     return { tone: "success", text: "Ингредиент сохранён." };
   }
 
-  if (params.deleted) {
-    return { tone: "success", text: "Ингредиент удалён." };
+  if (params.archived) {
+    return { tone: "success", text: "Ингредиент перемещён в архив. История заказов и расчётов сохранена." };
+  }
+
+  if (params.restored) {
+    return { tone: "success", text: "Ингредиент возвращён в работу." };
   }
 
   if (params.error === "database") {
     return { tone: "error", text: "База данных не подключена. Заполните переменные окружения." };
+  }
+
+  if (params.error === "archive" || params.error === "save") {
+    return { tone: "error", text: "Не удалось изменить статус ингредиента. Попробуйте ещё раз." };
   }
 
   if (params.error) {
@@ -48,6 +62,9 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
   const params = searchParams ? await searchParams : {};
   const message = getMessage(params);
   const { ingredients, notConfigured, error } = await getAdminIngredients();
+  const showArchived = params.view === "archived";
+  const visibleIngredients = ingredients.filter((ingredient) => ingredient.is_active !== showArchived);
+  const archivedCount = ingredients.filter((ingredient) => !ingredient.is_active).length;
   const inventoryResult = error ? null : await getInventoryByIngredientIds(ingredients.map((ingredient) => ingredient.id));
 
   return (
@@ -61,6 +78,9 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
             <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Ингредиенты</h1>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href={showArchived ? "/admin/ingredients" : "/admin/ingredients?view=archived"} className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">
+              {showArchived ? "Активные ингредиенты" : `Архив${archivedCount ? ` · ${archivedCount}` : ""}`}
+            </Link>
             <Link href="/admin/ingredients/prices" className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">
               Цены и упаковки
             </Link>
@@ -92,8 +112,10 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
             <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (
             <div className="p-8 text-red-600">{error}</div>
-          ) : ingredients.length === 0 ? (
-            <div className="p-8 text-karimoff-muted">Ингредиентов пока нет.</div>
+          ) : visibleIngredients.length === 0 ? (
+            <div className="p-8 text-karimoff-muted">
+              {showArchived ? "В архиве пока нет ингредиентов." : "Активных ингредиентов пока нет."}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="admin-table min-w-[1320px]">
@@ -112,7 +134,7 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
                   </tr>
                 </thead>
                 <tbody>
-                  {ingredients.map((ingredient) => {
+                  {visibleIngredients.map((ingredient) => {
                     const inventoryItem = inventoryResult?.itemsByIngredient.get(ingredient.id) ?? null;
                     const isLow = inventoryItem && inventoryItem.min_quantity > 0 && inventoryItem.current_quantity <= inventoryItem.min_quantity;
 
@@ -163,19 +185,26 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
                                 </button>
                               </form>
                             ) : null}
-                            <form action={toggleIngredientActiveAction}>
-                              <input type="hidden" name="id" value={ingredient.id} />
-                              <input type="hidden" name="next_active" value={String(!ingredient.is_active)} />
-                              <button type="submit" className="rounded-full border border-karimoff-line px-3 py-2 text-xs font-bold transition hover:border-karimoff-orange hover:text-karimoff-orange">
-                                {ingredient.is_active ? "Скрыть" : "Показать"}
-                              </button>
-                            </form>
-                            <form action={deleteIngredientAction}>
-                              <input type="hidden" name="id" value={ingredient.id} />
-                              <ConfirmSubmitButton message={`Удалить ингредиент «${ingredient.name}»?`} className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50">
-                                Удалить
-                              </ConfirmSubmitButton>
-                            </form>
+                            {ingredient.is_active ? (
+                              <form action={archiveIngredientAction}>
+                                <input type="hidden" name="id" value={ingredient.id} />
+                                <ConfirmSubmitButton
+                                  message={`Переместить ингредиент «${ingredient.name}» в архив? История заказов сохранится.`}
+                                  className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
+                                >
+                                  В архив
+                                </ConfirmSubmitButton>
+                              </form>
+                            ) : (
+                              <form action={toggleIngredientActiveAction}>
+                                <input type="hidden" name="id" value={ingredient.id} />
+                                <input type="hidden" name="next_active" value="true" />
+                                <input type="hidden" name="return_to" value="/admin/ingredients?view=archived" />
+                                <button type="submit" className="rounded-full border border-karimoff-orange bg-karimoff-orange px-3 py-2 text-xs font-bold text-white transition hover:bg-[#D95405]">
+                                  Вернуть в работу
+                                </button>
+                              </form>
+                            )}
                           </div>
                         </td>
                       </tr>

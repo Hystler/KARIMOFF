@@ -21,7 +21,8 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
 
   const params = searchParams ? await searchParams : {};
   const { ingredients, notConfigured, error } = await getAdminIngredients();
-  const missingPriceCount = ingredients.filter((ingredient) => ingredient.cost_per_unit <= 0).length;
+  const activeIngredients = ingredients.filter((ingredient) => ingredient.is_active);
+  const missingPriceCount = activeIngredients.filter((ingredient) => ingredient.cost_per_unit <= 0).length;
 
   return (
     <main className="admin-page">
@@ -62,7 +63,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
               <span>Действие</span>
             </div>
             <div className="divide-y divide-karimoff-line">
-              {ingredients.map((ingredient) => {
+              {activeIngredients.map((ingredient) => {
                 const saved = params.saved === ingredient.id;
                 return (
                   <form

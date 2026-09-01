@@ -61,7 +61,7 @@ function Delta({ value, inverse = false }: { value: KpiValue; inverse?: boolean 
   const className = positive ? (inverse ? "is-negative" : "is-positive") : negative ? (inverse ? "is-positive" : "is-negative") : "is-neutral";
   const Icon = positive ? ArrowUpRight : negative ? ArrowDownRight : Minus;
   const text = value.delta.percent === null
-    ? value.delta.direction === "new" ? "Новый результат" : "Нет базы сравнения"
+    ? value.delta.direction === "new" ? "Новый результат" : "Нет продаж в прошлом периоде"
     : `${value.delta.percent > 0 ? "+" : ""}${formatPercent(value.delta.percent)}`;
   return <span className={`analytics-kpi-delta ${className}`}><Icon size={14} />{text}</span>;
 }

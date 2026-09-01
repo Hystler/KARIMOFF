@@ -23,6 +23,8 @@ function fixture() {
     "economics-values": read("src/lib/economics-values.ts"),
     "economics-input": read("src/lib/economics-input.ts")
       .replace('from "./economics-values"', 'from "./economics-values.ts"'),
+    "management-result": read("src/lib/management-result.ts")
+      .replace('from "./economics-values"', 'from "./economics-values.ts"'),
     "economics-validation": read("src/lib/economics-validation.ts")
       .replace('import "server-only";\n\n', "")
       .replace('from "./economics-input"', 'from "./economics-input.ts"')
@@ -172,6 +174,68 @@ test("economics action exports only an async server action and returns controlle
   assert.match(component, /type="text"/);
   assert.match(component, /formatEconomicsDraft/);
   assert.match(component, /aria-live="polite"/);
+});
+
+test("actual management result separates POS and web acquiring and treats CAPEX below operations", () => {
+  const files = fixture();
+  let result;
+  try {
+    result = runTypeScript(`
+      const management = await import(${JSON.stringify(files.url("management-result"))});
+      const expenses = {
+        acquiringPosPercent: 1,
+        acquiringWebPercent: 3,
+        capex: 500,
+        marketing: 400,
+        miscPercent: 0.5,
+        other: 100,
+        payroll: 2000,
+        rent: 1000,
+        royaltyPercent: 0,
+        taxPercent: 6,
+        utilities: 500
+      };
+      console.log(JSON.stringify(management.calculateManagementResult({
+        coveredRevenue: 10000,
+        grossProfit: 7000,
+        posCoveredRevenue: 6000,
+        webCoveredRevenue: 4000
+      }, expenses)));
+    `);
+  } finally {
+    files.cleanup();
+  }
+
+  assert.deepEqual(result, {
+    cashResult: 1670,
+    commissions: 830,
+    fixedOpex: 4000,
+    misc: 50,
+    operatingResult: 2170,
+    posAcquiring: 60,
+    royalty: 0,
+    tax: 600,
+    webAcquiring: 120
+  });
+});
+
+test("actual economics UI uses canonical covered sales and labels incomplete food cost honestly", () => {
+  const query = read("src/lib/economics-actual.ts");
+  const component = read("src/components/admin/ActualManagementResult.tsx");
+  const page = read("src/app/admin/economics/page.tsx");
+
+  assert.match(query, /canonical_analytics_sales/);
+  assert.match(query, /product_ingredients/);
+  assert.match(query, /coalesce\(product_cost\.is_complete, false\)/);
+  assert.match(component, /Управленческий результат/);
+  assert.match(component, /Валовая прибыль по food cost/);
+  assert.match(component, /Продажи на .* не включены в валовую прибыль/);
+  assert.match(component, /Эквайринг кассы/);
+  assert.match(component, /Эквайринг сайта/);
+  assert.match(component, /Роялти для основной точки по умолчанию 0%/);
+  assert.match(page, /getActualManagementResult/);
+  assert.match(page, /Плановый сценарий точки/);
+  assert.doesNotMatch(component, /Чистая прибыль/);
 });
 
 test("analytics EXPLAIN diagnostics are fixed-query, admin-only, test-only, and read-only", () => {
