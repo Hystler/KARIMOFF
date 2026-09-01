@@ -223,6 +223,7 @@ test("actual economics UI uses canonical covered sales and labels incomplete foo
   const query = read("src/lib/economics-actual.ts");
   const component = read("src/components/admin/ActualManagementResult.tsx");
   const page = read("src/app/admin/economics/page.tsx");
+  const calendar = read("src/components/admin/RussianDateRangePicker.tsx");
 
   assert.match(query, /canonical_analytics_sales/);
   assert.match(query, /product_ingredients/);
@@ -233,9 +234,17 @@ test("actual economics UI uses canonical covered sales and labels incomplete foo
   assert.match(component, /Эквайринг кассы/);
   assert.match(component, /Эквайринг сайта/);
   assert.match(component, /Роялти для основной точки по умолчанию 0%/);
+  assert.match(component, /parseEconomicsNumber\(value\) \?\? 0/);
+  assert.match(component, /type="text"/);
+  assert.match(component, /formatEconomicsDraft/);
+  assert.doesNotMatch(component, /type="number"/);
   assert.match(page, /getActualManagementResult/);
+  assert.match(page, /EconomicsPeriodFilter/);
   assert.match(page, /Плановый сценарий точки/);
   assert.doesNotMatch(component, /Чистая прибыль/);
+  assert.match(calendar, /Intl\.DateTimeFormat\("ru-RU"/);
+  assert.match(calendar, /Выберите период/);
+  assert.doesNotMatch(page + calendar, /type="date"/);
 });
 
 test("analytics EXPLAIN diagnostics are fixed-query, admin-only, test-only, and read-only", () => {

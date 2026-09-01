@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActualManagementResultCalculator } from "@/components/admin/ActualManagementResult";
 import { EconomicsCalculator } from "@/components/admin/EconomicsCalculator";
+import { EconomicsPeriodFilter } from "@/components/admin/EconomicsPeriodFilter";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { parseAnalyticsFilters } from "@/lib/analytics/filters";
 import { getAnalyticsScope } from "@/lib/analytics/permissions";
@@ -118,10 +119,13 @@ export default async function AdminEconomicsPage({ searchParams }: PageProps) {
           </div>
         ) : null}
 
-        <form method="get" className="mt-8 grid gap-4 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:grid-cols-[minmax(220px,1fr)_minmax(170px,0.7fr)_minmax(170px,0.7fr)_auto] sm:items-end">
-          <label className="admin-field">Период<select name="period" defaultValue={filters.period}>{periodOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="admin-field">С даты<input type="date" name="from" defaultValue={filters.dateFrom ?? range.fromDateKey} /></label>
-          <label className="admin-field">По дату<input type="date" name="to" defaultValue={filters.dateTo ?? addCalendarDays(range.toDateKeyExclusive, -1)} /></label>
+        <form method="get" className="economics-period-form">
+          <EconomicsPeriodFilter
+            initialFrom={filters.dateFrom ?? range.fromDateKey}
+            initialPeriod={filters.period}
+            initialTo={filters.dateTo ?? addCalendarDays(range.toDateKeyExclusive, -1)}
+            options={periodOptions}
+          />
           <button type="submit" className="admin-primary-button">Показать</button>
         </form>
 

@@ -558,6 +558,30 @@ button:not(:disabled),
     @apply grid min-w-0 gap-2 text-xs font-black text-karimoff-muted;
   }
 
+  .management-number-input {
+    @apply flex min-h-11 overflow-hidden rounded-lg border border-karimoff-line bg-white transition focus-within:border-karimoff-orange focus-within:shadow-[0_0_0_4px_rgba(251,103,10,0.10)];
+  }
+
+  .management-number-input input {
+    @apply min-w-0 flex-1 border-0 bg-transparent px-3.5 py-2 text-base font-bold tabular-nums text-karimoff-black outline-none shadow-none focus:border-0 focus:shadow-none;
+  }
+
+  .management-number-input span {
+    @apply flex min-w-12 items-center justify-center border-l border-karimoff-line bg-karimoff-soft px-3 text-sm font-black text-karimoff-muted;
+  }
+
+  .economics-period-form {
+    @apply relative mt-8 grid gap-4 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:grid-cols-[minmax(210px,0.75fr)_minmax(280px,1.25fr)_auto] sm:items-end;
+  }
+
+  .economics-date-range {
+    @apply min-w-0;
+  }
+
+  .economics-date-range-note {
+    @apply flex min-h-11 items-center rounded-lg border border-dashed border-karimoff-line bg-karimoff-soft/55 px-4 text-xs font-bold text-karimoff-muted;
+  }
+
   .admin-status {
     @apply inline-flex min-h-8 items-center rounded-full bg-karimoff-orange/10 px-3 text-xs font-black text-karimoff-orange;
   }
@@ -752,19 +776,105 @@ button:not(:disabled),
   }
 
   .analytics-custom-range {
-    @apply flex min-w-0 items-end gap-1 rounded-lg border border-karimoff-line bg-white p-1;
+    @apply min-w-0;
   }
 
-  .analytics-custom-range label {
-    @apply grid gap-0.5 px-2 text-[10px] font-bold uppercase text-karimoff-muted;
+  .russian-date-range {
+    @apply relative min-w-0;
   }
 
-  .analytics-custom-range input {
-    @apply min-h-7 min-w-[118px] border-0 bg-transparent p-0 text-xs font-bold text-karimoff-black outline-none;
+  .russian-date-range-trigger {
+    @apply flex min-h-11 min-w-[250px] max-w-full items-center gap-3 rounded-lg border border-karimoff-line bg-white px-3.5 text-left text-karimoff-black transition hover:border-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange;
   }
 
-  .analytics-custom-range button {
-    @apply flex h-8 w-8 items-center justify-center rounded-lg bg-karimoff-orange text-white disabled:opacity-35;
+  .russian-date-range-trigger > svg {
+    @apply shrink-0 text-karimoff-orange;
+  }
+
+  .russian-date-range-trigger > span {
+    @apply grid min-w-0 gap-0.5;
+  }
+
+  .russian-date-range-trigger small {
+    @apply text-[9px] font-black uppercase text-karimoff-muted;
+  }
+
+  .russian-date-range-trigger strong {
+    @apply truncate text-xs font-black;
+  }
+
+  .russian-date-range-popover {
+    @apply absolute left-0 top-[calc(100%+8px)] z-[70] w-[340px] max-w-[calc(100vw-32px)] overflow-hidden rounded-lg border border-black/10 bg-white shadow-[0_24px_70px_rgba(18,18,20,0.22)];
+  }
+
+  .russian-date-range-popover > header {
+    @apply flex items-center justify-between gap-4 border-b border-black/[0.07] px-4 py-3;
+  }
+
+  .russian-date-range-popover > header > div {
+    @apply grid gap-0.5;
+  }
+
+  .russian-date-range-popover > header span {
+    @apply text-[10px] font-black uppercase text-karimoff-orange;
+  }
+
+  .russian-date-range-popover > header strong {
+    @apply text-xs font-black;
+  }
+
+  .russian-date-range-popover > header button,
+  .russian-date-range-month-nav button {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-karimoff-line bg-white text-karimoff-muted transition hover:border-karimoff-orange hover:text-karimoff-orange;
+  }
+
+  .russian-date-range-month-nav {
+    @apply grid grid-cols-[36px_1fr_36px] items-center gap-3 px-4 py-3;
+  }
+
+  .russian-date-range-month-nav strong {
+    @apply text-center text-sm font-black capitalize;
+  }
+
+  .russian-date-range-weekdays,
+  .russian-date-range-grid {
+    @apply grid grid-cols-7 px-3;
+  }
+
+  .russian-date-range-weekdays span {
+    @apply py-1 text-center text-[9px] font-black uppercase text-karimoff-muted;
+  }
+
+  .russian-date-range-grid {
+    @apply gap-y-1 pb-3;
+  }
+
+  .russian-date-range-grid button {
+    @apply relative flex aspect-square items-center justify-center rounded-md text-xs font-bold tabular-nums text-karimoff-black transition hover:bg-orange-50 hover:text-karimoff-orange focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-karimoff-orange;
+  }
+
+  .russian-date-range-grid button.is-outside {
+    @apply text-black/25;
+  }
+
+  .russian-date-range-grid button.is-in-range {
+    @apply rounded-none bg-orange-50 text-karimoff-orange;
+  }
+
+  .russian-date-range-grid button.is-selected {
+    @apply z-10 bg-karimoff-orange font-black text-white shadow-[0_6px_15px_rgba(251,103,10,0.24)];
+  }
+
+  .russian-date-range-popover > footer {
+    @apply flex items-center justify-between gap-3 border-t border-black/[0.07] bg-[#FBF9F6] px-4 py-3;
+  }
+
+  .russian-date-range-popover > footer > span {
+    @apply max-w-[150px] text-[9px] font-bold leading-4 text-karimoff-muted;
+  }
+
+  .russian-date-range-popover > footer button {
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-karimoff-orange px-3 text-xs font-black text-white transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-35;
   }
 
   .analytics-more-filters {
@@ -1250,7 +1360,9 @@ button:not(:disabled),
   }
 
   .analytics-category-grid > a {
-    @apply relative min-h-[190px] overflow-hidden rounded-lg border border-black/[0.08] bg-[#FBF9F6] p-4 transition hover:-translate-y-0.5 hover:border-karimoff-orange hover:shadow-[0_12px_26px_rgba(18,18,20,0.08)];
+    @apply relative min-h-[190px] overflow-hidden rounded-lg border border-black/[0.08] p-4 transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_rgba(18,18,20,0.08)];
+    background: var(--analytics-soft, #fbf9f6);
+    border-top: 3px solid var(--analytics-accent, #fb670a);
   }
 
   .analytics-category-grid > a.is-active { @apply border-karimoff-orange bg-orange-50; }
@@ -1259,7 +1371,7 @@ button:not(:disabled),
   .analytics-category-grid > a > div:first-child span { @apply shrink-0 text-[10px] font-black; }
   .analytics-category-grid > a > b { @apply relative z-10 mt-4 block text-xl font-black tabular-nums; }
   .analytics-category-grid > a > svg { @apply absolute inset-x-0 top-16 h-16 w-full opacity-50; }
-  .analytics-category-grid > a > svg polyline { fill: none; stroke: #fb670a; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .analytics-category-grid > a > svg polyline { fill: none; stroke: var(--analytics-accent, #fb670a); stroke-width: 2; vector-effect: non-scaling-stroke; }
   .analytics-category-grid dl { @apply absolute inset-x-4 bottom-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-black/[0.07] pt-3; }
   .analytics-category-grid dl div { @apply flex items-center justify-between gap-2; }
   .analytics-category-grid dt { @apply text-[9px] font-bold text-karimoff-muted; }
@@ -1324,6 +1436,12 @@ button:not(:disabled),
   .analytics-calendar-grid > a { @apply flex aspect-square min-w-0 flex-col justify-between rounded-md p-2 text-karimoff-black transition hover:outline hover:outline-2 hover:outline-karimoff-orange focus:outline focus:outline-2 focus:outline-karimoff-orange; }
   .analytics-calendar-grid > a strong { @apply text-xs font-black; }
   .analytics-calendar-grid > a span { @apply truncate text-[8px] font-black tabular-nums; }
+  .analytics-calendar-scale { @apply mt-3 flex items-center justify-end gap-1.5 text-[9px] font-bold text-karimoff-muted; }
+  .analytics-calendar-scale i { @apply h-2.5 w-5 rounded-sm; }
+  .analytics-calendar-scale i:nth-of-type(1) { background: rgba(251,103,10,.12); }
+  .analytics-calendar-scale i:nth-of-type(2) { background: rgba(251,103,10,.34); }
+  .analytics-calendar-scale i:nth-of-type(3) { background: rgba(251,103,10,.62); }
+  .analytics-calendar-scale i:nth-of-type(4) { background: rgba(251,103,10,.92); }
 
   .analytics-dayparts { @apply divide-y divide-black/[0.07] px-5 py-3 sm:px-6; }
   .analytics-dayparts > a { @apply grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 py-3 transition hover:text-karimoff-orange; }
@@ -1334,7 +1452,7 @@ button:not(:disabled),
   .analytics-dayparts > a > strong { @apply font-black tabular-nums; }
 
   .analytics-treemap { @apply flex min-h-[360px] flex-wrap content-stretch gap-2 p-3 sm:p-5; }
-  .analytics-treemap > a { @apply flex min-h-[116px] min-w-[150px] flex-grow flex-col justify-end overflow-hidden rounded-lg p-4 transition hover:-translate-y-0.5 hover:shadow-lg; }
+  .analytics-treemap > a { @apply flex min-h-[116px] min-w-[150px] flex-grow flex-col justify-end overflow-hidden rounded-lg border border-black/[0.07] p-4 text-karimoff-black transition hover:-translate-y-0.5 hover:shadow-lg; background: var(--analytics-soft, #fbf9f6); border-top: 4px solid var(--analytics-accent, #fb670a); }
   .analytics-treemap > a span { @apply mb-auto truncate text-[9px] font-black uppercase opacity-60; }
   .analytics-treemap > a strong { @apply line-clamp-2 text-sm font-black leading-tight; }
   .analytics-treemap > a b { @apply mt-2 text-lg font-black tabular-nums; }
@@ -1439,8 +1557,10 @@ button:not(:disabled),
   .analytics-select-control:first-child { min-width: 0; }
   .analytics-select-control:nth-child(2) { grid-column: 1 / -1; }
   .analytics-custom-range { grid-column: 1 / -1; width: 100%; }
-  .analytics-custom-range label { min-width: 0; flex: 1; }
-  .analytics-custom-range input { min-width: 0; width: 100%; }
+  .analytics-custom-range .russian-date-range-trigger { min-width: 0; width: 100%; }
+  .russian-date-range-popover { position: fixed; inset: 50% 12px auto; width: auto; max-width: none; transform: translateY(-50%); }
+  .economics-period-form { grid-template-columns: 1fr; }
+  .economics-period-form .admin-primary-button { width: 100%; }
   .analytics-more-filters { grid-column: 2; grid-row: 1; }
   .analytics-search { grid-column: 1 / -1; min-width: 0; }
   .analytics-filter-loading { grid-column: 1 / -1; margin-left: 0; }

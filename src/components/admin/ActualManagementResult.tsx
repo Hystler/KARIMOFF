@@ -3,6 +3,7 @@
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ActualManagementResult } from "@/lib/economics-actual";
+import { formatEconomicsDraft, parseEconomicsNumber } from "@/lib/economics-input";
 import type { EconomicsValues } from "@/lib/economics-values";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import {
@@ -37,12 +38,19 @@ const percentFields: Array<{ key: keyof ManagementExpenseInputs; label: string }
 
 export function ActualManagementResultCalculator({ actual, calendarDays, initialValues, rangeLabel }: Props) {
   const defaults = useMemo(() => createManagementExpenseDefaults(initialValues, calendarDays), [calendarDays, initialValues]);
-  const [drafts, setDrafts] = useState(defaults);
-  const result = useMemo(() => calculateManagementResult(actual, drafts), [actual, drafts]);
+  const defaultDrafts = useMemo(
+    () => Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, value === 0 ? "" : String(value)])) as Record<keyof ManagementExpenseInputs, string>,
+    [defaults]
+  );
+  const [drafts, setDrafts] = useState(defaultDrafts);
+  const values = useMemo(
+    () => Object.fromEntries(Object.entries(drafts).map(([key, value]) => [key, parseEconomicsNumber(value) ?? 0])) as ManagementExpenseInputs,
+    [drafts]
+  );
+  const result = useMemo(() => calculateManagementResult(actual, values), [actual, values]);
 
   const update = (key: keyof ManagementExpenseInputs, value: string) => {
-    const parsed = Number(value.replace(",", "."));
-    setDrafts((current) => ({ ...current, [key]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 }));
+    setDrafts((current) => ({ ...current, [key]: value }));
   };
 
   return (
@@ -76,7 +84,7 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
           <section>
             <div className="flex items-center justify-between gap-4">
               <div><h3 className="text-xl font-black">Расходы за период</h3><p className="mt-1 text-sm text-karimoff-muted">Начальные суммы пропорциональны {calendarDays} календарным дням.</p></div>
-              <button type="button" onClick={() => setDrafts(defaults)} className="admin-secondary-button"><RotateCcw size={16} />Сбросить</button>
+              <button type="button" onClick={() => setDrafts(defaultDrafts)} className="admin-secondary-button"><RotateCcw size={16} />Сбросить</button>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {fixedFields.map((field) => <MoneyInput key={field.key} label={field.label} value={drafts[field.key]} onChange={(value) => update(field.key, value)} />)}
@@ -104,7 +112,7 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
             <ResultLine label="Постоянные расходы" value={-result.fixedOpex} />
             <ResultLine label="Налоги и комиссии" value={-result.commissions} />
             <ResultLine label="Операционный результат" value={result.operatingResult} strong />
-            <ResultLine label="CAPEX" value={-drafts.capex} />
+            <ResultLine label="CAPEX" value={-values.capex} />
             <ResultLine label="Денежный результат" value={result.cashResult} strong accent />
           </div>
         </aside>
@@ -117,12 +125,40 @@ function Metric({ label, value, hint, accent = false }: { label: string; value: 
   return <article className="bg-white p-5 sm:p-6"><p className="text-xs font-bold uppercase text-karimoff-muted">{label}</p><strong className={`mt-2 block text-2xl font-black ${accent ? "text-karimoff-orange" : "text-karimoff-black"}`}>{value}</strong><span className="mt-1 block text-xs text-karimoff-muted">{hint}</span></article>;
 }
 
-function MoneyInput({ label, value, onChange }: { label: string; value: number; onChange: (value: string) => void }) {
-  return <label className="admin-field">{label}<div className="flex overflow-hidden rounded-lg border border-karimoff-line bg-white focus-within:border-karimoff-orange"><input type="number" min="0" step="100" value={value} onChange={(event) => onChange(event.target.value)} /><span className="flex items-center border-l border-karimoff-line px-3 font-bold text-karimoff-muted">₽</span></div></label>;
+function MoneyInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <LocalizedNumberInput label={label} value={value} onChange={onChange} suffix="₽" />;
 }
 
-function PercentInput({ label, value, onChange }: { label: string; value: number; onChange: (value: string) => void }) {
-  return <label className="admin-field">{label}<div className="flex overflow-hidden rounded-lg border border-karimoff-line bg-white focus-within:border-karimoff-orange"><input type="number" min="0" max="100" step="0.1" value={value} onChange={(event) => onChange(event.target.value)} /><span className="flex items-center border-l border-karimoff-line px-3 font-bold text-karimoff-muted">%</span></div></label>;
+function PercentInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <LocalizedNumberInput label={label} value={value} onChange={onChange} suffix="%" />;
+}
+
+function LocalizedNumberInput({ label, onChange, suffix, value }: { label: string; onChange: (value: string) => void; suffix: string; value: string }) {
+  const [focused, setFocused] = useState(false);
+  const finishEditing = () => {
+    const parsed = parseEconomicsNumber(value);
+    if (parsed !== null) onChange(String(parsed));
+    setFocused(false);
+  };
+  return (
+    <label className="admin-field">
+      {label}
+      <div className="management-number-input">
+        <input
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="0"
+          value={focused ? value : formatEconomicsDraft(value)}
+          onFocus={() => setFocused(true)}
+          onBlur={finishEditing}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span>{suffix}</span>
+      </div>
+    </label>
+  );
 }
 
 function ResultLine({ label, value, strong = false, accent = false }: { label: string; value: number; strong?: boolean; accent?: boolean }) {

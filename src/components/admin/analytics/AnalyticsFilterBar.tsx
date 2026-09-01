@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Check, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
+import { CalendarDays, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { channelLabels } from "@/lib/analytics/channels";
@@ -8,6 +8,7 @@ import { analyticsFiltersToParams } from "@/lib/analytics/filters";
 import { paymentMethodLabels } from "@/lib/analytics/metrics";
 import { OPERATING_HOURS, RESTAURANT_CLOSE_HOUR } from "@/lib/analytics/operating-hours";
 import type { AnalyticsFilterOptions, AnalyticsFilters } from "@/lib/analytics/types";
+import { RussianDateRangePicker } from "@/components/admin/RussianDateRangePicker";
 
 const periods = [
   ["today", "Сегодня"],
@@ -138,22 +139,16 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
 
         {filters.period === "custom" ? (
           <div className="analytics-custom-range">
-            <label>
-              <span>С</span>
-              <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-            </label>
-            <label>
-              <span>По</span>
-              <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-            </label>
-            <button
-              type="button"
-              aria-label="Применить период"
-              onClick={() => navigate({ from: dateFrom, to: dateTo })}
-              disabled={!dateFrom || !dateTo || dateFrom > dateTo}
-            >
-              <Check size={17} />
-            </button>
+            <RussianDateRangePicker
+              key={`${dateFrom}:${dateTo}`}
+              from={dateFrom}
+              to={dateTo}
+              onApply={(from, to) => {
+                setDateFrom(from);
+                setDateTo(to);
+                navigate({ from, to });
+              }}
+            />
           </div>
         ) : null}
 
