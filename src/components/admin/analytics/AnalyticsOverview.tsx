@@ -290,7 +290,7 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
 
       <section className="analytics-panel" id="products">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Ассортимент</p><h2>Товары</h2><span>POS без подтверждённого mapping остаётся видимым</span></div>
+          <div><p className="admin-eyebrow">Ассортимент</p><h2>Товары</h2><span>Цена продажи — из чека; food cost — по подтверждённой техкарте</span></div>
           <nav className="analytics-mini-tabs" aria-label="Рейтинг товаров">
             {[["revenue", "По выручке"], ["quantity", "По количеству"], ["growth", "Рост"], ["decline", "Падение"]].map(([value, label]) => (
               <Link key={value} href={analyticsHref(dashboard.filters, { ranking: value === "revenue" ? null : value })} className={dashboard.filters.productRanking === value ? "is-active" : ""} scroll={false}>{label}</Link>

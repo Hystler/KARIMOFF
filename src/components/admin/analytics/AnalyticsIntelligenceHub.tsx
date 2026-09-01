@@ -65,7 +65,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
 
       <section className="analytics-panel" id="category-intelligence">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Структура продаж</p><h2>Категории</h2><span>Клик применяет категорию ко всему отчёту</span></div>
+          <div><p className="admin-eyebrow">Структура продаж</p><h2>Категории</h2><span>Нажатие применяет категорию ко всему отчёту</span></div>
           <div className="analytics-heading-tools">
             {dashboard.itemFiltered ? <span className="analytics-context-badge">Позиционный срез</span> : null}
             <Link className="analytics-export-link" href={`/api/admin/analytics/report/export?report=categories&${analyticsFiltersToParams(dashboard.filters).toString()}`}><Download size={15} />CSV</Link>
@@ -151,7 +151,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
         </section>
         <section className="analytics-panel" id="dayparts">
           <header className="analytics-panel-heading compact">
-            <div><p className="admin-eyebrow">Части дня</p><h2>Спрос по времени суток</h2></div>
+            <div><p className="admin-eyebrow">Части дня</p><h2>Спрос по рабочему времени</h2><span>Только интервалы работы точки · Москва</span></div>
           </header>
           <div className="analytics-dayparts">
             {intelligence.dayparts.map((part) => (

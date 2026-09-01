@@ -6,7 +6,7 @@ import { getPostgresSql } from "@/lib/postgres/server";
 import { analyticsFiltersToParams } from "./filters";
 import { buildAverageTicketFactors, buildPareto, buildRevenueBridge, detectTransparentAnomaly } from "./intelligence-math";
 import { calculateMetricDelta, safeAverage } from "./metrics";
-import { OPERATING_HOURS } from "./operating-hours";
+import { OPERATING_HOURS, RESTAURANT_CLOSE_HOUR, RESTAURANT_OPEN_HOUR } from "./operating-hours";
 import { addCalendarDays } from "./periods";
 import { buildItemWhere, buildSalesWhere } from "./query";
 import type {
@@ -25,18 +25,16 @@ import type {
 type Totals = { revenue: number; sales: number; items: number; saleRevenue: number; refunds: number };
 
 const daypartDefinitions = [
-  { key: "morning", label: "До обеда", start: 0, end: 11 },
   { key: "lunch", label: "Обед", start: 11, end: 14 },
   { key: "afternoon", label: "День", start: 14, end: 17 },
-  { key: "evening", label: "Вечер", start: 17, end: 21 },
-  { key: "late", label: "Поздний вечер", start: 21, end: 24 }
+  { key: "evening", label: "Вечер", start: 17, end: 21 }
 ] as const;
 
 const daypartSchema = z.array(z.object({
   key: z.string().trim().min(1).max(40),
   label: z.string().trim().min(1).max(80),
-  start: z.number().int().min(0).max(23),
-  end: z.number().int().min(1).max(24)
+  start: z.number().int().min(RESTAURANT_OPEN_HOUR).max(RESTAURANT_CLOSE_HOUR - 1),
+  end: z.number().int().min(RESTAURANT_OPEN_HOUR + 1).max(RESTAURANT_CLOSE_HOUR)
 }).refine((part) => part.end > part.start)).min(1).max(8);
 
 const configurationSchema = z.object({

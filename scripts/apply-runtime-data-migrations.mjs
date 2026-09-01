@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import postgres from "postgres";
 
 const dataPath = new URL("../data/tech-cards/karimoff-tech-card-2026-08-11.json", import.meta.url);
+const mappingPath = new URL("../data/analytics/evotor-product-mappings.json", import.meta.url);
 const techCard = JSON.parse(readFileSync(dataPath, "utf8"));
+const explicitMappingRules = JSON.parse(readFileSync(mappingPath, "utf8"));
 const databaseUrl = process.env.DATABASE_URL;
 
 function normalizeName(value) {
@@ -13,6 +15,78 @@ function normalizeName(value) {
     .replace(/[^a-zа-я0-9]+/gi, " ")
     .trim()
     .toLowerCase();
+}
+
+function validateExplicitMappingRules() {
+  const claimedNames = new Set();
+  for (const rule of explicitMappingRules) {
+    if (!rule.product_slugs?.length || !rule.evotor_names?.length) {
+      throw new Error("Every explicit Evotor mapping must have product slugs and source names.");
+    }
+    for (const name of rule.evotor_names) {
+      const normalized = normalizeName(name);
+      if (!normalized || claimedNames.has(normalized)) {
+        throw new Error(`Invalid or duplicate explicit Evotor mapping: ${name}`);
+      }
+      claimedNames.add(normalized);
+    }
+  }
+}
+
+async function applyExplicitEvotorMappings(transaction) {
+  let confirmedMappings = 0;
+
+  for (const rule of explicitMappingRules) {
+    const targets = await transaction`
+      select id
+      from public.products
+      where slug = any(${rule.product_slugs}::text[])
+      order by array_position(${rule.product_slugs}::text[], slug)
+      limit 2
+    `;
+    if (targets.length !== 1) {
+      throw new Error(`Explicit Evotor mapping target is missing or ambiguous: ${rule.product_slugs[0]}`);
+    }
+
+    const normalizedNames = rule.evotor_names.map((name) =>
+      String(name).normalize("NFKC").replaceAll("ё", "е").trim().toLowerCase()
+    );
+    const changed = await transaction`
+      insert into public.evotor_product_mappings (
+        evotor_product_id,
+        karimoff_product_id,
+        status,
+        match_method,
+        confidence,
+        confirmed_by,
+        confirmed_at
+      )
+      select
+        product.id,
+        ${targets[0].id}::uuid,
+        'confirmed',
+        'manual',
+        1,
+        'system:explicit-catalog-alias',
+        now()
+      from public.evotor_products product
+      where replace(lower(trim(product.name)), 'ё', 'е') = any(${normalizedNames}::text[])
+      on conflict (evotor_product_id) do update
+      set
+        status = 'confirmed',
+        match_method = 'manual',
+        confidence = 1,
+        confirmed_by = 'system:explicit-catalog-alias',
+        confirmed_at = now(),
+        updated_at = now()
+      where public.evotor_product_mappings.status = 'suggested'
+        and public.evotor_product_mappings.karimoff_product_id = excluded.karimoff_product_id
+      returning id
+    `;
+    confirmedMappings += changed.length;
+  }
+
+  return confirmedMappings;
 }
 
 function getIngredientPricing(ingredient) {
@@ -147,6 +221,7 @@ function resolveIngredient(spec, ingredients) {
 }
 
 validateTechCard();
+validateExplicitMappingRules();
 
 if (!databaseUrl) {
   console.log("Runtime data migrations skipped: DATABASE_URL is not configured.");
@@ -456,7 +531,9 @@ try {
     };
   });
 
-  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify(result)}`);
+  const confirmedMappings = await sql.begin(applyExplicitEvotorMappings);
+
+  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings })}`);
 } finally {
   await sql.end({ timeout: 2 });
 }

@@ -14,6 +14,7 @@ import { fetchEvotorDevices } from "./devices";
 import { fetchEvotorDocuments } from "./documents";
 import { fetchEvotorEmployees } from "./employees";
 import { EvotorConfigurationError } from "./errors";
+import { EXPLICIT_EVOTOR_PRODUCT_MAPPINGS } from "./product-mapping-rules";
 import { fetchEvotorProducts } from "./products";
 import { parseEvotorReceipt, sanitizeEvotorPayload } from "./receipts";
 import { classifyEvotorFailure, evotorRetryDelaySeconds } from "./recovery";
@@ -234,6 +235,52 @@ async function persistSnapshot(params: {
         ) = 1
       on conflict (evotor_product_id) do nothing
     `;
+
+    for (const mapping of EXPLICIT_EVOTOR_PRODUCT_MAPPINGS) {
+      const targets = await transaction<{ id: string }[]>`
+        select id
+        from public.products
+        where slug = any(${mapping.productSlugs}::text[])
+        order by array_position(${mapping.productSlugs}::text[], slug)
+        limit 2
+      `;
+      if (targets.length !== 1) {
+        throw new Error(`Explicit Evotor mapping target is missing or ambiguous: ${mapping.productSlugs[0]}`);
+      }
+
+      await transaction`
+        insert into public.evotor_product_mappings (
+          evotor_product_id,
+          karimoff_product_id,
+          status,
+          match_method,
+          confidence,
+          confirmed_by,
+          confirmed_at
+        )
+        select
+          product.id,
+          ${targets[0].id}::uuid,
+          'confirmed',
+          'manual',
+          1,
+          'system:explicit-catalog-alias',
+          now()
+        from public.evotor_products product
+        where product.connection_id = ${params.connectionId}::uuid
+          and replace(lower(trim(product.name)), 'ё', 'е') = any(${mapping.evotorNames}::text[])
+        on conflict (evotor_product_id) do update
+        set
+          status = 'confirmed',
+          match_method = 'manual',
+          confidence = 1,
+          confirmed_by = 'system:explicit-catalog-alias',
+          confirmed_at = now(),
+          updated_at = now()
+        where public.evotor_product_mappings.status = 'suggested'
+          and public.evotor_product_mappings.karimoff_product_id = excluded.karimoff_product_id
+      `;
+    }
 
     let receiptCount = 0;
     let importedCount = 0;
