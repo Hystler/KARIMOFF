@@ -19,6 +19,7 @@ import {
   createPosOrderAction
 } from "@/app/pos/actions";
 import { PosProductCustomizer } from "@/components/operations/PosProductCustomizer";
+import { PosLoyaltyIdentifier, type PosLoyaltyCustomer } from "@/components/operations/PosLoyaltyIdentifier";
 import {
   initialPosOrderActionState,
   type PosOrderActionState
@@ -87,6 +88,7 @@ export function PosWorkspace({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Все");
   const [customerName, setCustomerName] = useState("Гость");
+  const [loyaltyCustomer, setLoyaltyCustomer] = useState<PosLoyaltyCustomer | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(initialIdempotencyKey);
   const [customizer, setCustomizer] = useState<{ product: Product; line: PosCartLine | null } | null>(null);
   const [state, formAction, pending] = useActionState(
@@ -95,6 +97,7 @@ export function PosWorkspace({
       if (result.status === "success") {
         setCart([]);
         setCustomerName("Гость");
+        setLoyaltyCustomer(null);
         setIdempotencyKey(crypto.randomUUID());
       }
       return result;
@@ -236,6 +239,7 @@ export function PosWorkspace({
           <form key={state.resetKey ?? "initial"} action={formAction} className="flex h-full flex-col p-4 sm:p-5 lg:sticky lg:top-[72px] lg:max-h-[calc(100dvh-72px)]">
             <input type="hidden" name="idempotency_key" value={idempotencyKey} />
             <input type="hidden" name="items" value={JSON.stringify(serializePosCart(cart))} />
+            <input type="hidden" name="customer_id" value={loyaltyCustomer?.id ?? ""} />
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-xs font-black uppercase text-[#C94F05]">Текущий заказ</p><h2 className="mt-1 text-2xl font-black">{itemCount ? `${itemCount} поз.` : "Пусто"}</h2></div>
               {itemCount ? <button type="button" onClick={() => setCart([])} className="grid h-11 w-11 place-items-center rounded-lg border border-red-200 text-red-600" aria-label="Очистить заказ"><Trash2 size={19} /></button> : null}
@@ -269,6 +273,13 @@ export function PosWorkspace({
             </div>
 
             <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
+              <PosLoyaltyIdentifier
+                customer={loyaltyCustomer}
+                onChange={(next) => {
+                  setLoyaltyCustomer(next);
+                  setCustomerName(next?.name ?? "Гость");
+                }}
+              />
               <label className="block">
                 <span className="mb-1.5 flex items-center gap-2 text-xs font-black text-black/60"><UserRound size={15} /> Имя для выдачи</span>
                 <input name="customer_name" value={customerName} onChange={(event) => setCustomerName(event.target.value.slice(0, 40))} onFocus={(event) => { if (event.currentTarget.value === "Гость") event.currentTarget.select(); }} maxLength={40} autoComplete="off" inputMode="text" className="min-h-12 w-full rounded-lg border border-black/10 px-4 text-base font-bold outline-none focus:border-[#FB670A] focus:ring-4 focus:ring-[#FB670A]/10" />

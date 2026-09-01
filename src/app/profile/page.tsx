@@ -6,6 +6,7 @@ import { getCustomerProfileData } from "@/lib/customer-data";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
 import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
+import { QrCode } from "lucide-react";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
 import { MaxLoginButton } from "@/components/auth/MaxLoginButton";
 import { logoutCustomerAction, unlinkSocialIdentityAction, updateMarketingConsentAction } from "./actions";
@@ -91,7 +92,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">{error}</div>
         ) : null}
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-karimoff-muted">Баланс баллов</p>
             <p className="admin-number mt-3 text-4xl font-black text-karimoff-orange">{formatNumber(account?.points_balance ?? 0)}</p>
@@ -106,6 +107,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <article className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
             <p className="text-sm font-semibold text-karimoff-muted">Оплаченных заказов</p>
             <p className="admin-number mt-3 text-3xl font-black text-karimoff-black">{paidOrderCount}</p>
+          </article>
+          <article className="rounded-lg border border-karimoff-line bg-[#111114] p-5 text-white shadow-card">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-white/55">Карта гостя</p>
+              <QrCode size={22} className="text-karimoff-orange" />
+            </div>
+            <p className="mt-3 text-xl font-black">QR для кассы и Wallet</p>
+            <Link href="/profile/loyalty" className="public-button-primary mt-5 w-full px-5">Открыть карту</Link>
           </article>
         </div>
 

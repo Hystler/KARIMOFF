@@ -47,6 +47,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026082714300
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828190000_refine_public_product_copy.sql ./supabase/migrations/20260828190000_refine_public_product_copy.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828220000_add_order_status_notifications.sql ./supabase/migrations/20260828220000_add_order_status_notifications.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901120000_add_ingredient_nutrition.sql ./supabase/migrations/20260901120000_add_ingredient_nutrition.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql ./supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql
 
 USER nextjs
 

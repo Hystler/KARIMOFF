@@ -592,6 +592,33 @@ const migrations = [
       `;
       return Boolean(objects?.columns_present && objects?.constraint_valid);
     }
+  },
+  {
+    name: "20260901170000_add_loyalty_cards_and_audience",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.loyalty_cards') is not null as cards,
+          to_regclass('public.loyalty_cards_status_idx') is not null as status_index,
+          to_regprocedure('public.create_pos_order_atomic(uuid,text,text,jsonb,uuid,uuid,text,text,timestamp with time zone,boolean,uuid)') is not null as customer_pos,
+          exists (
+            select 1 from pg_class
+            where oid = to_regclass('public.loyalty_cards')
+              and relrowsecurity
+          ) as rls_enabled,
+          case
+            when to_regclass('public.loyalty_cards') is null then false
+            else has_table_privilege('karimoff_app', 'public.loyalty_cards', 'select,insert,update,delete')
+          end as app_privileges
+      `;
+      return Boolean(
+        objects?.cards
+        && objects?.status_index
+        && objects?.customer_pos
+        && objects?.rls_enabled
+        && objects?.app_privileges
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

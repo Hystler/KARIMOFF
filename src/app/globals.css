@@ -1494,6 +1494,87 @@ button:not(:disabled),
   .analytics-pair-grid dd { @apply text-[10px] font-black tabular-nums; }
 
   .analytics-panel-note { @apply border-b border-black/[0.06] bg-amber-50 px-5 py-3 text-[10px] font-semibold leading-relaxed text-amber-900 sm:px-6; }
+
+  .audience-dashboard { @apply mt-5 grid gap-5; }
+  .audience-hero {
+    @apply grid overflow-hidden rounded-lg bg-[#17171A] text-white shadow-[0_18px_48px_rgba(18,18,20,0.14)] lg:grid-cols-[minmax(0,1fr)_280px];
+  }
+  .audience-hero > div:first-child { @apply px-5 py-6 sm:px-7 sm:py-8; }
+  .audience-hero > div:first-child > span { @apply inline-flex items-center gap-2 text-[10px] font-black uppercase text-[#FF9B5D]; }
+  .audience-hero h2 { @apply mt-3 max-w-4xl text-xl font-black leading-snug sm:text-2xl; }
+  .audience-hero p { @apply mt-3 max-w-3xl text-xs font-medium leading-relaxed text-white/55; }
+  .audience-hero-coverage { @apply grid content-center border-t border-white/10 bg-white/[0.045] px-5 py-6 lg:border-l lg:border-t-0; }
+  .audience-hero-coverage strong { @apply text-4xl font-black tabular-nums text-[#67D7B1]; }
+  .audience-hero-coverage span { @apply mt-2 text-sm font-black leading-snug; }
+  .audience-hero-coverage small { @apply mt-2 text-[10px] font-bold text-white/45; }
+
+  .audience-metric-grid { @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4; }
+  .audience-metric { @apply flex min-h-[142px] items-start gap-4 rounded-lg border border-black/[0.08] bg-white p-5 shadow-[0_8px_24px_rgba(18,18,20,0.045)]; }
+  .audience-metric-icon { @apply grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#F0ECE6] text-karimoff-black; }
+  .audience-metric > div { @apply grid min-w-0 gap-1; }
+  .audience-metric > div > span { @apply text-[10px] font-black uppercase text-karimoff-muted; }
+  .audience-metric strong { @apply mt-1 text-2xl font-black tabular-nums; }
+  .audience-metric small { @apply mt-1 text-[10px] font-bold leading-relaxed text-karimoff-muted; }
+
+  .audience-primary-grid { @apply grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]; }
+  .audience-secondary-grid { @apply grid items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.75fr)]; }
+  .audience-dashboard .analytics-panel > header { @apply flex items-start justify-between gap-4 border-b border-black/[0.07] px-5 py-4 sm:px-6; }
+  .audience-dashboard .analytics-panel > header h2 { @apply mt-1 text-lg font-black; }
+  .audience-dashboard .analytics-panel > header > small { @apply mt-1 text-right text-[9px] font-bold text-karimoff-muted; }
+  .audience-segment-list { @apply divide-y divide-black/[0.07] px-5 sm:px-6; }
+  .audience-segment { @apply grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-3 py-4; }
+  .audience-segment > div:first-child { @apply grid gap-1; }
+  .audience-segment > div:first-child strong { @apply text-sm font-black; }
+  .audience-segment > div:first-child span { @apply text-[10px] font-semibold leading-relaxed text-karimoff-muted; }
+  .audience-segment-value { @apply grid justify-items-end; }
+  .audience-segment-value strong { @apply text-lg font-black tabular-nums; }
+  .audience-segment-value span { @apply text-[10px] font-black text-karimoff-muted; }
+  .audience-bar { @apply col-span-full block h-2 overflow-hidden rounded-full bg-[#ECE8E2]; }
+  .audience-bar i { @apply block h-full rounded-full; }
+  .audience-bar-orange i { @apply bg-karimoff-orange; }
+  .audience-bar-green i { @apply bg-[#19966E]; }
+  .audience-bar-ink i { @apply bg-[#55545A]; }
+  .audience-segment-meta { @apply col-span-full flex flex-wrap gap-x-5 gap-y-1 text-[9px] font-bold text-karimoff-muted; }
+  .audience-segment-meta b { @apply ml-1 text-karimoff-black; }
+
+  .audience-frequency-list { @apply grid gap-4 px-5 py-5 sm:px-6; }
+  .audience-frequency-list > div { @apply grid grid-cols-[minmax(0,1fr)_52px] items-end gap-x-3 gap-y-2; }
+  .audience-frequency-list > div > div:first-child { @apply flex items-baseline justify-between gap-3; }
+  .audience-frequency-list strong { @apply text-xs font-black; }
+  .audience-frequency-list span { @apply text-[9px] font-bold text-karimoff-muted; }
+  .audience-frequency-list .audience-bar { @apply col-span-1; }
+  .audience-frequency-list > div > b { @apply row-start-1 text-right text-[10px] font-black; }
+  .audience-activation-grid { @apply grid grid-cols-2 gap-px border-t border-black/[0.07] bg-black/[0.07]; }
+  .audience-activation-grid > div { @apply grid min-w-0 gap-1 bg-[#FBF9F6] p-4; }
+  .audience-activation-grid svg { @apply mb-2 text-karimoff-orange; }
+  .audience-activation-grid span { @apply text-[9px] font-black uppercase text-karimoff-muted; }
+  .audience-activation-grid strong { @apply text-xl font-black; }
+  .audience-activation-grid small { @apply text-[9px] font-bold text-karimoff-muted; }
+
+  .audience-preference-list { @apply divide-y divide-black/[0.07] px-5 py-2 sm:px-6; }
+  .audience-preference-list > div { @apply grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-3 py-3; }
+  .audience-preference-list > div > span { @apply font-mono text-[9px] font-bold text-black/35; }
+  .audience-preference-list > div > div:nth-child(2) { @apply grid min-w-0 gap-2; }
+  .audience-preference-list > div > div:nth-child(2) strong { @apply truncate text-xs font-black; }
+  .audience-preference-list > div > div:last-child { @apply grid justify-items-end gap-1; }
+  .audience-preference-list > div > div:last-child strong { @apply text-xs font-black tabular-nums; }
+  .audience-preference-list > div > div:last-child small { @apply text-[8px] font-bold text-karimoff-muted; }
+
+  .audience-identity-list { @apply divide-y divide-black/[0.07] px-5 sm:px-6; }
+  .audience-identity-list > div { @apply grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 py-4; }
+  .audience-provider { @apply grid h-9 w-9 place-items-center rounded-lg; }
+  .audience-provider-telegram { @apply bg-sky-50 text-sky-700; }
+  .audience-provider-max { @apply bg-[#EAF8F4] text-[#147C61]; }
+  .audience-provider-phone { @apply bg-[#F1EDE8] text-karimoff-black; }
+  .audience-identity-list > div > div { @apply grid gap-1; }
+  .audience-identity-list strong { @apply text-xs font-black; }
+  .audience-identity-list span { @apply text-[9px] font-bold text-karimoff-muted; }
+  .audience-identity-list b { @apply text-xs font-black tabular-nums; }
+  .audience-demography-note { @apply border-t border-black/[0.07] bg-[#F5F2EE] px-5 py-4 sm:px-6; }
+  .audience-demography-note > strong { @apply text-[10px] font-black; }
+  .audience-demography-note p { @apply mt-2 text-[9px] font-semibold leading-relaxed text-karimoff-muted; }
+  .audience-demography-note > div { @apply mt-3 flex flex-wrap gap-2; }
+  .audience-demography-note > div span { @apply rounded-md bg-white px-2.5 py-1.5 text-[9px] font-bold; }
 }
 
 .admin-workspace .admin-page {

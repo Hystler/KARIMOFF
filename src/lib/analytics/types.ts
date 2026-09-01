@@ -432,3 +432,66 @@ export type AnalyticsSalesPage = {
   detail: AnalyticsSaleDetail | null;
   error: string | null;
 };
+
+export type AudienceSegmentKey = "new" | "returning" | "loyal" | "at_risk" | "sleeping";
+
+export type AudienceSegment = {
+  key: AudienceSegmentKey;
+  label: string;
+  description: string;
+  customers: number;
+  share: number;
+  revenue: number;
+  averageCheck: number;
+};
+
+export type AudienceFrequencyRow = {
+  key: string;
+  label: string;
+  customers: number;
+  share: number;
+};
+
+export type AudienceIdentityRow = {
+  provider: "telegram" | "max" | "phone";
+  label: string;
+  customers: number;
+  share: number;
+};
+
+export type AudiencePreferenceRow = {
+  key: string;
+  name: string;
+  customers: number;
+  revenue: number;
+  share: number;
+};
+
+export type AudienceAgeRow = {
+  key: string;
+  label: string;
+  customers: number;
+  share: number;
+};
+
+export type AudienceDashboard = {
+  rangeLabel: string;
+  customers: number;
+  activeCustomers: number;
+  identifiedSales: number;
+  totalSales: number;
+  identifiedCoveragePercent: number;
+  repeatRatePercent: number;
+  averageLifetimeRevenue: number;
+  averageLifetimeOrders: number;
+  medianRecencyDays: number | null;
+  marketingReachPercent: number;
+  loyaltyCardCoveragePercent: number;
+  ageCoveragePercent: number;
+  coreSummary: string;
+  segments: AudienceSegment[];
+  frequencies: AudienceFrequencyRow[];
+  identities: AudienceIdentityRow[];
+  preferences: AudiencePreferenceRow[];
+  ageGroups: AudienceAgeRow[];
+};

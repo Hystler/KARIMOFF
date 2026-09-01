@@ -36,6 +36,7 @@ type WebOrderInput = {
 type PosOrderInput = {
   source: "pos";
   locationId: string;
+  customerId: string | null;
   customerName: string;
   comment: string | null;
   items: CartItemInput[];
@@ -121,7 +122,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     p_actor_role: input.actorRole,
     p_fulfillment_mode: input.fulfillmentMode ?? "asap",
     p_requested_at: input.fulfillmentMode === "scheduled" ? input.requestedAt ?? null : null,
-    p_is_test: isTest
+    p_is_test: isTest,
+    p_customer_id: input.customerId
   });
   const order = firstRow(data);
   if (error || !order?.order_id) {
