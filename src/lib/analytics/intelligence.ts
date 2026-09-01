@@ -6,6 +6,7 @@ import { getPostgresSql } from "@/lib/postgres/server";
 import { analyticsFiltersToParams } from "./filters";
 import { buildAverageTicketFactors, buildPareto, buildRevenueBridge, detectTransparentAnomaly } from "./intelligence-math";
 import { calculateMetricDelta, safeAverage } from "./metrics";
+import { OPERATING_HOURS } from "./operating-hours";
 import { addCalendarDays } from "./periods";
 import { buildItemWhere, buildSalesWhere } from "./query";
 import type {
@@ -208,10 +209,11 @@ async function getHourlyDemand(
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
     where ${context.text}
+      and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
     group by 1, 2
     order by 2, 1
   `, context.values);
-  return Array.from({ length: 24 }, (_, hour) => {
+  return OPERATING_HOURS.map((hour) => {
     const categories: AnalyticsHourlyCategoryPoint["categories"] = {};
     for (const category of visibleCategories) {
       const row = rows.find((item) => item.category === category && number(item.hour) === hour);
@@ -392,9 +394,10 @@ async function getHourlyTotals(filters: AnalyticsFilters, range: AnalyticsRange,
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
     where ${context.text}
+      and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
     group by 1 order by 1
   `, context.values);
-  return Array.from({ length: 24 }, (_, hour) => {
+  return OPERATING_HOURS.map((hour) => {
     const row = rows.find((item) => number(item.hour) === hour);
     return { hour, revenue: number(row?.revenue), quantity: number(row?.quantity), receipts: number(row?.receipts) };
   });

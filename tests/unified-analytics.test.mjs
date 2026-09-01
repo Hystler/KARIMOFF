@@ -24,9 +24,9 @@ function analyticsFixture() {
   mkdirSync(cacheDirectory, { recursive: true });
   const directory = mkdtempSync(join(cacheDirectory, "karimoff-analytics-test-"));
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
-  for (const name of ["types", "periods", "metrics", "filters", "channels"]) {
+  for (const name of ["types", "periods", "metrics", "filters", "channels", "operating-hours"]) {
     const source = read(`src/lib/analytics/${name}.ts`).replace(
-      /from "\.\/(types|periods|metrics|filters|channels)"/g,
+      /from "\.\/(types|periods|metrics|filters|channels|operating-hours)"/g,
       'from "./$1.ts"'
     );
     writeFileSync(join(directory, `${name}.ts`), source);

@@ -45,6 +45,33 @@ type MetricRow = {
 
 type TimelineRow = MetricRow & { bucket: string; source: AnalyticsChannel };
 
+type FoodCostMetricRow = {
+  covered_item_rows: string | number;
+  covered_revenue: string | number;
+  food_cost: string | number;
+  total_revenue: string | number;
+};
+
+const PRODUCT_FOOD_COST_CTE = `
+  product_food_costs as (
+    select
+      recipe.product_id,
+      count(*) > 0
+        and bool_and(
+          ingredient.cost_per_unit > 0
+          and recipe.unit = ingredient.unit
+        ) as is_complete,
+      sum(
+        recipe.quantity
+        / (1 - least(95, greatest(0, coalesce(ingredient.waste_percent, 0))) / 100)
+        * ingredient.cost_per_unit
+      )::numeric as unit_food_cost
+    from public.product_ingredients recipe
+    join public.ingredients ingredient on ingredient.id = recipe.ingredient_id
+    group by recipe.product_id
+  )
+`;
+
 function number(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -131,6 +158,38 @@ async function getMetricRow(
     customers: 0,
     customers_available: false,
     discounts_available: false
+  };
+}
+
+async function getFoodCostMetricRow(
+  filters: AnalyticsFilters,
+  range: AnalyticsRange,
+  scope: AnalyticsScope
+) {
+  const where = itemFilteredWhere(filters, range, scope);
+  const rows = await query<FoodCostMetricRow>(`
+    with ${PRODUCT_FOOD_COST_CTE}
+    select
+      count(*) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      )::integer as covered_item_rows,
+      coalesce(sum(i.net_revenue) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as covered_revenue,
+      coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as food_cost,
+      coalesce(sum(abs(i.net_revenue)), 0)::numeric as total_revenue
+    from public.analytics_sale_items i
+    join public.canonical_analytics_sales s on s.sale_id = i.sale_id
+    left join product_food_costs product_cost on product_cost.product_id = i.product_id
+    where ${where.text}
+  `, where.values);
+  return rows[0] ?? {
+    covered_item_rows: 0,
+    covered_revenue: 0,
+    food_cost: 0,
+    total_revenue: 0
   };
 }
 
@@ -326,6 +385,9 @@ type ProductAggregate = {
   quantity: string | number;
   revenue: string | number;
   receipts: string | number;
+  covered_revenue: string | number;
+  food_cost: string | number;
+  food_cost_complete: boolean;
 };
 
 async function getProductRows(
@@ -335,6 +397,7 @@ async function getProductRows(
 ) {
   const where = itemFilteredWhere(filters, range, scope);
   return query<ProductAggregate>(`
+    with ${PRODUCT_FOOD_COST_CTE}
     select
       coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
       i.product_name,
@@ -344,9 +407,19 @@ async function getProductRows(
       min(i.source) as single_channel,
       coalesce(sum(i.net_quantity), 0)::numeric as quantity,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
-      count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
+      count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts,
+      coalesce(sum(i.net_revenue) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as covered_revenue,
+      coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as food_cost,
+      bool_and(
+        i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ) as food_cost_complete
     from public.analytics_sale_items i
     join public.canonical_analytics_sales s on s.sale_id = i.sale_id
+    left join product_food_costs product_cost on product_cost.product_id = i.product_id
     where ${where.text}
     group by 1, 2
   `, where.values);
@@ -372,12 +445,19 @@ async function getProducts(
     const quantity = number(row.quantity);
     const previousProduct = previousByKey.get(row.product_key);
     const previousRevenue = previousProduct?.revenue ?? 0;
+    const foodCostComplete = Boolean(row.food_cost_complete);
+    const foodCost = foodCostComplete ? number(row.food_cost) : null;
+    const grossProfit = foodCost === null ? null : number(row.covered_revenue) - foodCost;
     return {
       key: row.product_key,
       name: row.product_name,
       category: row.category,
       quantity,
       revenue,
+      foodCost,
+      grossProfit,
+      grossMarginPercent: grossProfit !== null && revenue > 0 ? (grossProfit / revenue) * 100 : null,
+      foodCostComplete,
       averagePrice: safeAverage(revenue, quantity),
       share: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0,
       previousRevenue,
@@ -681,6 +761,7 @@ async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scop
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
       where ${where.text}
+        and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
       group by 1, 2
       order by 1, 2
     `, where.values);
@@ -702,6 +783,7 @@ async function getHeatmap(filters: AnalyticsFilters, range: AnalyticsRange, scop
       coalesce(sum(s.items_count) filter (where s.sale_count_eligible), 0)::numeric as items
     from public.canonical_analytics_sales s
     where ${where.text}
+      and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
     group by 1, 2
     order by 1, 2
   `, where.values);
@@ -779,10 +861,23 @@ export async function getAnalyticsDashboard(params: {
   const comparisonRange = getComparisonRange(range, filters.comparison);
   const granularity = getAnalyticsGranularity(range);
 
-  const [currentMetric, previousMetric, currentTimelineRows, previousTimelineRows, options, heatmap, weekdays, updatedAt] =
+  const [
+    currentMetric,
+    previousMetric,
+    currentFoodCostMetric,
+    previousFoodCostMetric,
+    currentTimelineRows,
+    previousTimelineRows,
+    options,
+    heatmap,
+    weekdays,
+    updatedAt
+  ] =
     await Promise.all([
       getMetricRow(filters, range, scope),
       getMetricRow(filters, comparisonRange, scope),
+      getFoodCostMetricRow(filters, range, scope),
+      getFoodCostMetricRow(filters, comparisonRange, scope),
       getTimelineRows(filters, range, scope, granularity),
       getTimelineRows(filters, comparisonRange, scope, granularity),
       getAnalyticsFilterOptions(scope),
@@ -811,6 +906,13 @@ export async function getAnalyticsDashboard(params: {
     discounts: number(currentMetric.discounts),
     customers: number(currentMetric.customers)
   };
+  const currentFoodCost = number(currentFoodCostMetric.food_cost);
+  const currentCoveredRevenue = number(currentFoodCostMetric.covered_revenue);
+  const currentGrossProfit = currentCoveredRevenue - currentFoodCost;
+  const currentFoodCostCoverageRevenue = number(currentFoodCostMetric.total_revenue);
+  const currentFoodCostCoveragePercent = currentFoodCostCoverageRevenue > 0
+    ? Math.min(100, (Math.abs(currentCoveredRevenue) / currentFoodCostCoverageRevenue) * 100)
+    : 0;
   const previous = {
     revenue: number(previousMetric.revenue),
     saleRevenue: number(previousMetric.sale_revenue),
@@ -822,6 +924,9 @@ export async function getAnalyticsDashboard(params: {
     discounts: number(previousMetric.discounts),
     customers: number(previousMetric.customers)
   };
+  const previousFoodCost = number(previousFoodCostMetric.food_cost);
+  const previousCoveredRevenue = number(previousFoodCostMetric.covered_revenue);
+  const previousGrossProfit = previousCoveredRevenue - previousFoodCost;
   const spark = (metric: AnalyticsFilters["metric"]) =>
     mergeTimelineRows(currentTimelineRows, currentKeys, granularity, metric).map((point) => point.value);
   const currentAverage = safeAverage(current.saleRevenue, current.sales);
@@ -889,6 +994,17 @@ export async function getAnalyticsDashboard(params: {
     granularity,
     kpis: {
       revenue: metricValue(current.revenue, previous.revenue, spark("revenue")),
+      foodCost: metricValue(currentFoodCost, previousFoodCost, [previousFoodCost, currentFoodCost]),
+      grossProfit: metricValue(
+        currentGrossProfit,
+        previousGrossProfit,
+        [previousGrossProfit, currentGrossProfit]
+      ),
+      grossProfitAvailable: number(currentFoodCostMetric.covered_item_rows) > 0,
+      grossMarginPercent: currentCoveredRevenue > 0
+        ? (currentGrossProfit / currentCoveredRevenue) * 100
+        : null,
+      foodCostCoveragePercent: currentFoodCostCoveragePercent,
       sales: metricValue(current.sales, previous.sales, spark("sales")),
       averageOrdersPerDay: metricValue(currentOrdersPerDay, previousOrdersPerDay, spark("sales")),
       averageReceiptsPerDay: metricValue(

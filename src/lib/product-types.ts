@@ -49,6 +49,13 @@ export type ProductCompositionItem = {
   ingredient_id: string;
   name: string;
   sort_order: number;
+  quantity: number;
+  unit: "g" | "ml" | "pcs";
+  nutrition_basis_quantity: number;
+  calories_kcal: number | null;
+  proteins_g: number | null;
+  fats_g: number | null;
+  carbohydrates_g: number | null;
 };
 
 export type Product = {

@@ -95,6 +95,11 @@ export type KpiValue = {
 
 export type AnalyticsKpis = {
   revenue: KpiValue;
+  foodCost: KpiValue;
+  grossProfit: KpiValue;
+  grossProfitAvailable: boolean;
+  grossMarginPercent: number | null;
+  foodCostCoveragePercent: number;
   sales: KpiValue;
   averageOrdersPerDay: KpiValue;
   averageReceiptsPerDay: KpiValue;
@@ -136,6 +141,10 @@ export type AnalyticsProductRow = {
   category: string | null;
   quantity: number;
   revenue: number;
+  foodCost: number | null;
+  grossProfit: number | null;
+  grossMarginPercent: number | null;
+  foodCostComplete: boolean;
   averagePrice: number;
   share: number;
   previousRevenue: number;

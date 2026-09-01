@@ -16,8 +16,10 @@ function fixture() {
 
   const files = {
     "analytics-types": read("src/lib/analytics/types.ts"),
+    "operating-hours": read("src/lib/analytics/operating-hours.ts"),
     "analytics-periods": read("src/lib/analytics/periods.ts")
-      .replace('from "./types"', 'from "./analytics-types.ts"'),
+      .replace('from "./types"', 'from "./analytics-types.ts"')
+      .replace('from "./operating-hours"', 'from "./operating-hours.ts"'),
     "economics-values": read("src/lib/economics-values.ts"),
     "economics-input": read("src/lib/economics-input.ts")
       .replace('from "./economics-values"', 'from "./economics-values.ts"'),

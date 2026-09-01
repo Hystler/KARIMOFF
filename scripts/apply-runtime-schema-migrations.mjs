@@ -564,6 +564,34 @@ const migrations = [
         objects?.rls_enabled
       );
     }
+  },
+  {
+    name: "20260901120000_add_ingredient_nutrition",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          bool_and(attribute.attname is not null) as columns_present,
+          exists (
+            select 1
+            from pg_constraint
+            where conrelid = 'public.ingredients'::regclass
+              and conname = 'ingredients_nutrition_values_check'
+              and convalidated
+          ) as constraint_valid
+        from unnest(array[
+          'nutrition_basis_quantity',
+          'calories_kcal',
+          'proteins_g',
+          'fats_g',
+          'carbohydrates_g'
+        ]) expected(column_name)
+        left join pg_attribute attribute
+          on attribute.attrelid = 'public.ingredients'::regclass
+         and attribute.attname = expected.column_name
+         and not attribute.attisdropped
+      `;
+      return Boolean(objects?.columns_present && objects?.constraint_valid);
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

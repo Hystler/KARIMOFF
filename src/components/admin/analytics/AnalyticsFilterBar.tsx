@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { channelLabels } from "@/lib/analytics/channels";
 import { analyticsFiltersToParams } from "@/lib/analytics/filters";
 import { paymentMethodLabels } from "@/lib/analytics/metrics";
+import { OPERATING_HOURS, RESTAURANT_CLOSE_HOUR } from "@/lib/analytics/operating-hours";
 import type { AnalyticsFilterOptions, AnalyticsFilters } from "@/lib/analytics/types";
 
 const periods = [
@@ -226,12 +227,12 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                   value={filters.hourFrom ?? ""}
                   onChange={(event) => {
                     const from = event.target.value;
-                    const currentTo = filters.hourTo ?? Math.min(24, Number(from) + 1);
+                    const currentTo = filters.hourTo ?? Math.min(RESTAURANT_CLOSE_HOUR, Number(from) + 1);
                     navigate({ hourFrom: from || null, hourTo: from ? String(Math.max(Number(from) + 1, currentTo)) : null }, true);
                   }}
                 >
                   <option value="">С любого</option>
-                  {Array.from({ length: 24 }, (_, hour) => <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>)}
+                  {OPERATING_HOURS.map((hour) => <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>)}
                 </select>
                 <span>—</span>
                 <select
@@ -241,7 +242,10 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
                   onChange={(event) => navigate({ hourTo: event.target.value || null }, true)}
                 >
                   <option value="">До любого</option>
-                  {Array.from({ length: 24 - (filters.hourFrom ?? 0) }, (_, index) => (filters.hourFrom ?? 0) + index + 1).map((hour) => (
+                  {Array.from(
+                    { length: RESTAURANT_CLOSE_HOUR - (filters.hourFrom ?? RESTAURANT_CLOSE_HOUR - 1) },
+                    (_, index) => (filters.hourFrom ?? RESTAURANT_CLOSE_HOUR - 1) + index + 1
+                  ).map((hour) => (
                     <option value={hour} key={hour}>{String(hour).padStart(2, "0")}:00</option>
                   ))}
                 </select>

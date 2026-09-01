@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { productIngredientFormSchema } from "@/lib/ingredient-schema";
+import { productIngredientFormSchema, type ProductIngredientFormInput } from "@/lib/ingredient-schema";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
 async function requireAdmin() {
@@ -27,6 +27,32 @@ function getDatabaseOrRedirect(productId: string) {
 function revalidateProductComposition(productId: string) {
   revalidatePath(`/admin/products/${productId}/edit`);
   revalidatePath("/admin/economics");
+}
+
+function toCompositionPayload(data: ProductIngredientFormInput) {
+  return {
+    ingredient_id: data.ingredient_id,
+    quantity: data.quantity,
+    unit: data.unit,
+    sort_order: data.sort_order,
+    is_removable: data.is_removable,
+    is_extra_available: data.is_extra_available,
+    extra_quantity: data.extra_quantity,
+    extra_price: data.extra_price,
+    max_extra_quantity: data.max_extra_quantity,
+    preparation_step: data.preparation_step || null,
+    preparation_note: data.preparation_note || null,
+    preparation_image_url: data.preparation_image_url || null,
+    station: data.station || null,
+    preparation_time_seconds: data.preparation_time_seconds || null
+  };
+}
+
+function compositionSaveError(message: string) {
+  if (message.includes("product_ingredients_station_check")) {
+    return "Выберите допустимую кухонную станцию";
+  }
+  return "Не удалось сохранить строку состава";
 }
 
 export async function addProductIngredientAction(formData: FormData) {
@@ -57,10 +83,13 @@ export async function addProductIngredientAction(formData: FormData) {
   }
 
   const database = getDatabaseOrRedirect(parsed.data.product_id);
-  const { error } = await database.from("product_ingredients").insert(parsed.data);
+  const { error } = await database.from("product_ingredients").insert({
+    product_id: parsed.data.product_id,
+    ...toCompositionPayload(parsed.data)
+  });
 
   if (error) {
-    redirect(`/admin/products/${parsed.data.product_id}/edit?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/products/${parsed.data.product_id}/edit?error=${encodeURIComponent(compositionSaveError(error.message))}`);
   }
 
   revalidateProductComposition(parsed.data.product_id);
@@ -97,26 +126,11 @@ export async function updateProductIngredientAction(formData: FormData) {
   const database = getDatabaseOrRedirect(parsed.data.product_id);
   const { error } = await database
     .from("product_ingredients")
-    .update({
-      ingredient_id: parsed.data.ingredient_id,
-      quantity: parsed.data.quantity,
-      unit: parsed.data.unit,
-      sort_order: parsed.data.sort_order,
-      is_removable: parsed.data.is_removable,
-      is_extra_available: parsed.data.is_extra_available,
-      extra_quantity: parsed.data.extra_quantity,
-      extra_price: parsed.data.extra_price,
-      max_extra_quantity: parsed.data.max_extra_quantity,
-      preparation_step: parsed.data.preparation_step || null,
-      preparation_note: parsed.data.preparation_note || null,
-      preparation_image_url: parsed.data.preparation_image_url || null,
-      station: parsed.data.station || null,
-      preparation_time_seconds: parsed.data.preparation_time_seconds || null
-    })
+    .update(toCompositionPayload(parsed.data))
     .eq("id", id);
 
   if (error) {
-    redirect(`/admin/products/${parsed.data.product_id}/edit?error=${encodeURIComponent(error.message)}`);
+    redirect(`/admin/products/${parsed.data.product_id}/edit?error=${encodeURIComponent(compositionSaveError(error.message))}`);
   }
 
   revalidateProductComposition(parsed.data.product_id);

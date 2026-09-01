@@ -52,6 +52,32 @@ export function ProductComposition({ productId, productPrice, ingredients, foodC
         </div>
       ) : null}
 
+      <div className="mt-5 rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-karimoff-black">КБЖУ на порцию</p>
+            <p className="mt-1 text-xs leading-5 text-karimoff-muted">Автоматически из количества ингредиентов в рецептуре.</p>
+          </div>
+          {!foodCost.nutrition.available ? <strong className="text-sm text-amber-700">Данные уточняются</strong> : null}
+        </div>
+        {foodCost.nutrition.available ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {foodCost.nutrition.items.map((item) => (
+              <div key={item.key} className="rounded-lg border border-karimoff-line bg-white px-3 py-3">
+                <span className="block text-xs font-semibold text-karimoff-muted">{item.label}</span>
+                <strong className="mt-1 block text-base font-black text-karimoff-black">
+                  {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(item.value ?? 0)} {item.unit}
+                </strong>
+              </div>
+            ))}
+          </div>
+        ) : foodCost.nutrition.missingIngredients.length ? (
+          <p className="mt-3 text-xs font-semibold leading-5 text-amber-700">
+            Заполните КБЖУ ингредиентов: {foodCost.nutrition.missingIngredients.join(", ")}.
+          </p>
+        ) : null}
+      </div>
+
       {foodCost.lines.length === 0 ? (
         <div className="mt-6 rounded-lg border border-dashed border-karimoff-line bg-karimoff-cream p-5 text-sm leading-6 text-karimoff-muted">
           Состав не задан. Добавьте ингредиенты, чтобы увидеть себестоимость товара.

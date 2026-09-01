@@ -1,6 +1,12 @@
 import { ArrowRight, Download, Info, Layers3, PackageSearch, ReceiptText, ShoppingBasket, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { analyticsFiltersToParams } from "@/lib/analytics/filters";
+import {
+  formatOperatingInterval,
+  OPERATING_INTERVALS,
+  RESTAURANT_CLOSE_HOUR,
+  RESTAURANT_OPEN_HOUR
+} from "@/lib/analytics/operating-hours";
 import type { AnalyticsDashboard, AnalyticsFilters, KpiValue } from "@/lib/analytics/types";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import { AnalyticsFullscreenButton } from "./AnalyticsFullscreenButton";
@@ -119,7 +125,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
 
       <section className="analytics-panel analytics-expanded-panel" id="hourly-demand">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Время и спрос</p><h2>Категории по часам</h2><span>До пяти ведущих или выбранных категорий · Москва</span></div>
+          <div><p className="admin-eyebrow">Время и спрос</p><h2>Категории по рабочим интервалам</h2><span>11:00–21:00 · до пяти ведущих или выбранных категорий · Москва</span></div>
           <div className="analytics-heading-tools">
             <nav className="analytics-mini-tabs" aria-label="Метрика почасового спроса">
               <Link href={analyticsHref(dashboard.filters, { demand: null })} className={dashboard.filters.demandMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
@@ -232,7 +238,7 @@ function ProductProfile({ dashboard }: { dashboard: AnalyticsDashboard }) {
         <div><dt>Количество</dt><dd>{formatNumber(profile.quantity, 2)}</dd></div>
         <div><dt>Дней с продажами</dt><dd>{formatNumber(profile.daysSold)}</dd></div>
         <div><dt>В среднем в день</dt><dd>{formatNumber(profile.averageUnitsPerDay, 2)}</dd></div>
-        <div><dt>Пиковый час</dt><dd>{profile.peakHour === null ? "Нет данных" : `${String(profile.peakHour).padStart(2, "0")}:00`}</dd></div>
+        <div><dt>Пиковый интервал</dt><dd>{profile.peakHour === null ? "Нет данных" : formatOperatingInterval(profile.peakHour)}</dd></div>
         <div><dt>Сильный день</dt><dd>{profile.strongestWeekday ? weekdayLabels[profile.strongestWeekday - 1] : "Нет данных"}</dd></div>
         <div><dt>Доля категории</dt><dd>{profile.categoryShare === null ? "Нет mapping" : formatPercent(profile.categoryShare)}</dd></div>
       </dl>
@@ -247,7 +253,8 @@ function HourlyDemandChart({ dashboard }: { dashboard: AnalyticsDashboard }) {
   const metric = dashboard.filters.demandMetric;
   const values = data.flatMap((point) => categories.map((category) => metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0));
   const maximum = Math.max(1, ...values);
-  const x = (hour: number) => 48 + (hour / 23) * 820;
+  const intervalSpan = RESTAURANT_CLOSE_HOUR - RESTAURANT_OPEN_HOUR - 1;
+  const x = (hour: number) => 48 + ((hour - RESTAURANT_OPEN_HOUR) / intervalSpan) * 820;
   const y = (value: number) => 258 - (Math.max(0, value) / maximum) * 218;
   return (
     <div className="analytics-demand-chart">
@@ -257,13 +264,13 @@ function HourlyDemandChart({ dashboard }: { dashboard: AnalyticsDashboard }) {
           const points = data.map((point) => `${x(point.hour)},${y(metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0)}`).join(" ");
           return <polyline key={category} points={points} style={{ stroke: chartColors[index % chartColors.length] }} />;
         })}
-        {Array.from({ length: 12 }, (_, index) => index * 2).map((hour) => <text x={x(hour)} y="286" textAnchor="middle" key={hour}>{String(hour).padStart(2, "0")}</text>)}
+        {OPERATING_INTERVALS.map(({ hour, label }) => <text x={x(hour)} y="286" textAnchor="middle" key={hour}>{label}</text>)}
         {categories.flatMap((category, categoryIndex) => data.map((point) => {
           const value = metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0;
           if (!value) return null;
           const href = analyticsHref(dashboard.filters, { hourFrom: String(point.hour), hourTo: String(point.hour + 1), category }, "/admin/analytics/sales");
           const categoryPoint = point.categories[category];
-          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: chartColors[categoryIndex % chartColors.length] }}><title>{category}, {point.hour}:00 — выручка {formatRub(categoryPoint?.revenue ?? 0)}, товаров {formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков {formatNumber(categoryPoint?.receipts ?? 0)}</title></circle></a>;
+          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: chartColors[categoryIndex % chartColors.length] }}><title>{category}, {formatOperatingInterval(point.hour)} — выручка {formatRub(categoryPoint?.revenue ?? 0)}, товаров {formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков {formatNumber(categoryPoint?.receipts ?? 0)}</title></circle></a>;
         }))}
       </svg>
       <div className="analytics-demand-legend">{categories.map((category, index) => <span key={category}><i style={{ background: chartColors[index % chartColors.length] }} />{category}</span>)}</div>

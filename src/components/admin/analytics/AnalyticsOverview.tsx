@@ -3,6 +3,7 @@ import Link from "next/link";
 import { channelColors, getChannelLabel } from "@/lib/analytics/channels";
 import { analyticsFiltersToParams } from "@/lib/analytics/filters";
 import { getPaymentMethodLabel } from "@/lib/analytics/metrics";
+import { OPERATING_INTERVALS } from "@/lib/analytics/operating-hours";
 import type {
   AnalyticsBreakdownRow,
   AnalyticsDashboard,
@@ -24,7 +25,6 @@ const metricTabs: Array<[AnalyticsMetric, string]> = [
 ];
 
 const weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
 function analyticsHref(filters: AnalyticsFilters, patch: Record<string, string | null>) {
   const params = analyticsFiltersToParams(filters);
   for (const [key, value] of Object.entries(patch)) {
@@ -71,26 +71,30 @@ function KpiCard({
   value,
   format,
   inverse = false,
-  hint
+  hint,
+  available = true
 }: {
   label: string;
   value: KpiValue;
   format: (value: number) => string;
   inverse?: boolean;
   hint?: string;
+  available?: boolean;
 }) {
   return (
     <article className="analytics-kpi-card">
       <div>
         <span>{label}</span>
-        <strong>{format(value.current)}</strong>
+        <strong>{available ? format(value.current) : "Нет данных"}</strong>
         {hint ? <small className="analytics-kpi-hint">{hint}</small> : null}
       </div>
-      <Sparkline values={value.sparkline} />
-      <div className="analytics-kpi-meta">
-        <Delta value={value} inverse={inverse} />
-        <span>было {format(value.previous)}</span>
-      </div>
+      {available ? <Sparkline values={value.sparkline} /> : null}
+      {available ? (
+        <div className="analytics-kpi-meta">
+          <Delta value={value} inverse={inverse} />
+          <span>было {format(value.previous)}</span>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -109,6 +113,15 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
     <>
       <section className="analytics-kpi-grid" aria-label="Основные показатели">
         <KpiCard label="Выручка" value={dashboard.kpis.revenue} format={(value) => formatRub(value)} />
+        <KpiCard
+          label="Валовая прибыль по food cost"
+          value={dashboard.kpis.grossProfit}
+          format={(value) => formatRub(value)}
+          available={dashboard.kpis.grossProfitAvailable}
+          hint={dashboard.kpis.grossProfitAvailable
+            ? `Выручка − ${formatRub(dashboard.kpis.foodCost.current)} food cost · маржа ${dashboard.kpis.grossMarginPercent === null ? "не рассчитана" : formatPercent(dashboard.kpis.grossMarginPercent)} · покрытие ${formatPercent(dashboard.kpis.foodCostCoveragePercent)}`
+            : "Нужны подтверждённые сопоставления товаров и полные цены ингредиентов"}
+        />
         <KpiCard label="Завершённые продажи" value={dashboard.kpis.sales} format={(value) => formatNumber(value)} hint="Касса и оплаченные завершённые web-заказы" />
         <KpiCard label="Среднее заказов в день" value={dashboard.kpis.averageOrdersPerDay} format={(value) => formatNumber(value, 1)} hint="Завершённые продажи / календарные дни" />
         <KpiCard label="Среднее чеков в день" value={dashboard.kpis.averageReceiptsPerDay} format={(value) => formatNumber(value, 1)} hint="Только фискальные POS-чеки" />
@@ -222,7 +235,7 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
 
       <section className="analytics-panel analytics-expanded-panel" id="heatmap">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Ритм точки</p><h2>День недели × час</h2><span>Локальное время ресторана</span></div>
+          <div><p className="admin-eyebrow">Ритм точки</p><h2>День недели × интервал</h2><span>Рабочие интервалы 11:00–21:00 · Москва</span></div>
           <div className="analytics-heading-tools">
             <nav className="analytics-mini-tabs" aria-label="Метрика тепловой карты">
               <Link href={analyticsHref(dashboard.filters, { heatmap: null })} className={dashboard.filters.heatmapMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
@@ -233,13 +246,13 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
           </div>
         </header>
         <div className="analytics-heatmap-scroll">
-          <div className="analytics-heatmap" role="grid" aria-label="Продажи по дням недели и часам">
+          <div className="analytics-heatmap" role="grid" aria-label="Продажи по дням недели и рабочим интервалам">
             <span />
-            {Array.from({ length: 24 }, (_, hour) => <span key={hour} className="analytics-heatmap-hour">{hour}</span>)}
+            {OPERATING_INTERVALS.map((interval) => <span key={interval.hour} className="analytics-heatmap-hour">{interval.label}</span>)}
             {Array.from({ length: 7 }, (_, index) => index + 1).map((weekday) => (
               <div className="contents" key={weekday}>
                 <strong>{weekdays[weekday - 1]}</strong>
-                {Array.from({ length: 24 }, (_, hour) => {
+                {OPERATING_INTERVALS.map(({ hour, label: intervalLabel }) => {
                   const cell = dashboard.heatmap.find((item) => item.weekday === weekday && item.hour === hour);
                   const value = dashboard.filters.heatmapMetric === "sales"
                     ? cell?.sales ?? 0
@@ -251,7 +264,7 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
                     ? formatRub(value)
                     : `${formatNumber(value, dashboard.filters.heatmapMetric === "items" ? 2 : 0)} ${dashboard.filters.heatmapMetric === "items" ? "товаров" : "продаж"}`;
                   const color = value < 0 ? "220, 38, 38" : "251, 103, 10";
-                  return <span key={hour} role="gridcell" tabIndex={0} title={`${weekdays[weekday - 1]}, ${hour}:00 — ${label}`} style={{ backgroundColor: `rgba(${color}, ${0.05 + intensity * 0.9})` }} />;
+                  return <span key={hour} role="gridcell" tabIndex={0} title={`${weekdays[weekday - 1]}, ${intervalLabel} — ${label}`} style={{ backgroundColor: `rgba(${color}, ${0.05 + intensity * 0.9})` }} />;
                 })}
               </div>
             ))}
@@ -286,14 +299,17 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
         </header>
         {dashboard.products.length ? (
           <div className="overflow-x-auto">
-            <table className="analytics-table min-w-[860px]">
-              <thead><tr><th>Товар</th><th>Канал</th><th>Продано</th><th>Выручка</th><th>Средняя цена</th><th>Доля</th><th>Динамика</th></tr></thead>
+            <table className="analytics-table min-w-[1160px]">
+              <thead><tr><th>Товар</th><th>Канал</th><th>Продано</th><th>Выручка</th><th>Food cost</th><th>Валовая прибыль</th><th>Маржа</th><th>Средняя цена</th><th>Доля</th><th>Динамика</th></tr></thead>
               <tbody>{dashboard.products.map((product) => (
                 <tr key={product.key}>
                   <td><strong>{product.name}</strong><span>{product.category ?? "Категория не указана"}</span>{product.mappingStatus === "unmapped" ? <em>Не сопоставлено</em> : null}</td>
                   <td>{product.channel === "multiple" ? "Несколько" : getChannelLabel(product.channel)}</td>
                   <td>{formatNumber(product.quantity, 2)}</td>
                   <td><strong>{formatRub(product.revenue)}</strong></td>
+                  <td>{product.foodCost === null ? "Нет данных" : formatRub(product.foodCost)}</td>
+                  <td><strong>{product.grossProfit === null ? "Нет данных" : formatRub(product.grossProfit)}</strong></td>
+                  <td>{product.grossMarginPercent === null ? "Нет данных" : formatPercent(product.grossMarginPercent)}</td>
                   <td>{formatRub(product.averagePrice)}</td>
                   <td>{formatPercent(product.share)}</td>
                   <td><Delta value={{ current: product.revenue, previous: product.previousRevenue, delta: product.delta, sparkline: [] }} /></td>

@@ -1011,9 +1011,9 @@ button:not(:disabled),
 
   .analytics-heatmap {
     display: grid;
-    grid-template-columns: 34px repeat(24, minmax(24px, 1fr));
+    grid-template-columns: 34px repeat(10, minmax(52px, 1fr));
     gap: 4px;
-    min-width: 760px;
+    min-width: 620px;
     align-items: center;
   }
 
@@ -1026,7 +1026,7 @@ button:not(:disabled),
   }
 
   .analytics-heatmap [role="gridcell"] {
-    @apply block aspect-square min-h-6 rounded-[4px] border border-black/[0.04] transition hover:scale-110 hover:ring-2 hover:ring-karimoff-orange/30 focus-visible:scale-110;
+    @apply block h-10 rounded-[4px] border border-black/[0.04] transition hover:scale-105 hover:ring-2 hover:ring-karimoff-orange/30 focus-visible:scale-105;
   }
 
   .analytics-weekdays {
