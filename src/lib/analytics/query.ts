@@ -1,3 +1,4 @@
+import { analyticsCategorySql } from "./categories";
 import type { AnalyticsFilters, AnalyticsRange, AnalyticsScope } from "./types";
 
 export type ParameterizedQuery = {
@@ -63,10 +64,11 @@ export function buildSalesWhere(
 
   const categories = filters.categories.length ? filters.categories : filters.category ? [filters.category] : [];
   if (options.includeItemFilters !== false && categories.length) {
+    const category = analyticsCategorySql("filter_item");
     clauses.push(`exists (
       select 1 from public.analytics_sale_items filter_item
       where filter_item.sale_id = ${alias}.sale_id
-        and filter_item.category = any(${parameters.add(categories, "::text[]")})
+        and ${category} = any(${parameters.add(categories, "::text[]")})
     )`);
   }
   if (options.includeItemFilters !== false && filters.product) {
@@ -107,7 +109,7 @@ export function buildItemWhere(
   const clauses: string[] = [];
   const categories = filters.categories.length ? filters.categories : filters.category ? [filters.category] : [];
   if (options.includeCategory !== false && categories.length) {
-    clauses.push(`${alias}.category = any(${parameters.add(categories, "::text[]")})`);
+    clauses.push(`${analyticsCategorySql(alias)} = any(${parameters.add(categories, "::text[]")})`);
   }
   if (options.includeProduct !== false && filters.product) {
     clauses.push(`coalesce(

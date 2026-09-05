@@ -35,6 +35,12 @@ function getIngredientId(formData: FormData) {
   return id;
 }
 
+function getIngredientReturnTo(formData: FormData) {
+  return formData.get("return_to") === "/admin/ingredients?view=archived"
+    ? "/admin/ingredients?view=archived"
+    : "/admin/ingredients";
+}
+
 function toPayload(formData: FormData) {
   const parsed = ingredientFormSchema.safeParse({
     name: formData.get("name"),
@@ -44,6 +50,10 @@ function toPayload(formData: FormData) {
     package_price: formData.get("package_price") || undefined,
     cost_per_unit: formData.get("cost_per_unit") || undefined,
     waste_percent: formData.get("waste_percent") || 0,
+    calories_kcal: formData.get("calories_kcal") || undefined,
+    proteins_g: formData.get("proteins_g") || undefined,
+    fats_g: formData.get("fats_g") || undefined,
+    carbohydrates_g: formData.get("carbohydrates_g") || undefined,
     sort_order: formData.get("sort_order") || 100,
     is_active: formData.get("is_active") === "on"
   });
@@ -67,6 +77,11 @@ function toPayload(formData: FormData) {
       waste_percent: parsed.data.waste_percent,
       package_size: packageSize,
       package_price: packagePrice,
+      nutrition_basis_quantity: parsed.data.unit === "pcs" ? 1 : 100,
+      calories_kcal: parsed.data.calories_kcal ?? null,
+      proteins_g: parsed.data.proteins_g ?? null,
+      fats_g: parsed.data.fats_g ?? null,
+      carbohydrates_g: parsed.data.carbohydrates_g ?? null,
       sort_order: parsed.data.sort_order,
       is_active: parsed.data.is_active
     }
@@ -195,11 +210,12 @@ export async function toggleIngredientActiveAction(formData: FormData) {
 
   const id = getIngredientId(formData);
   const nextActive = String(formData.get("next_active") || "") === "true";
+  const returnTo = getIngredientReturnTo(formData);
   const database = getDatabaseOrRedirect();
   const { error } = await database.from("ingredients").update({ is_active: nextActive }).eq("id", id);
 
   if (error) {
-    redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=save`);
   }
 
   await writeAuditLog({
@@ -212,22 +228,22 @@ export async function toggleIngredientActiveAction(formData: FormData) {
     sourcePath: "/admin/ingredients"
   });
   revalidateIngredientViews();
-  redirect("/admin/ingredients?saved=1");
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}${nextActive ? "restored" : "archived"}=1`);
 }
 
-export async function deleteIngredientAction(formData: FormData) {
+export async function archiveIngredientAction(formData: FormData) {
   await requireAdmin();
 
   const id = getIngredientId(formData);
   const database = getDatabaseOrRedirect();
-  const { error } = await database.from("ingredients").delete().eq("id", id);
+  const { error } = await database.from("ingredients").update({ is_active: false }).eq("id", id);
 
   if (error) {
-    redirect(`/admin/ingredients?error=${encodeURIComponent(error.message)}`);
+    redirect("/admin/ingredients?error=archive");
   }
 
   await writeAuditLog({
-    action: "ingredient.delete",
+    action: "ingredient.archive",
     actorRefHash: getAdminActorHash(),
     actorType: "admin",
     entityId: id,
@@ -235,5 +251,5 @@ export async function deleteIngredientAction(formData: FormData) {
     sourcePath: "/admin/ingredients"
   });
   revalidateIngredientViews();
-  redirect("/admin/ingredients?deleted=1");
+  redirect("/admin/ingredients?archived=1");
 }

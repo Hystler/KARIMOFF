@@ -12,6 +12,7 @@ const dashboard = read("src/lib/analytics/dashboard.ts");
 const query = read("src/lib/analytics/query.ts");
 const filterBar = read("src/components/admin/analytics/AnalyticsFilterBar.tsx");
 const hub = read("src/components/admin/analytics/AnalyticsIntelligenceHub.tsx");
+const rangePicker = read("src/components/admin/RussianDateRangePicker.tsx");
 const reportExport = read("src/app/api/admin/analytics/report/export/route.ts");
 const operationalMigration = read("supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql");
 
@@ -20,9 +21,9 @@ function fixture() {
   mkdirSync(cacheDirectory, { recursive: true });
   const directory = mkdtempSync(join(cacheDirectory, "karimoff-premium-analytics-test-"));
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
-  for (const name of ["types", "periods", "metrics", "filters", "intelligence-math"]) {
+  for (const name of ["types", "periods", "metrics", "filters", "intelligence-math", "operating-hours", "palette"]) {
     const source = read(`src/lib/analytics/${name}.ts`).replace(
-      /from "\.\/(types|periods|metrics|filters|intelligence-math)"/g,
+      /from "\.\/(types|periods|metrics|filters|intelligence-math|operating-hours)"/g,
       'from "./$1.ts"'
     );
     writeFileSync(join(directory, `${name}.ts`), source);
@@ -148,7 +149,8 @@ test("premium analytics aggregates on the server and preserves stable product id
   assert.match(dashboard, /join public\.analytics_sale_items i on i\.sale_id = s\.sale_id/);
   assert.match(dashboard, /count\(distinct s\.sale_id\)/);
   assert.match(query, /at time zone 'Europe\/Moscow'/);
-  assert.match(query, /category = any/);
+  assert.match(query, /analyticsCategorySql/);
+  assert.match(query, /= any/);
   assert.doesNotMatch(hub, /food cost|gross profit|margin/i);
 });
 
@@ -176,6 +178,33 @@ test("analytics controls are URL-backed, keyboard reachable, and support drill-t
   assert.match(hub, /\/admin\/analytics\/sales/);
   assert.match(hub, /AnalyticsFullscreenButton/);
   assert.match(hub, /title=/);
+  assert.match(filterBar, /RussianDateRangePicker/);
+  assert.match(rangePicker, /aria-haspopup="dialog"/);
+  assert.match(rangePicker, /Предыдущий месяц/);
+  assert.doesNotMatch(filterBar + rangePicker, /type="date"/);
+});
+
+test("analytics category colors are stable and carry the same meaning across charts", () => {
+  const files = fixture();
+  let result;
+  try {
+    result = runTypeScript(`
+      const palette = await import(${JSON.stringify(files.url("palette"))});
+      console.log(JSON.stringify({
+        shawarma: palette.getAnalyticsCategoryPalette("Шаурма"),
+        shawarmaAgain: palette.getAnalyticsCategoryPalette("Шаурма с курицей"),
+        burgers: palette.getAnalyticsCategoryPalette("Бургеры"),
+        hotdogs: palette.getAnalyticsCategoryPalette("Хот-доги")
+      }));
+    `);
+  } finally {
+    files.cleanup();
+  }
+  assert.deepEqual(result.shawarma, result.shawarmaAgain);
+  assert.notEqual(result.shawarma.accent, result.burgers.accent);
+  assert.notEqual(result.burgers.accent, result.hotdogs.accent);
+  assert.match(hub, /getAnalyticsCategoryPalette/);
+  assert.doesNotMatch(hub, /index % 5|index % 3/);
 });
 
 test("product and category CSV reports are scoped, aggregated, and spreadsheet-safe", () => {

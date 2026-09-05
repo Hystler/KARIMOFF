@@ -23,6 +23,7 @@ const itemSchema = z.object({
 const payloadSchema = z.object({
   locationId: z.string().uuid(),
   customerName: z.string().trim().max(40).default("Гость"),
+  customerId: z.union([z.string().uuid(), z.literal("")]).transform((value) => value || null),
   comment: z.string().trim().max(500).default(""),
   idempotencyKey: z.string().uuid(),
   items: z.array(itemSchema).min(1).max(50)
@@ -49,6 +50,7 @@ export async function createPosOrderAction(
   const parsed = payloadSchema.safeParse({
     locationId: formData.get("location_id"),
     customerName: formData.get("customer_name") || "Гость",
+    customerId: formData.get("customer_id") || "",
     comment: formData.get("comment") || "",
     idempotencyKey: formData.get("idempotency_key") || randomUUID(),
     items
@@ -65,6 +67,7 @@ export async function createPosOrderAction(
       source: "pos",
       locationId: parsed.data.locationId,
       customerName: parsed.data.customerName || "Гость",
+      customerId: parsed.data.customerId,
       comment: parsed.data.comment || null,
       items: parsed.data.items,
       idempotencyKey: parsed.data.idempotencyKey,

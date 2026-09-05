@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
+import { ProductRecipeComposer } from "@/components/admin/ProductRecipeComposer";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminIngredients } from "@/lib/ingredients";
 import { logoutAction } from "../../login/actions";
 import { createProductAction } from "../actions";
 
@@ -19,6 +21,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
   }
 
   const params = searchParams ? await searchParams : {};
+  const ingredientResult = await getAdminIngredients();
 
   return (
     <main className="admin-page">
@@ -46,7 +49,17 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
           </div>
         ) : null}
 
-        <ProductForm action={createProductAction} submitLabel="Создать товар" />
+        {ingredientResult.error ? (
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
+            Не удалось загрузить ингредиенты: {ingredientResult.error}
+          </div>
+        ) : null}
+
+        <ProductForm
+          action={createProductAction}
+          submitLabel="Создать товар и рецептуру"
+          compositionEditor={<ProductRecipeComposer ingredients={ingredientResult.ingredients} />}
+        />
       </div>
     </main>
   );

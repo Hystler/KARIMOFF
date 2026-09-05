@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Product } from "@/lib/product-types";
 import { adminProductCategoryOptions } from "@/lib/product-categories";
 
@@ -5,9 +6,10 @@ type ProductFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   product?: Product | null;
   submitLabel: string;
+  compositionEditor?: ReactNode;
 };
 
-export function ProductForm({ action, product, submitLabel }: ProductFormProps) {
+export function ProductForm({ action, product, submitLabel, compositionEditor }: ProductFormProps) {
   const currentCategory = product?.category ?? "Бургеры";
   const categoryOptions = adminProductCategoryOptions.includes(currentCategory)
     ? adminProductCategoryOptions
@@ -139,32 +141,14 @@ export function ProductForm({ action, product, submitLabel }: ProductFormProps) 
         </label>
       </div>
 
-      <fieldset className="grid gap-4 rounded-lg border border-karimoff-line p-4">
-        <legend className="px-2 text-sm font-bold text-karimoff-black">КБЖУ на порцию</legend>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            ["calories", "Ккал", product?.calories],
-            ["protein", "Белки, г", product?.protein],
-            ["fat", "Жиры, г", product?.fat],
-            ["carbs", "Углеводы, г", product?.carbs]
-          ].map(([name, label, value]) => (
-            <label key={String(name)} className="grid gap-2 text-sm font-semibold text-karimoff-black">
-              {String(label)}
-              <input
-                name={String(name)}
-                type="number"
-                min="0"
-                step="0.1"
-                defaultValue={value ?? ""}
-                className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm outline-none transition focus:border-karimoff-orange"
-              />
-            </label>
-          ))}
+      {compositionEditor ?? (
+        <div className="rounded-lg border border-karimoff-line bg-karimoff-cream px-4 py-4">
+          <p className="text-sm font-bold text-karimoff-black">КБЖУ рассчитывается автоматически</p>
+          <p className="mt-1 text-xs font-medium leading-5 text-karimoff-muted">
+            Измените рецептуру ниже: значения складываются из КБЖУ ингредиентов и их количества.
+          </p>
         </div>
-        <p className="text-xs font-medium leading-5 text-karimoff-muted">
-          Заполняйте только подтверждённые значения. Пустые поля на сайте показываются как «Данные уточняются», а не как нули.
-        </p>
-      </fieldset>
+      )}
 
       <label className="flex items-center gap-3 text-sm font-semibold text-karimoff-black">
         <input

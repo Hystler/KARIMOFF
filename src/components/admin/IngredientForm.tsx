@@ -61,6 +61,33 @@ export function IngredientForm({ action, ingredient, submitLabel }: IngredientFo
         Если заполнены размер и цена упаковки, себестоимость за единицу рассчитается автоматически. Отходы учитывают несъедобную или технологически потерянную часть: например, кочерыжку, обрезь или ужарку.
       </p>
 
+      <fieldset className="grid gap-4 rounded-lg border border-karimoff-line p-4">
+        <legend className="px-2 text-sm font-bold text-karimoff-black">КБЖУ ингредиента</legend>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            ["calories_kcal", "Ккал", ingredient?.calories_kcal],
+            ["proteins_g", "Белки, г", ingredient?.proteins_g],
+            ["fats_g", "Жиры, г", ingredient?.fats_g],
+            ["carbohydrates_g", "Углеводы, г", ingredient?.carbohydrates_g]
+          ].map(([name, label, value]) => (
+            <label key={String(name)} className="grid gap-2 text-sm font-semibold text-karimoff-black">
+              {String(label)}
+              <input
+                name={String(name)}
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={value ?? ""}
+                className="rounded-lg border border-karimoff-line bg-white px-4 py-3 outline-none transition focus:border-karimoff-orange"
+              />
+            </label>
+          ))}
+        </div>
+        <p className="text-xs font-medium leading-5 text-karimoff-muted">
+          Для граммов и миллилитров указывайте значения на 100 г/мл, для штучного ингредиента — на 1 штуку. Заполните весь блок; товар посчитает КБЖУ автоматически по своей рецептуре.
+        </p>
+      </fieldset>
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-semibold text-karimoff-black">
           Порядок

@@ -32,6 +32,7 @@ COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules/postgres ./node
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-data-migrations.mjs ./scripts/apply-runtime-data-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-schema-migrations.mjs ./scripts/apply-runtime-schema-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/data/tech-cards ./data/tech-cards
+COPY --from=builder --chown=nextjs:nodejs /app/data/analytics ./data/analytics
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql ./supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812153000_add_production_accounting.sql ./supabase/migrations/20260812153000_add_production_accounting.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812190000_add_evotor_cloud_integration.sql ./supabase/migrations/20260812190000_add_evotor_cloud_integration.sql
@@ -45,6 +46,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026082712000
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql ./supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828190000_refine_public_product_copy.sql ./supabase/migrations/20260828190000_refine_public_product_copy.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828220000_add_order_status_notifications.sql ./supabase/migrations/20260828220000_add_order_status_notifications.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901120000_add_ingredient_nutrition.sql ./supabase/migrations/20260901120000_add_ingredient_nutrition.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql ./supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql
 
 USER nextjs
 

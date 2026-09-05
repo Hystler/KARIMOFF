@@ -5,6 +5,7 @@ import {
   ANALYTICS_PERIODS,
   type AnalyticsFilters
 } from "./types";
+import { RESTAURANT_CLOSE_HOUR, RESTAURANT_OPEN_HOUR } from "./operating-hours";
 
 type RawParams = Record<string, string | string[] | undefined> | URLSearchParams;
 
@@ -62,8 +63,8 @@ export function parseAnalyticsFilters(params: RawParams): AnalyticsFilters {
         .filter((value): value is number => value !== null)
     )
   ).sort((left, right) => left - right);
-  const hourFrom = integer(read(params, "hourFrom"), 0, 23);
-  const hourToCandidate = integer(read(params, "hourTo"), 1, 24);
+  const hourFrom = integer(read(params, "hourFrom"), RESTAURANT_OPEN_HOUR, RESTAURANT_CLOSE_HOUR - 1);
+  const hourToCandidate = integer(read(params, "hourTo"), RESTAURANT_OPEN_HOUR + 1, RESTAURANT_CLOSE_HOUR);
   const hourTo = hourFrom !== null && hourToCandidate !== null && hourToCandidate > hourFrom
     ? hourToCandidate
     : null;

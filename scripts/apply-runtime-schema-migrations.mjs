@@ -564,6 +564,61 @@ const migrations = [
         objects?.rls_enabled
       );
     }
+  },
+  {
+    name: "20260901120000_add_ingredient_nutrition",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          bool_and(attribute.attname is not null) as columns_present,
+          exists (
+            select 1
+            from pg_constraint
+            where conrelid = 'public.ingredients'::regclass
+              and conname = 'ingredients_nutrition_values_check'
+              and convalidated
+          ) as constraint_valid
+        from unnest(array[
+          'nutrition_basis_quantity',
+          'calories_kcal',
+          'proteins_g',
+          'fats_g',
+          'carbohydrates_g'
+        ]) expected(column_name)
+        left join pg_attribute attribute
+          on attribute.attrelid = 'public.ingredients'::regclass
+         and attribute.attname = expected.column_name
+         and not attribute.attisdropped
+      `;
+      return Boolean(objects?.columns_present && objects?.constraint_valid);
+    }
+  },
+  {
+    name: "20260901170000_add_loyalty_cards_and_audience",
+    applied: async (sql) => {
+      const [objects] = await sql`
+        select
+          to_regclass('public.loyalty_cards') is not null as cards,
+          to_regclass('public.loyalty_cards_status_idx') is not null as status_index,
+          to_regprocedure('public.create_pos_order_atomic(uuid,text,text,jsonb,uuid,uuid,text,text,timestamp with time zone,boolean,uuid)') is not null as customer_pos,
+          exists (
+            select 1 from pg_class
+            where oid = to_regclass('public.loyalty_cards')
+              and relrowsecurity
+          ) as rls_enabled,
+          case
+            when to_regclass('public.loyalty_cards') is null then false
+            else has_table_privilege('karimoff_app', 'public.loyalty_cards', 'select,insert,update,delete')
+          end as app_privileges
+      `;
+      return Boolean(
+        objects?.cards
+        && objects?.status_index
+        && objects?.customer_pos
+        && objects?.rls_enabled
+        && objects?.app_privileges
+      );
+    }
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;

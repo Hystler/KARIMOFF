@@ -4,6 +4,7 @@ import type {
   AnalyticsPeriodKey,
   AnalyticsRange
 } from "./types";
+import { formatOperatingInterval, OPERATING_HOURS } from "./operating-hours";
 
 export const DEFAULT_ANALYTICS_TIMEZONE = "Europe/Moscow";
 
@@ -299,7 +300,7 @@ export function buildBucketKeys(range: AnalyticsRange, granularity: AnalyticsGra
   const keys: string[] = [];
   if (granularity === "hour") {
     const start = getZonedParts(range.from, range.timezone);
-    for (let hour = 0; hour < 24; hour += 1) {
+    for (const hour of OPERATING_HOURS) {
       keys.push(`${dateKeyFromParts(start)}T${pad(hour)}`);
     }
     return keys;
@@ -327,7 +328,7 @@ export function buildBucketKeys(range: AnalyticsRange, granularity: AnalyticsGra
 }
 
 export function formatBucketLabel(key: string, granularity: AnalyticsGranularity) {
-  if (granularity === "hour") return `${key.slice(-2)}:00`;
+  if (granularity === "hour") return formatOperatingInterval(Number(key.slice(-2)));
   const date = new Date(`${key.slice(0, 10)}T12:00:00Z`);
   return new Intl.DateTimeFormat("ru-RU", {
     day: granularity === "month" ? undefined : "numeric",

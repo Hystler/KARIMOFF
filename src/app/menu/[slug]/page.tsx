@@ -92,7 +92,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const composition = await getPublicProductComposition(product.id);
-  const nutrition = getProductNutrition(product);
+  const nutrition = getProductNutrition(product, composition);
   const canonicalUrl = `${PUBLIC_ORIGIN}/menu/${encodeURIComponent(product.slug)}`;
   const structuredData = {
     "@context": "https://schema.org",

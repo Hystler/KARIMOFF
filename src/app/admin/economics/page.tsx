@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ActualManagementResultCalculator } from "@/components/admin/ActualManagementResult";
 import { EconomicsCalculator } from "@/components/admin/EconomicsCalculator";
+import { EconomicsPeriodFilter } from "@/components/admin/EconomicsPeriodFilter";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { parseAnalyticsFilters } from "@/lib/analytics/filters";
+import { getAnalyticsScope } from "@/lib/analytics/permissions";
+import { addCalendarDays, countAnalyticsCalendarDays, getAnalyticsRange } from "@/lib/analytics/periods";
+import { getActualManagementResult } from "@/lib/economics-actual";
 import { getAdminEconomicsSettings } from "@/lib/economics";
 import { formatPercent, formatRub } from "@/lib/format";
 import { getProductsFoodCosts } from "@/lib/ingredients";
@@ -10,6 +16,21 @@ import { getAdminProducts } from "@/lib/products";
 import { logoutAction } from "../login/actions";
 
 export const dynamic = "force-dynamic";
+
+type PageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
+
+const periodOptions = [
+  ["today", "Сегодня"],
+  ["yesterday", "Вчера"],
+  ["7d", "Последние 7 дней"],
+  ["30d", "Последние 30 дней"],
+  ["this_week", "Текущая неделя"],
+  ["last_week", "Прошлая неделя"],
+  ["this_month", "Текущий месяц"],
+  ["last_month", "Прошлый месяц"],
+  ["this_quarter", "Текущий квартал"],
+  ["custom", "Свой период"]
+] as const;
 
 function foodCostTone(value: number | null) {
   if (value === null) {
@@ -27,18 +48,27 @@ function foodCostTone(value: number | null) {
   return "bg-red-50 text-red-700";
 }
 
-export default async function AdminEconomicsPage() {
+export default async function AdminEconomicsPage({ searchParams }: PageProps) {
   const isAuthed = await isAdminAuthenticated();
 
   if (!isAuthed) {
     redirect("/admin/login");
   }
 
-  const [productsResult, economicsResult, inventoryStock] = await Promise.all([
+  const rawParams = searchParams ? await searchParams : {};
+  const filters = parseAnalyticsFilters(rawParams);
+  const range = getAnalyticsRange({
+    period: filters.period,
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo
+  });
+  const [productsResult, economicsResult, inventoryStock, analyticsScope] = await Promise.all([
     getAdminProducts(),
     getAdminEconomicsSettings(),
-    getInventoryStockValue()
+    getInventoryStockValue(),
+    getAnalyticsScope()
   ]);
+  const actualManagementResult = await getActualManagementResult({ filters, range, scope: analyticsScope });
   const productEconomics = productsResult.error
     ? {
         items: [],
@@ -71,7 +101,7 @@ export default async function AdminEconomicsPage() {
             <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
               Админка
             </Link>
-            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Юнит-экономика</h1>
+            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Экономика точки</h1>
           </div>
           <form action={logoutAction}>
             <button
@@ -88,6 +118,30 @@ export default async function AdminEconomicsPage() {
             {economicsResult.error}
           </div>
         ) : null}
+
+        <form method="get" className="economics-period-form">
+          <EconomicsPeriodFilter
+            initialFrom={filters.dateFrom ?? range.fromDateKey}
+            initialPeriod={filters.period}
+            initialTo={filters.dateTo ?? addCalendarDays(range.toDateKeyExclusive, -1)}
+            options={periodOptions}
+          />
+          <button type="submit" className="admin-primary-button">Показать</button>
+        </form>
+
+        <ActualManagementResultCalculator
+          key={`${range.fromDateKey}:${range.toDateKeyExclusive}`}
+          actual={actualManagementResult}
+          calendarDays={countAnalyticsCalendarDays(range)}
+          initialValues={economicsResult.settings}
+          rangeLabel={range.label}
+        />
+
+        <section className="mt-8 border-t border-karimoff-line pt-8">
+          <p className="admin-eyebrow">Планирование</p>
+          <h2 className="mt-2 text-3xl font-black">Плановый сценарий точки</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-karimoff-muted">Сохранённые вводные используются как база для прогноза и начальные значения фактического расчёта выше.</p>
+        </section>
 
         <EconomicsCalculator initialValues={economicsResult.settings} />
 

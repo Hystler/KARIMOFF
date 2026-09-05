@@ -3,9 +3,11 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { getPostgresSql } from "@/lib/postgres/server";
+import { analyticsCategorySql } from "./categories";
 import { analyticsFiltersToParams } from "./filters";
 import { buildAverageTicketFactors, buildPareto, buildRevenueBridge, detectTransparentAnomaly } from "./intelligence-math";
 import { calculateMetricDelta, safeAverage } from "./metrics";
+import { OPERATING_HOURS, RESTAURANT_CLOSE_HOUR, RESTAURANT_OPEN_HOUR } from "./operating-hours";
 import { addCalendarDays } from "./periods";
 import { buildItemWhere, buildSalesWhere } from "./query";
 import type {
@@ -24,18 +26,16 @@ import type {
 type Totals = { revenue: number; sales: number; items: number; saleRevenue: number; refunds: number };
 
 const daypartDefinitions = [
-  { key: "morning", label: "До обеда", start: 0, end: 11 },
   { key: "lunch", label: "Обед", start: 11, end: 14 },
   { key: "afternoon", label: "День", start: 14, end: 17 },
-  { key: "evening", label: "Вечер", start: 17, end: 21 },
-  { key: "late", label: "Поздний вечер", start: 21, end: 24 }
+  { key: "evening", label: "Вечер", start: 17, end: 21 }
 ] as const;
 
 const daypartSchema = z.array(z.object({
   key: z.string().trim().min(1).max(40),
   label: z.string().trim().min(1).max(80),
-  start: z.number().int().min(0).max(23),
-  end: z.number().int().min(1).max(24)
+  start: z.number().int().min(RESTAURANT_OPEN_HOUR).max(RESTAURANT_CLOSE_HOUR - 1),
+  end: z.number().int().min(RESTAURANT_OPEN_HOUR + 1).max(RESTAURANT_CLOSE_HOUR)
 }).refine((part) => part.end > part.start)).min(1).max(8);
 
 const configurationSchema = z.object({
@@ -120,10 +120,11 @@ type CategoryAggregate = {
 
 async function loadCategoryAggregates(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<CategoryAggregate>(`
     select
-      coalesce(i.category, '__unknown__') as id,
-      coalesce(i.category, 'Категория не указана') as name,
+      coalesce(${itemCategory}, '__unknown__') as id,
+      coalesce(${itemCategory}, 'Категория не указана') as name,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
       count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts
@@ -137,8 +138,9 @@ async function loadCategoryAggregates(filters: AnalyticsFilters, range: Analytic
 
 async function loadCategoryTrend(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<{ id: string; day: string; revenue: string | number }>(`
-    select coalesce(i.category, '__unknown__') as id,
+    select coalesce(${itemCategory}, '__unknown__') as id,
       to_char(date_trunc('day', s.analytics_at at time zone 'Europe/Moscow'), 'YYYY-MM-DD') as day,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue
     from public.canonical_analytics_sales s
@@ -193,6 +195,7 @@ async function getHourlyDemand(
   visibleCategories: string[]
 ): Promise<AnalyticsHourlyCategoryPoint[]> {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   const rows = await query<{
     category: string;
     hour: string | number;
@@ -200,7 +203,7 @@ async function getHourlyDemand(
     quantity: string | number;
     receipts: string | number;
   }>(`
-    select coalesce(i.category, 'Категория не указана') as category,
+    select coalesce(${itemCategory}, 'Категория не указана') as category,
       extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer as hour,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
@@ -208,10 +211,11 @@ async function getHourlyDemand(
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
     where ${context.text}
+      and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
     group by 1, 2
     order by 2, 1
   `, context.values);
-  return Array.from({ length: 24 }, (_, hour) => {
+  return OPERATING_HOURS.map((hour) => {
     const categories: AnalyticsHourlyCategoryPoint["categories"] = {};
     for (const category of visibleCategories) {
       const row = rows.find((item) => item.category === category && number(item.hour) === hour);
@@ -269,10 +273,11 @@ type ProductAggregate = {
 
 async function getProductAggregates(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope) {
   const context = itemContext(filters, range, scope);
+  const itemCategory = analyticsCategorySql("i");
   return query<ProductAggregate>(`
     select coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as key,
       i.product_name as name,
-      coalesce(max(i.category), 'Категория не указана') as category,
+      coalesce(max(${itemCategory}), 'Категория не указана') as category,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
       case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status
@@ -392,9 +397,10 @@ async function getHourlyTotals(filters: AnalyticsFilters, range: AnalyticsRange,
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
     where ${context.text}
+      and extract(hour from s.analytics_at at time zone 'Europe/Moscow')::integer between 11 and 20
     group by 1 order by 1
   `, context.values);
-  return Array.from({ length: 24 }, (_, hour) => {
+  return OPERATING_HOURS.map((hour) => {
     const row = rows.find((item) => number(item.hour) === hour);
     return { hour, revenue: number(row?.revenue), quantity: number(row?.quantity), receipts: number(row?.receipts) };
   });

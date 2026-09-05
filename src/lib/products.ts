@@ -335,7 +335,7 @@ export async function getPublicProductComposition(productId: string): Promise<Pr
 
   const { data: lines, error } = await database
     .from("product_ingredients")
-    .select("ingredient_id, sort_order")
+    .select("ingredient_id, quantity, unit, sort_order")
     .eq("product_id", productId)
     .order("sort_order", { ascending: true });
 
@@ -346,20 +346,31 @@ export async function getPublicProductComposition(productId: string): Promise<Pr
   const ingredientIds = Array.from(new Set(lines.map((line) => String(line.ingredient_id))));
   const { data: ingredients, error: ingredientsError } = await database
     .from("ingredients")
-    .select("id, name")
+    .select("id, name, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g")
     .in("id", ingredientIds);
 
   if (ingredientsError || !ingredients) {
     return [];
   }
 
-  const names = new Map(ingredients.map((ingredient) => [String(ingredient.id), String(ingredient.name)]));
+  const ingredientsById = new Map(ingredients.map((ingredient) => [String(ingredient.id), ingredient]));
 
   return lines.flatMap((line) => {
     const ingredientId = String(line.ingredient_id);
-    const name = names.get(ingredientId);
-    return name
-      ? [{ ingredient_id: ingredientId, name, sort_order: Number(line.sort_order ?? 100) }]
+    const ingredient = ingredientsById.get(ingredientId);
+    return ingredient
+      ? [{
+          ingredient_id: ingredientId,
+          name: String(ingredient.name),
+          sort_order: Number(line.sort_order ?? 100),
+          quantity: Number(line.quantity ?? 0),
+          unit: line.unit === "ml" || line.unit === "pcs" ? line.unit : "g",
+          nutrition_basis_quantity: Number(ingredient.nutrition_basis_quantity ?? (line.unit === "pcs" ? 1 : 100)),
+          calories_kcal: ingredient.calories_kcal === null || ingredient.calories_kcal === undefined ? null : Number(ingredient.calories_kcal),
+          proteins_g: ingredient.proteins_g === null || ingredient.proteins_g === undefined ? null : Number(ingredient.proteins_g),
+          fats_g: ingredient.fats_g === null || ingredient.fats_g === undefined ? null : Number(ingredient.fats_g),
+          carbohydrates_g: ingredient.carbohydrates_g === null || ingredient.carbohydrates_g === undefined ? null : Number(ingredient.carbohydrates_g)
+        }]
       : [];
   });
 }

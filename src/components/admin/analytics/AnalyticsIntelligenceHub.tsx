@@ -1,12 +1,24 @@
 import { ArrowRight, Download, Info, Layers3, PackageSearch, ReceiptText, ShoppingBasket, Sparkles } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { analyticsFiltersToParams } from "@/lib/analytics/filters";
+import {
+  formatOperatingInterval,
+  OPERATING_INTERVALS,
+  RESTAURANT_CLOSE_HOUR,
+  RESTAURANT_OPEN_HOUR
+} from "@/lib/analytics/operating-hours";
 import type { AnalyticsDashboard, AnalyticsFilters, KpiValue } from "@/lib/analytics/types";
+import { getAnalyticsCategoryPalette } from "@/lib/analytics/palette";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import { AnalyticsFullscreenButton } from "./AnalyticsFullscreenButton";
 
-const chartColors = ["#FB670A", "#151515", "#23856D", "#3267A8", "#B34E37"];
 const weekdayLabels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+function categoryStyle(category: string) {
+  const colors = getAnalyticsCategoryPalette(category);
+  return { "--analytics-accent": colors.accent, "--analytics-soft": colors.soft } as CSSProperties;
+}
 
 function analyticsHref(filters: AnalyticsFilters, patch: Record<string, string | null>, path = "/admin/analytics") {
   const params = analyticsFiltersToParams(filters);
@@ -29,7 +41,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 }
 
 function DeltaText({ value }: { value: { percent: number | null; direction: string } }) {
-  if (value.percent === null) return <span className="is-neutral">нет базы</span>;
+  if (value.percent === null) return <span className="is-neutral">нет продаж в прошлом периоде</span>;
   return (
     <span className={value.direction === "up" ? "is-positive" : value.direction === "down" ? "is-negative" : "is-neutral"}>
       {value.percent > 0 ? "+" : ""}{formatPercent(value.percent)}
@@ -59,7 +71,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
 
       <section className="analytics-panel" id="category-intelligence">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Структура продаж</p><h2>Категории</h2><span>Клик применяет категорию ко всему отчёту</span></div>
+          <div><p className="admin-eyebrow">Структура продаж</p><h2>Категории</h2><span>Нажатие применяет категорию ко всему отчёту</span></div>
           <div className="analytics-heading-tools">
             {dashboard.itemFiltered ? <span className="analytics-context-badge">Позиционный срез</span> : null}
             <Link className="analytics-export-link" href={`/api/admin/analytics/report/export?report=categories&${analyticsFiltersToParams(dashboard.filters).toString()}`}><Download size={15} />CSV</Link>
@@ -72,6 +84,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
                 key={category.id}
                 href={analyticsHref(dashboard.filters, { category: category.id === "__unknown__" ? null : category.id })}
                 className={dashboard.filters.categories.includes(category.id) ? "is-active" : ""}
+                style={categoryStyle(category.name)}
                 scroll={false}
               >
                 <div><strong>{category.name}</strong><DeltaText value={category.delta} /></div>
@@ -119,7 +132,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
 
       <section className="analytics-panel analytics-expanded-panel" id="hourly-demand">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Время и спрос</p><h2>Категории по часам</h2><span>До пяти ведущих или выбранных категорий · Москва</span></div>
+          <div><p className="admin-eyebrow">Время и спрос</p><h2>Категории по рабочим интервалам</h2><span>11:00–21:00 · до пяти ведущих или выбранных категорий · Москва</span></div>
           <div className="analytics-heading-tools">
             <nav className="analytics-mini-tabs" aria-label="Метрика почасового спроса">
               <Link href={analyticsHref(dashboard.filters, { demand: null })} className={dashboard.filters.demandMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
@@ -145,7 +158,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
         </section>
         <section className="analytics-panel" id="dayparts">
           <header className="analytics-panel-heading compact">
-            <div><p className="admin-eyebrow">Части дня</p><h2>Спрос по времени суток</h2></div>
+            <div><p className="admin-eyebrow">Части дня</p><h2>Спрос по рабочему времени</h2><span>Только интервалы работы точки · Москва</span></div>
           </header>
           <div className="analytics-dayparts">
             {intelligence.dayparts.map((part) => (
@@ -161,7 +174,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
 
       <section className="analytics-panel analytics-expanded-panel" id="sales-treemap">
         <header className="analytics-panel-heading">
-          <div><p className="admin-eyebrow">Ассортимент на одном экране</p><h2>Карта продаж</h2><span>Категория → товар; размер отражает выбранную метрику</span></div>
+          <div><p className="admin-eyebrow">Ассортимент на одном экране</p><h2>Карта продаж</h2><span>Размер — выбранная метрика, цвет — категория товара</span></div>
           <div className="analytics-heading-tools">
             <nav className="analytics-mini-tabs" aria-label="Метрика карты продаж">
               <Link href={analyticsHref(dashboard.filters, { treemap: null })} className={dashboard.filters.treemapMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
@@ -232,7 +245,7 @@ function ProductProfile({ dashboard }: { dashboard: AnalyticsDashboard }) {
         <div><dt>Количество</dt><dd>{formatNumber(profile.quantity, 2)}</dd></div>
         <div><dt>Дней с продажами</dt><dd>{formatNumber(profile.daysSold)}</dd></div>
         <div><dt>В среднем в день</dt><dd>{formatNumber(profile.averageUnitsPerDay, 2)}</dd></div>
-        <div><dt>Пиковый час</dt><dd>{profile.peakHour === null ? "Нет данных" : `${String(profile.peakHour).padStart(2, "0")}:00`}</dd></div>
+        <div><dt>Пиковый интервал</dt><dd>{profile.peakHour === null ? "Нет данных" : formatOperatingInterval(profile.peakHour)}</dd></div>
         <div><dt>Сильный день</dt><dd>{profile.strongestWeekday ? weekdayLabels[profile.strongestWeekday - 1] : "Нет данных"}</dd></div>
         <div><dt>Доля категории</dt><dd>{profile.categoryShare === null ? "Нет mapping" : formatPercent(profile.categoryShare)}</dd></div>
       </dl>
@@ -247,26 +260,28 @@ function HourlyDemandChart({ dashboard }: { dashboard: AnalyticsDashboard }) {
   const metric = dashboard.filters.demandMetric;
   const values = data.flatMap((point) => categories.map((category) => metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0));
   const maximum = Math.max(1, ...values);
-  const x = (hour: number) => 48 + (hour / 23) * 820;
+  const intervalSpan = RESTAURANT_CLOSE_HOUR - RESTAURANT_OPEN_HOUR - 1;
+  const x = (hour: number) => 48 + ((hour - RESTAURANT_OPEN_HOUR) / intervalSpan) * 820;
   const y = (value: number) => 258 - (Math.max(0, value) / maximum) * 218;
   return (
     <div className="analytics-demand-chart">
       <svg viewBox="0 0 900 300" role="img" aria-label="Почасовой спрос по категориям">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1="48" x2="868" y1={y(maximum * ratio)} y2={y(maximum * ratio)} />)}
-        {categories.map((category, index) => {
+        {categories.map((category) => {
+          const colors = getAnalyticsCategoryPalette(category);
           const points = data.map((point) => `${x(point.hour)},${y(metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0)}`).join(" ");
-          return <polyline key={category} points={points} style={{ stroke: chartColors[index % chartColors.length] }} />;
+          return <polyline key={category} points={points} style={{ stroke: colors.accent }} />;
         })}
-        {Array.from({ length: 12 }, (_, index) => index * 2).map((hour) => <text x={x(hour)} y="286" textAnchor="middle" key={hour}>{String(hour).padStart(2, "0")}</text>)}
-        {categories.flatMap((category, categoryIndex) => data.map((point) => {
+        {OPERATING_INTERVALS.map(({ hour, label }) => <text x={x(hour)} y="286" textAnchor="middle" key={hour}>{label}</text>)}
+        {categories.flatMap((category) => data.map((point) => {
           const value = metric === "items" ? point.categories[category]?.quantity ?? 0 : point.categories[category]?.revenue ?? 0;
           if (!value) return null;
           const href = analyticsHref(dashboard.filters, { hourFrom: String(point.hour), hourTo: String(point.hour + 1), category }, "/admin/analytics/sales");
           const categoryPoint = point.categories[category];
-          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: chartColors[categoryIndex % chartColors.length] }}><title>{category}, {point.hour}:00 — выручка {formatRub(categoryPoint?.revenue ?? 0)}, товаров {formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков {formatNumber(categoryPoint?.receipts ?? 0)}</title></circle></a>;
+          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: getAnalyticsCategoryPalette(category).accent }}><title>{category}, {formatOperatingInterval(point.hour)} — выручка {formatRub(categoryPoint?.revenue ?? 0)}, товаров {formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков {formatNumber(categoryPoint?.receipts ?? 0)}</title></circle></a>;
         }))}
       </svg>
-      <div className="analytics-demand-legend">{categories.map((category, index) => <span key={category}><i style={{ background: chartColors[index % chartColors.length] }} />{category}</span>)}</div>
+      <div className="analytics-demand-legend">{categories.map((category) => <span key={category}><i style={{ background: getAnalyticsCategoryPalette(category).accent }} />{category}</span>)}</div>
     </div>
   );
 }
@@ -298,6 +313,7 @@ function CalendarHeatmap({ dashboard }: { dashboard: AnalyticsDashboard }) {
           );
         })}
       </div>
+      <div className="analytics-calendar-scale"><span>Меньше</span><i /><i /><i /><i /><span>Больше</span></div>
     </div>
   );
 }
@@ -309,14 +325,14 @@ function SalesTreemap({ dashboard }: { dashboard: AnalyticsDashboard }) {
   const total = rows.reduce((sum, row) => sum + Math.max(0, metric === "items" ? row.quantity : row.revenue), 0);
   return (
     <div className="analytics-treemap">
-      {rows.filter((row) => (metric === "items" ? row.quantity : row.revenue) > 0).map((row, index) => {
+      {rows.filter((row) => (metric === "items" ? row.quantity : row.revenue) > 0).map((row) => {
         const current = metric === "items" ? row.quantity : row.revenue;
         const share = total > 0 ? (current / total) * 100 : 0;
         return (
           <Link
             key={row.key}
             href={analyticsHref(dashboard.filters, { product: row.key })}
-            style={{ flexBasis: `${Math.max(12, Math.min(42, share * 2.1))}%`, background: index % 5 === 0 ? "#171717" : index % 3 === 0 ? "#E85F0A" : "#F5F1EB", color: index % 5 === 0 || index % 3 === 0 ? "white" : "#171717" }}
+            style={{ ...categoryStyle(row.category ?? "Без категории"), flexBasis: `${Math.max(12, Math.min(42, share * 2.1))}%` }}
             scroll={false}
           >
             <span>{row.category}</span><strong>{row.name}</strong><b>{metric === "items" ? formatNumber(row.quantity, 2) : formatRub(row.revenue)}</b><small>{formatPercent(share)}{row.mappingStatus === "unmapped" ? " · Не сопоставлено" : ""}</small>

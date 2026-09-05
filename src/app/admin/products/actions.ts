@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit";
-import { productFormSchema, type ProductFormInput } from "@/lib/product-schema";
+import {
+  productCompositionDraftSchema,
+  productFormSchema,
+  type ProductCompositionDraftInput,
+  type ProductFormInput
+} from "@/lib/product-schema";
+import { getPostgresSql } from "@/lib/postgres/server";
 import { removeStoragePublicUrl, slugifyStorageSegment, uploadImageToStorage } from "@/lib/storage-images";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
@@ -45,10 +51,6 @@ function parseProductForm(formData: FormData) {
     price: formData.get("price"),
     image_url: formData.get("image_url"),
     weight: formData.get("weight"),
-    calories: formData.get("calories"),
-    protein: formData.get("protein"),
-    fat: formData.get("fat"),
-    carbs: formData.get("carbs"),
     allergens: formData.get("allergens"),
     sort_order: formData.get("sort_order") || 100,
     is_active: formData.get("is_active") === "on"
@@ -64,16 +66,131 @@ function toPayload(data: ProductFormInput) {
     price: data.price,
     image_url: data.image_url || null,
     weight: data.weight || null,
-    calories: data.calories ?? null,
-    protein: data.protein ?? null,
-    fat: data.fat ?? null,
-    carbs: data.carbs ?? null,
     allergens: data.allergens
       ? data.allergens.split(",").map((item) => item.trim()).filter(Boolean)
       : null,
     sort_order: data.sort_order,
     is_active: data.is_active
   };
+}
+
+function parseProductComposition(formData: FormData) {
+  let value: unknown;
+  try {
+    value = JSON.parse(String(formData.get("composition_json") || "[]"));
+  } catch {
+    return { ok: false as const, message: "Не удалось прочитать рецептуру" };
+  }
+
+  const parsed = productCompositionDraftSchema.safeParse(value);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      message: parsed.error.issues[0]?.message ?? "Проверьте рецептуру"
+    };
+  }
+
+  const ingredientIds = parsed.data.map((line) => line.ingredient_id);
+  if (new Set(ingredientIds).size !== ingredientIds.length) {
+    return { ok: false as const, message: "Один ингредиент указан в рецептуре несколько раз" };
+  }
+
+  return { ok: true as const, data: parsed.data };
+}
+
+function productCreateError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("products_slug_key") || message.includes("duplicate key")) {
+    return "Товар с таким slug уже существует";
+  }
+  if (message.includes("PRODUCT_INGREDIENT")) {
+    return message.replace("PRODUCT_INGREDIENT:", "");
+  }
+  return "Не удалось сохранить товар и рецептуру";
+}
+
+async function createProductWithComposition(
+  product: ProductFormInput,
+  composition: ProductCompositionDraftInput
+) {
+  const payload = toPayload(product);
+  const sql = getPostgresSql();
+  return sql.begin(async (transaction) => {
+    const [createdProduct] = await transaction<{ id: string }[]>`
+      insert into public.products (
+        name,
+        slug,
+        category,
+        description,
+        price,
+        image_url,
+        weight,
+        allergens,
+        sort_order,
+        is_active,
+        calories,
+        protein,
+        fat,
+        carbs
+      ) values (
+        ${payload.name},
+        ${payload.slug},
+        ${payload.category},
+        ${payload.description},
+        ${payload.price},
+        ${payload.image_url},
+        ${payload.weight},
+        ${payload.allergens}::text[],
+        ${payload.sort_order},
+        ${payload.is_active},
+        null,
+        null,
+        null,
+        null
+      )
+      returning id::text
+    `;
+
+    if (!createdProduct) {
+      throw new Error("PRODUCT_CREATE_FAILED");
+    }
+
+    for (const line of composition) {
+      const [ingredient] = await transaction<{ id: string; unit: "g" | "ml" | "pcs" }[]>`
+        select id::text, unit
+        from public.ingredients
+        where id = ${line.ingredient_id}::uuid
+          and is_active = true
+        for share
+      `;
+      if (!ingredient) {
+        throw new Error("PRODUCT_INGREDIENT:Выбранный ингредиент не найден или отключён");
+      }
+      if (ingredient.unit !== line.unit) {
+        throw new Error("PRODUCT_INGREDIENT:Единица ингредиента изменилась. Обновите форму и повторите");
+      }
+
+      await transaction`
+        insert into public.product_ingredients (
+          product_id,
+          ingredient_id,
+          quantity,
+          unit,
+          sort_order,
+          station
+        ) values (
+          ${createdProduct.id}::uuid,
+          ${line.ingredient_id}::uuid,
+          ${line.quantity},
+          ${line.unit},
+          ${line.sort_order},
+          ${line.station || null}
+        )
+      `;
+    }
+
+    return createdProduct.id;
+  });
 }
 
 function revalidateProductViews() {
@@ -132,11 +249,16 @@ export async function createProductAction(formData: FormData) {
     redirect(`/admin/products/new?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? "Проверьте поля")}`);
   }
 
-  const database = getDatabaseOrRedirect();
-  const { error } = await database.from("products").insert(toPayload(parsed.data));
+  const composition = parseProductComposition(formData);
+  if (!composition.ok) {
+    redirect(`/admin/products/new?error=${encodeURIComponent(composition.message)}`);
+  }
 
-  if (error) {
-    redirect(`/admin/products/new?error=${encodeURIComponent(error.message)}`);
+  let productId: string;
+  try {
+    productId = await createProductWithComposition(parsed.data, composition.data);
+  } catch (error) {
+    redirect(`/admin/products/new?error=${encodeURIComponent(productCreateError(error))}`);
   }
 
   await writeAuditLog({
@@ -144,11 +266,12 @@ export async function createProductAction(formData: FormData) {
     actorRefHash: getAdminActorHash(),
     actorType: "admin",
     entityType: "product",
-    metadata: { name: parsed.data.name, price: parsed.data.price },
+    entityId: productId,
+    metadata: { name: parsed.data.name, price: parsed.data.price, ingredient_count: composition.data.length },
     sourcePath: "/admin/products/new"
   });
   revalidateProductViews();
-  redirect("/admin/products?saved=1");
+  redirect(`/admin/products/${productId}/edit?saved=created`);
 }
 
 export async function updateProductAction(formData: FormData) {

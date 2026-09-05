@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { calculateRecipeNutrition } from "./product-nutrition";
 import type { Product } from "./product-types";
 
 export type Ingredient = {
@@ -15,6 +16,11 @@ export type Ingredient = {
   waste_percent: number;
   package_size: number | null;
   package_price: number | null;
+  nutrition_basis_quantity: number;
+  calories_kcal: number | null;
+  proteins_g: number | null;
+  fats_g: number | null;
+  carbohydrates_g: number | null;
   is_active: boolean;
   sort_order: number;
 };
@@ -44,6 +50,11 @@ export type ProductIngredientLine = {
   preparation_image_url: string | null;
   station: string | null;
   preparation_time_seconds: number | null;
+  nutrition_basis_quantity: number;
+  calories_kcal: number | null;
+  proteins_g: number | null;
+  fats_g: number | null;
+  carbohydrates_g: number | null;
 };
 
 export type ProductFoodCost = {
@@ -55,6 +66,7 @@ export type ProductFoodCost = {
   food_cost_percent: number | null;
   gross_profit: number | null;
   gross_margin_percent: number | null;
+  nutrition: ReturnType<typeof calculateRecipeNutrition>;
 };
 
 function normalizeUnit(value: unknown): "g" | "ml" | "pcs" {
@@ -73,6 +85,11 @@ function normalizeIngredient(row: Record<string, unknown>): Ingredient {
     waste_percent: Math.min(95, Math.max(0, Number(row.waste_percent ?? 0))),
     package_size: row.package_size === null || row.package_size === undefined ? null : Number(row.package_size),
     package_price: row.package_price === null || row.package_price === undefined ? null : Number(row.package_price),
+    nutrition_basis_quantity: Number(row.nutrition_basis_quantity ?? (normalizeUnit(row.unit) === "pcs" ? 1 : 100)),
+    calories_kcal: row.calories_kcal === null || row.calories_kcal === undefined ? null : Number(row.calories_kcal),
+    proteins_g: row.proteins_g === null || row.proteins_g === undefined ? null : Number(row.proteins_g),
+    fats_g: row.fats_g === null || row.fats_g === undefined ? null : Number(row.fats_g),
+    carbohydrates_g: row.carbohydrates_g === null || row.carbohydrates_g === undefined ? null : Number(row.carbohydrates_g),
     is_active: row.is_active !== false,
     sort_order: Number(row.sort_order ?? 100)
   };
@@ -88,6 +105,19 @@ export function getEffectiveIngredientCostPerUnit(costPerUnit: number, wastePerc
 }
 
 function calculateMetrics(product: Product, lines: ProductIngredientLine[]): ProductFoodCost {
+  const nutrition = calculateRecipeNutrition(lines.map((line) => ({
+    ingredient_id: line.ingredient_id,
+    name: line.ingredient_name,
+    sort_order: line.sort_order,
+    quantity: line.quantity,
+    unit: line.unit,
+    nutrition_basis_quantity: line.nutrition_basis_quantity,
+    calories_kcal: line.calories_kcal,
+    proteins_g: line.proteins_g,
+    fats_g: line.fats_g,
+    carbohydrates_g: line.carbohydrates_g
+  })));
+
   if (!lines.length) {
     return {
       product,
@@ -97,7 +127,8 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
       food_cost: null,
       food_cost_percent: null,
       gross_profit: null,
-      gross_margin_percent: null
+      gross_margin_percent: null,
+      nutrition
     };
   }
 
@@ -114,7 +145,8 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
       food_cost: null,
       food_cost_percent: null,
       gross_profit: null,
-      gross_margin_percent: null
+      gross_margin_percent: null,
+      nutrition
     };
   }
 
@@ -131,7 +163,8 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
     food_cost: foodCost,
     food_cost_percent: foodCostPercent,
     gross_profit: grossProfit,
-    gross_margin_percent: grossMarginPercent
+    gross_margin_percent: grossMarginPercent,
+    nutrition
   };
 }
 
@@ -148,7 +181,7 @@ export async function getAdminIngredients() {
 
   const { data, error } = await database
     .from("ingredients")
-    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, is_active, sort_order")
+    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g, is_active, sort_order")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
@@ -172,7 +205,7 @@ export async function getAdminIngredientById(id: string) {
 
   const { data, error } = await database
     .from("ingredients")
-    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, is_active, sort_order")
+    .select("id, created_at, updated_at, name, category, unit, cost_per_unit, waste_percent, package_size, package_price, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g, is_active, sort_order")
     .eq("id", id)
     .maybeSingle();
 
@@ -260,7 +293,15 @@ export async function getProductFoodCost(product: Product) {
         preparation_note: typeof line.preparation_note === "string" ? line.preparation_note : null,
         preparation_image_url: typeof line.preparation_image_url === "string" ? line.preparation_image_url : null,
         station: typeof line.station === "string" ? line.station : null,
-        preparation_time_seconds: line.preparation_time_seconds === null || line.preparation_time_seconds === undefined ? null : Number(line.preparation_time_seconds)
+        preparation_time_seconds:
+          line.preparation_time_seconds === null || line.preparation_time_seconds === undefined
+            ? null
+            : Number(line.preparation_time_seconds),
+        nutrition_basis_quantity: ingredient.nutrition_basis_quantity,
+        calories_kcal: ingredient.calories_kcal,
+        proteins_g: ingredient.proteins_g,
+        fats_g: ingredient.fats_g,
+        carbohydrates_g: ingredient.carbohydrates_g
       } satisfies ProductIngredientLine;
     })
     .filter((line): line is ProductIngredientLine => Boolean(line));
@@ -349,7 +390,12 @@ export async function getProductsFoodCosts(products: Product[]) {
       preparation_time_seconds:
         line.preparation_time_seconds === null || line.preparation_time_seconds === undefined
           ? null
-          : Number(line.preparation_time_seconds)
+          : Number(line.preparation_time_seconds),
+      nutrition_basis_quantity: ingredient.nutrition_basis_quantity,
+      calories_kcal: ingredient.calories_kcal,
+      proteins_g: ingredient.proteins_g,
+      fats_g: ingredient.fats_g,
+      carbohydrates_g: ingredient.carbohydrates_g
     };
 
     linesByProduct.set(productId, [...(linesByProduct.get(productId) ?? []), row]);
