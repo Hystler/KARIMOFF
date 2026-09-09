@@ -84,6 +84,7 @@ export default async function AdminIngredientsPage({ searchParams }: AdminIngred
             <Link href="/admin/ingredients/prices" className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">
               Цены и упаковки
             </Link>
+            <Link href="/admin/ingredients/extras" className="rounded-full border border-karimoff-black/15 bg-white px-5 py-3 text-center text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange">Допы к блюдам</Link>
             <Link href="/admin/ingredients/new" className="rounded-full border border-karimoff-orange bg-karimoff-orange px-5 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(251,103,10,0.2)] transition hover:-translate-y-0.5 hover:bg-[#D95405]">
               Создать ингредиент
             </Link>

@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import postgres from "postgres";
 import bcrypt from "bcryptjs";
+import ts from "typescript";
+import { readFileSync } from "node:fs";
 
 if (!process.argv.includes("--disposable-audit")) throw new Error("Explicit disposable-audit argument required.");
 if (!process.env.PLAYWRIGHT_MODULE_PATH) throw new Error("Set PLAYWRIGHT_MODULE_PATH to an installed Playwright module.");
@@ -20,6 +22,12 @@ const password = randomBytes(24).toString("base64url");
 const passwordHash = await bcrypt.hash(password, 12);
 let browser;
 try {
+  const catalogModule = {};
+  new Function("exports", ts.transpileModule(readFileSync("src/lib/extras-catalog.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(catalogModule);
+  for (const extra of catalogModule.extrasCatalog.filter(extra => extra.key !== "jalapeno")) {
+    await sql`insert into ingredients(name,unit,cost_per_unit,waste_percent,is_active)
+      select ${extra.name},${extra.unit},1,0,true where not exists(select 1 from ingredients where name=${extra.name})`;
+  }
   // Every row here is synthetic and confined to the separately created disposable database.
   const [product] = await sql`
     insert into products(name,slug,category,description,price,image_url,is_active)
@@ -96,6 +104,13 @@ try {
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Войти", exact: true }).click();
     await page.waitForURL(`${origin}/admin`, { timeout: 15000 });
+    await page.goto(`${origin}/admin/ingredients/extras`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /Добавить допы в каталог|Добавить к новым блюдам/ }).click();
+    await page.waitForURL(/saved=/);
+    assert.equal(await page.locator("article").count(), 20);
+    assert.match(await page.locator("article").filter({ hasText: "Халапеньо" }).innerText(), /Данные уточняются/);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+    await page.screenshot({ path: `${output}/extras-${viewport.width}.png`, fullPage: true });
     for (const path of ["/admin/analytics/planning", "/admin/notifications", "/admin/analytics", "/admin/economics", "/admin/customers", "/admin/orders", "/pos", "/kitchen"]) {
       const response = await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
       assert.equal(response.status(), 200, path);
