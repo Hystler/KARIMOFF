@@ -35,3 +35,8 @@ export function resolveVerifiedSocialIdentity(params: {
 export function canUnlinkAuthenticationMethod(identityCount: number, hasPasswordFallback: boolean) {
   return identityCount + (hasPasswordFallback ? 1 : 0) > 1;
 }
+
+export function canUnlinkPublicSocialMethod(providers: string[], removing: string, enabled: { telegram: boolean; max: boolean }) {
+  return providers.some((provider) => provider !== removing
+    && (provider === "telegram" || provider === "max") && enabled[provider]);
+}

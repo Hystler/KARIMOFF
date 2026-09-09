@@ -223,6 +223,11 @@ function resolveIngredient(spec, ingredients) {
 validateTechCard();
 validateExplicitMappingRules();
 
+if (process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true") {
+  console.log("Runtime data migrations skipped: read-only startup.");
+  process.exit(0);
+}
+
 if (!databaseUrl) {
   console.log("Runtime data migrations skipped: DATABASE_URL is not configured.");
   process.exit(0);

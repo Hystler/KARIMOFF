@@ -1,6 +1,7 @@
 import "server-only";
 
 import { YooKassaError } from "./errors";
+import { assertYooKassaCreationWindow } from "./retry";
 import type { YooKassaConfiguration } from "./config";
 import type {
   CreateYooKassaPaymentInput,
@@ -25,7 +26,7 @@ type ProviderErrorPayload = {
   type?: unknown;
 };
 
-const IDEMPOTENCE_KEY_PATTERN = /^[0-9A-Za-z+_.-]{1,64}$/;
+const IDEMPOTENCE_KEY_PATTERN = /^[0-9A-Za-z+_.:-]{1,64}$/;
 const RETRY_BASE_MS = [500, 1_500, 3_500] as const;
 
 function defaultSleep(milliseconds: number) {
@@ -93,9 +94,10 @@ export class YooKassaClient {
     this.timeoutMs = options.timeoutMs ?? 12_000;
   }
 
-  createPayment(input: CreateYooKassaPaymentInput, idempotenceKey: string) {
+  createPayment(input: CreateYooKassaPaymentInput, idempotenceKey: string, creationDeadline?: number) {
     return this.request<YooKassaPayment>("/payments", {
       body: input,
+      creationDeadline,
       idempotenceKey,
       method: "POST"
     });
@@ -107,9 +109,10 @@ export class YooKassaClient {
     });
   }
 
-  createRefund(input: CreateYooKassaRefundInput, idempotenceKey: string) {
+  createRefund(input: CreateYooKassaRefundInput, idempotenceKey: string, creationDeadline?: number) {
     return this.request<YooKassaRefund>("/refunds", {
       body: input,
+      creationDeadline,
       idempotenceKey,
       method: "POST"
     });
@@ -121,9 +124,10 @@ export class YooKassaClient {
     });
   }
 
-  createReceipt(input: CreateYooKassaReceiptInput, idempotenceKey: string) {
+  createReceipt(input: CreateYooKassaReceiptInput, idempotenceKey: string, creationDeadline?: number) {
     return this.request<YooKassaProviderReceipt>("/receipts", {
       body: input,
+      creationDeadline,
       idempotenceKey,
       method: "POST"
     });
@@ -137,7 +141,7 @@ export class YooKassaClient {
 
   private async request<T>(
     path: string,
-    options: { body?: unknown; idempotenceKey?: string; method: "GET" | "POST" }
+    options: { body?: unknown; creationDeadline?: number; idempotenceKey?: string; method: "GET" | "POST" }
   ): Promise<T> {
     if (options.method === "POST" && !IDEMPOTENCE_KEY_PATTERN.test(options.idempotenceKey ?? "")) {
       throw new YooKassaError({
@@ -151,6 +155,9 @@ export class YooKassaClient {
     let lastError: YooKassaError | null = null;
 
     for (let attempt = 0; attempt < RETRY_BASE_MS.length; attempt += 1) {
+      if (options.method === "POST" && options.creationDeadline !== undefined) {
+        assertYooKassaCreationWindow(options.creationDeadline);
+      }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {

@@ -41,11 +41,6 @@ export function SocialAuthButtons({ enabled, onProviderStart, returnTo }: Social
         ) : null}
       </div>
 
-      <div className="mt-6 flex items-center gap-3 text-xs font-bold uppercase text-karimoff-muted/70" aria-hidden="true">
-        <span className="h-px flex-1 bg-karimoff-line" />
-        или
-        <span className="h-px flex-1 bg-karimoff-line" />
-      </div>
     </section>
   );
 }

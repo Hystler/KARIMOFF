@@ -73,6 +73,7 @@ export type CustomerPaymentStatus = {
 
 export type FiscalReceiptContext = {
   amount: string;
+  createdAt: string;
   id: string;
   idempotencyKey: string;
   items: FiscalOrderItem[];
@@ -82,6 +83,7 @@ export type FiscalReceiptContext = {
   providerReceiptId: string | null;
   receiptEmail: string;
   receiptRegistration: string | null;
+  status: string;
 };
 
 export type YooKassaRefundAllocation = {
@@ -91,6 +93,7 @@ export type YooKassaRefundAllocation = {
 
 export type YooKassaRefundContext = {
   amount: string;
+  createdAt: string;
   id: string;
   idempotencyKey: string;
   isFullRefund: boolean;
@@ -558,6 +561,7 @@ export async function getFiscalReceiptContext(receiptId: string) {
   const sql = getPostgresSql();
   const [row] = await sql<{
     amount: string;
+    created_at: string;
     id: string;
     idempotency_key: string;
     order_id: string;
@@ -568,9 +572,12 @@ export async function getFiscalReceiptContext(receiptId: string) {
     receipt_email: string;
     receipt_registration: string | null;
     receipt_snapshot: unknown;
+    status: string;
   }[]>`
     select
       receipt.id,
+      receipt.created_at,
+      receipt.status,
       receipt.order_id,
       receipt.payment_id,
       receipt.idempotency_key,
@@ -598,6 +605,7 @@ export async function getFiscalReceiptContext(receiptId: string) {
     : [];
   return {
     amount: row.amount,
+    createdAt: row.created_at,
     id: row.id,
     idempotencyKey: row.idempotency_key,
     items: await loadSettlementItems(row.order_id, includedRefundIds, paymentItems),
@@ -606,7 +614,8 @@ export async function getFiscalReceiptContext(receiptId: string) {
     providerPaymentId: row.provider_payment_id,
     providerReceiptId: row.provider_receipt_id,
     receiptEmail: row.receipt_email,
-    receiptRegistration: row.receipt_registration
+    receiptRegistration: row.receipt_registration,
+    status: row.status
   } satisfies FiscalReceiptContext;
 }
 
@@ -678,6 +687,8 @@ export async function recordFiscalReceiptState(
           reconcile_locked_by = null,
           updated_at = now()
       where id = ${receiptId}::uuid and provider = 'yookassa'
+        and (provider_receipt_id is null or provider_receipt_id = ${receipt.id})
+        and (status = 'pending' or status = ${status})
       returning order_id
     `;
     if (row) {
@@ -688,18 +699,20 @@ export async function recordFiscalReceiptState(
   });
 }
 
-export async function markFiscalReceiptFailure(receiptId: string, errorCode: string) {
+export async function markFiscalReceiptFailure(receiptId: string, errorCode: string, retryable = true) {
   const sql = getPostgresSql();
   await sql`
     update public.fiscal_receipts
     set reconcile_attempts = reconcile_attempts + 1,
-        next_reconcile_at = now() + least(interval '15 minutes', interval '10 seconds' * power(2, least(7, reconcile_attempts))),
+        next_reconcile_at = case when ${retryable}
+          then now() + least(interval '15 minutes', interval '10 seconds' * power(2, least(7, reconcile_attempts)))
+          else null end,
         last_error_code = ${errorCode.slice(0, 120)},
         last_error_at = now(),
         reconcile_locked_at = null,
         reconcile_locked_by = null,
         updated_at = now()
-    where id = ${receiptId}::uuid and provider = 'yookassa'
+    where id = ${receiptId}::uuid and provider = 'yookassa' and status = 'pending'
   `;
 }
 
@@ -993,6 +1006,7 @@ export async function getYooKassaRefundContext(refundId: string) {
   const sql = getPostgresSql();
   const [row] = await sql<{
     amount: string;
+    created_at: string;
     id: string;
     idempotency_key: string;
     kitchen_status: string;
@@ -1008,6 +1022,7 @@ export async function getYooKassaRefundContext(refundId: string) {
   }[]>`
     select
       refund.id,
+      refund.created_at,
       refund.payment_id,
       refund.order_id,
       refund.idempotency_key,
@@ -1030,6 +1045,7 @@ export async function getYooKassaRefundContext(refundId: string) {
   const isFullRefund = row.metadata?.refund_kind === "full";
   return {
     amount: row.amount,
+    createdAt: row.created_at,
     id: row.id,
     idempotencyKey: row.idempotency_key,
     isFullRefund,

@@ -1,9 +1,15 @@
 import "server-only";
 
 import { z } from "zod";
+import { getNotificationConfiguration, getOrderNotificationReturnUrl } from "./configuration";
 
 export type OrderNotificationEvent = "cancelled" | "ready";
 export type OrderNotificationProvider = "max" | "telegram";
+
+export function getTelegramBotRecipientId(value: unknown): string | null {
+  if (typeof value !== "string" || !/^[1-9][0-9]{0,15}$/.test(value)) return null;
+  return Number.isSafeInteger(Number(value)) ? value : null;
+}
 
 export class NotificationProviderError extends Error {
   constructor(
@@ -18,9 +24,22 @@ export class NotificationProviderError extends Error {
 
 const telegramResponseSchema = z.object({
   ok: z.boolean(),
-  result: z.object({ message_id: z.number() }).optional(),
-  parameters: z.object({ retry_after: z.number().optional() }).optional()
+  error_code: z.number().int().optional(),
+  result: z.object({ message_id: z.number().int().positive() }).optional(),
+  parameters: z.object({ retry_after: z.number().nonnegative().optional() }).optional()
 }).passthrough();
+
+const maxResponseSchema = z.object({
+  message: z.object({ body: z.object({ mid: z.string().trim().min(1) }) })
+});
+
+function retryAfterSeconds(value: string | null) {
+  if (!value?.trim()) return undefined;
+  const seconds = Number(value);
+  if (!Number.isNaN(seconds)) return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, (date - Date.now()) / 1_000) : undefined;
+}
 
 function notificationText(orderNumber: string, event: OrderNotificationEvent) {
   return event === "ready"
@@ -36,7 +55,10 @@ function classifyHttpFailure(provider: OrderNotificationProvider, status: number
       Math.max(1, retryAfterSeconds ?? 30) * 1_000
     );
   }
-  if (status >= 500 || status === 408) {
+  if (status === 408) {
+    return new NotificationProviderError(`${provider}_outcome_unknown`, false);
+  }
+  if (status >= 500) {
     return new NotificationProviderError(`${provider}_temporary_failure`, true);
   }
   return new NotificationProviderError(`${provider}_delivery_rejected`, false);
@@ -65,17 +87,26 @@ async function sendTelegramMessage(params: {
       cache: "no-store",
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      redirect: "error",
       signal: AbortSignal.timeout(8_000)
     });
   } catch {
-    throw new NotificationProviderError("telegram_network_failure", true);
+    // The server may have accepted a POST before the connection was lost.
+    throw new NotificationProviderError("telegram_outcome_unknown", false);
   }
 
   const payload = telegramResponseSchema.safeParse(await response.json().catch(() => null));
-  if (!response.ok || !payload.success || !payload.data.ok) {
-    throw classifyHttpFailure("telegram", response.status, payload.success ? payload.data.parameters?.retry_after : undefined);
+  if (!response.ok || (payload.success && !payload.data.ok)) {
+    throw classifyHttpFailure(
+      "telegram",
+      payload.success && !payload.data.ok ? payload.data.error_code ?? response.status : response.status,
+      payload.success ? payload.data.parameters?.retry_after : undefined
+    );
   }
-  return String(payload.data.result?.message_id ?? "");
+  if (!payload.success || !payload.data.result) {
+    throw new NotificationProviderError("telegram_outcome_unknown", false);
+  }
+  return String(payload.data.result.message_id);
 }
 
 async function sendMaxMessage(params: {
@@ -107,21 +138,19 @@ async function sendMaxMessage(params: {
         "Content-Type": "application/json"
       },
       method: "POST",
+      redirect: "error",
       signal: AbortSignal.timeout(8_000)
     });
   } catch {
-    throw new NotificationProviderError("max_network_failure", true);
+    throw new NotificationProviderError("max_outcome_unknown", false);
   }
 
   if (!response.ok) {
-    const retryAfter = Number(response.headers.get("retry-after"));
-    throw classifyHttpFailure("max", response.status, Number.isFinite(retryAfter) ? retryAfter : undefined);
+    throw classifyHttpFailure("max", response.status, retryAfterSeconds(response.headers.get("retry-after")));
   }
-  const payload = await response.json().catch(() => null) as {
-    body?: { mid?: string };
-    message_id?: string;
-  } | null;
-  return String(payload?.body?.mid ?? payload?.message_id ?? "");
+  const payload = maxResponseSchema.safeParse(await response.json().catch(() => null));
+  if (!payload.success) throw new NotificationProviderError("max_outcome_unknown", false);
+  return payload.data.message.body.mid;
 }
 
 export async function sendOrderStatusNotification(params: {
@@ -130,9 +159,12 @@ export async function sendOrderStatusNotification(params: {
   provider: OrderNotificationProvider;
   recipientId: string;
 }) {
-  const appOrigin = process.env.APP_ORIGIN?.trim();
-  if (!appOrigin) throw new NotificationProviderError("app_origin_not_configured", false);
-  const returnUrl = new URL("/profile/orders", appOrigin).toString();
+  const configuration = getNotificationConfiguration();
+  if (!configuration.enabled || configuration.maintenance) {
+    throw new NotificationProviderError("delivery_disabled", false);
+  }
+  const returnUrl = getOrderNotificationReturnUrl();
+  if (!returnUrl) throw new NotificationProviderError("app_origin_not_configured", false);
   return params.provider === "telegram"
     ? sendTelegramMessage({ ...params, returnUrl })
     : sendMaxMessage({ ...params, returnUrl });

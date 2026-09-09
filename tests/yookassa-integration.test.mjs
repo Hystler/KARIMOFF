@@ -38,7 +38,7 @@ function fixture() {
   for (const name of ["types", "errors", "money", "receipt", "retry", "client"]) {
     let source = read(`src/lib/payments/yookassa/${name}.ts`)
       .replace('import "server-only";\n\n', "")
-      .replace(/from "\.\/(types|errors|money|config)"/g, 'from "./$1.ts"');
+      .replace(/from "\.\/(types|errors|money|config|retry)"/g, 'from "./$1.ts"');
     writeFileSync(join(directory, `${name}.ts`), source);
   }
   writeFileSync(

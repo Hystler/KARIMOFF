@@ -1,6 +1,6 @@
 import "server-only";
 
-import { logOperationalEvent } from "@/lib/observability";
+import { logOperationalError, logOperationalEvent } from "@/lib/observability";
 import {
   areOrderStatusNotificationsEnabled,
   processOrderNotificationBatch
@@ -22,6 +22,8 @@ async function run(state: SchedulerState) {
   try {
     const result = await processOrderNotificationBatch(10);
     if (result.claimed > 0) logOperationalEvent("order_notification.batch", result);
+  } catch {
+    logOperationalError("order_notification.batch_failed", { code: "batch_failed" });
   } finally {
     state.running = false;
   }

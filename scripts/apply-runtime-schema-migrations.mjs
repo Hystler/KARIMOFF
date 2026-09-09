@@ -622,6 +622,7 @@ const migrations = [
   }
 ];
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 
 if (!databaseUrl) {
   console.log("Runtime schema migrations skipped: database is not configured.");
@@ -632,7 +633,8 @@ const sql = postgres(databaseUrl, {
   connect_timeout: 10,
   idle_timeout: 5,
   max: 1,
-  prepare: false
+  prepare: false,
+  ...(readOnly ? { connection: { default_transaction_read_only: "on" } } : {})
 });
 
 let activeMigrationName = null;
@@ -643,6 +645,9 @@ try {
     if (await migration.applied(sql)) {
       console.log(`Runtime schema migration already applied: ${migration.name}.`);
       continue;
+    }
+    if (readOnly) {
+      throw new Error(`required migration missing in read-only startup: ${migration.name}`);
     }
     const migrationPath = new URL(`../supabase/migrations/${migration.name}.sql`, import.meta.url);
     const migrationSql = readFileSync(migrationPath, "utf8");

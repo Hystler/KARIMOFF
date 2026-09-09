@@ -11,6 +11,7 @@ import {
 } from "./config";
 import { safeYooKassaErrorCode, YooKassaError } from "./errors";
 import { moneyToMinorUnits, rubles } from "./money";
+import { yooKassaCreationDeadline } from "./retry";
 import {
   applyYooKassaPaymentState,
   applyYooKassaRefundState,
@@ -192,6 +193,13 @@ async function executeYooKassaPaymentForOrder(
       status: context.status
     };
   }
+  if (context.status !== "pending") {
+    throw new YooKassaError({
+      message: "YooKassa payment attempt is already terminal.",
+      kind: "validation",
+      providerCode: "PAYMENT_ATTEMPT_NOT_PENDING"
+    });
+  }
 
   const body = paymentRequest(configuration, context);
   await bindPaymentRequestFingerprint(
@@ -204,7 +212,7 @@ async function executeYooKassaPaymentForOrder(
   try {
     const payment = context.providerPaymentId
       ? await client.getPayment(context.providerPaymentId)
-      : await client.createPayment(body, context.idempotencyKey);
+      : await client.createPayment(body, context.idempotencyKey, yooKassaCreationDeadline(context.createdAt));
     assertPaymentBinding(context, payment);
     await recordYooKassaPaymentCreated(context.id, payment);
     await applyYooKassaPaymentState(context.id, payment);
@@ -311,7 +319,7 @@ export async function reconcileYooKassaFiscalReceipt(
   assertProviderRuntimeConfigured();
   const configuration = requireYooKassaConfiguration();
   const context = await getFiscalReceiptContext(receiptId);
-  if (!context) return { skipped: true };
+  if (!context || context.status !== "pending") return { skipped: true };
   if (context.receiptRegistration !== "succeeded") {
     await releaseFiscalReceiptClaim(context.id);
     return { skipped: true, reason: "prepayment_receipt_pending" };
@@ -334,13 +342,20 @@ export async function reconcileYooKassaFiscalReceipt(
         requestFingerprint(body),
         fiscalRequestSnapshot(body)
       );
-      receipt = await client.createReceipt(body, context.idempotencyKey);
+      receipt = await client.createReceipt(body, context.idempotencyKey, yooKassaCreationDeadline(context.createdAt));
     }
-    if (receipt.payment_id && receipt.payment_id !== context.providerPaymentId) {
+    if (receipt.type !== "payment" || receipt.payment_id !== context.providerPaymentId) {
       throw new YooKassaError({
         message: "YooKassa receipt payment does not match.",
         kind: "validation",
         providerCode: "RECEIPT_PAYMENT_MISMATCH"
+      });
+    }
+    if (context.providerReceiptId && receipt.id !== context.providerReceiptId) {
+      throw new YooKassaError({
+        message: "YooKassa receipt identifier does not match.",
+        kind: "validation",
+        providerCode: "RECEIPT_ID_MISMATCH"
       });
     }
     await recordFiscalReceiptState(context.id, receipt);
@@ -351,7 +366,11 @@ export async function reconcileYooKassaFiscalReceipt(
     });
     return { skipped: false, status: receipt.status };
   } catch (error) {
-    await markFiscalReceiptFailure(context.id, safeYooKassaErrorCode(error));
+    await markFiscalReceiptFailure(
+      context.id,
+      safeYooKassaErrorCode(error),
+      error instanceof YooKassaError ? error.retryable : true
+    );
     throw error;
   }
 }
@@ -417,7 +436,7 @@ async function executeYooKassaRefund(
     const client = clientFactory(configuration);
     const refund = context.providerRefundId
       ? await client.getRefund(context.providerRefundId)
-      : await client.createRefund(body, context.idempotencyKey);
+      : await client.createRefund(body, context.idempotencyKey, yooKassaCreationDeadline(context.createdAt));
     assertRefundBinding(context, refund);
     await applyYooKassaRefundState(context.id, refund);
     logOperationalEvent("yookassa.refund.reconciled", {

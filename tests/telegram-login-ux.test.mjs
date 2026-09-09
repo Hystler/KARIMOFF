@@ -44,7 +44,8 @@ test("Telegram is the primary human-readable login option and remains on the KAR
   assert.match(telegram, /router\.replace\(nextPath/);
   assert.doesNotMatch(telegram, /window\.location\s*=|oauth\.telegram\.org\/auth/);
   assert.ok(social.indexOf("enabled.telegram") < social.indexOf("enabled.max"));
-  assert.ok(authForm.indexOf("<SocialAuthButtons") < authForm.indexOf("<form action={passwordAction}"));
+  assert.match(authForm, /<SocialAuthButtons/);
+  assert.doesNotMatch(authForm, /passwordAction|name="password"/);
 });
 
 test("official Telegram Login Library is configured in Russian with profile, phone and write scopes", () => {
@@ -75,12 +76,12 @@ test("Telegram cancellation, expiry and identity conflict are human-readable", (
   assert.doesNotMatch(telegram, />\s*(Success|Callback|OAuth|Token|Authorization failed)\s*</);
 });
 
-test("missing Telegram phone offers a safe password fallback without SMS UI", () => {
+test("missing Telegram phone offers retry and support without a false SMS fallback", () => {
   const complete = read("src/components/auth/SocialCompleteForm.tsx");
   const consumeRoute = read("src/app/api/auth/social/telegram/consume/route.ts");
   assert.match(complete, /не передал подтверждённый номер телефона/);
   assert.match(complete, /По имени или username аккаунты не связываются/);
-  assert.match(complete, /Создать профиль по телефону/);
+  assert.match(complete, /Связаться с рестораном/);
   assert.doesNotMatch(complete, /SMS|СМС|смс/);
   assert.match(consumeRoute, /status: resolution\.kind/);
   assert.match(consumeRoute, /readPendingSocialIdentity/);
@@ -100,4 +101,16 @@ test("Telegram profile names and identity status are available to admins without
   assert.match(detail, /Привязан к профилю/);
   assert.match(list, /IdentityProviderBadge/);
   assert.doesNotMatch(`${detail}\n${list}`, /access_token|refresh_token|client_secret/i);
+});
+
+test("Telegram notifications use only a signed numeric profile id, never substitute OIDC sub", () => {
+  const output = importTypescriptScript("src/lib/auth/social/telegram-protocol.ts", `
+    console.log(JSON.stringify([987654321, "987654321", undefined, null, "@guest", "001", -1, 0,
+      "1234123412341234123", "9e5", Number.MAX_SAFE_INTEGER + 1].map(subject.normalizeTelegramBotUserId)));
+  `);
+  assert.deepEqual(JSON.parse(output), ["987654321", "987654321", null, null, null, null, null, null, null, null, null]);
+  const library = read("src/lib/auth/social/telegram-library.ts");
+  assert.match(library, /providerUserId: claims\.sub/);
+  assert.match(library, /telegramBotUserId: normalizeTelegramBotUserId\(claims\.id\)/);
+  assert.ok(library.indexOf("claims = verifyTelegramIdToken") < library.indexOf("telegramBotUserId:"));
 });

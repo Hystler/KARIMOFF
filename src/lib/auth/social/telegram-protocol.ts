@@ -15,3 +15,11 @@ export function isTelegramPhoneVerified(
   // phone_number_verified. A signed phone-scope number is verified by Telegram.
   return Boolean(phone && explicitVerification !== false);
 }
+
+// Call only with the profile id from a cryptographically verified Telegram ID token, never OIDC sub.
+export function normalizeTelegramBotUserId(value: unknown): string | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^[1-9]\d{0,15}$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? String(id) : null;
+}

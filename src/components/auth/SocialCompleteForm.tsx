@@ -28,8 +28,8 @@ export function SocialCompleteForm({ provider }: { provider: SocialProvider; sug
         <AuthDocumentLink href="/login" className="flex min-h-12 items-center justify-center rounded-full bg-karimoff-orange px-6 py-3 text-sm font-bold text-white transition hover:bg-[#D95405]">
           Попробовать снова
         </AuthDocumentLink>
-        <AuthDocumentLink href="/register" className="flex min-h-12 items-center justify-center rounded-full border border-karimoff-line px-6 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-black/30">
-          Создать профиль по телефону
+        <AuthDocumentLink href="/about" className="flex min-h-12 items-center justify-center rounded-full border border-karimoff-line px-6 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-black/30">
+          Связаться с рестораном
         </AuthDocumentLink>
       </div>
     </section>

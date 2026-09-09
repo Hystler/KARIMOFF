@@ -80,7 +80,7 @@ test("the last authentication method cannot be unlinked", () => {
     ]));
   `);
   assert.deepEqual(JSON.parse(output), [false, true, true]);
-  assert.match(read("src/app/profile/actions.ts"), /canUnlinkAuthenticationMethod/);
+  assert.match(read("src/app/profile/actions.ts"), /canUnlinkPublicSocialMethod/);
 });
 
 test("OAuth state is server-authoritative, one-time and expires", () => {

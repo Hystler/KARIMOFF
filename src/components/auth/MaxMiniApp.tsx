@@ -221,7 +221,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
             <>
               <ShieldCheck className="text-[#471AFF]" size={36} aria-hidden="true" />
               <h1 className="mt-5 text-3xl font-black leading-tight">Номер не передан</h1>
-              <p className="mt-3 text-base leading-7 text-black/60">{state.message} Повторите запрос или вернитесь к входу по телефону с паролем.</p>
+              <p className="mt-3 text-base leading-7 text-black/60">{state.message} Повторите запрос или вернитесь на сайт и выберите другой мессенджер.</p>
               <div className="mt-7 grid gap-3">
                 <button
                   type="button"

@@ -1,6 +1,5 @@
 const CART_STORAGE_KEY = "karimoff_cart";
 const CHECKOUT_ATTEMPT_STORAGE_KEY = "karimoff_checkout_attempt_v1";
-const CHECKOUT_ATTEMPT_TTL_MS = 15 * 60_000;
 
 type CheckoutAttempt = {
   cartPayload: string;
@@ -41,8 +40,7 @@ export function getOrCreateCheckoutRequestId(cartPayload: string) {
   const existing = readAttempt();
   if (
     existing &&
-    existing.cartPayload === cartPayload &&
-    Date.now() - existing.createdAt < CHECKOUT_ATTEMPT_TTL_MS
+    existing.cartPayload === cartPayload
   ) {
     return existing.idempotencyKey;
   }
@@ -64,10 +62,13 @@ export function rememberCheckoutPayment(params: {
   paymentId: string;
 }) {
   const existing = readAttempt();
+  // Preserve the submitted snapshot even if the cart changed while the provider was responding.
+  // Missing storage must not turn an unknown submission into permission to clear today's cart.
+  const submitted = existing?.idempotencyKey === params.idempotencyKey ? existing : null;
   writeAttempt({
-    cartPayload: params.cartPayload,
-    cartSnapshot: window.localStorage.getItem(CART_STORAGE_KEY) ?? "[]",
-    createdAt: existing?.createdAt ?? Date.now(),
+    cartPayload: submitted?.cartPayload ?? params.cartPayload,
+    cartSnapshot: submitted?.cartSnapshot ?? "unavailable-submission-snapshot",
+    createdAt: submitted?.createdAt ?? Date.now(),
     idempotencyKey: params.idempotencyKey,
     paymentId: params.paymentId
   });

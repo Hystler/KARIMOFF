@@ -5,7 +5,7 @@ import { getTelegramLoginLibraryConfig } from "./config";
 import { getSocialAuthError, SocialAuthError } from "./errors";
 import { getJson, getSafeNetworkErrorCode } from "./telegram-http";
 import { TELEGRAM_RS256_JWKS_SNAPSHOT } from "./telegram-jwks-snapshot";
-import { isTelegramPhoneVerified, normalizeTelegramPhone } from "./telegram-protocol";
+import { isTelegramPhoneVerified, normalizeTelegramBotUserId, normalizeTelegramPhone } from "./telegram-protocol";
 import { TELEGRAM_OIDC_ISSUER, verifyTelegramIdToken } from "./telegram-token";
 import type { SocialIdentityClaims } from "./types";
 
@@ -146,6 +146,7 @@ export async function verifyTelegramLibraryIdToken(params: {
       givenName: claims.given_name ?? null,
       familyName: claims.family_name ?? null,
       loginFlow: "telegram_login_library",
+      telegramBotUserId: normalizeTelegramBotUserId(claims.id),
       botAccessRequested: true
     }
   };

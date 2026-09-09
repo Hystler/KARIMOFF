@@ -35,6 +35,7 @@ tests
 tmp
 
 coverage
+outputs
 *.log
 *.tsbuildinfo
 **/.DS_Store

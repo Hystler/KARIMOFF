@@ -1,3 +1,20 @@
+import { YooKassaError } from "./errors";
+
+export function yooKassaCreationDeadline(createdAt: string) {
+  // The persisted attempt predates its first POST. Leave room for an in-flight request.
+  return new Date(createdAt).getTime() + 24 * 60 * 60_000 - 60_000;
+}
+
+export function assertYooKassaCreationWindow(deadline: number) {
+  if (!Number.isFinite(deadline) || Date.now() >= deadline) {
+    throw new YooKassaError({
+      message: "YooKassa creation requires manual reconciliation after the idempotence window.",
+      kind: "validation",
+      providerCode: "IDEMPOTENCE_WINDOW_EXPIRED"
+    });
+  }
+}
+
 export function yooKassaReconciliationDelaySeconds(params: {
   ageSeconds: number;
   attempts: number;

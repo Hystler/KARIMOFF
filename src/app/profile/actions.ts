@@ -8,7 +8,8 @@ import { getShortUserAgent, isChecked, recordLegalConsents } from "@/lib/legal-c
 import { getPostgresSql } from "@/lib/postgres/server";
 import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
 import { isSocialProvider } from "@/lib/auth/social/types";
-import { canUnlinkAuthenticationMethod } from "@/lib/auth/social/linking-rules";
+import { canUnlinkPublicSocialMethod } from "@/lib/auth/social/linking-rules";
+import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 
 export async function updateMarketingConsentAction(formData: FormData) {
   await assertTrustedRequestOrigin();
@@ -60,7 +61,9 @@ export async function unlinkSocialIdentityAction(formData: FormData) {
   if (!isSocialProvider(provider)) redirect("/profile?identity_error=invalid");
 
   const sql = getPostgresSql();
+  const enabled = getConfiguredSocialProviders();
   const removed = await sql.begin(async (transaction) => {
+    await transaction`select id from public.customers where id = ${customer.id}::uuid for update`;
     const identities = await transaction<{ provider: string }[]>`
       select provider
       from public.user_identities
@@ -68,11 +71,7 @@ export async function unlinkSocialIdentityAction(formData: FormData) {
         and provider in ('phone', 'telegram', 'max')
       for update
     `;
-    const [account] = await transaction<{ password_hash: string | null }[]>`
-      select password_hash from public.customers where id = ${customer.id}::uuid for update
-    `;
-    const hasPasswordFallback = Boolean(account?.password_hash) && !identities.some((identity) => identity.provider === "phone");
-    if (!canUnlinkAuthenticationMethod(identities.length, hasPasswordFallback)) {
+    if (!canUnlinkPublicSocialMethod(identities.map((identity) => identity.provider), provider, enabled)) {
       throw new Error("Нельзя удалить последний способ входа.");
     }
     const deleted = await transaction`

@@ -4,6 +4,7 @@ const links = [
   ["/admin/analytics", "Обзор"],
   ["/admin/analytics/sales", "Продажи"],
   ["/admin/analytics/audience", "Аудитория"],
+  ["/admin/analytics/planning", "План закупок"],
   ["/admin/analytics#category-intelligence", "Категории"],
   ["/admin/analytics#hourly-demand", "Время и спрос"],
   ["/admin/analytics#products", "Товары"],
@@ -12,9 +13,11 @@ const links = [
   ["/admin/analytics#employees", "Сотрудники"]
 ] as const;
 
-export function AnalyticsSubnav({ active }: { active: "overview" | "sales" | "audience" }) {
+export function AnalyticsSubnav({ active }: { active: "overview" | "sales" | "audience" | "planning" }) {
   const activeHref = active === "sales"
     ? "/admin/analytics/sales"
+    : active === "planning"
+      ? "/admin/analytics/planning"
     : active === "audience"
       ? "/admin/analytics/audience"
       : "/admin/analytics";

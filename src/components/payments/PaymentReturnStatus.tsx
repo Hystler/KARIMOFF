@@ -50,17 +50,23 @@ export function PaymentReturnStatus(props: {
   const check = useCallback(async () => {
     if (inFlight.current || document.visibilityState === "hidden") return;
     inFlight.current = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8_000);
     try {
       const request = await fetch(`/api/payments/${encodeURIComponent(props.paymentId)}/status`, {
         cache: "no-store",
-        credentials: "same-origin"
+        credentials: "same-origin",
+        signal: controller.signal
       });
       const payload = await request.json().catch(() => null) as StatusPayload | null;
       if (!request.ok || !payload?.ok) return;
       const next = normalizeStatus(payload.payment?.status);
       setOrderNumber(payload.payment?.orderNumber || props.initialOrderNumber);
       setState(next);
+    } catch {
+      // A network failure is not a payment result. The next bounded poll can recover.
     } finally {
+      window.clearTimeout(timeout);
       inFlight.current = false;
     }
   }, [props.initialOrderNumber, props.paymentId]);
@@ -82,8 +88,9 @@ export function PaymentReturnStatus(props: {
     window.addEventListener("focus", resume);
     window.addEventListener("pageshow", resume);
     document.addEventListener("visibilitychange", visible);
-    void check();
+    const initialCheck = window.setTimeout(() => void check(), 0);
     return () => {
+      window.clearTimeout(initialCheck);
       window.clearInterval(interval);
       window.removeEventListener("focus", resume);
       window.removeEventListener("pageshow", resume);
