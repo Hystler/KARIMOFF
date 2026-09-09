@@ -1,4 +1,5 @@
 import type { Ingredient } from "@/lib/ingredients";
+import { getIngredientNutritionReference } from "@/lib/ingredient-nutrition";
 
 type IngredientFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -13,6 +14,7 @@ const units = [
 ];
 
 export function IngredientForm({ action, ingredient, submitLabel }: IngredientFormProps) {
+  const reference = ingredient ? getIngredientNutritionReference(ingredient) : undefined;
   return (
     <form action={action} className="mt-8 grid gap-5 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
       {ingredient ? <input type="hidden" name="id" value={ingredient.id} /> : null}
@@ -63,6 +65,12 @@ export function IngredientForm({ action, ingredient, submitLabel }: IngredientFo
 
       <fieldset className="grid gap-4 rounded-lg border border-karimoff-line p-4">
         <legend className="px-2 text-sm font-bold text-karimoff-black">КБЖУ ингредиента</legend>
+        {reference ? <p className="text-sm leading-6 text-karimoff-muted">
+          Пока значения не заполнены, в расчёте используются справочные данные на 100 г: {reference.calories_kcal} ккал;
+          белки {reference.proteins_g} г; жиры {reference.fats_g} г; углеводы {reference.carbohydrates_g} г.
+          {" "}<a href={reference.sourceUrl} target="_blank" rel="noreferrer" className="underline">Источник: {reference.sourceName}</a>.
+          {" "}Данные ориентировочные. Значения с упаковки имеют приоритет.
+        </p> : null}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
             ["calories_kcal", "Ккал", ingredient?.calories_kcal],

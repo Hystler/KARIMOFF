@@ -27,7 +27,8 @@ test("LCP heroes are eager, high priority, and do not load the old placeholder",
 test("product images remain lazy and use bounded responsive sizes", () => {
   assert.match(productCard, /loading="lazy"/);
   assert.match(productCard, /fetchPriority="low"/);
-  assert.match(productCard, /\(min-width: 1280px\) 220px/);
+  assert.match(productCard, /\(min-width: 1280px\) 280px/);
+  assert.doesNotMatch(productCard, /contentVisibility|containIntrinsicSize/);
   assert.doesNotMatch(productCard, /sizes="[^"]*20vw/);
 });
 

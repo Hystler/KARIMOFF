@@ -13,6 +13,7 @@ import {
   getComparisonRange
 } from "./periods";
 import { buildItemWhere, buildSalesWhere, buildScopeWhere, offsetPlaceholders } from "./query";
+import { SALE_FOOD_COST_JOIN } from "./sale-food-cost";
 import type {
   AnalyticsBreakdownRow,
   AnalyticsChannel,
@@ -58,17 +59,19 @@ const PRODUCT_FOOD_COST_CTE = `
     select
       recipe.product_id,
       count(*) > 0
-        and bool_and(
+        and bool_and(coalesce(
           ingredient.cost_per_unit > 0
           and recipe.unit = ingredient.unit
-        ) as is_complete,
+          and recipe.quantity >= 0,
+          false
+        )) as is_complete,
       sum(
         recipe.quantity
         / (1 - least(95, greatest(0, coalesce(ingredient.waste_percent, 0))) / 100)
         * ingredient.cost_per_unit
       )::numeric as unit_food_cost
     from public.product_ingredients recipe
-    join public.ingredients ingredient on ingredient.id = recipe.ingredient_id
+    left join public.ingredients ingredient on ingredient.id = recipe.ingredient_id
     group by recipe.product_id
   )
 `;
@@ -183,7 +186,7 @@ async function getFoodCostMetricRow(
       coalesce(sum(abs(i.net_revenue)), 0)::numeric as total_revenue
     from public.analytics_sale_items i
     join public.canonical_analytics_sales s on s.sale_id = i.sale_id
-    left join product_food_costs product_cost on product_cost.product_id = i.product_id
+    ${SALE_FOOD_COST_JOIN}
     where ${where.text}
   `, where.values);
   return rows[0] ?? {
@@ -422,7 +425,7 @@ async function getProductRows(
       ) as food_cost_complete
     from public.analytics_sale_items i
     join public.canonical_analytics_sales s on s.sale_id = i.sale_id
-    left join product_food_costs product_cost on product_cost.product_id = i.product_id
+    ${SALE_FOOD_COST_JOIN}
     where ${where.text}
     group by 1, 2
   `, where.values);

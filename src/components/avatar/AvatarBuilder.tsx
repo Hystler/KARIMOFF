@@ -79,24 +79,24 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
   }
 
   return (
-    <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden border-y border-black/10 bg-karimoff-black">
+    <div className="avatar-editor profile-border w-full overflow-clip border-y bg-karimoff-black">
       <div className="grid min-h-[620px] lg:grid-cols-[minmax(0,1fr)_430px]">
-        <section className="relative min-h-[480px] lg:min-h-[620px]">
+        <section className="relative min-w-0 min-h-[480px] lg:min-h-[620px]">
           <Avatar3DStudio avatar={avatar} />
         </section>
 
-        <form action={saveAvatarAction} className="flex min-w-0 flex-col bg-[#F7F4EF] text-karimoff-black">
+        <form action={saveAvatarAction} className="avatar-editor-panel flex min-w-0 flex-col">
           {sections.map((section) => (
             <input key={section.key} type="hidden" name={section.key} value={avatar[section.key]} />
           ))}
 
-          <div className="border-b border-karimoff-line px-5 pb-4 pt-5 sm:px-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase text-karimoff-orange">Редактор образа</p>
+          <div className="profile-border border-b px-5 pb-4 pt-5 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0 flex-1 basis-40">
+                <p className="profile-accent text-xs font-black uppercase">Редактор образа</p>
                 <h3 className="mt-1 text-xl font-black">Соберите персонажа</h3>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
                   onClick={() => setAvatar(initialAvatar)}
@@ -109,7 +109,7 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                 <button
                   type="button"
                   onClick={shuffleAvatar}
-                  className="public-button-primary h-11 min-h-11 w-11 px-0 py-0"
+                  className="public-button-primary h-11 min-h-11 w-11 shrink-0 px-0 py-0"
                   aria-label="Случайный образ"
                   title="Случайный образ"
                 >
@@ -119,8 +119,8 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
             </div>
           </div>
 
-          <div className="border-b border-karimoff-line p-3">
-            <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+          <div className="profile-border border-b p-3">
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} role="group" aria-label="Разделы редактора">
               {sections.map((section) => {
                 const Icon = section.icon;
                 const isActive = activeSection === section.key;
@@ -129,9 +129,8 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                     key={section.key}
                     type="button"
                     onClick={() => setActiveSection(section.key)}
-                    className={`flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange ${
-                      isActive ? "bg-karimoff-black text-white" : "text-karimoff-muted hover:bg-white hover:text-karimoff-black"
-                    }`}
+                    className="avatar-section flex min-h-16 min-w-0 flex-col items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-bold transition min-[400px]:min-h-12 min-[400px]:flex-row"
+                    aria-pressed={isActive}
                   >
                     <Icon size={17} />
                     {section.label}
@@ -152,38 +151,35 @@ export function AvatarBuilder({ initialAvatar, options = avatarOptions, error }:
                     key={option.value}
                     type="button"
                     onClick={() => setAvatar((current) => ({ ...current, [activeSection]: option.value }))}
-                    className={`min-h-[76px] rounded-lg border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange ${
-                      isSelected
-                        ? "border-karimoff-orange bg-white shadow-[0_12px_28px_rgba(18,18,20,0.08)]"
-                        : "border-karimoff-line bg-white/55 hover:border-karimoff-black/25 hover:bg-white"
-                    }`}
+                    className="avatar-option min-h-[104px] min-w-0 rounded-lg border p-3 text-left transition"
                     aria-pressed={isSelected}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex min-h-10 items-center gap-2">
                       {color ? (
                         <span
-                          className="h-5 w-5 shrink-0 rounded-full border border-black/10"
+                          className="avatar-swatch h-5 w-5 shrink-0 rounded-full border"
                           style={{ backgroundColor: color }}
+                          aria-hidden="true"
                         />
                       ) : (
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${isSelected ? "bg-karimoff-orange" : "bg-karimoff-line"}`} />
+                        <span className="avatar-option-dot h-2.5 w-2.5 shrink-0 rounded-full" aria-hidden="true" />
                       )}
-                      <span className="text-sm font-bold leading-5">{option.label}</span>
+                      <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-bold leading-5">{option.label}</span>
                     </span>
-                    {isSelected ? <span className="mt-2 block text-xs font-semibold text-karimoff-orange">Выбрано</span> : null}
+                    <span className="profile-accent mt-2 block min-h-4 text-xs font-semibold" aria-hidden="true">{isSelected ? "Выбрано" : null}</span>
                   </button>
                 );
               })}
             </div>
 
             {error ? (
-              <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+              <p className="profile-error mt-5 rounded-lg border px-4 py-3 text-sm font-semibold" role="alert">
                 {error}
               </p>
             ) : null}
           </div>
 
-          <div className="sticky bottom-0 border-t border-karimoff-line bg-[#F7F4EF]/95 p-5 backdrop-blur-md sm:p-6">
+          <div className="avatar-editor-footer profile-border border-t p-5 sm:p-6">
             <button
               type="submit"
               className="public-button-primary w-full px-7"

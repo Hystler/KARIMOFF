@@ -32,7 +32,7 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
   const isUtility = avatar.clothes === "utility_black";
 
   return (
-    <div className={`${sizeClasses[size]} relative overflow-hidden rounded-[28%] border border-karimoff-line ${backgroundClass} shadow-[0_24px_70px_rgba(18,18,20,0.16)]`}>
+    <div className={`${sizeClasses[size]} relative shrink-0 overflow-hidden rounded-[28%] border border-karimoff-line ${backgroundClass} shadow-[0_24px_70px_rgba(18,18,20,0.16)]`}>
       <svg viewBox="0 0 220 220" className="absolute inset-0 h-full w-full" aria-hidden="true">
         {avatar.background === "grill" || avatar.background === "neon" || avatar.background === "kitchen_line" || avatar.background === "night_city" ? (
           <g opacity="0.18" stroke="#fff" strokeWidth="3">
@@ -143,7 +143,7 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
         ) : null}
       </svg>
       {!isSmall ? (
-        <div className="absolute bottom-3 left-3 right-3 rounded-full border border-white/35 bg-white/20 px-3 py-1 text-center text-xs font-black uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+        <div className="absolute bottom-3 left-3 right-3 rounded-full border border-white/35 bg-[#121214]/90 px-3 py-1 text-center text-xs font-black uppercase text-white">
           KARIMOFF
         </div>
       ) : null}

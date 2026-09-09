@@ -10,6 +10,7 @@
   --public-control-border: rgba(18, 18, 20, 0.15);
   --public-control-color: #121214;
   --public-control-shadow: 0 12px 28px rgba(18, 18, 20, 0.10);
+  --product-photo-bg: #f4f4f5;
 }
 
 html[data-theme="dark"] {
@@ -20,7 +21,11 @@ html[data-theme="dark"] {
   --public-control-border: rgba(255, 255, 255, 0.16);
   --public-control-color: #ffffff;
   --public-control-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  --product-photo-bg: #242428;
 }
+
+.product-photo { background: var(--product-photo-bg); }
+.product-card .product-cta { margin-top: 0; }
 
 * {
   box-sizing: border-box;

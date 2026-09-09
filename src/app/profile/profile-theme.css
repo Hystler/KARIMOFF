@@ -1,0 +1,196 @@
+.profile-theme {
+  --profile-background: #f8f4ee;
+  --profile-surface: #ffffff;
+  --profile-panel: #f7f4ef;
+  --profile-hover: #eeeae4;
+  --profile-text: #121214;
+  --profile-muted: #625f59;
+  --profile-border: #d8d3cc;
+  --profile-control-border: #89857f;
+  --profile-accent: #ad4100;
+  --profile-accent-soft: #fff0e5;
+  --profile-action: #ad4100;
+  --profile-action-hover: #913600;
+  --profile-on-action: #ffffff;
+  --profile-selected: #121214;
+  --profile-on-selected: #ffffff;
+  --profile-success: #047857;
+  --profile-success-soft: #ecfdf5;
+  --profile-danger: #b91c1c;
+  --profile-danger-soft: #fef2f2;
+  --profile-warning: #92400e;
+  min-height: 100dvh;
+  background: var(--profile-background);
+  color: var(--profile-text);
+}
+
+html[data-theme="dark"] .profile-theme {
+  --profile-background: #121214;
+  --profile-surface: #1b1b1f;
+  --profile-panel: #202024;
+  --profile-hover: #303036;
+  --profile-text: #f5f5f6;
+  --profile-muted: #b9b9c1;
+  --profile-border: #42424b;
+  --profile-control-border: #85858f;
+  --profile-accent: #ff9b66;
+  --profile-accent-soft: #39271d;
+  --profile-action: #ff8c45;
+  --profile-action-hover: #ffa46b;
+  --profile-on-action: #121214;
+  --profile-selected: #f5f5f6;
+  --profile-on-selected: #121214;
+  --profile-success: #6ee7b7;
+  --profile-success-soft: #12362d;
+  --profile-danger: #fca5a5;
+  --profile-danger-soft: #3c2025;
+  --profile-warning: #fcd34d;
+}
+
+.profile-theme :where(h1, h2, h3, p, a, button, label) {
+  overflow-wrap: anywhere;
+}
+
+.profile-theme :where(article, section, form) {
+  min-width: 0;
+}
+
+.profile-theme .profile-surface { background: var(--profile-surface); }
+.profile-theme .profile-border { border-color: var(--profile-border); }
+.profile-theme .profile-muted { color: var(--profile-muted); }
+.profile-theme .profile-accent { color: var(--profile-accent); }
+.profile-theme .profile-success { color: var(--profile-success); }
+.profile-theme .profile-danger { color: var(--profile-danger); }
+
+.profile-theme .profile-success-badge {
+  background: var(--profile-success-soft);
+  color: var(--profile-success);
+}
+
+.profile-theme .profile-error {
+  border-color: var(--profile-danger);
+  background: var(--profile-danger-soft);
+  color: var(--profile-danger);
+}
+
+.profile-theme .profile-inverse {
+  --profile-accent: #ff9b66;
+  background: #111114;
+  color: #ffffff;
+}
+
+.profile-theme .profile-inverse-muted { color: #b9b9c1; }
+
+.profile-theme :is(.public-button-primary, .public-button-secondary) {
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+
+.profile-theme .public-button-primary {
+  border-color: var(--profile-action);
+  background: var(--profile-action);
+  color: var(--profile-on-action);
+}
+
+.profile-theme .public-button-primary:hover {
+  background: var(--profile-action-hover);
+}
+
+.profile-theme :is(.public-button-secondary, .public-icon-button) {
+  border-color: var(--profile-control-border);
+  background: var(--profile-surface);
+  color: var(--profile-text);
+}
+
+.profile-theme :is(.public-button-secondary, .public-icon-button):hover {
+  border-color: var(--profile-accent);
+  color: var(--profile-accent);
+}
+
+.profile-theme :focus-visible { outline-color: var(--profile-accent); }
+.profile-theme .profile-back:hover { color: var(--profile-accent); }
+
+.profile-theme .profile-unlink {
+  border-color: var(--profile-control-border);
+  color: var(--profile-text);
+}
+
+.profile-theme .profile-unlink:hover {
+  border-color: var(--profile-danger);
+  color: var(--profile-danger);
+}
+
+/* Compact provider controls keep their own brand family, with readable text in both themes. */
+.profile-theme [data-profile-provider="telegram"] {
+  --profile-provider-text: #126b95;
+  --profile-provider-hover: #126b95;
+}
+
+.profile-theme [data-profile-provider="max"] {
+  --profile-provider-text: #471aff;
+  --profile-provider-hover: #471aff;
+}
+
+html[data-theme="dark"] .profile-theme [data-profile-provider="telegram"] { --profile-provider-text: #65cfff; }
+html[data-theme="dark"] .profile-theme [data-profile-provider="max"] { --profile-provider-text: #b6a1ff; }
+
+.profile-theme [data-profile-provider] :is(button, a) {
+  max-width: 100%;
+  border-color: var(--profile-provider-text);
+  color: var(--profile-provider-text);
+  outline-color: var(--profile-provider-text);
+}
+
+.profile-theme [data-profile-provider] :is(button, a):hover {
+  background: var(--profile-provider-hover);
+  color: #ffffff;
+}
+
+/* The shared order component is read-only; adapt only its profile preview. */
+.profile-theme .profile-orders-preview .text-karimoff-orange { color: var(--profile-accent); }
+.profile-theme .profile-orders-preview .bg-orange-50 { background: var(--profile-accent-soft); }
+.profile-theme .profile-orders-preview [role="status"] { color: var(--profile-success); }
+.profile-theme .profile-orders-preview [role="status"].text-amber-700 { color: var(--profile-warning); }
+.profile-theme .profile-orders-preview :has(> [role="status"]) { flex-wrap: wrap; }
+
+.profile-theme .avatar-editor-panel,
+.profile-theme .avatar-editor-footer {
+  background: var(--profile-panel);
+  color: var(--profile-text);
+}
+
+.profile-theme .avatar-editor-footer {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+.profile-theme .avatar-section {
+  color: var(--profile-muted);
+}
+
+.profile-theme .avatar-section svg { flex-shrink: 0; }
+.profile-theme .avatar-section:hover { background: var(--profile-hover); color: var(--profile-text); }
+
+.profile-theme .avatar-section[aria-pressed="true"] {
+  background: var(--profile-selected);
+  color: var(--profile-on-selected);
+}
+
+.profile-theme .avatar-option {
+  border-color: var(--profile-control-border);
+  background: var(--profile-surface);
+  color: var(--profile-text);
+}
+
+.profile-theme .avatar-option:hover { background: var(--profile-hover); }
+
+.profile-theme .avatar-option[aria-pressed="true"] {
+  border-color: var(--profile-accent);
+  background: var(--profile-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--profile-accent);
+}
+
+/* Swatch fills come only from the avatar palette, never from theme tokens. */
+.profile-theme .avatar-swatch { border-color: var(--profile-control-border); }
+.profile-theme .avatar-option-dot { background: var(--profile-control-border); }
+.profile-theme .avatar-option[aria-pressed="true"] .avatar-option-dot { background: var(--profile-accent); }

@@ -4,11 +4,14 @@ export const menuCategoryFilters: Array<{ label: string; value: "all" | Normaliz
   { label: "Всё меню", value: "all" },
   { label: "Бургеры", value: "burgers" },
   { label: "Шаурма", value: "shaurma" },
-  { label: "Снэки", value: "snacks" },
-  { label: "Напитки", value: "drinks" }
+  { label: "Снэки", value: "snacks" }
 ];
 
 export const adminProductCategoryOptions = ["Бургеры", "Шаурма", "Снэки", "Напитки", "Соусы", "Другое"];
+
+export function isPublicMenuCategory(category: string | null | undefined) {
+  return normalizeProductCategory(category) !== "drinks";
+}
 
 export function normalizeProductCategory(category: string | null | undefined): NormalizedProductCategory {
   const value = String(category ?? "")

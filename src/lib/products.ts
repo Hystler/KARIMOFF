@@ -4,6 +4,9 @@ import { demoProducts } from "@/data/products";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { isPublicMenuCategory } from "@/lib/product-categories";
+import { formatServing, normalizeServing, getPortionGroup } from "./product-serving";
+import { getProductAliases } from "./product-portions";
 import type {
   Product,
   ProductCompositionItem,
@@ -16,7 +19,11 @@ import type {
 const PRODUCT_SELECT =
   "id, created_at, updated_at, name, slug, category, description, price, image_url, is_active, sort_order, weight, tags, calories, protein, fat, carbs, allergens";
 
-export const fallbackProducts: Product[] = demoProducts;
+export function isPublicMenuProduct(product: Pick<Product, "category">) {
+  return isPublicMenuCategory(product.category);
+}
+
+export const fallbackProducts: Product[] = demoProducts.filter(isPublicMenuProduct);
 
 const fallbackBySlug = new Map(fallbackProducts.map((product) => [product.slug, product]));
 const fallbackActiveProducts = fallbackProducts.filter((product) => product.is_active);
@@ -262,13 +269,29 @@ async function attachProductModifierGroups(products: Product[]): Promise<Product
     groupsByProduct.set(productId, [...(groupsByProduct.get(productId) ?? []), group]);
   }
 
-  return products.map((product) => ({
-    ...product,
-    modifier_groups: groupsByProduct.get(product.id) ?? []
-  }));
+  return products.map((product) => {
+    const detailed = { ...product, modifier_groups: groupsByProduct.get(product.id) ?? [] };
+    const portionIngredients = new Set(getPortionGroup(detailed)?.options.map(option => option.ingredient_id) ?? []);
+    return { ...detailed, modifier_options: detailed.modifier_options?.filter(option => !portionIngredients.has(option.ingredient_id)) };
+  });
 }
 
 async function attachProductDetails(products: Product[]) {
+  const database = createDatabaseServerClient();
+  const ambiguous = products.filter(product => !normalizeServing(product.weight));
+  if (database && ambiguous.length) {
+    const { data } = await database.from("product_ingredients").select("product_id, quantity, unit")
+      .in("product_id", ambiguous.map(product => product.id));
+    // A one-ingredient snack has a known base portion. Never infer a finished dish's weight from mixed units.
+    products = products.map(product => {
+      if (normalizeServing(product.weight)) return product;
+      const lines = (data ?? []).filter(line => String(line.product_id) === product.id);
+      if (lines.length !== 1 || Number(lines[0].quantity) <= 0) return product;
+      const unit = lines[0].unit;
+      return ["g", "ml", "pcs"].includes(String(unit))
+        ? { ...product, weight: formatServing(Number(lines[0].quantity), unit as "g" | "ml" | "pcs") } : product;
+    });
+  }
   return attachProductModifierGroups(await attachProductModifiers(await attachProductImages(products)));
 }
 
@@ -285,7 +308,7 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(Math.max(limit + 20, 100));
 
   if (error) {
     if (error && process.env.NODE_ENV !== "production") {
@@ -298,7 +321,11 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
     return [];
   }
 
-  return attachProductDetails(data.map((row) => normalizeProduct(row)));
+  const publicProducts = data
+    .map((row) => normalizeProduct(row))
+    .filter(isPublicMenuProduct)
+    .slice(0, limit);
+  return attachProductDetails(publicProducts);
 }
 
 export async function getActiveProductBySlug(slug: string): Promise<Product | null> {
@@ -315,14 +342,33 @@ export async function getActiveProductBySlug(slug: string): Promise<Product | nu
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error || !data) {
-    if (error && process.env.NODE_ENV !== "production") {
-      console.warn("Product detail could not be loaded:", error.message);
+  let resolvedData = data;
+  let resolvedError = error;
+  if (!resolvedData && !resolvedError) {
+    const aliases = getProductAliases(slug).filter((candidate) => candidate !== slug);
+    if (aliases.length) {
+      const fallback = await database
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .in("slug", aliases)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      resolvedData = fallback.data;
+      resolvedError = fallback.error;
+    }
+  }
+
+  if (resolvedError || !resolvedData) {
+    if (resolvedError && process.env.NODE_ENV !== "production") {
+      console.warn("Product detail could not be loaded:", resolvedError.message);
     }
     return null;
   }
 
-  const [product] = await attachProductDetails([normalizeProduct(data)]);
+  const normalized = normalizeProduct(resolvedData);
+  if (!isPublicMenuProduct(normalized)) return null;
+  const [product] = await attachProductDetails([normalized]);
   return product ?? null;
 }
 
@@ -346,7 +392,7 @@ export async function getPublicProductComposition(productId: string): Promise<Pr
   const ingredientIds = Array.from(new Set(lines.map((line) => String(line.ingredient_id))));
   const { data: ingredients, error: ingredientsError } = await database
     .from("ingredients")
-    .select("id, name, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g")
+    .select("id, name, unit, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g")
     .in("id", ingredientIds);
 
   if (ingredientsError || !ingredients) {
@@ -365,14 +411,30 @@ export async function getPublicProductComposition(productId: string): Promise<Pr
           sort_order: Number(line.sort_order ?? 100),
           quantity: Number(line.quantity ?? 0),
           unit: line.unit === "ml" || line.unit === "pcs" ? line.unit : "g",
-          nutrition_basis_quantity: Number(ingredient.nutrition_basis_quantity ?? (line.unit === "pcs" ? 1 : 100)),
+          nutrition_basis_quantity: ingredient.unit === line.unit ? Number(ingredient.nutrition_basis_quantity ?? (line.unit === "pcs" ? 1 : 100)) : 0,
           calories_kcal: ingredient.calories_kcal === null || ingredient.calories_kcal === undefined ? null : Number(ingredient.calories_kcal),
           proteins_g: ingredient.proteins_g === null || ingredient.proteins_g === undefined ? null : Number(ingredient.proteins_g),
           fats_g: ingredient.fats_g === null || ingredient.fats_g === undefined ? null : Number(ingredient.fats_g),
           carbohydrates_g: ingredient.carbohydrates_g === null || ingredient.carbohydrates_g === undefined ? null : Number(ingredient.carbohydrates_g)
         }]
-      : [];
+      : [{ ingredient_id: ingredientId, name: "Неизвестный ингредиент", sort_order: Number(line.sort_order ?? 100),
+          quantity: Number(line.quantity ?? 0), unit: line.unit === "ml" || line.unit === "pcs" ? line.unit : "g",
+          nutrition_basis_quantity: 0, calories_kcal: null, proteins_g: null, fats_g: null, carbohydrates_g: null }];
   });
+}
+
+export async function getPublicModifierNutrition(product: Product): Promise<ProductCompositionItem[]> {
+  const ids = Array.from(new Set((product.modifier_groups ?? []).flatMap(group => group.options.flatMap(option =>
+    [option.ingredient_id, option.replacement_ingredient_id].filter((id): id is string => Boolean(id))))));
+  const database = createDatabaseServerClient();
+  if (!database || !ids.length) return [];
+  const { data, error } = await database.from("ingredients")
+    .select("id, name, unit, nutrition_basis_quantity, calories_kcal, proteins_g, fats_g, carbohydrates_g").in("id", ids);
+  if (error) return [];
+  return (data ?? []).map(row => ({ ingredient_id: String(row.id), name: String(row.name), quantity: 0, sort_order: 0,
+    unit: row.unit === "ml" || row.unit === "pcs" ? row.unit : "g", nutrition_basis_quantity: Number(row.nutrition_basis_quantity),
+    calories_kcal: row.calories_kcal == null ? null : Number(row.calories_kcal), proteins_g: row.proteins_g == null ? null : Number(row.proteins_g),
+    fats_g: row.fats_g == null ? null : Number(row.fats_g), carbohydrates_g: row.carbohydrates_g == null ? null : Number(row.carbohydrates_g) }));
 }
 
 export async function getAdminProducts() {

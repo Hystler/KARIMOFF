@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { loadTypeScript } from "./helpers/load-typescript.mjs";
 import test from "node:test";
 
 const root = process.cwd();
@@ -13,17 +12,6 @@ function sourceFiles(directory) {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? sourceFiles(path) : [path];
   });
-}
-
-function runTypeScript(source) {
-  const result = spawnSync(process.execPath, [
-    "--experimental-strip-types",
-    "--input-type=module",
-    "-e",
-    source
-  ], { cwd: root, encoding: "utf8" });
-  assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
 }
 
 test("product details use stable active slugs and expose complete SEO metadata", () => {
@@ -42,13 +30,10 @@ test("product details use stable active slugs and expose complete SEO metadata",
 });
 
 test("nutrition distinguishes missing data from real zero values", () => {
-  const moduleUrl = pathToFileURL(join(root, "src/lib/product-nutrition.ts")).href;
-  const result = runTypeScript(`
-    const { getProductNutrition } = await import(${JSON.stringify(moduleUrl)});
+    const { getProductNutrition } = loadTypeScript("src/lib/product-nutrition.ts");
     const absent = getProductNutrition({ calories: null, protein: null, fat: null, carbs: null });
     const present = getProductNutrition({ calories: 0, protein: 12.5, fat: null, carbs: 30 });
-    console.log(JSON.stringify({ absent, present }));
-  `);
+  const result = { absent, present };
   assert.equal(result.absent.available, false);
   assert.equal(result.present.available, true);
   assert.equal(result.present.items.find((item) => item.key === "calories").value, 0);

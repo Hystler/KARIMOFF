@@ -51,10 +51,10 @@ export const avatarOptions: AvatarOptions = {
     { value: "varsity_orange", label: "Куртка KARIMOFF" },
     { value: "black_hoodie", label: "Графитовое худи" },
     { value: "chef_jacket", label: "Китель шефа" },
-    { value: "utility_black", label: "Чёрный utility" }
+    { value: "utility_black", label: "Чёрный костюм" }
   ],
   background: [
-    { value: "studio_orange", label: "Orange studio" },
+    { value: "studio_orange", label: "Оранжевая студия" },
     { value: "night_city", label: "Ночной город" },
     { value: "kitchen_line", label: "Открытая кухня" },
     { value: "clean", label: "Светлая студия" }

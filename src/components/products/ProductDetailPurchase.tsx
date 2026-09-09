@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Minus, Plus, ShoppingBasket } from "lucide-react";
+import { Check, ChevronDown, Minus, Plus, ShoppingBasket } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   getConfiguredCartUnitPrice,
@@ -9,7 +9,9 @@ import {
   useCart,
   type CartCustomization
 } from "@/components/cart/CartProvider";
-import type { Product, ProductModifierGroup } from "@/lib/product-types";
+import type { Product, ProductCompositionItem, ProductModifierGroup } from "@/lib/product-types";
+import { getPortionGroup, getServingLabel } from "@/lib/product-serving";
+import { getCustomizedNutrition } from "@/lib/product-nutrition";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value);
@@ -19,7 +21,7 @@ function selectedCount(group: ProductModifierGroup, selected: Set<string>) {
   return group.options.filter((option) => selected.has(option.id)).length;
 }
 
-export function ProductDetailPurchase({ product }: { product: Product }) {
+export function ProductDetailPurchase({ product, composition = [], nutritionIngredients = [] }: { product: Product; composition?: ProductCompositionItem[]; nutritionIngredients?: ProductCompositionItem[] }) {
   const { addItem } = useCart();
   const defaults = useMemo(() => getDefaultCartCustomization(product), [product]);
   const [removed, setRemoved] = useState(new Set(defaults.removed.map((item) => item.ingredient_id)));
@@ -29,10 +31,11 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const ingredientOptions = product.modifier_options ?? [];
-  const removable = ingredientOptions.filter((option) => option.is_removable);
+  const portion = getPortionGroup(product);
+  const removable = ingredientOptions.filter((option) => option.is_removable && !portion?.options.some(size => size.ingredient_id === option.ingredient_id));
   const addable = ingredientOptions.filter((option) => option.is_extra_available);
-  const groups = product.modifier_groups ?? [];
-  const customization = useMemo<CartCustomization>(() => ({
+  const groups = (product.modifier_groups ?? []).filter(group => group.id !== portion?.id);
+  const customization: CartCustomization = {
     removed: removable
       .filter((option) => removed.has(option.ingredient_id))
       .map((option) => ({ ingredient_id: option.ingredient_id, name: option.name })),
@@ -46,9 +49,11 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
       .filter((extra) => extra.quantity > 0),
     modifierOptionIds: [...selectedOptions],
     note
-  }), [addable, extras, note, removable, removed, selectedOptions]);
-  const valid = isCartCustomizationValid(product, customization);
+  };
+  const portionChosen = !portion || portion.options.some(option => selectedOptions.has(option.id));
+  const valid = isCartCustomizationValid(product, customization) && portionChosen;
   const total = getConfiguredCartUnitPrice(product, customization) * quantity;
+  const nutrition = getCustomizedNutrition(product, composition, nutritionIngredients, customization);
 
   function toggleGroupOption(group: ProductModifierGroup, optionId: string) {
     setSelectedOptions((current) => {
@@ -74,6 +79,17 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
 
   return (
     <div className="mt-8 border-t border-karimoff-line pt-7">
+      {portion ? <fieldset className="mb-7">
+        <legend className="text-lg font-bold text-karimoff-black">Размер порции</legend>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {portion.options.map(option => <button type="button" key={option.id} aria-pressed={selectedOptions.has(option.id)}
+            onClick={() => toggleGroupOption(portion, option.id)}
+            className={`min-h-16 rounded-lg border p-3 text-left text-karimoff-black ${selectedOptions.has(option.id) ? "border-karimoff-orange bg-karimoff-orange/10" : "border-karimoff-line bg-white"}`}>
+            <strong className="block text-base">{option.label}</strong>
+            <span className="text-sm text-karimoff-orange">{formatPrice(product.price + option.price_delta)} ₽</span>
+          </button>)}
+        </div>
+      </fieldset> : null}
       {removable.length ? (
         <fieldset>
           <legend className="text-lg font-black text-karimoff-black">Убрать из состава</legend>
@@ -162,9 +178,10 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
       {groups.map((group) => {
         const count = selectedCount(group, selectedOptions);
         const invalid = count < group.min_selections || count > group.max_selections;
-        return (
-          <fieldset key={group.id} className="mt-7">
-            <legend className="flex flex-wrap items-center gap-2 text-lg font-black text-karimoff-black">
+        const optional = group.min_selections === 0;
+        const fieldset = (
+          <fieldset key={group.id} className={optional ? "mt-4" : "mt-7"}>
+            <legend className={optional ? "sr-only" : "flex flex-wrap items-center gap-2 text-lg font-black text-karimoff-black"}>
               {group.name}
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${group.min_selections > 0 ? "bg-karimoff-orange/10 text-karimoff-orange" : "bg-karimoff-soft text-karimoff-muted"}`}>
                 {group.min_selections > 0 ? "Обязательно" : "По желанию"}
@@ -195,6 +212,13 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
             </div>
           </fieldset>
         );
+        return optional ? <details key={group.id} className="group/modifiers mt-7 border-y border-karimoff-line py-4">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-base font-bold text-karimoff-black [&::-webkit-details-marker]:hidden">
+            <span>{group.name}<span className="mt-1 block text-xs font-normal text-karimoff-muted">{count ? `Выбрано: ${count}` : "По желанию"}</span></span>
+            <ChevronDown size={20} aria-hidden className="shrink-0 transition-transform group-open/modifiers:rotate-180" />
+          </summary>
+          {fieldset}
+        </details> : fieldset;
       })}
 
       <label className="mt-7 block">
@@ -225,10 +249,27 @@ export function ProductDetailPurchase({ product }: { product: Product }) {
           aria-live="polite"
         >
           {added ? <Check size={21} aria-hidden /> : <ShoppingBasket size={21} aria-hidden />}
-          <span>{added ? "Добавлено" : "Добавить в корзину"} · {formatPrice(total)} ₽</span>
+          <span>{!portionChosen ? "Выберите порцию" : `${added ? "Добавлено" : "Добавить в корзину"} · ${formatPrice(total)} ₽`}</span>
         </button>
       </div>
-      {!valid ? <p className="mt-3 text-sm font-bold text-red-700">Заполните обязательные настройки блюда.</p> : null}
+      {!valid ? <p className="mt-3 text-sm text-karimoff-muted">{!portionChosen ? "Выберите размер порции выше." : "Выберите обязательные варианты блюда."}</p> : null}
+      <section className="mt-8 border-t border-karimoff-line pt-6" aria-label="Пищевая ценность выбранного блюда">
+        <h2 className="text-xl font-bold text-karimoff-black">КБЖУ на порцию</h2>
+        {portion ? (
+          <p className="mt-2 text-sm text-karimoff-muted">
+            {portionChosen ? getServingLabel(product, [...selectedOptions]) : "Выберите размер порции"}
+          </p>
+        ) : null}
+        {portionChosen && nutrition.complete ? <>
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+            {nutrition.items.map(item => <div key={item.key} className="min-w-0">
+              <dt className="text-xs text-karimoff-muted">{item.label}</dt>
+              <dd className="mt-1 text-base font-bold tabular-nums text-karimoff-black">{new Intl.NumberFormat("ru-RU", { maximumFractionDigits: item.key === "calories" ? 0 : 1 }).format(item.value ?? 0)} {item.unit}</dd>
+            </div>)}
+          </dl>
+          <p className="mt-3 text-xs text-karimoff-muted">Расчёт по составу выбранной порции. Значения ориентировочные.</p>
+        </> : <p className="mt-3 text-sm text-karimoff-muted">{portionChosen ? "Данные уточняются." : "Пищевая ценность появится после выбора порции."}</p>}
+      </section>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   useCart
 } from "@/components/cart/CartProvider";
 import type { Product } from "@/lib/product-types";
+import { getPortionGroup } from "@/lib/product-serving";
 
 export function ProductCustomizer({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -26,7 +27,7 @@ export function ProductCustomizer({ product }: { product: Product }) {
       type="button"
       onClick={() => {
         const customization = getDefaultCartCustomization(product);
-        if (!isCartCustomizationValid(product, customization)) {
+        if (getPortionGroup(product) || !isCartCustomizationValid(product, customization)) {
           router.push(`/menu/${encodeURIComponent(product.slug)}`);
           return;
         }
@@ -37,7 +38,7 @@ export function ProductCustomizer({ product }: { product: Product }) {
       aria-live="polite"
     >
       {isAdded ? <Check aria-hidden size={18} strokeWidth={2.8} /> : <ShoppingBasket aria-hidden size={18} strokeWidth={2.4} />}
-      <span>{isAdded ? "Добавлено" : "В корзину"}</span>
+      <span>{isAdded ? "Добавлено" : getPortionGroup(product) ? "Выбрать порцию" : "В корзину"}</span>
     </button>
   );
 }

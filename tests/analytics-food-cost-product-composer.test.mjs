@@ -1,23 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { loadTypeScript } from "./helpers/load-typescript.mjs";
 import test from "node:test";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
-
-function runTypeScript(source) {
-  const result = spawnSync(process.execPath, [
-    "--experimental-strip-types",
-    "--input-type=module",
-    "-e",
-    source
-  ], { cwd: root, encoding: "utf8" });
-  assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout);
-}
 
 test("ingredient nutrition is complete, non-negative, and uses a unit-aware basis", () => {
   const migration = read("supabase/migrations/20260901120000_add_ingredient_nutrition.sql");
@@ -46,9 +34,7 @@ test("ingredient nutrition is complete, non-negative, and uses a unit-aware basi
 });
 
 test("recipe nutrition scales grams and pieces without applying kitchen waste twice", () => {
-  const moduleUrl = pathToFileURL(join(root, "src/lib/product-nutrition.ts")).href;
-  const result = runTypeScript(`
-    const { calculateRecipeNutrition } = await import(${JSON.stringify(moduleUrl)});
+    const { calculateRecipeNutrition } = loadTypeScript("src/lib/product-nutrition.ts");
     const complete = calculateRecipeNutrition([
       { ingredient_id: "a", name: "Курица", sort_order: 10, quantity: 150, unit: "g", nutrition_basis_quantity: 100, calories_kcal: 200, proteins_g: 20, fats_g: 10, carbohydrates_g: 0 },
       { ingredient_id: "b", name: "Булочка", sort_order: 20, quantity: 1, unit: "pcs", nutrition_basis_quantity: 1, calories_kcal: 250, proteins_g: 8, fats_g: 4, carbohydrates_g: 45 }
@@ -56,8 +42,7 @@ test("recipe nutrition scales grams and pieces without applying kitchen waste tw
     const incomplete = calculateRecipeNutrition([
       { ingredient_id: "c", name: "Соус", sort_order: 10, quantity: 20, unit: "g", nutrition_basis_quantity: 100, calories_kcal: null, proteins_g: null, fats_g: null, carbohydrates_g: null }
     ]);
-    console.log(JSON.stringify({ complete, incomplete }));
-  `);
+  const result = { complete, incomplete };
 
   assert.equal(result.complete.available, true);
   assert.equal(result.complete.items.find((item) => item.key === "calories").value, 550);

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { ProductImagesManager } from "@/components/admin/ProductImagesManager";
 import { ProductComposition } from "@/components/admin/ProductComposition";
+import { ProductPortions } from "@/components/admin/ProductPortions";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getProductFoodCost } from "@/lib/ingredients";
 import { getAdminProductById } from "@/lib/products";
@@ -68,6 +69,7 @@ export default async function EditProductPage({ params, searchParams }: EditProd
               </div>
             ) : null}
             <ProductForm action={updateProductAction} product={product} submitLabel="Сохранить товар" />
+            {product ? <ProductPortions product={product} /> : null}
             {product ? (
               <ProductImagesManager
                 productId={product.id}
