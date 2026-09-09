@@ -1,5 +1,6 @@
 import { CalendarClock, CreditCard, MapPin, PackageCheck, Phone, ReceiptText, RefreshCw, ShoppingBag } from "lucide-react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
@@ -8,7 +9,7 @@ import { kitchenStatusLabel, orderSourceLabel, type KitchenStatus } from "@/lib/
 import { checkYooKassaPaymentStatusAction, updateOrderStatusAction } from "./actions";
 
 const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
-  new: "accepted",
+  new: "cooking",
   accepted: "cooking",
   cooking: "ready",
   ready: "handed_out"
@@ -69,7 +70,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrdersPage({
   searchParams
 }: {
-  searchParams: Promise<{ deleted?: string; error?: string; payment_checked?: string; saved?: string; warning?: string }>;
+  searchParams: Promise<{ deleted?: string; error?: string; payment_checked?: string; saved?: string; warning?: string; view?: string }>;
 }) {
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
@@ -81,6 +82,11 @@ export default async function AdminOrdersPage({
     ? null
     : locations.map((location) => location.id);
   const { orders, notConfigured, error } = await getAdminOrders(locationIds);
+  const history = params.view === "history";
+  const visibleOrders = orders.filter((order) => {
+    const archived = !order.is_operational || ["handed_out", "cancelled"].includes(order.kitchen_status);
+    return history ? archived : !archived;
+  });
 
   return (
     <main className="admin-content admin-content-wide">
@@ -90,8 +96,12 @@ export default async function AdminOrdersPage({
           <h1>Заказы</h1>
           <p>Время получения, пожелания гостя, оплата и путь заказа до кухни.</p>
         </div>
-        <div className="admin-status">{orders.length} всего</div>
+        <div className="admin-status">{visibleOrders.length} {history ? "в истории" : "в работе"}</div>
       </header>
+      <nav className="analytics-subnav mb-5" aria-label="Очередь заказов">
+        <Link href="/admin/orders" className={!history ? "is-active" : ""} aria-current={!history ? "page" : undefined}>В работе</Link>
+        <Link href="/admin/orders?view=history" className={history ? "is-active" : ""} aria-current={history ? "page" : undefined}>История</Link>
+      </nav>
 
       {params.saved ? <div className="admin-alert admin-alert-success">Статус заказа обновлён.</div> : null}
       {params.payment_checked ? <div className="admin-alert admin-alert-success">Статус платежа обновлён по данным ЮKassa.</div> : null}
@@ -101,12 +111,12 @@ export default async function AdminOrdersPage({
 
       {notConfigured ? (
         <div className="admin-empty">База данных не подключена.</div>
-      ) : orders.length === 0 ? (
+      ) : visibleOrders.length === 0 ? (
         <div className="admin-empty">Заказов пока нет.</div>
       ) : (
         <section className="grid gap-4">
-          {orders.map((order) => (
-            <article key={order.id} className="admin-order-card">
+          {visibleOrders.map((order) => (
+            <article key={order.id} className="admin-order-card" data-kitchen-status={order.kitchen_status}>
               <div className="admin-order-main">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -120,7 +130,7 @@ export default async function AdminOrdersPage({
                       </a>
                     ) : null}
                   </div>
-                  <span className={`admin-order-status admin-order-status-${order.status}`}>{kitchenStatusLabel(order.kitchen_status)}</span>
+                  <span className={`admin-order-status admin-order-status-${order.kitchen_status}`}>{kitchenStatusLabel(order.kitchen_status)}</span>
                 </div>
 
                 <div className="mt-4 grid gap-2 rounded-lg bg-karimoff-cream p-4 text-sm sm:grid-cols-2">

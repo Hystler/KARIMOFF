@@ -38,20 +38,18 @@ import {
 
 const columns: Array<{ status: KitchenStatus; title: string; empty: string }> = [
   { status: "new", title: "Новые", empty: "Новых заказов нет" },
-  { status: "accepted", title: "Приняты", empty: "Нет принятых заказов" },
   { status: "cooking", title: "Готовятся", empty: "Сейчас ничего не готовится" },
   { status: "ready", title: "Готово", empty: "Нет заказов к выдаче" }
 ];
 
 const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
-  new: "accepted",
+  new: "cooking",
   accepted: "cooking",
   cooking: "ready",
   ready: "handed_out"
 };
 
 const actionLabels: Partial<Record<KitchenStatus, string>> = {
-  accepted: "Принять",
   cooking: "Начать готовить",
   ready: "Готово",
   handed_out: "Выдан"
@@ -213,13 +211,11 @@ function OrderTicket({
   const tone = elapsed === null ? "normal" : classifySla(elapsed, sla);
   const target = nextStatus[order.kitchenStatus];
   const canAdvance = target ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
-  const toneClasses = tone === "critical"
-    ? "border-red-500 bg-red-50/35"
-    : tone === "warning"
-      ? "border-amber-400 bg-amber-50/30"
-      : order.kitchenStatus === "ready"
-        ? "border-emerald-400 bg-emerald-50/35"
-        : "border-black/10 bg-white";
+  const toneClasses = order.kitchenStatus === "ready"
+    ? "border-emerald-500 bg-emerald-50"
+    : order.kitchenStatus === "cooking"
+      ? "border-amber-400 bg-amber-50"
+      : "border-red-500 bg-red-50";
 
   return (
     <article className={`rounded-lg border-2 p-4 shadow-sm transition ${toneClasses}`}>
@@ -409,9 +405,9 @@ export function KitchenWorkspace({
       </header>
 
       <div className={embedded ? "" : "mx-auto max-w-[1900px] p-4 sm:p-6"}>
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+        <div className="grid gap-4 lg:grid-cols-3">
           {columns.map((column) => {
-            const items = orders.filter((order) => order.kitchenStatus === column.status);
+            const items = orders.filter((order) => order.kitchenStatus === column.status || (column.status === "new" && order.kitchenStatus === "accepted"));
             return (
               <section key={column.status} aria-labelledby={`column-${column.status}`} className="min-w-0">
                 <div className="mb-3 flex items-center justify-between gap-3 px-1">

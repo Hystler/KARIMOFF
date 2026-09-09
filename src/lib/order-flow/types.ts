@@ -139,7 +139,7 @@ export type OrderRecipe = {
 };
 
 export const kitchenTransitionMap: Record<KitchenStatus, KitchenStatus[]> = {
-  new: ["accepted", "cancelled"],
+  new: ["cooking", "cancelled"],
   accepted: ["cooking", "cancelled"],
   cooking: ["ready", "cancelled"],
   ready: ["handed_out"],

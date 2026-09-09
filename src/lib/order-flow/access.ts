@@ -38,9 +38,13 @@ export async function canStaffAccessOrderLocation(
 }
 
 export async function canStaffAccessOrder(staff: CurrentStaff, orderId: string) {
+  const sql = getPostgresSql();
+  const [order] = await sql<{ is_test: boolean }[]>`
+    select is_test from public.orders where id = ${orderId}::uuid
+  `;
+  if (!order || order.is_test !== (process.env.TEST_ORDER_MODE === "true")) return false;
   if (staff.legacy || staff.role === "owner" || staff.role === "admin") return true;
   if (!staff.id) return false;
-  const sql = getPostgresSql();
   const rows = await sql<{ allowed: boolean }[]>`
     select exists (
       select 1

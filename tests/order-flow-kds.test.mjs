@@ -69,7 +69,7 @@ test("KDS SLA and role transitions remain deterministic", () => {
         elapsed: sla.elapsedSeconds("2026-08-14T10:00:00Z", new Date("2026-08-14T10:08:01Z")),
         tones: [299, 300, 480].map((value) => sla.classifySla(value, settings)),
         cook: [
-          permissions.canTransitionKitchen("cook", "new", "accepted"),
+          permissions.canTransitionKitchen("cook", "new", "cooking"),
           permissions.canTransitionKitchen("cook", "ready", "handed_out")
         ],
         cashier: permissions.canTransitionKitchen("cashier", "ready", "handed_out"),

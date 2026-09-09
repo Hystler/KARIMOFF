@@ -246,6 +246,7 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
   let ordersQuery = database
     .from("orders")
     .select("id, created_at, customer_name, customer_phone, display_number, source, kitchen_status, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total, is_test, is_operational");
+  ordersQuery = ordersQuery.eq("is_test", process.env.TEST_ORDER_MODE === "true");
   if (locationIds !== null) ordersQuery = ordersQuery.in("location_id", locationIds);
   const { data: ordersData, error: ordersError } = await ordersQuery.order("created_at", { ascending: false });
 

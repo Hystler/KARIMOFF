@@ -225,6 +225,7 @@ export async function getKitchenOperationsMetrics(
       join public.order_locations location on location.id = o.location_id
       where o.location_id = ${locationId}::uuid
         and o.is_operational = true
+        and o.is_test = ${process.env.TEST_ORDER_MODE === "true"}
         and (o.created_at at time zone location.timezone)::date =
             (now() at time zone location.timezone)::date
     ), cycle as (
@@ -294,6 +295,7 @@ export async function getOrderFlowQueue(params: {
     left join public.staff_users staff on staff.id = o.assigned_staff_id
     where o.location_id = ${params.locationId}::uuid
       and o.is_operational = true
+      and o.is_test = ${process.env.TEST_ORDER_MODE === "true"}
       and o.kitchen_status = any(${statuses}::text[])
     order by coalesce(o.requested_at, o.created_at), o.created_at
     limit ${limit}
@@ -462,6 +464,7 @@ export async function getOrderOutboxEvents(params: {
     where event.id > ${params.afterId}
       and order_row.location_id = ${params.locationId}::uuid
       and order_row.is_operational = true
+      and order_row.is_test = ${process.env.TEST_ORDER_MODE === "true"}
     order by event.id
     limit ${limit}
   `;
@@ -475,6 +478,7 @@ export async function getLatestOrderEventCursor(locationId: string) {
     join public.orders order_row on order_row.id = event.aggregate_id
     where order_row.location_id = ${locationId}::uuid
       and order_row.is_operational = true
+      and order_row.is_test = ${process.env.TEST_ORDER_MODE === "true"}
   `;
   return Number(rows[0]?.id ?? 0);
 }

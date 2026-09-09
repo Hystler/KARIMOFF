@@ -15,6 +15,7 @@ import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import { AnalyticsTrendChart } from "./AnalyticsTrendChart";
 import { AnalyticsIntelligenceHub } from "./AnalyticsIntelligenceHub";
 import { AnalyticsFullscreenButton } from "./AnalyticsFullscreenButton";
+import { AnalyticsOverviewContents } from "./AnalyticsSubnav";
 
 const metricTabs: Array<[AnalyticsMetric, string]> = [
   ["revenue", "Выручка"],
@@ -110,7 +111,8 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
   const maxWeekday = Math.max(1, ...dashboard.weekdays.map((row) => row.revenue));
 
   return (
-    <>
+    <div className="contents [&_[id]]:scroll-mt-64">
+      <AnalyticsOverviewContents />
       <section className="analytics-kpi-grid" aria-label="Основные показатели">
         <KpiCard label="Выручка" value={dashboard.kpis.revenue} format={(value) => formatRub(value)} />
         <KpiCard
@@ -329,7 +331,7 @@ export function AnalyticsOverview({ dashboard }: { dashboard: AnalyticsDashboard
         <section className="analytics-panel"><header className="analytics-panel-heading compact"><div><p className="admin-eyebrow">Команда</p><h2>Продажи по сотрудникам</h2></div></header><CompactBreakdown rows={dashboard.employees} showItems /></section>
         <section className="analytics-panel"><header className="analytics-panel-heading compact"><div><p className="admin-eyebrow">Категории</p><h2>Структура ассортимента</h2></div></header><CompactBreakdown rows={dashboard.categories} /></section>
       </div>
-    </>
+    </div>
   );
 }
 

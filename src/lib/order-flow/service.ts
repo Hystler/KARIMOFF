@@ -2,6 +2,7 @@ import "server-only";
 
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { logOperationalEvent } from "@/lib/observability";
+import { getPostgresSql } from "@/lib/postgres/server";
 import type { OrderActorRole } from "./types";
 
 type CartItemInput = {
@@ -154,20 +155,32 @@ export async function transitionOrder(params: {
   actorRole: OrderActorRole;
   deviceSource: string;
 }) {
-  const database = createDatabaseServerClient();
-  if (!database) throw new Error("База данных не подключена.");
-  const { data, error } = await database.rpc("set_order_kitchen_status_atomic", {
-    p_order_id: params.orderId,
-    p_status: params.status,
-    p_actor_id: params.actorId,
-    p_actor_role: params.actorRole,
-    p_device_source: params.deviceSource
+  const data = await getPostgresSql().begin(async (sql) => {
+    const [order] = await sql<{ kitchen_status: string; is_test: boolean; source: string; payment_status: string }[]>`
+      select kitchen_status, is_test, source, payment_status
+      from public.orders where id = ${params.orderId}::uuid for update
+    `;
+    const fail = (message: string): never => { throw Object.assign(new Error(message), { code: "P0001" }); };
+    if (!order || order.is_test !== (process.env.TEST_ORDER_MODE === "true")) {
+      fail("Этот заказ недоступен в текущем окружении.");
+    }
+    if (params.status === "handed_out" && !order.is_test && ["pos", "kiosk"].includes(order.source)
+      && !["paid", "partially_refunded"].includes(order.payment_status)) {
+      fail("Оплата не подтверждена. Сначала оплатите заказ на кассе.");
+    }
+    const apply = async (status: string) => {
+      const [row] = await sql<{ result: { ok?: boolean; warnings?: string[]; already_applied?: boolean } }[]>`
+        select public.set_order_kitchen_status_atomic(
+          ${params.orderId}::uuid, ${status}::text, ${params.actorId}::uuid,
+          ${params.actorRole}::text, ${params.deviceSource}::text
+        ) as result
+      `;
+      return row.result;
+    };
+    // Preserve existing SQL permissions/events, but commit acceptance and cooking together.
+    if (params.status === "cooking" && order.kitchen_status === "new") await apply("accepted");
+    return apply(params.status);
   });
-  if (error) {
-    const failure = new Error(error.message || "Не удалось изменить статус заказа.");
-    Object.assign(failure, { code: error.code });
-    throw failure;
-  }
   logOperationalEvent("order.status_transition", {
     order_id: params.orderId,
     to_status: params.status,

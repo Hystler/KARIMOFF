@@ -31,7 +31,7 @@ export function canTransitionKitchen(
   if (["owner", "admin", "manager"].includes(role)) return true;
   if (role === "cashier") return from === "ready" && to === "handed_out";
   return role === "cook" && (
-    (from === "new" && to === "accepted") ||
+    (from === "new" && to === "cooking") ||
     (from === "accepted" && to === "cooking") ||
     (from === "cooking" && to === "ready")
   );

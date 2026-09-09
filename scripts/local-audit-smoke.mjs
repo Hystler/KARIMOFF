@@ -60,7 +60,7 @@ try {
   };
   const args = ["run", "--rm", "-d", "--name", container, "-p", "127.0.0.1:3108:3000"];
   for (const [key, value] of Object.entries(environment)) args.push("-e", `${key}=${value}`);
-  args.push("karimoff-audit:20260908", "node", "server.js");
+  args.push(process.env.AUDIT_DOCKER_IMAGE || "karimoff-audit:20260908", "node", "server.js");
   execFileSync("docker", args, { stdio: ["ignore", "pipe", "pipe"] });
   for (let attempt = 0; attempt < 40; attempt++) {
     if (await fetch(origin).then((r) => r.ok).catch(() => false)) break;
@@ -119,6 +119,29 @@ try {
       }
       results.push({ viewport: viewport.width, path, status: response.status() });
     }
+    const guestName = `Проверка кухни ${viewport.width}`;
+    await sql`update inventory_items set current_quantity = 0, reserved_quantity = 0`;
+    await page.goto(`${origin}/pos`, { waitUntil: "networkidle" });
+    await page.locator("article").filter({ hasText: "Бургер для проверки" }).getByRole("button", { name: /Добавить/ }).click();
+    await page.locator('input[name="customer_name"]').fill(guestName);
+    await page.getByRole("button", { name: "Отправить на кухню", exact: true }).click();
+    await page.waitForFunction(() => /Заказ .+ отправлен на кухню/.test(document.body.innerText));
+    const [created] = await sql`select display_number from orders where customer_name = ${guestName} and is_test order by created_at desc limit 1`;
+    assert.ok(created?.display_number);
+    await page.goto(`${origin}/kitchen`, { waitUntil: "networkidle" });
+    const ticket = page.locator("article").filter({ hasText: created.display_number });
+    await ticket.waitFor();
+    assert.match(await ticket.getAttribute("class"), /border-red-500/);
+    assert.equal(await ticket.getByRole("button", { name: "Принять", exact: true }).count(), 0);
+    for (const [button, color] of [["Начать готовить", "border-amber-400"], ["Готово", "border-emerald-500"]]) {
+      await ticket.getByRole("button", { name: button, exact: true }).click();
+      await page.waitForFunction(({ name, color }) => [...document.querySelectorAll("article")].some(element => element.textContent.includes(name) && element.className.includes(color)), { name: created.display_number, color });
+      await page.screenshot({ path: `${output}/kitchen-${color}-${viewport.width}.png`, fullPage: true });
+    }
+    await ticket.getByRole("button", { name: "Выдан", exact: true }).click();
+    await ticket.waitFor({ state: "detached" });
+    await page.goto(`${origin}/admin/orders?view=history`, { waitUntil: "networkidle" });
+    assert.match(await page.locator("body").innerText(), new RegExp(guestName));
     assert.deepEqual(exceptions, [], "browser exceptions");
     await page.goto(`${origin}/admin`, { waitUntil: "networkidle" });
     if (viewport.width < 768) await page.getByRole("button", { name: "Открыть меню", exact: true }).click();

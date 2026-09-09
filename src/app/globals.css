@@ -646,6 +646,19 @@ button:not(:disabled),
     @apply admin-card grid min-w-0 overflow-hidden xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1.25fr)_220px];
   }
 
+  .admin-order-card[data-kitchen-status="new"],
+  .admin-order-card[data-kitchen-status="accepted"] {
+    @apply border-l-4 border-red-500 bg-red-50/40;
+  }
+
+  .admin-order-card[data-kitchen-status="cooking"] {
+    @apply border-l-4 border-amber-400 bg-amber-50/40;
+  }
+
+  .admin-order-card[data-kitchen-status="ready"] {
+    @apply border-l-4 border-emerald-500 bg-emerald-50/40;
+  }
+
   .admin-order-main,
   .admin-order-items,
   .admin-order-actions {
@@ -665,16 +678,23 @@ button:not(:disabled),
     @apply inline-flex min-h-8 items-center rounded-full px-3 text-xs font-black;
   }
 
-  .admin-order-status-new {
-    @apply bg-orange-100 text-orange-800;
+  .admin-order-status-new,
+  .admin-order-status-accepted {
+    @apply bg-red-100 text-red-800;
   }
 
-  .admin-order-status-in_progress {
-    @apply bg-blue-100 text-blue-800;
+  .admin-order-status-in_progress,
+  .admin-order-status-cooking {
+    @apply bg-amber-100 text-amber-900;
   }
 
-  .admin-order-status-completed {
+  .admin-order-status-completed,
+  .admin-order-status-ready {
     @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .admin-order-status-handed_out {
+    @apply bg-gray-100 text-gray-700;
   }
 
   .admin-order-status-cancelled {
