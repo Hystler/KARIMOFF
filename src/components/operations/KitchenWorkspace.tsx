@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./KitchenWorkspace.module.css";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -35,6 +36,7 @@ import {
   type OrderFlowOrder,
   type OrderLocation
 } from "@/lib/order-flow/types";
+import { kitchenStations, kitchenStationLabels, kitchenViewStatus, stationItems, stationStatus, type KitchenView } from "@/lib/order-flow/kitchen-stations";
 
 const columns: Array<{ status: KitchenStatus; title: string; empty: string }> = [
   { status: "new", title: "Новые", empty: "Новых заказов нет" },
@@ -42,18 +44,12 @@ const columns: Array<{ status: KitchenStatus; title: string; empty: string }> = 
   { status: "ready", title: "Готово", empty: "Нет заказов к выдаче" }
 ];
 
-const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
-  new: "cooking",
-  accepted: "cooking",
-  cooking: "ready",
-  ready: "handed_out"
-};
-
 const actionLabels: Partial<Record<KitchenStatus, string>> = {
   cooking: "Начать готовить",
   ready: "Готово",
   handed_out: "Выдан"
 };
+const stationPreferenceKey = "karimoff.kitchen.station.v1";
 
 function formatRequested(value: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -195,12 +191,14 @@ function OrderTicket({
   role,
   sla,
   now,
+  view,
   onRecipe
 }: {
   order: OrderFlowOrder;
   role: OrderActorRole;
   sla: KitchenSla;
   now: number;
+  view: KitchenView;
   onRecipe: (item: OrderFlowItem) => void;
 }) {
   const [state, action, pending] = useActionState(transitionKitchenOrderAction, initialKitchenActionState);
@@ -209,32 +207,33 @@ function OrderTicket({
     : order.operationalStartedAt;
   const elapsed = operationalElapsedSeconds(anchor, now);
   const tone = elapsed === null ? "normal" : classifySla(elapsed, sla);
-  const target = nextStatus[order.kitchenStatus];
+  const visibleItems = stationItems(order, view);
+  const viewStatus = kitchenViewStatus(order, view);
+  const target = order.kitchenStatus === "ready" ? "handed_out" : undefined;
   const canAdvance = target ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
-  const toneClasses = order.kitchenStatus === "ready"
+  const toneClasses = viewStatus === "ready"
     ? "border-emerald-500 bg-emerald-50"
-    : order.kitchenStatus === "cooking"
+    : viewStatus === "cooking"
       ? "border-amber-400 bg-amber-50"
       : "border-red-500 bg-red-50";
 
   return (
-    <article className={`rounded-lg border-2 p-4 shadow-sm transition ${toneClasses}`}>
+    <article className={`${styles.ticket} rounded-lg border-2 shadow-sm ${toneClasses}`} data-order-ticket={order.id}>
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <strong className="text-2xl font-black tabular-nums">{order.displayNumber}</strong>
+            <strong className="text-xl font-black tabular-nums">{order.displayNumber}</strong>
             <span className="rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-black uppercase text-black/55">{orderSourceLabel(order.source)}</span>
             {order.isTest ? <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-black uppercase text-sky-800">Test</span> : null}
           </div>
-          <p className="mt-1 truncate text-base font-bold text-black/65">{order.publicDisplayName}</p>
+          <p className="mt-1 break-words text-sm font-bold text-black/65">{order.publicDisplayName}</p>
         </div>
-        <div className={`shrink-0 rounded-lg px-3 py-2 text-right ${tone === "critical" ? "bg-red-600 text-white" : tone === "warning" ? "bg-amber-400 text-black" : "bg-[#121214] text-white"}`}>
-          <p className="text-[10px] font-black uppercase opacity-70">Время</p>
-          <p className="mt-0.5 font-mono text-lg font-black tabular-nums">{elapsed === null ? "—" : formatElapsed(elapsed)}</p>
+        <div className={`shrink-0 rounded-md px-2 py-1 text-right ${tone === "critical" ? "bg-red-600 text-white" : tone === "warning" ? "bg-amber-400 text-black" : "bg-[#121214] text-white"}`}>
+          <p className="font-mono text-base font-black tabular-nums">{elapsed === null ? "—" : formatElapsed(elapsed)}</p>
         </div>
       </header>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-black/60">
+      <div className="mt-2 flex flex-wrap gap-1 text-xs font-bold text-black/60">
         <span className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-black/5 px-2.5">
           {order.fulfillmentType === "pickup" ? <PackageCheck size={15} /> : <MapPin size={15} />}
           {order.fulfillmentType === "pickup" ? "Самовывоз" : "Доставка"}
@@ -251,20 +250,20 @@ function OrderTicket({
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-2">
-        {order.items.map((item) => (
-          <button key={item.id} type="button" onClick={() => onRecipe(item)} className="rounded-lg border border-black/10 bg-white p-3 text-left transition hover:border-[#FB670A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FB670A]/20">
+      <div className={styles.lines}>
+        {visibleItems.map((item) => (
+          <button key={item.id} type="button" onClick={() => onRecipe(item)} title={`Техкарта: ${item.name}`} className={styles.line}>
             <div className="flex items-start justify-between gap-3">
-              <span className="font-black leading-5">{item.name}</span>
+              <span className="font-bold leading-5">{item.kitchenStatus === "ready" ? <CheckCircle2 size={14} className="mr-1 inline text-emerald-700" aria-label="Готово" /> : null}{item.name}</span>
               <strong className="shrink-0 text-lg tabular-nums text-[#D95405]">×{item.quantity}</strong>
             </div>
             {item.modifiers.map((modifier) => (
-              <p key={modifier.id} className={`mt-2 rounded-md px-2.5 py-2 text-sm font-black uppercase leading-5 ${modifier.type === "remove" ? "bg-amber-100 text-amber-950" : modifier.type === "replace" ? "bg-sky-100 text-sky-900" : "bg-emerald-100 text-emerald-900"}`}>
+              <p key={modifier.id} className={`mt-1 rounded px-2 py-1 text-xs font-black uppercase leading-4 ${modifier.type === "remove" ? "bg-amber-100 text-amber-950" : modifier.type === "replace" ? "bg-sky-100 text-sky-900" : "bg-emerald-100 text-emerald-900"}`}>
                 {modifierLabel(modifier)}
               </p>
             ))}
             {item.itemNote ? <p className="mt-2 rounded-md bg-violet-100 px-2.5 py-2 text-sm font-black leading-5 text-violet-950">К позиции: {item.itemNote}</p> : null}
-            <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-black/40"><PanelRightClose size={13} /> Открыть техкарту</p>
+            <PanelRightClose size={13} className="mt-1 text-black/40" aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -282,15 +281,35 @@ function OrderTicket({
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-2">
+      {view !== "all" && viewStatus === "ready" && order.kitchenStatus !== "ready" ? <p className={styles.waiting}>Станция готова. Остальные позиции: {order.items.filter((item) => item.kitchenStatus !== "ready").length}</p> : null}
+      <div className={styles.actions}>
+        {order.kitchenStatus !== "ready" ? kitchenStations.filter((station) => view === "all" || view === station).map((station) => {
+          const items = stationItems(order, station);
+          if (!items.length) return null;
+          const from = stationStatus(items);
+          const to = from === "new" ? "cooking" : "ready";
+          if (from === "ready") return <p className={styles.stationDone} key={station}><CheckCircle2 size={16} />{kitchenStationLabels[station]}: готово</p>;
+          if (!canTransitionKitchen(role, from, to)) return null;
+          return <form action={action} key={station}>
+            <input type="hidden" name="order_id" value={order.id} />
+            <input type="hidden" name="from_status" value={from} />
+            <input type="hidden" name="to_status" value={to} />
+            <input type="hidden" name="station" value={station} />
+            <input type="hidden" name="device_source" value="kds" />
+            <button type="submit" disabled={pending} className={`${styles.advance} ${to === "ready" ? styles.ready : styles.start}`}>
+              {to === "ready" ? <CheckCircle2 size={18} /> : <ChefHat size={18} />}
+              <span>{view === "all" ? `${kitchenStationLabels[station]} · ` : ""}{pending ? "Сохраняем…" : actionLabels[to]}</span>
+            </button>
+          </form>;
+        }) : null}
         {canAdvance && target ? (
           <form action={action}>
             <input type="hidden" name="order_id" value={order.id} />
             <input type="hidden" name="from_status" value={order.kitchenStatus} />
             <input type="hidden" name="to_status" value={target} />
             <input type="hidden" name="device_source" value="kds" />
-            <button type="submit" disabled={pending} className={`inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg px-4 text-base font-black shadow-sm transition active:scale-[0.99] disabled:opacity-50 ${target === "ready" || target === "handed_out" ? "bg-emerald-600 text-white" : "bg-[#FB670A] text-white"}`}>
-              {target === "ready" || target === "handed_out" ? <CheckCircle2 size={22} /> : <ChefHat size={22} />}
+            <button type="submit" disabled={pending} className={`${styles.advance} ${styles.ready}`}>
+              <CheckCircle2 size={18} />
               {pending ? "Сохраняем…" : actionLabels[target]}
             </button>
           </form>
@@ -301,7 +320,7 @@ function OrderTicket({
             <input type="hidden" name="from_status" value={order.kitchenStatus} />
             <input type="hidden" name="to_status" value="cancelled" />
             <input type="hidden" name="device_source" value="kds" />
-            <button type="submit" disabled={pending} className="min-h-11 w-full rounded-lg border border-red-200 text-sm font-bold text-red-700 disabled:opacity-50">Отменить</button>
+            <button type="submit" disabled={pending} className={styles.cancel}>Отменить заказ</button>
           </form>
         ) : null}
       </div>
@@ -333,15 +352,52 @@ export function KitchenWorkspace({
   const router = useRouter();
   const [now, setNow] = useState(0);
   const [selectedItem, setSelectedItem] = useState<OrderFlowItem | null>(null);
+  const [view, setView] = useState<KitchenView>("all");
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const selectView = (next: KitchenView) => {
+    setView(next);
+    try { window.localStorage.setItem(stationPreferenceKey, next); } catch { /* Storage may be disabled on a shared terminal. */ }
+  };
+  const visibleOrders = orders.filter((order) => stationItems(order, view).length > 0);
+  const queueColumns = columns.map((column) => ({
+    ...column,
+    orders: visibleOrders.filter((order) => kitchenViewStatus(order, view) === column.status
+      || (column.status === "new" && kitchenViewStatus(order, view) === "accepted"))
+  }));
   const realtime = useOrderRealtime(location.id, () => router.refresh(), initialCursor);
   useEffect(() => {
-    const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
+    const initialTimer = window.setTimeout(() => {
+      setNow(Date.now());
+      try {
+        const saved = window.localStorage.getItem(stationPreferenceKey);
+        if (saved === "all" || saved === "snacks" || saved === "main") setView(saved);
+      } catch { /* The default view remains usable without storage. */ }
+    }, 0);
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
     };
   }, []);
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        workspace.querySelectorAll<HTMLElement>(`.${styles.tickets}`).forEach((list) => {
+          list.style.setProperty("--ticket-list-height", `${Math.max(160, window.innerHeight - list.getBoundingClientRect().top - 20)}px`);
+        });
+      });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(workspace);
+    if (workspace.parentElement) observer.observe(workspace.parentElement);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); cancelAnimationFrame(frame); };
+  }, [view, embedded]);
   const active = orders.filter((order) => order.kitchenStatus !== "ready");
   const elapsedValues = active.flatMap((order) => {
     const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt
@@ -363,16 +419,15 @@ export function KitchenWorkspace({
   ];
 
   return (
-    <main className={embedded ? "min-w-0" : "min-h-dvh bg-[#F3F1ED] text-[#121214]"}>
-      <header className={embedded ? "mb-5" : "sticky top-0 z-30 border-b border-black/10 bg-[#121214] text-white shadow-lg"}>
-        <div className={embedded ? "" : "mx-auto max-w-[1900px] px-4 py-4 sm:px-6"}>
+    <div ref={workspaceRef} className={`${styles.workspace} ${embedded ? "min-w-0" : "min-h-dvh bg-[#f0f2f3] text-[#121214]"}`}>
+      <header className={embedded ? "mb-3" : "border-b border-black/10 bg-[#121214] text-white"}>
+        <div className={embedded ? "" : "mx-auto max-w-[2200px] px-3 py-3 sm:px-4"}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className={`text-xs font-black uppercase ${embedded ? "text-[#C94F05]" : "text-[#FF9A5C]"}`}>KARIMOFF KDS · {location.name}</p>
-              <h1 className={`mt-1 font-black leading-tight ${embedded ? "text-3xl" : "text-2xl text-white sm:text-3xl"}`}>Кухня в реальном времени</h1>
-              <p className={`mt-1 text-sm ${embedded ? "text-black/55" : "text-white/55"}`}>{staffName}</p>
+              <h1 className={`mt-1 text-xl font-black leading-tight ${embedded ? "" : "text-white"}`}>Кухня <span className="text-sm font-normal opacity-65">· {staffName}</span></h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               {locations.length > 1 ? (
                 <select
                   value={location.id}
@@ -387,38 +442,45 @@ export function KitchenWorkspace({
                 {realtime === "online" ? <Wifi size={17} className="text-emerald-500" /> : <WifiOff size={17} className="text-amber-500" />}
                 {realtime === "online" ? "Онлайн" : realtime === "offline" ? "Нет сети" : "Резервное обновление"}
               </span>
-              <button type="button" onClick={() => router.refresh()} className={`grid h-11 w-11 place-items-center rounded-lg ${embedded ? "border border-black/10 bg-white" : "bg-white/10"}`} aria-label="Обновить очередь">
+              <button type="button" onClick={() => router.refresh()} className={`grid h-11 w-11 place-items-center rounded-lg ${embedded ? "border border-black/10 bg-white" : "bg-white/10"}`} aria-label="Обновить очередь" title="Обновить очередь">
                 <RefreshCw size={19} />
               </button>
               {!embedded && role !== "cook" ? <a href="/pos" className="inline-flex min-h-11 items-center rounded-lg bg-[#FB670A] px-4 text-sm font-black text-white">POS</a> : null}
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-7">
+          <div className={styles.stats}>
             {stats.map(({ label, value, icon: Icon }) => (
-              <div key={label} className={`flex min-h-[72px] items-center gap-3 rounded-lg px-3 ${embedded ? "border border-black/10 bg-white" : "bg-white/[0.08]"}`}>
-                <Icon size={20} className={label === "Просрочено" && overdue ? "text-red-500" : "text-[#FB670A]"} />
-                <div><p className={`text-[10px] font-black uppercase ${embedded ? "text-black/45" : "text-white/45"}`}>{label}</p><p className="mt-0.5 text-xl font-black tabular-nums">{value}</p></div>
+              <div key={label} className={styles.stat}>
+                <Icon size={15} className={label === "Просрочено" && overdue ? "text-red-500" : "text-[#FB670A]"} />
+                <span className="text-xs opacity-65">{label}</span><strong className="text-sm tabular-nums">{value}</strong>
               </div>
             ))}
           </div>
         </div>
       </header>
 
-      <div className={embedded ? "" : "mx-auto max-w-[1900px] p-4 sm:p-6"}>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {columns.map((column) => {
-            const items = orders.filter((order) => order.kitchenStatus === column.status || (column.status === "new" && order.kitchenStatus === "accepted"));
+      <div className={embedded ? "" : "mx-auto max-w-[2200px] p-3 sm:p-4"}>
+        <div className={styles.tabs} role="tablist" aria-label="Станция кухни">
+          {([['all', 'Все'], ['snacks', 'Закуски'], ['main', 'Основные блюда']] as const).map(([key, label]) => <button
+            key={key} type="button" role="tab" id={`station-tab-${key}`} aria-selected={view === key} aria-controls="kitchen-queue"
+            onClick={() => selectView(key)} title={key === "main" ? "Бургеры, шаурма, роллы, хот-доги" : label}
+          >{label}<span>{orders.filter((order) => stationItems(order, key).length > 0).length}</span></button>)}
+        </div>
+        <div id="kitchen-queue" role="tabpanel" aria-labelledby={`station-tab-${view}`} className={styles.board}
+          style={{ "--kitchen-columns": queueColumns.map((column) => column.orders.length ? "minmax(0, 1fr)" : "140px").join(" ") } as CSSProperties}>
+          {queueColumns.map((column) => {
+            const items = column.orders;
             return (
-              <section key={column.status} aria-labelledby={`column-${column.status}`} className="min-w-0">
-                <div className="mb-3 flex items-center justify-between gap-3 px-1">
-                  <h2 id={`column-${column.status}`} className="text-xl font-black">{column.title}</h2>
+              <section key={column.status} aria-labelledby={`column-${column.status}`} className={styles.column}>
+                <div className="mb-2 flex items-center justify-between gap-3 px-1">
+                  <h2 id={`column-${column.status}`} className="text-base font-black">{column.title}</h2>
                   <span className="grid h-8 min-w-8 place-items-center rounded-full bg-[#121214] px-2 text-xs font-black text-white">{items.length}</span>
                 </div>
-                <div className="grid gap-3">
+                <div className={styles.tickets} tabIndex={items.length ? 0 : undefined} role="region" aria-label={`${column.title}: заказы`}>
                   {items.length ? items.map((order) => (
-                    <OrderTicket key={order.id} order={order} role={role} sla={sla} now={now} onRecipe={setSelectedItem} />
+                    <OrderTicket key={`${order.id}:${view}`} order={order} view={view} role={role} sla={sla} now={now} onRecipe={setSelectedItem} />
                   )) : (
-                    <div className="grid min-h-[116px] place-items-center rounded-lg border border-dashed border-black/15 bg-white/60 p-4 text-center text-sm font-semibold text-black/35">{column.empty}</div>
+                    <p className="py-2 text-sm text-black/45">{column.empty}</p>
                   )}
                 </div>
               </section>
@@ -427,6 +489,6 @@ export function KitchenWorkspace({
         </div>
       </div>
       {selectedItem ? <RecipeDrawer item={selectedItem} onClose={() => setSelectedItem(null)} /> : null}
-    </main>
+    </div>
   );
 }

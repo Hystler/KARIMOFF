@@ -86,10 +86,9 @@ function KpiCard({
     <article className="analytics-kpi-card">
       <div>
         <span>{label}</span>
-        <strong>{available ? format(value.current) : "Нет данных"}</strong>
+        <div className="analytics-kpi-value"><strong>{available ? format(value.current) : "Нет данных"}</strong>{available ? <Sparkline values={value.sparkline} /> : null}</div>
         {hint ? <small className="analytics-kpi-hint">{hint}</small> : null}
       </div>
-      {available ? <Sparkline values={value.sparkline} /> : null}
       {available ? (
         <div className="analytics-kpi-meta">
           <Delta value={value} inverse={inverse} />

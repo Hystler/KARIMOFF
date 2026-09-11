@@ -44,7 +44,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
 
         {params.error ? (
           <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
-            {params.error === "save" ? "Не удалось сохранить цену. Повторите попытку." : decodeURIComponent(params.error)}
+            {params.error === "save" ? "Не удалось сохранить цену. Повторите попытку." : params.error}
           </div>
         ) : null}
 
@@ -54,7 +54,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">Не удалось загрузить ингредиенты.</div>
         ) : (
           <section className="mt-8 overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card">
-            <div className="hidden grid-cols-[minmax(200px,1.2fr)_120px_145px_150px_110px_130px] gap-4 border-b border-karimoff-line bg-karimoff-soft px-5 py-4 text-xs font-bold text-karimoff-muted lg:grid">
+            <div className="hidden grid-cols-[minmax(160px,1.2fr)_110px_120px_130px_90px_110px] gap-3 border-b border-karimoff-line bg-karimoff-soft px-4 py-3 text-xs font-bold text-karimoff-muted xl:grid">
               <span>Ингредиент</span>
               <span>Размер упаковки</span>
               <span>Цена упаковки</span>
@@ -69,7 +69,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                   <form
                     key={ingredient.id}
                     action={updateIngredientPriceAction}
-                    className={`grid gap-4 px-5 py-5 transition lg:grid-cols-[minmax(200px,1.2fr)_120px_145px_150px_110px_130px] lg:items-end ${saved ? "bg-emerald-50/70" : "hover:bg-karimoff-soft/45"}`}
+                    className={`grid gap-3 px-4 py-3 transition sm:grid-cols-2 xl:grid-cols-[minmax(160px,1.2fr)_110px_120px_130px_90px_110px] xl:items-end ${saved ? "bg-emerald-50/70" : "hover:bg-karimoff-soft/45"}`}
                   >
                     <input type="hidden" name="id" value={ingredient.id} />
                     <div className="self-center">
@@ -79,7 +79,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                       </p>
                     </div>
                     <label className="grid gap-1.5 text-xs font-bold text-karimoff-muted">
-                      <span className="lg:hidden">Размер упаковки</span>
+                      <span className="xl:sr-only">Размер упаковки</span>
                       <div className="relative">
                         <input
                           name="package_size"
@@ -94,7 +94,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                       </div>
                     </label>
                     <label className="grid gap-1.5 text-xs font-bold text-karimoff-muted">
-                      <span className="lg:hidden">Цена упаковки</span>
+                      <span className="xl:sr-only">Цена упаковки</span>
                       <div className="relative">
                         <input
                           name="package_price"
@@ -109,7 +109,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                       </div>
                     </label>
                     <label className="grid gap-1.5 text-xs font-bold text-karimoff-muted">
-                      <span className="lg:hidden">Стоимость за 1 {unitLabels[ingredient.unit]}</span>
+                      <span className="xl:sr-only">Стоимость за 1 {unitLabels[ingredient.unit]}</span>
                       <div className="relative">
                         <input
                           name="cost_per_unit"
@@ -125,7 +125,7 @@ export default async function IngredientPricesPage({ searchParams }: IngredientP
                       {ingredient.cost_per_unit > 0 ? <span className="font-medium text-karimoff-muted">Сейчас: {formatCost(ingredient.cost_per_unit)} ₽</span> : null}
                     </label>
                     <label className="grid gap-1.5 text-xs font-bold text-karimoff-muted">
-                      <span className="lg:hidden">Отходы, %</span>
+                      <span className="xl:sr-only">Отходы, %</span>
                       <input
                         name="waste_percent"
                         type="number"

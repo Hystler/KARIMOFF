@@ -56,7 +56,7 @@ export default async function KitchenPage({
             <label className="admin-field">Заказ на табло, мин<input name="ready_display_minutes" type="number" min="1" max="1440" defaultValue={Math.round(sla.readyDisplaySeconds / 60)} required /></label>
             <label className="flex min-h-12 items-center gap-3 rounded-lg border border-karimoff-line px-4 text-sm font-bold"><input name="online_requires_paid" type="checkbox" defaultChecked={sla.onlineRequiresPaid} className="h-5 w-5 accent-karimoff-orange" />Сайт: показывать после оплаты</label>
             <label className="flex min-h-12 items-center gap-3 rounded-lg border border-karimoff-line px-4 text-sm font-bold"><input name="pos_requires_paid" type="checkbox" defaultChecked={sla.posRequiresPaid} className="h-5 w-5 accent-karimoff-orange" />POS: показывать после оплаты</label>
-            <div className="rounded-lg bg-karimoff-cream px-4 py-3 text-sm leading-6 text-karimoff-muted">Склад списывается один раз при статусе «Готово». Это правило на этой итерации не меняется.</div>
+            <label className="admin-field">Нехватка остатков<select name="inventory_shortage_policy" defaultValue={sla.inventoryShortagePolicy} required><option value="allow_negative">Пилот: списывать в минус</option><option value="block">Строго: блокировать готовность</option></select></label>
             <button type="submit" className="admin-primary-button md:col-span-3">Сохранить настройки</button>
           </form>
         </details>

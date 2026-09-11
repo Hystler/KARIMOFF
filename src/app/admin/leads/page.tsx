@@ -72,7 +72,7 @@ function getMessage(params: Awaited<NonNullable<AdminLeadsPageProps["searchParam
   }
 
   if (params.error) {
-    return { tone: "error", text: `Ошибка: ${decodeURIComponent(params.error)}` };
+    return { tone: "error", text: `Ошибка: ${params.error}` };
   }
 
   return null;

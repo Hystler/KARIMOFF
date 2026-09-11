@@ -36,7 +36,7 @@ export default async function NewVacancyPage({ searchParams }: NewVacancyPagePro
             </button>
           </form>
         </header>
-        {params.error ? <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">{decodeURIComponent(params.error)}</div> : null}
+        {params.error ? <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">{params.error}</div> : null}
         <VacancyForm action={createVacancyAction} submitLabel="Создать вакансию" />
       </div>
     </main>

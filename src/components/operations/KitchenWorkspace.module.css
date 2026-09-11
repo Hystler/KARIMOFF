@@ -1,0 +1,32 @@
+.workspace { min-width: 0; letter-spacing: 0; }
+.workspace * { min-width: 0; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; }
+.stat { display: flex; align-items: center; gap: 6px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #d1d5db; margin-bottom: 12px; }
+.tabs button { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border-bottom: 3px solid transparent; font-size: 14px; font-weight: 700; }
+.tabs button[aria-selected="true"] { border-bottom-color: #d95405; color: #a63d00; }
+.tabs button span { font-size: 12px; color: #50555b; font-variant-numeric: tabular-nums; }
+.board { display: grid; gap: 16px; }
+.column { min-width: 0; }
+.tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 265px), 1fr)); align-items: start; gap: 8px; }
+.ticket { padding: 10px; overflow-wrap: anywhere; }
+.lines { display: grid; margin-top: 8px; border-top: 1px solid #0002; }
+.line { display: block; width: 100%; padding: 8px 0; text-align: left; border-bottom: 1px solid #0002; font-size: 14px; }
+.line:hover { background: #ffffff90; }
+.line:focus-visible, .tabs button:focus-visible, .advance:focus-visible { outline: 3px solid #0369a1; outline-offset: 2px; }
+.actions { display: grid; gap: 6px; margin-top: 10px; }
+.advance { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; border-radius: 6px; padding: 7px 10px; font-size: 14px; font-weight: 800; line-height: 20px; }
+.advance svg { flex-shrink: 0; }
+.advance:disabled { opacity: .55; }
+.start { color: #fff; background: #b94405; }
+.ready { color: #fff; background: #087747; }
+.cancel { display: block; min-height: 36px; margin-left: auto; padding: 4px 8px; font-size: 12px; font-weight: 700; color: #b91c1c; }
+.cancel:disabled { opacity: .55; }
+.cancel:focus-visible { outline: 3px solid #0369a1; outline-offset: 2px; }
+.waiting, .stationDone { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #126244; }
+@media (min-width: 961px) {
+  .board { grid-template-columns: var(--kitchen-columns); gap: 12px; }
+  .tickets { max-height: max(160px, var(--ticket-list-height, calc(100dvh - 260px))); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 2px; }
+}
+@media (max-width: 960px) { .cancel { min-height: 44px; } }
+@media (max-width: 479px) { .tabs button { padding-inline: 8px; font-size: 13px; } .stats { gap: 7px 12px; } }

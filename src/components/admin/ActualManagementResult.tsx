@@ -54,8 +54,8 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
   };
 
   return (
-    <section className="mt-8 overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card">
-      <header className="border-b border-karimoff-line p-5 sm:p-6">
+    <section className="mt-5 overflow-hidden border-y border-karimoff-line bg-white">
+      <header className="border-b border-karimoff-line p-4">
         <p className="admin-eyebrow">Фактические продажи · {rangeLabel}</p>
         <h2 className="mt-2 text-3xl font-black">Управленческий результат</h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-karimoff-muted">
@@ -79,8 +79,8 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
         </div>
       ) : null}
 
-      <div className="grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)]">
-        <div className="grid gap-6">
+      <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]">
+        <div className="grid gap-4">
           <section>
             <div className="flex items-center justify-between gap-4">
               <div><h3 className="text-xl font-black">Расходы за период</h3><p className="mt-1 text-sm text-karimoff-muted">Начальные суммы пропорциональны {calendarDays} календарным дням.</p></div>
@@ -99,7 +99,7 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
           </section>
         </div>
 
-        <aside className="h-fit rounded-lg border border-karimoff-line bg-karimoff-soft p-5">
+        <aside className="h-fit border-t border-karimoff-line pt-4 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
           <p className="admin-eyebrow">Расчёт</p>
           <h3 className="mt-2 text-2xl font-black">От выручки до результата</h3>
           <div className="mt-5 grid gap-3">
@@ -122,7 +122,7 @@ export function ActualManagementResultCalculator({ actual, calendarDays, initial
 }
 
 function Metric({ label, value, hint, accent = false }: { label: string; value: string; hint: string; accent?: boolean }) {
-  return <article className="bg-white p-5 sm:p-6"><p className="text-xs font-bold uppercase text-karimoff-muted">{label}</p><strong className={`mt-2 block text-2xl font-black ${accent ? "text-karimoff-orange" : "text-karimoff-black"}`}>{value}</strong><span className="mt-1 block text-xs text-karimoff-muted">{hint}</span></article>;
+  return <article className="bg-white p-4"><p className="text-xs font-bold text-karimoff-muted">{label}</p><strong className={`mt-2 block text-xl font-black ${accent ? "text-karimoff-orange" : "text-karimoff-black"}`}>{value}</strong><span className="mt-1 block text-xs text-karimoff-muted">{hint}</span></article>;
 }
 
 function MoneyInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

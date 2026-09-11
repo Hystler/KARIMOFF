@@ -106,8 +106,8 @@ export default async function AdminOrdersPage({
       {params.saved ? <div className="admin-alert admin-alert-success">Статус заказа обновлён.</div> : null}
       {params.payment_checked ? <div className="admin-alert admin-alert-success">Статус платежа обновлён по данным ЮKassa.</div> : null}
       {params.deleted ? <div className="admin-alert admin-alert-success">Заказ удалён.</div> : null}
-      {params.error || error ? <div className="admin-alert admin-alert-error">{decodeURIComponent(params.error || error || "")}</div> : null}
-      {params.warning ? <div className="admin-alert admin-alert-warning">{decodeURIComponent(params.warning)}</div> : null}
+      {params.error || error ? <div role="alert" className="admin-alert admin-alert-error">{params.error || error}</div> : null}
+      {params.warning ? <div className="admin-alert admin-alert-warning">{params.warning}</div> : null}
 
       {notConfigured ? (
         <div className="admin-empty">База данных не подключена.</div>

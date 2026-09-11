@@ -25,7 +25,7 @@ function getMessage(params: Awaited<NonNullable<AdminSettingsPageProps["searchPa
   }
 
   if (params.error) {
-    return { tone: "error", text: `Ошибка: ${decodeURIComponent(params.error)}` };
+    return { tone: "error", text: `Ошибка: ${params.error}` };
   }
 
   return null;

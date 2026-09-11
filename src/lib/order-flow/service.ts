@@ -154,6 +154,7 @@ export async function transitionOrder(params: {
   actorId: string | null;
   actorRole: OrderActorRole;
   deviceSource: string;
+  station?: "snacks" | "main";
 }) {
   const data = await getPostgresSql().begin(async (sql) => {
     const [order] = await sql<{ kitchen_status: string; is_test: boolean; source: string; payment_status: string }[]>`
@@ -167,6 +168,15 @@ export async function transitionOrder(params: {
     if (params.status === "handed_out" && !order.is_test && ["pos", "kiosk"].includes(order.source)
       && !["paid", "partially_refunded"].includes(order.payment_status)) {
       fail("Оплата не подтверждена. Сначала оплатите заказ на кассе.");
+    }
+    if (params.station) {
+      const [row] = await sql<{ result: { ok?: boolean; warnings?: string[]; already_applied?: boolean } }[]>`
+        select public.set_order_kitchen_station_status_atomic(
+          ${params.orderId}::uuid, ${params.station}::text, ${params.status}::text,
+          ${params.actorId}::uuid, ${params.actorRole}::text, ${params.deviceSource}::text
+        ) as result
+      `;
+      return row.result;
     }
     const apply = async (status: string) => {
       const [row] = await sql<{ result: { ok?: boolean; warnings?: string[]; already_applied?: boolean } }[]>`
@@ -185,7 +195,8 @@ export async function transitionOrder(params: {
     order_id: params.orderId,
     to_status: params.status,
     actor_role: params.actorRole,
-    device_source: params.deviceSource
+    device_source: params.deviceSource,
+    station: params.station ?? null
   });
   return (data ?? {}) as { ok?: boolean; warnings?: string[]; already_applied?: boolean };
 }

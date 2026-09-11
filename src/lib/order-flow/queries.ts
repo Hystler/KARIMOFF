@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { kitchenStationForCategory } from "./kitchen-stations";
 import type {
   KitchenSla,
   KitchenOperationsMetrics,
@@ -53,6 +54,9 @@ type ItemRow = {
   allergens: string[] | null;
   item_note: string | null;
   configuration_snapshot: Record<string, unknown> | null;
+  product_category: string | null;
+  kitchen_station: OrderFlowItem["kitchenStation"] | null;
+  kitchen_status: OrderFlowItem["kitchenStatus"];
 };
 
 type ModifierRow = {
@@ -103,6 +107,8 @@ function mapItem(
     lineTotal: Number(row.line_total),
     itemNote: row.item_note,
     configurationSnapshot: row.configuration_snapshot ?? {},
+    kitchenStation: row.kitchen_station ?? kitchenStationForCategory(row.product_category),
+    kitchenStatus: row.kitchen_status,
     modifiers,
     recipe: row.product_id
       ? {
@@ -186,9 +192,10 @@ export async function getKitchenSla(locationId: string): Promise<KitchenSla> {
     online_requires_paid: boolean;
     pos_requires_paid: boolean;
     inventory_trigger: "ready";
+    inventory_shortage_policy: KitchenSla["inventoryShortagePolicy"];
   }[]>`
     select warning_seconds, critical_seconds, ready_display_seconds,
-      online_requires_paid, pos_requires_paid, inventory_trigger
+      online_requires_paid, pos_requires_paid, inventory_trigger, inventory_shortage_policy
     from public.kitchen_sla_settings
     where location_id = ${locationId}::uuid
     limit 1
@@ -199,7 +206,8 @@ export async function getKitchenSla(locationId: string): Promise<KitchenSla> {
     readyDisplaySeconds: Number(rows[0]?.ready_display_seconds ?? 900),
     onlineRequiresPaid: Boolean(rows[0]?.online_requires_paid ?? false),
     posRequiresPaid: Boolean(rows[0]?.pos_requires_paid ?? false),
-    inventoryTrigger: "ready"
+    inventoryTrigger: "ready",
+    inventoryShortagePolicy: rows[0]?.inventory_shortage_policy ?? "allow_negative"
   };
 }
 
@@ -305,9 +313,14 @@ export async function getOrderFlowQueue(params: {
   const items = await sql<ItemRow[]>`
     select item.id, item.order_id, item.product_id, item.product_name,
       item.quantity, item.unit_price, item.line_total, product.allergens,
-      item.item_note, item.configuration_snapshot
+      item.item_note, item.configuration_snapshot,
+      product.category as product_category, work.station as kitchen_station,
+      coalesce(work.status, case when orders.kitchen_status in ('ready', 'handed_out') then 'ready'
+        when orders.kitchen_status = 'cooking' then 'cooking' else 'new' end) as kitchen_status
     from public.order_items item
+    join public.orders orders on orders.id = item.order_id
     left join public.products product on product.id = item.product_id
+    left join public.order_item_kitchen_state work on work.order_item_id = item.id
     where item.order_id = any(${orderIds}::uuid[])
     order by item.id
   `;

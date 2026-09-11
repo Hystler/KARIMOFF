@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ProductionRecipeForm } from "@/components/admin/ProductionRecipeForm";
+import styles from "@/components/admin/OperationsWorkspace.module.css";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getProductionRecipeById } from "@/lib/production";
 import { saveProductionRecipeAction } from "../../actions";
@@ -21,16 +22,15 @@ export default async function EditProductionRecipePage({ params, searchParams }:
   if (!workspace.error && !workspace.recipe) notFound();
 
   return (
-    <main className="admin-content">
-      <header className="admin-heading">
+    <main className={styles.page}>
+      <header className={styles.heading}>
         <div>
           <Link href="/admin/production" className="text-sm font-bold text-karimoff-muted transition hover:text-karimoff-orange">Производство</Link>
           <h1>{workspace.recipe?.name ?? "Производственная карта"}</h1>
-          <p>Изменения пересчитают плановую себестоимость. Склад меняется только при проведении фактического выпуска.</p>
         </div>
       </header>
-      {currentSearchParams.error ? <div className="admin-alert admin-alert-error">{decodeURIComponent(currentSearchParams.error)}</div> : null}
-      {workspace.error ? <div className="admin-alert admin-alert-error">{workspace.error}</div> : null}
+      {currentSearchParams.error ? <div role="alert" className={styles.notice} data-tone="error">{currentSearchParams.error}</div> : null}
+      {workspace.error ? <div role="alert" className={styles.notice} data-tone="error">{workspace.error}</div> : null}
       {workspace.recipe ? (
         <ProductionRecipeForm
           action={saveProductionRecipeAction}

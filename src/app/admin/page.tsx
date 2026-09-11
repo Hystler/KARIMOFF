@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  ArrowUpRight,
   ChartNoAxesCombined,
   Boxes,
   ChefHat,
@@ -8,6 +9,7 @@ import {
   Plug,
   Settings,
   ShoppingBag,
+  SquareTerminal,
   Users,
   UtensilsCrossed
 } from "lucide-react";
@@ -16,6 +18,7 @@ import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import { getMoscowDateKey, ORDER_TIME_ZONE } from "@/lib/order-time";
 
 const cards = [
   { title: "Кухня", description: "Живая очередь и отметка готовности", href: "/admin/kitchen", icon: ChefHat },
@@ -43,43 +46,60 @@ export default async function AdminPage() {
   const locationIds = staff.legacy || ["owner", "admin"].includes(staff.role)
     ? null
     : locations.map((location) => location.id);
-  const { orders } = await getAdminOrders(locationIds);
-  const newCount = orders.filter((order) => order.status === "new").length;
-  const inProgressCount = orders.filter((order) => order.status === "in_progress").length;
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayOrders = orders.filter((order) => order.created_at.slice(0, 10) === todayKey);
-  const todayRevenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
+  const { orders, error, notConfigured } = await getAdminOrders(locationIds);
+  const activeOrders = orders.filter((order) => order.is_operational && !["handed_out", "cancelled"].includes(order.kitchen_status))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const newCount = activeOrders.filter((order) => ["new", "accepted"].includes(order.kitchen_status)).length;
+  const inProgressCount = activeOrders.filter((order) => order.kitchen_status === "cooking").length;
+  const readyCount = activeOrders.filter((order) => order.kitchen_status === "ready").length;
+  const todayKey = getMoscowDateKey();
+  const todayOrders = orders.filter((order) => getMoscowDateKey(new Date(order.created_at)) === todayKey && order.status !== "cancelled");
+  const todayTotal = todayOrders.reduce((sum, order) => sum + order.total, 0);
+  const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", timeZone: ORDER_TIME_ZONE }).format(new Date());
+  const statusLabels = { new: "Новый", accepted: "Принят", cooking: "Готовится", ready: "Готов", handed_out: "Выдан", cancelled: "Отменён" };
 
   return (
     <main className="admin-content">
       <header className="admin-heading">
         <div>
-          <p className="admin-eyebrow">Рабочий день</p>
-          <h1>Добро пожаловать, {staff.name}</h1>
-          <p>Главное по заказам и быстрый доступ к операционным разделам.</p>
+          <p className="admin-eyebrow">{dateLabel}</p>
+          <h1>Обзор</h1>
         </div>
-        <Link href="/admin/kitchen" className="admin-primary-button">
+        <div className="flex flex-wrap gap-2"><Link href="/pos" className="admin-secondary-button"><SquareTerminal size={17} />Касса</Link><Link href="/kitchen" className="admin-primary-button">
           <ChefHat size={19} />
           Открыть кухню
-        </Link>
+        </Link></div>
       </header>
 
-      <section className="admin-metrics">
+      {error || notConfigured ? <p role="alert" className="admin-alert admin-alert-error">Не удалось загрузить заказы. Попробуйте обновить страницу.</p> : null}
+      <section className="admin-metrics admin-overview-metrics" aria-label="Заказы">
         <article><span>Новые заказы</span><strong>{newCount}</strong></article>
         <article><span>Готовятся</span><strong>{inProgressCount}</strong></article>
+        <article><span>Ожидают выдачи</span><strong className="text-emerald-700">{readyCount}</strong></article>
         <article><span>Заказов сегодня</span><strong>{todayOrders.length}</strong></article>
-        <article><span>Сумма сегодня</span><strong>{new Intl.NumberFormat("ru-RU").format(todayRevenue)} ₽</strong></article>
+        <article><span>{process.env.TEST_ORDER_MODE === "true" ? "Тестовая сумма сегодня" : "Сумма заказов сегодня"}</span><strong>{new Intl.NumberFormat("ru-RU").format(todayTotal)} ₽</strong></article>
       </section>
 
-      <section className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(({ title, description, href, icon: Icon }) => (
-          <Link key={href} href={href} className="admin-dashboard-card">
-            <span className="admin-dashboard-icon"><Icon size={22} /></span>
-            <h2>{title}</h2>
-            <p>{description}</p>
-            <span className="mt-auto pt-5 text-sm font-black text-karimoff-orange">Открыть</span>
-          </Link>
-        ))}
+      <section className="mt-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-bold">В работе · {activeOrders.length}</h2><Link href="/admin/orders" className="text-sm font-semibold text-karimoff-orange">Все заказы</Link></div>
+        <div className="max-w-full overflow-x-auto border-y border-karimoff-line bg-white">
+          <table className="admin-table min-w-[620px]">
+            <thead><tr><th>Заказ</th><th>Время</th><th>Гость</th><th>Состав</th><th>Статус</th></tr></thead>
+            <tbody>{activeOrders.slice(0, 8).map((order) => <tr key={order.id}>
+              <td className="font-bold">{order.display_number}{order.is_test ? <span className="ml-2 text-xs text-sky-700">Тест</span> : null}</td>
+              <td className="tabular-nums">{new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: ORDER_TIME_ZONE }).format(new Date(order.created_at))}</td>
+              <td>{order.customer_name || "Гость"}</td>
+              <td className="max-w-sm">{order.items.map((item) => `${item.product_name} × ${item.quantity}`).join(", ")}</td>
+              <td><span className={`admin-order-status admin-order-status-${order.kitchen_status}`}>{statusLabels[order.kitchen_status]}</span></td>
+            </tr>)}{!activeOrders.length ? <tr><td colSpan={5} className="text-karimoff-muted">Нет заказов в работе</td></tr> : null}</tbody>
+          </table>
+        </div>
+      </section>
+      <section className="mt-6">
+        <h2 className="mb-3 text-base font-bold">Разделы</h2>
+        <div className="admin-overview-links">{cards.map(({ title, href, icon: Icon }) => (
+          <Link key={href} href={href} className="admin-overview-link"><Icon size={19} /><span>{title}</span><ArrowUpRight size={16} /></Link>
+        ))}</div>
       </section>
     </main>
   );

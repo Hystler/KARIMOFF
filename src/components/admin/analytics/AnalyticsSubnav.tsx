@@ -60,7 +60,6 @@ export function AnalyticsSubnav({ active }: { active: "overview" | "sales" | "au
 export function AnalyticsOverviewContents() {
   return (
     <nav aria-label="Содержание обзора" className="mb-5 border-b border-black/10 pb-3 text-sm">
-      <h2 className="mb-1 font-bold text-karimoff-muted">Содержание обзора</h2>
       <ul className="flex flex-wrap gap-x-5 gap-y-1">
         {overviewSections.map(([id, label]) => (
           <li key={id}>

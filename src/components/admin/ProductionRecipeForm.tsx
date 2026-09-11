@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDollarSign, Plus, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Ingredient } from "@/lib/ingredients";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/production-calculations";
 import type { ProductionRecipeView } from "@/lib/production";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
+import styles from "./OperationsWorkspace.module.css";
 
 type ComponentDraft = {
   ingredient_id: string;
@@ -145,146 +146,141 @@ export function ProductionRecipeForm({
   }
 
   return (
-    <form action={action} className="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <form action={action} className={styles.recipeForm}>
       {recipe ? <input type="hidden" name="id" value={recipe.id} /> : null}
       <input type="hidden" name="components_json" value={JSON.stringify(components)} />
       <input type="hidden" name="expenses_json" value={JSON.stringify(expenses)} />
 
-      <div className="grid gap-6">
-        <section className="admin-card p-5 sm:p-6">
-          <p className="admin-eyebrow">Основное</p>
-          <h2 className="mt-2 text-xl font-black">Партия и выход</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <label className="admin-field sm:col-span-2">
+      <div className={styles.recipeBody}>
+        <section className={styles.section}>
+          <div className={styles.sectionHeading}><h2>Партия и выход</h2></div>
+          <div className={`${styles.formGrid} ${styles.recipeFields}`}>
+            <label className={`${styles.field} ${styles.spanTwo}`}>
               Название карты
               <input name="name" required defaultValue={recipe?.name ?? ""} placeholder="Например: Курица жареная" />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Выходной полуфабрикат
               <select name="output_ingredient_id" required value={outputIngredientId} onChange={(event) => selectOutputIngredient(event.target.value)}>
                 {ingredients.map((ingredient) => <option key={ingredient.id} value={ingredient.id}>{ingredient.name}</option>)}
               </select>
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Категория
               <input name="category" defaultValue={recipe?.category ?? ""} placeholder="Мясо / соусы / заготовки" />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Выход одной партии
               <input name="output_quantity" type="number" min="0.001" step="0.001" value={outputQuantity} onChange={(event) => setOutputQuantity(numericValue(event.target.value))} />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Единица выпуска
               <select name="output_unit" value={outputUnit} onChange={(event) => setOutputUnit(event.target.value as ProductionUnit)}>
                 {allowedUnits(outputIngredient).map((unit) => <option key={unit} value={unit}>{unitLabels[unit]}</option>)}
               </select>
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Длительность партии, мин.
               <input name="batch_duration_minutes" type="number" min="1" step="1" value={duration} onChange={(event) => setDuration(numericValue(event.target.value))} />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               План партий в месяц
               <input name="planned_batches_per_month" type="number" min="0" step="0.1" value={plannedBatches} onChange={(event) => setPlannedBatches(numericValue(event.target.value))} />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Цена продажи за {unitLabels[outputUnit]}
               <input name="sale_price_per_output_unit" type="number" min="0" step="0.01" value={salePrice} onChange={(event) => setSalePrice(numericValue(event.target.value))} />
             </label>
-            <label className="admin-field">
+            <label className={styles.field}>
               Порядок
               <input name="sort_order" type="number" min="0" step="1" defaultValue={recipe?.sort_order ?? 100} />
             </label>
-            <label className="admin-field sm:col-span-2">
+            <label className={`${styles.field} ${styles.spanTwo}`}>
               Комментарий
-              <textarea name="notes" rows={3} defaultValue={recipe?.notes ?? ""} placeholder="Температура, фасовка, важные примечания" />
+              <textarea name="notes" rows={2} defaultValue={recipe?.notes ?? ""} placeholder="Температура, фасовка, важные примечания" />
             </label>
-            <label className="flex min-h-11 items-center gap-3 rounded-lg border border-karimoff-line px-4 text-sm font-bold sm:col-span-2">
-              <input name="is_active" type="checkbox" defaultChecked={recipe?.is_active ?? true} className="h-5 w-5 accent-karimoff-orange" />
+            <label className={`${styles.check} ${styles.spanTwo}`}>
+              <input name="is_active" type="checkbox" defaultChecked={recipe?.is_active ?? true} />
               Карта активна и участвует в плане
             </label>
           </div>
         </section>
 
-        <section className="admin-card overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-karimoff-line p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
-            <div>
-              <p className="admin-eyebrow">Сырьё</p>
-              <h2 className="mt-2 text-xl font-black">Состав партии</h2>
-              <p className="mt-2 text-sm leading-6 text-karimoff-muted">Указывайте закупаемое количество до ужарки. Основное сырьё нужно для расчёта выхода и потерь.</p>
-            </div>
-            <button type="button" onClick={addComponent} className="admin-secondary-button shrink-0"><Plus size={17} />Добавить сырьё</button>
+        <section className={styles.section} aria-labelledby="recipe-components-heading">
+          <div className={styles.sectionHeading}>
+            <h2 id="recipe-components-heading">Состав партии</h2>
+            <button type="button" onClick={addComponent} className={styles.button}><Plus size={15} />Добавить сырьё</button>
           </div>
-          <div className="grid gap-3 p-5 sm:p-6">
-            {components.map((component, index) => {
-              const ingredient = ingredients.find((item) => item.id === component.ingredient_id);
-              const lineCost = (ingredient?.cost_per_unit ?? 0) * (component.unit === "kg" || component.unit === "l" ? component.quantity * 1000 : component.quantity);
-              return (
-                <div key={`${component.ingredient_id}-${index}`} className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/45 p-4 lg:grid-cols-[minmax(220px,1fr)_130px_105px_130px_44px] lg:items-end">
-                  <label className="admin-field">
-                    Ингредиент
-                    <select value={component.ingredient_id} onChange={(event) => {
-                      const nextIngredient = ingredients.find((item) => item.id === event.target.value);
-                      setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ingredient_id: event.target.value, unit: defaultUnit(nextIngredient) } : item));
-                    }}>
-                      <option value="">Выберите</option>
-                      {ingredients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="admin-field">
-                    Количество
-                    <input type="number" min="0.001" step="0.001" value={component.quantity} onChange={(event) => setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: numericValue(event.target.value) } : item))} />
-                  </label>
-                  <label className="admin-field">
-                    Единица
-                    <select value={component.unit} onChange={(event) => setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value as ProductionUnit } : item))}>
-                      {allowedUnits(ingredient).map((unit) => <option key={unit} value={unit}>{unitLabels[unit]}</option>)}
-                    </select>
-                  </label>
-                  <div>
-                    <p className="text-xs font-black text-karimoff-muted">Стоимость</p>
-                    <p className="mt-3 font-black tabular-nums">{formatRub(lineCost, 2)}</p>
-                    <label className="mt-2 flex items-center gap-2 text-xs font-bold text-karimoff-muted">
-                      <input type="radio" name="primary_component" checked={component.is_primary} onChange={() => setComponents((current) => current.map((item, itemIndex) => ({ ...item, is_primary: itemIndex === index })))} className="accent-karimoff-orange" />
-                      Основное
-                    </label>
-                  </div>
-                  <button type="button" aria-label="Удалить сырьё" onClick={() => setComponents((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="flex h-11 w-11 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"><Trash2 size={17} /></button>
-                </div>
-              );
-            })}
+          <div className={styles.tableScroll} role="region" aria-label="Состав партии" tabIndex={0}>
+            <table className={`${styles.table} ${styles.lineItems}`}>
+              <thead><tr><th scope="col">Ингредиент</th><th scope="col">Кол-во до обработки</th><th scope="col">Ед.</th><th scope="col">Основное</th><th scope="col" className={styles.numeric}>Стоимость</th><th scope="col"><span className="sr-only">Действия</span></th></tr></thead>
+              <tbody>{components.map((component, index) => {
+                const ingredient = ingredients.find((item) => item.id === component.ingredient_id);
+                const lineCost = (ingredient?.cost_per_unit ?? 0) * (component.unit === "kg" || component.unit === "l" ? component.quantity * 1000 : component.quantity);
+                return (
+                  <tr key={index}>
+                    <td><label className={styles.field}>
+                      <span className="sr-only">Ингредиент {index + 1}</span>
+                      <select value={component.ingredient_id} onChange={(event) => {
+                        const nextIngredient = ingredients.find((item) => item.id === event.target.value);
+                        setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ingredient_id: event.target.value, unit: defaultUnit(nextIngredient) } : item));
+                      }}>
+                        <option value="">Выберите</option>
+                        {ingredients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                      </select>
+                    </label></td>
+                    <td><label className={styles.field}>
+                      <span className="sr-only">Количество сырья {index + 1}</span>
+                      <input type="number" min="0.001" step="0.001" value={component.quantity} onChange={(event) => setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: numericValue(event.target.value) } : item))} />
+                    </label></td>
+                    <td><label className={styles.field}>
+                      <span className="sr-only">Единица сырья {index + 1}</span>
+                      <select value={component.unit} onChange={(event) => setComponents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, unit: event.target.value as ProductionUnit } : item))}>
+                        {allowedUnits(ingredient).map((unit) => <option key={unit} value={unit}>{unitLabels[unit]}</option>)}
+                      </select>
+                    </label></td>
+                    <td><label className={styles.check}>
+                      <input type="radio" name="primary_component" checked={component.is_primary} onChange={() => setComponents((current) => current.map((item, itemIndex) => ({ ...item, is_primary: itemIndex === index })))} />
+                      <span className="sr-only">Основное сырьё: {ingredient?.name ?? index + 1}</span>
+                    </label></td>
+                    <td className={styles.numeric}>{formatRub(lineCost, 2)}</td>
+                    <td><button type="button" aria-label={`Удалить сырьё ${index + 1}`} title="Удалить сырьё" onClick={() => setComponents((current) => current.filter((_, itemIndex) => itemIndex !== index))} className={`${styles.iconButton} ${styles.danger}`}><Trash2 size={15} /></button></td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
           </div>
+          {!components.length ? <p className={styles.empty}>Сырьё не добавлено.</p> : null}
         </section>
 
-        <section className="admin-card overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-karimoff-line p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
-            <div>
-              <p className="admin-eyebrow">На партию</p>
-              <h2 className="mt-2 text-xl font-black">Прямые расходы</h2>
-              <p className="mt-2 text-sm leading-6 text-karimoff-muted">Труд смены, электричество, упаковка и расходники именно для этой партии.</p>
+        <section className={styles.section} aria-labelledby="recipe-expenses-heading">
+          <div className={styles.sectionHeading}>
+            <h2 id="recipe-expenses-heading">Прямые расходы</h2>
+            <button type="button" onClick={() => setExpenses((current) => [...current, { amount_per_batch: 0, category: "other", name: "", sort_order: (current.length + 1) * 100 }])} className={styles.button}><Plus size={15} />Добавить расход</button>
+          </div>
+          {expenses.length ? (
+            <div className={styles.tableScroll} role="region" aria-label="Прямые расходы" tabIndex={0}>
+              <table className={`${styles.table} ${styles.lineItems}`}>
+                <thead><tr><th scope="col">Статья</th><th scope="col">Тип</th><th scope="col">₽ на партию</th><th scope="col"><span className="sr-only">Действия</span></th></tr></thead>
+                <tbody>{expenses.map((expense, index) => (
+                  <tr key={index}>
+                    <td><label className={styles.field}><span className="sr-only">Статья расхода {index + 1}</span><input value={expense.name} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="Например: работа смены" /></label></td>
+                    <td><label className={styles.field}><span className="sr-only">Тип расхода {index + 1}</span><select value={expense.category} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, category: event.target.value as ExpenseDraft["category"] } : item))}>{expenseCategories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label></td>
+                    <td><label className={styles.field}><span className="sr-only">Сумма расхода {index + 1}</span><input type="number" min="0" step="0.01" value={expense.amount_per_batch} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, amount_per_batch: numericValue(event.target.value) } : item))} /></label></td>
+                    <td><button type="button" aria-label={`Удалить расход ${index + 1}`} title="Удалить расход" onClick={() => setExpenses((current) => current.filter((_, itemIndex) => itemIndex !== index))} className={`${styles.iconButton} ${styles.danger}`}><Trash2 size={15} /></button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
             </div>
-            <button type="button" onClick={() => setExpenses((current) => [...current, { amount_per_batch: 0, category: "other", name: "", sort_order: (current.length + 1) * 100 }])} className="admin-secondary-button shrink-0"><Plus size={17} />Добавить расход</button>
-          </div>
-          <div className="grid gap-3 p-5 sm:p-6">
-            {expenses.length ? expenses.map((expense, index) => (
-              <div key={`${expense.name}-${index}`} className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/45 p-4 md:grid-cols-[180px_minmax(180px,1fr)_150px_44px] md:items-end">
-                <label className="admin-field">Тип<select value={expense.category} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, category: event.target.value as ExpenseDraft["category"] } : item))}>{expenseCategories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label>
-                <label className="admin-field">Статья<input value={expense.name} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="Например: работа смены" /></label>
-                <label className="admin-field">₽ на партию<input type="number" min="0" step="0.01" value={expense.amount_per_batch} onChange={(event) => setExpenses((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, amount_per_batch: numericValue(event.target.value) } : item))} /></label>
-                <button type="button" aria-label="Удалить расход" onClick={() => setExpenses((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="flex h-11 w-11 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50"><Trash2 size={17} /></button>
-              </div>
-            )) : <p className="admin-empty">Прямых расходов пока нет. Сырьё всё равно попадёт в расчёт.</p>}
-          </div>
+          ) : <p className={styles.empty}>Прямых расходов пока нет.</p>}
         </section>
 
-        <button type="submit" className="admin-primary-button w-full sm:w-fit">{recipe ? "Сохранить карту" : "Создать карту"}</button>
+        <button type="submit" className={styles.primary}><Save size={15} />{recipe ? "Сохранить карту" : "Создать карту"}</button>
       </div>
 
-      <aside className="admin-card p-5 xl:sticky xl:top-7">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-karimoff-orange/10 text-karimoff-orange"><CircleDollarSign size={22} /></div>
-        <p className="admin-eyebrow mt-5">Расчёт</p>
-        <h2 className="mt-2 text-xl font-black">Одна партия</h2>
-        <dl className="mt-5 grid gap-3 text-sm">
+      <aside className={styles.summary}>
+        <h2>Расчёт одной партии</h2>
+        <dl>
           <Result label="Сырьё" value={formatRub(metrics.materialCost, 2)} />
           <Result label="Прямые расходы" value={formatRub(metrics.directCost, 2)} />
           <Result label="Доля месячных расходов" value={formatRub(metrics.overheadPerBatch, 2)} />
@@ -297,10 +293,10 @@ export function ProductionRecipeForm({
           <Result label="Выход основного сырья" value={metrics.yieldPercent === null ? "Отметьте основное сырьё" : formatPercent(metrics.yieldPercent)} />
           <Result label="Потери / ужарка" value={metrics.lossPercent === null ? "—" : formatPercent(metrics.lossPercent)} />
         </dl>
-        <div className="mt-5 rounded-lg bg-karimoff-black p-4 text-white">
-          <p className="text-xs font-bold text-white/60">План на месяц</p>
-          <p className="mt-2 text-xl font-black">{formatRub(metrics.plannedMonthlyGrossProfit, 2)}</p>
-          <p className="mt-1 text-xs text-white/60">расчётная валовая прибыль при {formatNumber(plannedBatches, 1)} партиях</p>
+        <div className={styles.monthlyPlan}>
+          <p className={styles.muted}>План на месяц</p>
+          <strong>{formatRub(metrics.plannedMonthlyGrossProfit, 2)}</strong>
+          <p className={styles.muted}>расчётная валовая прибыль при {formatNumber(plannedBatches, 1)} партиях</p>
         </div>
       </aside>
     </form>
@@ -308,5 +304,5 @@ export function ProductionRecipeForm({
 }
 
 function Result({ label, value, strong = false }: { label: string; strong?: boolean; value: string }) {
-  return <div className="flex items-start justify-between gap-4 border-b border-karimoff-line pb-3 last:border-b-0"><dt className="text-karimoff-muted">{label}</dt><dd className={strong ? "text-right font-black tabular-nums" : "text-right font-bold tabular-nums"}>{value}</dd></div>;
+  return <div className={`${styles.result} ${strong ? styles.resultStrong : ""}`}><dt>{label}</dt><dd>{value}</dd></div>;
 }

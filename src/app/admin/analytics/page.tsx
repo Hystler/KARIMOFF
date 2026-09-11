@@ -51,9 +51,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
     <main className="admin-content admin-content-wide analytics-page">
       <header className="admin-heading analytics-heading">
         <div>
-          <p className="admin-eyebrow">Единая картина бизнеса</p>
           <h1>Аналитика продаж</h1>
-          <p>Касса и интернет-заказы в одной системе метрик без двойного складского списания.</p>
         </div>
         <div className="analytics-heading-actions">
           <span><Clock3 size={16} />Данные обновлены: {updatedLabel}</span>

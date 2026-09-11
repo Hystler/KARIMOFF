@@ -48,6 +48,8 @@ export type OrderFlowItem = {
   configurationSnapshot: Record<string, unknown>;
   modifiers: OrderFlowModifier[];
   recipe: OrderRecipe | null;
+  kitchenStation: "snacks" | "main";
+  kitchenStatus: "new" | "cooking" | "ready";
 };
 
 export type OrderFlowOrder = {
@@ -102,6 +104,7 @@ export type KitchenSla = {
   onlineRequiresPaid: boolean;
   posRequiresPaid: boolean;
   inventoryTrigger: "ready";
+  inventoryShortagePolicy: "allow_negative" | "block";
 };
 
 export type KitchenOperationsMetrics = {

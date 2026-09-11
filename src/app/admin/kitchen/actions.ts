@@ -13,7 +13,8 @@ const schema = z.object({
   criticalMinutes: z.coerce.number().int().min(2).max(240),
   readyDisplayMinutes: z.coerce.number().int().min(1).max(1440),
   onlineRequiresPaid: z.boolean(),
-  posRequiresPaid: z.boolean()
+  posRequiresPaid: z.boolean(),
+  inventoryShortagePolicy: z.enum(["allow_negative", "block"])
 }).refine((value) => value.criticalMinutes > value.warningMinutes, {
   message: "Критический порог должен быть больше предупреждения."
 });
@@ -28,7 +29,8 @@ export async function saveKitchenSlaAction(formData: FormData) {
     criticalMinutes: formData.get("critical_minutes"),
     readyDisplayMinutes: formData.get("ready_display_minutes"),
     onlineRequiresPaid: formData.get("online_requires_paid") === "on",
-    posRequiresPaid: formData.get("pos_requires_paid") === "on"
+    posRequiresPaid: formData.get("pos_requires_paid") === "on",
+    inventoryShortagePolicy: formData.get("inventory_shortage_policy")
   });
   const locationId = String(formData.get("location_id") ?? "");
   if (!parsed.success) {
@@ -47,7 +49,7 @@ export async function saveKitchenSlaAction(formData: FormData) {
       await transaction`
         insert into public.kitchen_sla_settings (
           location_id, warning_seconds, critical_seconds, ready_display_seconds,
-          online_requires_paid, pos_requires_paid, inventory_trigger, updated_at
+          online_requires_paid, pos_requires_paid, inventory_trigger, inventory_shortage_policy, updated_at
         ) values (
           ${parsed.data.locationId}::uuid,
           ${parsed.data.warningMinutes * 60},
@@ -55,7 +57,7 @@ export async function saveKitchenSlaAction(formData: FormData) {
           ${parsed.data.readyDisplayMinutes * 60},
           ${parsed.data.onlineRequiresPaid},
           ${parsed.data.posRequiresPaid},
-          'ready', now()
+          'ready', ${parsed.data.inventoryShortagePolicy}, now()
         )
         on conflict (location_id) do update
         set warning_seconds = excluded.warning_seconds,
@@ -64,6 +66,7 @@ export async function saveKitchenSlaAction(formData: FormData) {
             online_requires_paid = excluded.online_requires_paid,
             pos_requires_paid = excluded.pos_requires_paid,
             inventory_trigger = 'ready',
+            inventory_shortage_policy = excluded.inventory_shortage_policy,
             updated_at = now()
       `;
       await transaction`
@@ -78,7 +81,8 @@ export async function saveKitchenSlaAction(formData: FormData) {
             ready_display_seconds: parsed.data.readyDisplayMinutes * 60,
             online_requires_paid: parsed.data.onlineRequiresPaid,
             pos_requires_paid: parsed.data.posRequiresPaid,
-            inventory_trigger: "ready"
+            inventory_trigger: "ready",
+            inventory_shortage_policy: parsed.data.inventoryShortagePolicy
           })},
           '/admin/kitchen'
         )

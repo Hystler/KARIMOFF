@@ -6,20 +6,22 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
-if (process.argv.length !== 3 || process.argv[2] !== "--disposable-audit") {
+if (process.argv[2] !== "--disposable-audit" || process.argv.slice(3).some(value => value !== "--ui-audit")) {
   throw new Error("Use --disposable-audit. No custom target or environment configuration is accepted.");
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const container = "karimoff-audit-20260908";
+const auditId = process.argv.includes("--ui-audit") ? "20260911" : "20260908";
+const port = auditId === "20260911" ? 55440 : 55439;
+const container = `karimoff-audit-${auditId}`;
 const volume = `${container}-data`;
 const network = `${container}-network`;
 const labelKey = "karimoff.local-audit";
-const labelValue = "20260908";
+const labelValue = auditId;
 const image = "postgres:17-alpine";
 const database = "karimoff_audit";
-const dsn = "postgres://postgres@127.0.0.1:55439/karimoff_audit";
-const output = join(root, "outputs/site-audit-2026-09/database");
+const dsn = `postgres://postgres@127.0.0.1:${port}/karimoff_audit`;
+const output = join(root, `outputs/site-audit-${auditId}/database`);
 mkdirSync(output, { recursive: true });
 const logPath = join(output, `setup-${new Date().toISOString().replaceAll(":", "-")}.log`);
 
@@ -64,7 +66,7 @@ if (!names.split("\n").includes(container)) {
   docker([
     "run", "-d", "--name", container, "--label", `${labelKey}=${labelValue}`,
     "--restart", "unless-stopped", "--network", network,
-    "--publish", "127.0.0.1:55439:5432",
+    "--publish", `127.0.0.1:${port}:5432`,
     "--mount", `type=volume,src=${volume},dst=/var/lib/postgresql/data`,
     "-e", `POSTGRES_DB=${database}`, "-e", "POSTGRES_HOST_AUTH_METHOD=trust",
     image
@@ -75,7 +77,7 @@ assert.equal(own.Config.Labels?.[labelKey], labelValue, "Refusing an unowned con
 assert.equal(own.Config.Image, image);
 assert.equal(own.HostConfig.AutoRemove, false);
 assert.deepEqual(own.HostConfig.PortBindings, {
-  "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "55439" }]
+  "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: String(port) }]
 });
 assert.deepEqual(Object.keys(own.NetworkSettings.Networks), [network]);
 assert.ok(own.Mounts.some(mount => mount.Name === volume && mount.Destination === "/var/lib/postgresql/data"));
@@ -83,7 +85,7 @@ if (!own.State.Running) docker(["start", container]);
 
 let ready = false;
 for (let attempt = 0; attempt < 60; attempt++) {
-  const result = spawnSync("docker", ["--context", context, "exec", container, "pg_isready", "-U", "postgres", "-d", database], {
+  const result = spawnSync("docker", ["--context", context, "exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", database], {
     encoding: "utf8", timeout: 5000
   });
   if (result.status === 0) { ready = true; break; }
@@ -176,7 +178,7 @@ try {
   const report = {
     status: "schema-ready", checkedAt: new Date().toISOString(), container, image, volume, network,
     dsn, identity, counts, latestMigration: migrations.at(-1), migrations,
-    persistent: true, autoRemove: false, hostBind: "127.0.0.1:55439",
+    persistent: true, autoRemove: false, hostBind: `127.0.0.1:${port}`,
     auth: "Local-only trust; minimal auth helper stubs, not a Supabase Auth service",
     seed: "Repository menu seed after baseline; order_locations seeded by canonical order migration",
     logPath

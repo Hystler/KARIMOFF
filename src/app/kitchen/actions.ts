@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { canStaffAccessOrder } from "@/lib/order-flow/access";
 import type { KitchenActionState } from "@/lib/order-flow/kitchen-action-state";
+import { kitchenStations, type KitchenStation } from "@/lib/order-flow/kitchen-stations";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
 import { transitionOrder } from "@/lib/order-flow/service";
 import { KITCHEN_STATUSES, type KitchenStatus } from "@/lib/order-flow/types";
@@ -20,6 +21,10 @@ export async function transitionKitchenOrderAction(
   const orderId = String(formData.get("order_id") ?? "");
   const fromStatus = String(formData.get("from_status") ?? "") as KitchenStatus;
   const toStatus = String(formData.get("to_status") ?? "") as KitchenStatus;
+  const station = String(formData.get("station") ?? "") as KitchenStation | "";
+  if (station && (!kitchenStations.includes(station) || !["cooking", "ready"].includes(toStatus))) {
+    return { status: "error", message: "Некорректная станция кухни." };
+  }
   if (!/^[0-9a-f-]{36}$/i.test(orderId) || !KITCHEN_STATUSES.includes(fromStatus) || !KITCHEN_STATUSES.includes(toStatus)) {
     return { status: "error", message: "Некорректное действие с заказом." };
   }
@@ -38,6 +43,7 @@ export async function transitionKitchenOrderAction(
       status: toStatus,
       actorId: staff.id,
       actorRole: staff.role,
+      ...(station ? { station } : {}),
       deviceSource: String(formData.get("device_source") || "kds").slice(0, 40)
     });
     revalidatePath("/kitchen");

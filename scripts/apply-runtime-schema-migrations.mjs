@@ -621,6 +621,20 @@ const migrations = [
     }
   }
 ];
+migrations.push({
+  name: "20260911163830_kitchen_stations_and_pilot_inventory_policy",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select to_regclass('public.order_item_kitchen_state') is not null as line_state,
+        to_regprocedure('public.set_order_kitchen_station_status_atomic(uuid,text,text,uuid,text,text)') is not null as station_transition,
+        exists (select 1 from pg_attribute where attrelid = 'public.kitchen_sla_settings'::regclass
+          and attname = 'inventory_shortage_policy' and not attisdropped) as inventory_policy,
+        position('inventory_shortage_policy' in pg_get_functiondef('public.set_order_status_staff_atomic(uuid,text,uuid,text,text)'::regprocedure)) > 0 as policy_function,
+        position('order_item_kitchen_state' in pg_get_functiondef('public.set_order_kitchen_status_atomic(uuid,text,uuid,text,text)'::regprocedure)) > 0 as ready_guard
+    `;
+    return Boolean(objects?.line_state && objects?.station_transition && objects?.inventory_policy && objects?.policy_function && objects?.ready_guard);
+  }
+});
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 

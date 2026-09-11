@@ -1,0 +1,29 @@
+.workspace { min-width: 0; }
+.workspace :is(h1, h2, p, button, label) { overflow-wrap: anywhere; letter-spacing: 0; }
+.catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  align-items: stretch;
+}
+.checkout { min-width: 0; }
+
+@media (min-width: 1024px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 340px; }
+  .checkout {
+    position: sticky;
+    top: 56px;
+    max-height: calc(100dvh - 56px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .checkout :is(input:not([type="hidden"]), select) { min-height: 36px; font-size: 14px; }
+  .checkout button { min-height: 36px; }
+  .checkout button[type="submit"] { min-height: 44px; font-size: 14px; box-shadow: none; }
+}
+
+@media (pointer: coarse) {
+  .catalog button { min-height: 44px; }
+}

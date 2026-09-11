@@ -130,14 +130,14 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
       action={formAction}
       noValidate
       onSubmit={() => setEditedFields(new Set())}
-      className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.72fr)]"
+      className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.72fr)]"
     >
-      <section className="grid gap-5">
+      <section className="grid gap-4">
         {groups.map((group) => (
-          <div key={group.title} className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
+          <div key={group.title} className="border-t border-karimoff-line bg-white p-4">
             <h2 className="text-2xl font-black">{group.title}</h2>
             <p className="mt-1 text-sm leading-5 text-karimoff-muted">{group.description}</p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {group.items.map((item) => {
                 const error = editedFields.has(item.key) ? undefined : state.fieldErrors?.[item.key];
                 const errorId = `${item.key}-error`;
@@ -145,7 +145,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
                   <label key={item.key} className="grid content-start gap-2 text-sm font-semibold text-karimoff-black">
                     <span>{item.label}</span>
                     <div
-                      className={`flex min-h-[48px] overflow-hidden rounded-lg border bg-white transition focus-within:border-karimoff-orange focus-within:shadow-[0_0_0_3px_rgba(251,103,10,0.09)] ${error ? "border-red-300" : "border-karimoff-line"}`}
+                      className={`flex min-h-9 overflow-hidden rounded-md border bg-white transition focus-within:border-karimoff-orange focus-within:shadow-[0_0_0_3px_rgba(251,103,10,0.09)] ${error ? "border-red-300" : "border-karimoff-line"}`}
                     >
                       <input
                         type="text"
@@ -159,7 +159,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
                         onChange={(event) => updateDraft(item.key, event.target.value)}
                         aria-invalid={Boolean(error)}
                         aria-describedby={error ? errorId : undefined}
-                        className="min-w-0 flex-1 bg-transparent px-4 py-3 text-base font-bold tabular-nums outline-none sm:text-sm"
+                        className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm font-bold tabular-nums outline-none"
                       />
                       {item.suffix ? (
                         <span className="flex min-w-12 items-center justify-center border-l border-karimoff-line bg-karimoff-soft px-3 text-sm font-bold text-karimoff-muted">
@@ -195,7 +195,7 @@ export function EconomicsCalculator({ initialValues }: EconomicsCalculatorProps)
         </div>
       </section>
 
-      <aside className="h-fit rounded-lg border border-karimoff-line bg-white p-5 shadow-card lg:sticky lg:top-8">
+      <aside className="h-fit border-y border-karimoff-line bg-white p-4 xl:sticky xl:top-4">
         <p className="text-sm font-semibold text-karimoff-orange">Результаты</p>
         <h2 className="mt-2 text-2xl font-black leading-tight">Расчёт точки</h2>
         <div className="mt-6 grid gap-3">

@@ -208,7 +208,7 @@ button:not(:disabled),
   }
 
   .admin-page {
-    @apply min-h-screen bg-karimoff-cream px-4 py-6 text-karimoff-black sm:px-6 sm:py-8 lg:px-8;
+    @apply min-h-screen min-w-0 bg-[#F4F5F6] px-4 py-5 text-karimoff-black lg:px-5;
   }
 
   .admin-shell {
@@ -216,7 +216,7 @@ button:not(:disabled),
   }
 
   .admin-page-title {
-    @apply mt-2 text-3xl font-black leading-tight sm:text-4xl;
+    @apply mt-1 text-2xl font-black leading-tight;
   }
 
   .admin-panel {
@@ -465,7 +465,7 @@ button:not(:disabled),
   }
 
   .admin-workspace {
-    @apply min-h-screen bg-[#F5F3EF] text-karimoff-black lg:grid lg:grid-cols-[244px_minmax(0,1fr)];
+    @apply min-h-screen min-w-0 bg-[#F4F5F6] text-karimoff-black lg:grid lg:grid-cols-[208px_minmax(0,1fr)];
   }
 
   .admin-sidebar {
@@ -485,15 +485,15 @@ button:not(:disabled),
   }
 
   .admin-nav {
-    @apply grid gap-1 overflow-y-auto px-3 py-4;
+    @apply grid min-h-0 content-start gap-0.5 overflow-y-auto px-2 py-3;
   }
 
   .admin-nav-link {
-    @apply flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white;
+    @apply flex min-h-9 items-center gap-2.5 rounded-md px-3 text-[13px] font-semibold text-white/70 transition hover:bg-white/[0.07] hover:text-white;
   }
 
   .admin-nav-link-active {
-    @apply bg-karimoff-orange text-white shadow-[0_10px_24px_rgba(251,103,10,0.22)] hover:bg-karimoff-orange;
+    @apply bg-karimoff-orange text-white hover:bg-karimoff-orange;
   }
 
   .admin-logout {
@@ -513,7 +513,7 @@ button:not(:disabled),
   }
 
   .admin-content {
-    @apply mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-9;
+    @apply mx-auto w-full min-w-0 max-w-[1640px] px-4 py-5 lg:px-5;
   }
 
   .admin-content-wide {
@@ -521,11 +521,11 @@ button:not(:disabled),
   }
 
   .admin-heading {
-    @apply mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+    @apply mb-5 flex flex-wrap items-center justify-between gap-3;
   }
 
   .admin-heading h1 {
-    @apply mt-1 text-3xl font-black leading-[1.08] sm:text-4xl;
+    @apply mt-1 text-2xl font-black leading-tight;
   }
 
   .admin-heading p:not(.admin-eyebrow) {
@@ -537,15 +537,15 @@ button:not(:disabled),
   }
 
   .admin-card {
-    @apply min-w-0 rounded-lg border border-black/[0.08] bg-white shadow-[0_14px_38px_rgba(18,18,20,0.055)];
+    @apply min-w-0 rounded-md border border-black/[0.10] bg-white;
   }
 
   .admin-primary-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-5 py-2.5 text-sm font-black text-white shadow-[0_12px_26px_rgba(251,103,10,0.20)] transition hover:-translate-y-0.5 hover:bg-[#D95405] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-[#E85C06] bg-karimoff-orange px-3 py-2 text-sm font-bold text-white transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-55;
   }
 
   .admin-secondary-button {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-karimoff-line bg-white px-5 py-2.5 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange;
+    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-karimoff-line bg-white px-3 py-2 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange;
   }
 
   .admin-danger-button {
@@ -576,7 +576,8 @@ button:not(:disabled),
   }
 
   .economics-period-form {
-    @apply relative mt-8 grid gap-4 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:grid-cols-[minmax(210px,0.75fr)_minmax(280px,1.25fr)_auto] sm:items-end;
+    @apply relative mt-5 grid gap-3 border-y border-karimoff-line bg-white p-3 sm:items-end;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   }
 
   .economics-date-range {
@@ -620,7 +621,7 @@ button:not(:disabled),
   }
 
   .admin-metrics article {
-    @apply admin-card flex min-h-[116px] flex-col justify-between p-5;
+    @apply admin-card flex min-h-[88px] flex-col justify-between p-4;
   }
 
   .admin-metrics span {
@@ -628,7 +629,7 @@ button:not(:disabled),
   }
 
   .admin-metrics strong {
-    @apply mt-3 text-2xl font-black tabular-nums;
+    @apply mt-2 text-2xl font-black tabular-nums;
   }
 
   .admin-dashboard-card {
@@ -648,7 +649,7 @@ button:not(:disabled),
   }
 
   .admin-order-card {
-    @apply admin-card grid min-w-0 overflow-hidden xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1.25fr)_220px];
+    @apply admin-card grid min-w-0 overflow-hidden xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(180px,0.6fr)];
   }
 
   .admin-order-card[data-kitchen-status="new"],
@@ -667,7 +668,7 @@ button:not(:disabled),
   .admin-order-main,
   .admin-order-items,
   .admin-order-actions {
-    @apply min-w-0 p-5 sm:p-6;
+    @apply min-w-0 p-4;
   }
 
   .admin-order-items,
@@ -1605,6 +1606,78 @@ button:not(:disabled),
 .admin-workspace .admin-page {
   min-height: auto;
   background: transparent;
+}
+
+/* Grid items must shrink to the workspace, including when browser zoom changes. */
+.admin-main :where(.grid, .flex) > * {
+  min-width: 0;
+}
+
+.admin-main :where(main, section, form, fieldset, details) {
+  min-width: 0;
+}
+
+.admin-main {
+  container-type: inline-size;
+}
+
+.admin-workspace :where(h1, h2, h3, p, a, button, label, th, td) {
+  overflow-wrap: anywhere;
+  letter-spacing: 0;
+}
+
+.admin-workspace .admin-page h1 { font-size: 24px; line-height: 1.25; }
+.admin-workspace .admin-page h2 { font-size: 18px; line-height: 1.35; }
+.admin-workspace .admin-page h3 { font-size: 16px; line-height: 1.4; }
+.admin-workspace .admin-page > div { max-width: 1640px; }
+.admin-workspace .admin-table { font-size: 13px; }
+.admin-workspace .admin-table :is(th, td) { padding: 10px 12px; }
+.admin-workspace .admin-table th { font-size: 11px; }
+.admin-workspace .admin-table :is(input, select) { max-width: 100%; }
+.admin-workspace .admin-page > div > header { gap: 12px; }
+.admin-workspace .admin-page > div > header :is(a, button) { border-radius: 6px; }
+.admin-workspace .admin-control,
+.admin-workspace .admin-field :is(input, select, textarea),
+.admin-workspace .management-number-input { min-height: 36px; }
+.admin-workspace .management-number-input input { font-size: 14px; }
+.admin-workspace .analytics-kpi-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 132px; box-shadow: none; }
+.admin-workspace .analytics-kpi-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-workspace .analytics-sparkline { position: static; width: 64px; height: 24px; flex-shrink: 0; }
+.admin-workspace .analytics-kpi-meta { position: static; flex-wrap: wrap; margin-top: auto; }
+.admin-workspace .analytics-panel-heading { padding: 12px 16px; }
+.admin-workspace .analytics-panel-heading h2 { font-size: 16px; }
+.admin-workspace .analytics-kpi-card > div:first-child strong { font-size: 22px; }
+.admin-workspace .analytics-trend-chart { height: 230px; }
+.admin-workspace .analytics-demand-chart svg { height: 260px; }
+
+.admin-overview-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  border-top: 1px solid #dddfe2;
+}
+.admin-workspace .admin-overview-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+.admin-overview-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 12px;
+  border-bottom: 1px solid #dddfe2;
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-overview-link:hover { background: #fff; color: #c44c04; }
+.admin-overview-link > svg:first-child { color: #757a80; }
+.admin-overview-link > svg:last-child { margin-left: auto; }
+
+@container (max-width: 920px) {
+  .admin-workspace .admin-order-card { grid-template-columns: minmax(0, 1fr); }
+  .admin-workspace .admin-order-items,
+  .admin-workspace .admin-order-actions { border-left: 0; border-top: 1px solid #dddfe2; }
+  .admin-workspace .analytics-two-column { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (pointer: coarse) {
+  .admin-workspace :is(.admin-primary-button, .admin-secondary-button, .admin-nav-link) { min-height: 44px; }
 }
 
 @keyframes product-added {

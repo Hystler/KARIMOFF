@@ -113,7 +113,8 @@ export function formatInventoryQuantity(value: number | null | undefined, unit: 
     return "—";
   }
 
-  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(value)} ${unit ?? ""}`.trim();
+  const label = ({ g: "г", kg: "кг", ml: "мл", l: "л", pcs: "шт." } as Record<string, string>)[unit ?? ""] ?? unit ?? "";
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 3 }).format(value)} ${label}`.trim();
 }
 
 export async function getInventoryByIngredientIds(ingredientIds: string[]) {

@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   PackageOpen,
+  ListPlus,
   Plug,
   Settings,
   ShoppingBag,
@@ -36,6 +37,7 @@ const navigation = [
   { href: "/admin/orders", label: "Заказы", icon: ShoppingBag, roles: ["owner", "admin", "manager", "cashier"] },
   { href: "/admin/products", label: "Меню", icon: UtensilsCrossed, roles: ["owner", "admin", "manager"] },
   { href: "/admin/ingredients", label: "Ингредиенты", icon: PackageOpen, roles: ["owner", "admin", "manager"] },
+  { href: "/admin/ingredients/extras", label: "Допы к блюдам", icon: ListPlus, roles: ["owner", "admin"] },
   { href: "/admin/inventory", label: "Склад", icon: Boxes, roles: ["owner", "admin", "manager"] },
   { href: "/admin/production", label: "Производство", icon: Factory, roles: ["owner", "admin", "manager"] },
   { href: "/admin/customers", label: "Пользователи", icon: Users, roles: ["owner", "admin", "manager"] },
@@ -63,12 +65,14 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const items = navigation.filter((item) => (item.roles as readonly string[]).includes(staff.role));
+  const activeHref = items.filter(({ href }) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="admin-workspace">
       {isOpen ? <button type="button" className="admin-sidebar-overlay" aria-label="Закрыть меню" onClick={() => setIsOpen(false)} /> : null}
       <aside className={`admin-sidebar ${isOpen ? "admin-sidebar-open" : ""}`}>
-        <div className="flex h-[72px] items-center justify-between border-b border-white/10 px-5">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
           <Link href={staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} className="text-xl font-black text-white">
             KARIM<span className="text-karimoff-orange">O</span>FF
           </Link>
@@ -76,19 +80,19 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
             <X size={20} />
           </button>
         </div>
-        <nav className="admin-nav">
+        <nav className="admin-nav" aria-label="Разделы администрирования">
           {items.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
+            const active = activeHref === href;
             return (
-              <Link key={href} href={href} onClick={() => setIsOpen(false)} className={`admin-nav-link ${active ? "admin-nav-link-active" : ""}`}>
-                <Icon size={19} strokeWidth={2.2} />
+              <Link key={href} href={href} aria-current={active ? "page" : undefined} onClick={() => setIsOpen(false)} className={`admin-nav-link ${active ? "admin-nav-link-active" : ""}`}>
+                <Icon size={17} strokeWidth={2} className="shrink-0" />
                 <span>{label}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="mt-auto border-t border-white/10 p-4">
-          <div className="rounded-lg bg-white/[0.07] p-3">
+        <div className="mt-auto shrink-0 border-t border-white/10 p-3">
+          <div className="px-3 py-1">
             <p className="truncate text-sm font-bold text-white">{staff.name}</p>
             <p className="mt-1 text-xs text-white/55">{roleLabels[staff.role]}</p>
           </div>

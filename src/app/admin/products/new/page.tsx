@@ -45,7 +45,7 @@ export default async function NewProductPage({ searchParams }: NewProductPagePro
 
         {params.error ? (
           <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
-            {decodeURIComponent(params.error)}
+            {params.error}
           </div>
         ) : null}
 

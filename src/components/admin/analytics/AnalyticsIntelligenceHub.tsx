@@ -278,7 +278,8 @@ function HourlyDemandChart({ dashboard }: { dashboard: AnalyticsDashboard }) {
           if (!value) return null;
           const href = analyticsHref(dashboard.filters, { hourFrom: String(point.hour), hourTo: String(point.hour + 1), category }, "/admin/analytics/sales");
           const categoryPoint = point.categories[category];
-          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: getAnalyticsCategoryPalette(category).accent }}><title>{category}, {formatOperatingInterval(point.hour)} — выручка {formatRub(categoryPoint?.revenue ?? 0)}, товаров {formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков {formatNumber(categoryPoint?.receipts ?? 0)}</title></circle></a>;
+          const title = `${category}, ${formatOperatingInterval(point.hour)}: выручка ${formatRub(categoryPoint?.revenue ?? 0)}, товаров ${formatNumber(categoryPoint?.quantity ?? 0, 2)}, чеков ${formatNumber(categoryPoint?.receipts ?? 0)}`;
+          return <a href={href} key={`${category}:${point.hour}`}><circle cx={x(point.hour)} cy={y(value)} r="5" style={{ fill: getAnalyticsCategoryPalette(category).accent }}><title>{title}</title></circle></a>;
         }))}
       </svg>
       <div className="analytics-demand-legend">{categories.map((category) => <span key={category}><i style={{ background: getAnalyticsCategoryPalette(category).accent }} />{category}</span>)}</div>

@@ -56,7 +56,7 @@ export default async function AdminLoyaltyPage() {
         ) : error ? (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-8 text-red-700">{error}</div>
         ) : (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <section className="rounded-lg border border-karimoff-line bg-white shadow-card">
               <div className="border-b border-karimoff-line p-5">
                 <h2 className="text-2xl font-black">Клиенты</h2>
