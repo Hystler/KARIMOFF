@@ -112,6 +112,21 @@ test("forward SQL retains existing loyalty accounting and protected commercial l
   assert.match(migration, /default 'allow_negative'/);
 });
 
+test("55440: migration supports Timeweb without legacy browser roles", localOnly, async () => {
+  await withFixture(async (sql, f) => {
+    const [roles] = await sql`select count(*)::int as count from pg_roles
+      where rolname in ('audit_missing_anon_role', 'audit_missing_authenticated_role')`;
+    assert.equal(roles.count, 0);
+    await sql.unsafe(migration.replace(/\banon\b/g, 'audit_missing_anon_role').replace(/\bauthenticated\b/g, 'audit_missing_authenticated_role'));
+    await sql`set local role karimoff_app`;
+    for (const station of ['main', 'snacks']) {
+      await f.advance(station, 'cooking');
+      await f.advance(station, 'ready');
+    }
+    assert.equal((await f.snapshot()).kitchen_status, 'ready');
+  });
+});
+
 test("55440: real mixed order, zero stock, repeated station ready and handout deduct exactly once", localOnly, async () => {
   await withFixture(async (sql, f) => {
     await sql`set local role karimoff_app`;

@@ -23,7 +23,7 @@ alter table public.order_item_kitchen_state drop constraint if exists order_item
 alter table public.order_item_kitchen_state add constraint order_item_kitchen_state_station_check
   check (station in ('snacks', 'main'));
 alter table public.order_item_kitchen_state enable row level security;
-revoke all on table public.order_item_kitchen_state from public, anon, authenticated;
+revoke all on table public.order_item_kitchen_state from public;
 
 create or replace function public.kitchen_station_for_category(p_category text)
 returns text language sql immutable security invoker set search_path = public, pg_temp
@@ -148,13 +148,20 @@ begin
 end
 $$;
 
-revoke all on function public.kitchen_station_for_category(text) from public, anon, authenticated;
-revoke all on function public.initialize_order_item_kitchen_state() from public, anon, authenticated;
-revoke all on function public.set_order_kitchen_station_status_atomic(uuid, text, text, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.kitchen_station_for_category(text) from public;
+revoke all on function public.initialize_order_item_kitchen_state() from public;
+revoke all on function public.set_order_kitchen_station_status_atomic(uuid, text, text, uuid, text, text) from public;
 
 do $$
 declare v_role text;
 begin
+  -- Legacy browser roles exist in old databases, but not in Timeweb-only clusters.
+  foreach v_role in array array['anon', 'authenticated'] loop
+    if exists (select 1 from pg_roles where rolname = v_role) then
+      execute format('revoke all on table public.order_item_kitchen_state from %I', v_role);
+      execute format('revoke all on function public.kitchen_station_for_category(text), public.initialize_order_item_kitchen_state(), public.set_order_kitchen_station_status_atomic(uuid,text,text,uuid,text,text) from %I', v_role);
+    end if;
+  end loop;
   foreach v_role in array array['karimoff_app', 'service_role'] loop
     if exists (select 1 from pg_roles where rolname = v_role) then
       execute format('grant select, insert, update on public.order_item_kitchen_state to %I', v_role);

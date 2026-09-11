@@ -29,4 +29,6 @@ The first deployment built successfully but failed startup because the new migra
 
 Production normally connects as `karimoff_app`, while tables belong to `karimoff_migrator`. New schema changes require the protected owner connection through the existing `MIGRATION_DATABASE_URL` startup hook. Remove that temporary credential from the app settings after applying the migration, and verify a successful redeploy using only the ordinary app connection. Keep the test stand read-only throughout. Do not change network access or broaden app-role permissions.
 
+The migration also tolerates absent legacy browser roles (`anon`, `authenticated`) in Timeweb. Revoke access from PUBLIC unconditionally and from optional roles only when they exist. A disposable PostgreSQL test exercises migration and station completion with missing-role aliases, without altering cluster roles.
+
 Negative stock is an explicit pilot policy, not reconciled physical stock. Unknown nutrition remains unknown and must be completed from labels or confirmed recipes. External payment/fiscal providers and actual customer orders were not exercised.
