@@ -4,9 +4,9 @@
 
 - New migration: `supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql`.
 - `kitchen_sla_settings.inventory_shortage_policy` defaults to `allow_negative`, including existing location settings. Locations without a settings row use the same explicit pilot default.
-- No new environment variables. Do not enable `TEST_ORDER_MODE` for normal pilot orders.
+- No new long-lived application flags. Do not enable `TEST_ORDER_MODE` for normal pilot orders.
 - Switch a location to `block` in `/admin/kitchen` to restore strict shortage rejection. This changes future deductions, not completed accounting or existing negative balances. Settings remain staff/location-scoped and audited.
-- Apply the migration before serving the updated kitchen code. The runtime migration script includes schema/function postconditions and respects its existing read-only mode. This task did not deploy or change shared production/test databases.
+- Apply the migration as the existing `karimoff_migrator` owner before serving the updated kitchen code. The ordinary `karimoff_app` role cannot alter these tables. The existing `MIGRATION_DATABASE_URL` hook may be supplied temporarily from protected credentials for startup, then removed after successful migration and a clean redeploy. Never grant table ownership to the application role. The runtime migration script checks postconditions and respects read-only mode.
 - The final migration was applied/reapplied only to the new disposable database at `127.0.0.1:55440`. Its setup ledger may have the earlier file checksum; do not rerun historical migrations to work around that difference.
 
 ## Transition Trace
