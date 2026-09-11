@@ -206,6 +206,10 @@ function resolveProduct(recipe, products) {
   );
 }
 
+function isInactiveRecipe(recipe, inactiveProductSlugs) {
+  return recipe.product_slugs.some((slug) => inactiveProductSlugs.has(normalizeName(slug)));
+}
+
 function resolveIngredient(spec, ingredients) {
   const acceptedNames = new Set([spec.name, ...(spec.aliases ?? [])].map(normalizeName));
   return (
@@ -263,7 +267,9 @@ try {
     `;
     const productByRecipe = new Map();
     const unresolvedProducts = [];
+    const skippedInactiveRecipes = [];
     const createdProducts = [];
+    const inactiveProductSlugs = new Set((techCard.inactive_product_slugs ?? []).map(normalizeName));
     const catalogProductDefaults = new Map(
       (techCard.catalog_product_defaults ?? []).map((product) => [normalizeName(product.slug), product])
     );
@@ -276,6 +282,10 @@ try {
           .find(Boolean);
 
         if (!defaults) {
+          if (isInactiveRecipe(recipe, inactiveProductSlugs)) {
+            skippedInactiveRecipes.push(recipe.product_slugs[0] ?? recipe.product_names[0]);
+            continue;
+          }
           unresolvedProducts.push(recipe.product_names[0] ?? recipe.product_slugs[0]);
           continue;
         }
@@ -319,14 +329,7 @@ try {
         item.product_slugs.some((candidate) => normalizeName(candidate) === normalizeName(slug))
       );
       return recipe ? resolveProduct(recipe, products) : null;
-    });
-    const missingInactiveProducts = (techCard.inactive_product_slugs ?? []).filter(
-      (_, index) => !inactiveProducts[index]
-    );
-
-    if (missingInactiveProducts.length) {
-      throw new Error(`Products to deactivate are missing: ${missingInactiveProducts.join(", ")}`);
-    }
+    }).filter(Boolean);
 
     const previousProductAvailability = inactiveProducts.map((product) => ({
       id: product.id,
@@ -445,6 +448,9 @@ try {
     for (const recipe of techCard.recipes) {
       const product = productByRecipe.get(recipe);
       if (!product) {
+        if (isInactiveRecipe(recipe, inactiveProductSlugs)) {
+          continue;
+        }
         throw new Error(`Resolved product is missing for ${recipe.product_slugs[0]}`);
       }
 
@@ -515,6 +521,7 @@ try {
           updated_ingredients: updatedIngredients,
           inserted_lines: insertedLines,
           deactivated_product_count: inactiveProducts.length,
+          skipped_inactive_recipes: skippedInactiveRecipes,
           previous_product_availability: previousProductAvailability,
           previous_ingredient_pricing: previousIngredientPricing,
           previous_composition: previousComposition
@@ -532,6 +539,7 @@ try {
       updatedIngredients,
       insertedLines,
       deactivatedProducts: inactiveProducts.length,
+      skippedInactiveRecipes: skippedInactiveRecipes.length,
       previousLines: previousComposition.length
     };
   });

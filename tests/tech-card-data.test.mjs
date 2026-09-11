@@ -191,6 +191,8 @@ test("runtime migration applies source pricing atomically and keeps an audit sna
   assert.match(runtimeMigration, /created_products/);
   assert.match(runtimeMigration, /insert into public\.products/);
   assert.match(runtimeMigration, /recipe \? resolveProduct\(recipe, products\) : null/);
+  assert.match(runtimeMigration, /isInactiveRecipe\(recipe, inactiveProductSlugs\)/);
+  assert.match(runtimeMigration, /skipped_inactive_recipes: skippedInactiveRecipes/);
   assert.match(runtimeMigration, /set is_active = false/);
   assert.match(runtimeMigration, /pg_advisory_xact_lock/);
 });
