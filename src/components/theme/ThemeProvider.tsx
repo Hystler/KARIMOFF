@@ -16,6 +16,10 @@ function getSystemTheme(fallback: SiteTheme): SiteTheme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function applyDocumentTheme(theme: SiteTheme) {
+  document.documentElement?.setAttribute("data-theme", theme);
+}
+
 type ThemeProviderProps = {
   children: ReactNode;
   defaultTheme: SiteTheme;
@@ -28,7 +32,7 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
 
   useEffect(() => {
     if (forceTheme) {
-      document.documentElement.dataset.theme = forceTheme;
+      applyDocumentTheme(forceTheme);
       const timeoutId = window.setTimeout(() => setTheme(forceTheme), 0);
       return () => window.clearTimeout(timeoutId);
     }
@@ -36,7 +40,7 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     const hasManualTheme = savedTheme === "dark" || savedTheme === "light";
     const nextTheme = hasManualTheme ? savedTheme : getSystemTheme(defaultTheme);
-    document.documentElement.dataset.theme = nextTheme;
+    applyDocumentTheme(nextTheme);
     const timeoutId = window.setTimeout(() => {
       setTheme(nextTheme);
       setUsesSystemTheme(!hasManualTheme);
@@ -51,7 +55,7 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (event: MediaQueryListEvent) => {
       const nextTheme = event.matches ? "dark" : "light";
-      document.documentElement.dataset.theme = nextTheme;
+      applyDocumentTheme(nextTheme);
       setTheme(nextTheme);
     };
 
@@ -62,7 +66,7 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
   const toggleTheme = useCallback(() => {
     if (forceTheme) return;
     const nextTheme = theme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = nextTheme;
+    applyDocumentTheme(nextTheme);
     window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     setUsesSystemTheme(false);
     setTheme(nextTheme);

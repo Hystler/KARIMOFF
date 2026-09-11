@@ -302,18 +302,23 @@ try {
         await page.evaluate(() => localStorage.setItem("karimoff_theme_preference_v2", "dark"));
         await page.addInitScript(() => {
           window.__karimoffThemeTransitions = [];
-          const record = () => window.__karimoffThemeTransitions.push(document.documentElement.dataset.theme ?? "unset");
-          record();
-          new MutationObserver(record).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+          const record = () => window.__karimoffThemeTransitions.push(document.documentElement?.getAttribute("data-theme") ?? "unset");
+          const observeTheme = () => {
+            if (!document.documentElement) return;
+            record();
+            new MutationObserver(record).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+          };
+          if (document.documentElement) observeTheme();
+          else document.addEventListener("DOMContentLoaded", observeTheme, { once: true });
         });
         await page.reload({ waitUntil: "domcontentloaded" });
         await page.waitForLoadState("networkidle", { timeout: 4000 }).catch(() => {});
-        assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+        assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark");
         const transitions = await page.evaluate(() => window.__karimoffThemeTransitions);
         assert.equal(transitions.includes("light"), false, `Unexpected theme transitions: ${transitions.join(", ")}`);
         for (const [name, path] of [["overview", "/admin"], ["economics", "/admin/economics"], ["analytics", "/admin/analytics"], ["notifications", "/admin/notifications"], ["pos", "/pos"]]) {
           if (path !== "/admin") await goto(path);
-          assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", `${path} lost the dark theme`);
+          assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark", `${path} lost the dark theme`);
           assert.equal((await layout()).overflow, false, `${path} overflowed in the dark theme`);
           const routeTransitions = await page.evaluate(() => window.__karimoffThemeTransitions);
           assert.equal(routeTransitions.includes("light"), false, `${path} flashed light: ${routeTransitions.join(", ")}`);

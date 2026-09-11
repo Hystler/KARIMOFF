@@ -38,6 +38,14 @@ function formatPercent(value: number | null) {
   return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value)}%`;
 }
 
+function formatNutrition(value: number | null, maximumFractionDigits = 1) {
+  if (value === null || !Number.isFinite(value)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits }).format(value);
+}
+
 function foodCostTone(value: number | null) {
   if (value === null) {
     return "bg-amber-50 text-amber-700";
@@ -54,12 +62,48 @@ function foodCostTone(value: number | null) {
   return "bg-red-50 text-red-700";
 }
 
+function ProductNutritionSummary({ foodCost }: { foodCost?: ProductFoodCost }) {
+  if (!foodCost) {
+    return (
+      <div className="admin-product-nutrition admin-product-nutrition-missing">
+        <span>КБЖУ на порцию</span>
+        <strong>Нет данных</strong>
+      </div>
+    );
+  }
+
+  const [calories, protein, fat, carbs] = foodCost.nutrition.items;
+
+  if (!foodCost.nutrition.available) {
+    return (
+      <div className="admin-product-nutrition admin-product-nutrition-missing">
+        <span>КБЖУ на порцию</span>
+        <strong>Не заполнено</strong>
+        {foodCost.nutrition.missingIngredients.length ? (
+          <small>{foodCost.nutrition.missingIngredients.slice(0, 3).join(", ")}</small>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-product-nutrition">
+      <span>КБЖУ на порцию</span>
+      <strong>{formatNutrition(calories.value, 0)} ккал</strong>
+      <small>
+        Б {formatNutrition(protein.value)} / Ж {formatNutrition(fat.value)} / У {formatNutrition(carbs.value)}
+      </small>
+    </div>
+  );
+}
+
 function ProductWarnings({ foodCost, product }: { foodCost?: ProductFoodCost; product: Product }) {
   const warnings = [
     foodCost && foodCost.lines.length === 0 ? "Состав не задан" : null,
     foodCost?.missing_price_ingredients.length
       ? `Нет цены: ${foodCost.missing_price_ingredients.join(", ")}`
       : null,
+    foodCost && !foodCost.nutrition.available ? "КБЖУ не заполнены" : null,
     !product.allergens?.length ? "Не заполнены аллергены" : null
   ].filter((warning): warning is string => Boolean(warning));
 
@@ -253,6 +297,12 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                           <dd className="admin-number mt-1 font-bold">{formatMoney(foodCost?.gross_profit ?? null)}</dd>
                           <dd className="mt-1 font-bold">Маржа {formatPercent(foodCost?.gross_margin_percent ?? null)}</dd>
                         </div>
+                        <div className="min-w-0">
+                          <dt className="text-karimoff-muted">Калорийность</dt>
+                          <dd className="mt-1">
+                            <ProductNutritionSummary foodCost={foodCost} />
+                          </dd>
+                        </div>
                       </dl>
 
                       <div className="mt-3">
@@ -272,6 +322,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       <th className="w-[120px]">Цена</th>
                       <th className="w-[165px]">Себестоимость</th>
                       <th className="w-[165px]">Прибыль с единицы</th>
+                      <th className="w-[175px]">КБЖУ</th>
                       <th className="w-[110px]">Статус</th>
                       <th className="min-w-[250px]">Действия</th>
                     </tr>
@@ -317,6 +368,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                             <p className="mt-1 text-xs font-bold text-karimoff-muted">
                               Маржа {formatPercent(foodCost?.gross_margin_percent ?? null)}
                             </p>
+                          </td>
+                          <td>
+                            <ProductNutritionSummary foodCost={foodCost} />
                           </td>
                           <td>
                             <span

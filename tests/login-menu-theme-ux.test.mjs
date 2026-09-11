@@ -33,7 +33,8 @@ test("public theme follows the device until the guest makes a manual choice", ()
   assert.match(provider, /window\.localStorage\.setItem\(THEME_STORAGE_KEY, nextTheme\)/);
   assert.match(layout, /karimoff_theme_preference_v2/);
   assert.match(layout, /suppressHydrationWarning/);
-  assert.match(layout, /document\.documentElement\.dataset\.theme = theme/);
+  assert.match(layout, /const root = document\.documentElement; if \(!root\) return;/);
+  assert.match(layout, /root\.setAttribute\("data-theme", theme\)/);
   assert.doesNotMatch(chrome, /forceTheme=/);
   assert.match(adminShell, /useTheme\(\)/);
   assert.match(adminShell, /onClick=\{toggleTheme\}/);
