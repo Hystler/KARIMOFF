@@ -1,5 +1,20 @@
 # KARIMOFF Ingredient Nutrition Source Audit
 
+## Update 2026-09-11
+
+This section supersedes the earlier missing-data status below. Owner-supplied product labels, production measurements, recipes, and explicitly temporary USDA analogues now provide 37 read-time nutrition references. Database values still take priority and are never overwritten by the fallback.
+
+- Exact label-based references: white and black burger buns; open and closed hot-dog buns; tortilla; beef patty; three sausage variants; nuggets; pickled cucumber; fried onion; cheddar; cheese sticks; fries; country potatoes; Caesar sauce; cheese sauce; ketchup; ordinary BBQ sauce; mayonnaise.
+- Recipe-derived estimates: prepared chicken breast, signature BBQ sauce, Tasty sauce, and garlic sauce.
+- Generic USDA estimates: cabbage, green leaf lettuce, tomato, fresh cucumber, red onion, lavash, mini lavash, flatbread, fried bacon, fried BBQ wings, honey-mustard sauce, and breaded shrimp after deep frying.
+- Still missing: chicken patty, prepared pork, and prepared beef.
+
+The beef patty is now consistently treated as 110 g. Piece-based label values are converted to one production piece using the confirmed masses: white bun 82 g, black bun 89 g, hot-dog buns 60 g, sausages 80 g, cheddar 10 g, cheese stick 23 g, and the measured 19 g midpoint for nuggets and breaded shrimp.
+
+Prepared chicken is provisional: 10 kg raw boneless skinless breast plus 250 ml sunflower oil, divided by the stated 7.8 kg cooked yield. Seasoning macros are omitted until its label is supplied. Garlic sauce is calculated from the supplied costed recipe: the component masses are recovered from the prices and unit costs shown in the same production notes.
+
+The supplied breaded-shrimp label describes the frozen product. Because the kitchen deep-fries it, the temporary served-state reference now uses USDA SR Legacy FDC 172037, “Fast foods, shrimp, breaded and fried”: 308 kcal, protein 7.84 g, fat 18.9 g, and carbohydrate 28 g per 100 g. One production piece is estimated at the measured midpoint of 19 g.
+
 Research/access date: **2026-09-10**, Europe/Moscow. Scope: local ingredient evidence and public primary nutrition sources only. This is a research handoff, not a database import, recipe calculation, publication, or labeling approval.
 
 ## Result And Coverage

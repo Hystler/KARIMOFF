@@ -57,13 +57,27 @@ test('missing modifier nutrition and mismatched units never produce a false comp
     assert.equal(nutrition.calculateRecipeNutrition([{...line,...change}]).complete,false);
   }
 });
-test('reference nutrition is exact-name, grams only and never overrides partial or entered data',()=>{
+test('reference nutrition is exact-name, unit-aware and never overrides partial or entered data',()=>{
   const cabbage={...line,name:'Капуста',unit:'g',quantity:100,nutrition_basis_quantity:100,calories_kcal:null,proteins_g:null,fats_g:null,carbohydrates_g:null};
   assert.equal(reference.getIngredientNutritionReference(cabbage).sourceFoodId,2346407);
   assert.equal(nutrition.calculateRecipeNutrition([cabbage]).items[0].value,27.9);
+  const bun={...cabbage,name:'Булочка для бургера белая',unit:'pcs',quantity:1,nutrition_basis_quantity:1};
+  assert.equal(nutrition.calculateRecipeNutrition([bun]).items[0].value,213.2);
   for(const change of [{name:'Капуста для проверки'},{unit:'pcs'},{calories_kcal:0},{calories_kcal:undefined}]) assert.equal(reference.getIngredientNutritionReference({...cabbage,...change}),undefined);
   const invalid={...cabbage,nutrition_basis_quantity:0};
   assert.equal(nutrition.calculateRecipeNutrition([invalid]).complete,false);
+});
+test('temporary prepared-food references use the confirmed production piece weights',()=>{
+  const empty=(name,unit)=>({...line,name,unit,quantity:1,nutrition_basis_quantity:unit==='pcs'?1:100,calories_kcal:null,proteins_g:null,fats_g:null,carbohydrates_g:null});
+  const calories=(name,unit)=>reference.getIngredientNutritionReference(empty(name,unit)).calories_kcal;
+  assert.equal(calories('Лаваш','pcs'),200.75);
+  assert.equal(calories('Бекон жареный','pcs'),16.23);
+  assert.equal(calories('Крыло куриное Барбекю','pcs'),147.66);
+  assert.equal(calories('Королевская креветка в панировке','pcs'),58.52);
+  assert.equal(calories('Соус медово-горчичный','g'),464);
+  assert.equal(calories('Соус чесночный','g'),526.63);
+  assert.equal(calories('Тортилья','g'),320);
+  assert.equal(calories('Соус барбекю обычный','g'),120);
 });
 test('disposable PG: portion setup idempotency, server price and recipe/food-cost snapshot',{
   skip:process.env.YOOKASSA_AUDIT_LOCAL_DSN?false:'Requires disposable local database'

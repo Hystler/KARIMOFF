@@ -1,7 +1,7 @@
 {
-  "version": "2026-09-01",
+  "version": "2026-09-11",
   "source_document": "Тех карта.docx",
-  "migration_marker": "data_migration.tech_card.20260901_food_costs_v2",
+  "migration_marker": "data_migration.tech_card.20260911_patty_portions_v3",
   "inactive_product_slugs": [
     "dobryy-apelsin-1-l",
     "dobryy-kola-1-l",
@@ -28,7 +28,7 @@
     { "key": "black_bun", "name": "Булочка для бургера чёрная", "aliases": ["Булочка чёрная", "Булочка черная"], "category": "Основа", "unit": "pcs", "sort_order": 40, "package_size": 1, "package_price": 41.7, "waste_percent": 0 },
     { "key": "hotdog_bun_open", "name": "Булочка для хот-дога открытая", "aliases": ["Булочка для хот-догов открытая"], "category": "Основа", "unit": "pcs", "sort_order": 50, "package_size": 1, "package_price": 21.6, "waste_percent": 0 },
     { "key": "hotdog_bun_closed", "name": "Булочка для хот-дога закрытая", "aliases": ["Булочка для хот-догов закрытая"], "category": "Основа", "unit": "pcs", "sort_order": 60, "package_size": 1, "package_price": 26.1, "waste_percent": 0 },
-    { "key": "beef_patty", "name": "Котлета говяжья", "aliases": ["Котлета"], "category": "Мясо", "unit": "g", "sort_order": 100, "package_size": 75, "package_price": 67.4, "waste_percent": 0 },
+    { "key": "beef_patty", "name": "Котлета говяжья", "aliases": ["Котлета"], "category": "Мясо", "unit": "g", "sort_order": 100, "package_size": 110, "package_price": 67.4, "waste_percent": 0 },
     { "key": "chicken_patty", "name": "Котлета куриная", "aliases": [], "category": "Мясо", "unit": "pcs", "sort_order": 105, "package_size": 1, "package_price": 44.7, "waste_percent": 0 },
     { "key": "chicken", "name": "Курица запечённая", "aliases": ["Курица", "Сочная курочка", "Курица запеченная"], "category": "Мясо", "unit": "g", "sort_order": 110, "package_size": 90, "package_price": 54, "waste_percent": 0 },
     { "key": "pork", "name": "Свинина запечённая", "aliases": ["Свинина", "Свинина запеченная"], "category": "Мясо", "unit": "g", "sort_order": 120, "package_size": 90, "package_price": 67, "waste_percent": 0 },
@@ -176,7 +176,7 @@
         { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
         { "ingredient": "pickle", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
         { "ingredient": "bacon", "quantity": 2, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
-        { "ingredient": "beef_patty", "quantity": 75 }
+        { "ingredient": "beef_patty", "quantity": 110 }
       ]
     },
     {
@@ -185,7 +185,7 @@
         { "ingredient": "bun", "quantity": 1 }, { "ingredient": "cheese_sauce", "quantity": 15, "removable": true },
         { "ingredient": "garlic_sauce", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
         { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
-        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 110 },
         { "ingredient": "cheese_stick", "quantity": 2, "removable": true }
       ]
     },
@@ -195,7 +195,7 @@
       "lines": [
         { "ingredient": "bun", "quantity": 1 }, { "ingredient": "garlic_sauce", "quantity": 30, "removable": true },
         { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
-        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 },
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 110 },
         { "ingredient": "fried_onion", "quantity": 5, "removable": true }
       ]
     },
@@ -207,7 +207,7 @@
         { "ingredient": "honey_mustard", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
         { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "pickle", "quantity": 11, "removable": true },
         { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
-        { "ingredient": "beef_patty", "quantity": 75 }
+        { "ingredient": "beef_patty", "quantity": 110 }
       ]
     },
     {
@@ -218,7 +218,7 @@
         { "ingredient": "bbq_sauce", "quantity": 15, "removable": true }, { "ingredient": "lettuce", "quantity": 12, "removable": true },
         { "ingredient": "tomato", "quantity": 13, "removable": true }, { "ingredient": "pickle", "quantity": 11, "removable": true },
         { "ingredient": "onion", "quantity": 3, "removable": true }, { "ingredient": "cheddar", "quantity": 1, "removable": true },
-        { "ingredient": "beef_patty", "quantity": 75 }
+        { "ingredient": "beef_patty", "quantity": 110 }
       ]
     },
     {
@@ -227,7 +227,7 @@
         { "ingredient": "black_bun", "quantity": 1 }, { "ingredient": "bbq_sauce", "quantity": 30, "removable": true },
         { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
         { "ingredient": "pickle", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true },
-        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 75 }
+        { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "beef_patty", "quantity": 110 }
       ]
     },
     {
@@ -323,7 +323,7 @@
   "source_issues": [
     "В рецепте «Хот-дог датский, колбаска говядина» указана куриная колбаска; рецепт не импортируется до подтверждения.",
     "У френчдогов указан «соус на выбор» без списка допустимых соусов; рецепты не импортируются.",
-    "Котлета указана как 75 г / 1 шт.; для склада и food cost она нормализована в 75 г.",
+    "По уточнению владельца от 11.09.2026 говяжья котлета во всех бургерах весит 110 г; закупочная цена 67,4 ₽ относится к одной котлете.",
     "В исходнике склеены строки «Говядина — 90 г» и заголовок датского хот-дога; при разборе они разделены.",
     "Цены листового салата и четырёх фирменных соусов временные; их нужно заменить фактическими закупочными ценами после получения накладных.",
     "Напитки выведены из активного меню; их исторические карточки и состав сохранены для корректности старых заказов.",

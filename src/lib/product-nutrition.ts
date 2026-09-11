@@ -23,11 +23,16 @@ function nutritionItems(values: {
 }
 
 export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
-  const sources = new Map<string, { ingredient: string; name: string; url: string }>();
+  const sources = new Map<string, { ingredient: string; name: string; url: string; estimated: boolean }>();
   lines = lines.map(line => {
     const reference = line.nutrition_basis_quantity > 0 ? getIngredientNutritionReference(line) : undefined;
-    if (reference) sources.set(line.ingredient_id, { ingredient: line.name, name: reference.sourceName, url: reference.sourceUrl });
-    return reference ? { ...line, nutrition_basis_quantity: 100, calories_kcal: reference.calories_kcal,
+    if (reference) sources.set(line.ingredient_id, {
+      ingredient: line.name,
+      name: reference.sourceName,
+      url: reference.sourceUrl,
+      estimated: reference.estimated
+    });
+    return reference ? { ...line, nutrition_basis_quantity: reference.nutrition_basis_quantity, calories_kcal: reference.calories_kcal,
       proteins_g: reference.proteins_g, fats_g: reference.fats_g, carbohydrates_g: reference.carbohydrates_g } : line;
   });
   const missingIngredients = Array.from(new Set(lines
@@ -48,7 +53,7 @@ export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
       available: false,
       complete: false,
       missingIngredients,
-      estimated: sources.size > 0,
+      estimated: [...sources.values()].some((source) => source.estimated),
       sources: [...sources.values()],
       items: nutritionItems({ calories: null, protein: null, fat: null, carbs: null })
     };
@@ -68,7 +73,7 @@ export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
     available: true,
     complete: true,
     missingIngredients: [] as string[],
-    estimated: sources.size > 0,
+    estimated: [...sources.values()].some((source) => source.estimated),
     sources: [...sources.values()],
     items: nutritionItems(total)
   };

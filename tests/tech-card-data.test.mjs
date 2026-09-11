@@ -119,6 +119,18 @@ test("owner pricing and kitchen waste assumptions are explicit", () => {
   }
 });
 
+test("every beef burger and its purchase basis use the confirmed 110 gram patty", () => {
+  const patty = data.ingredients.find((ingredient) => ingredient.key === "beef_patty");
+  const pattyLines = data.recipes.flatMap((recipe) =>
+    recipe.lines.filter((line) => line.ingredient === "beef_patty")
+  );
+
+  assert.equal(patty?.unit, "g");
+  assert.equal(patty?.package_size, 110);
+  assert.ok(pattyLines.length > 0);
+  assert.ok(pattyLines.every((line) => line.quantity === 110));
+});
+
 test("all active menu products have complete food cost inputs and drinks are hidden", () => {
   const ingredients = new Map(data.ingredients.map((ingredient) => [ingredient.key, ingredient]));
   const inactiveSlugs = new Set(data.inactive_product_slugs);

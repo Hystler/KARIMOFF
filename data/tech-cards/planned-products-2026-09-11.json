@@ -1,0 +1,88 @@
+{
+  "status": "awaiting_catalog_prices_and_images",
+  "source": "Owner production notes, 11.09.2026",
+  "assumptions": [
+    "Classic burger vegetables: lettuce 12 g, tomato 13 g, red onion 3 g, pickled cucumber 11 g.",
+    "A single burger sauce is 30 g; when two sauces are used, each is 15 g.",
+    "Cheddar is one 10 g slice unless an explicit slice count is given.",
+    "Beef and chicken patties are one 110 g piece.",
+    "Tortilla is 85 g and mini lavash is 40 g.",
+    "Mini shawarma vegetables are 50% of the current chicken shawarma quantities."
+  ],
+  "products": [
+    {
+      "slug": "chickenburger",
+      "name": "Чикенбургер",
+      "image_url": "/assets/products/burgers/chickenburger.webp",
+      "lines": [
+        { "ingredient": "Булочка для бургера белая", "quantity": 1, "unit": "pcs" },
+        { "ingredient": "Соус чесночный", "quantity": 30, "unit": "g", "removable": true },
+        { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
+        { "ingredient": "Помидор", "quantity": 13, "unit": "g", "removable": true },
+        { "ingredient": "Котлета куриная", "quantity": 1, "unit": "pcs" },
+        { "ingredient": "Сыр Чеддер, ломтик", "quantity": 1, "unit": "pcs", "removable": true }
+      ]
+    },
+    {
+      "slug": "chicken-roll",
+      "name": "Чикенролл",
+      "image_url": "/assets/products/burgers/chicken-roll.webp",
+      "lines": [
+        { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
+        { "ingredient": "Соус чесночный", "quantity": 30, "unit": "g", "removable": true },
+        { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
+        { "ingredient": "Котлета куриная", "quantity": 1, "unit": "pcs" },
+        { "ingredient": "Сыр Чеддер, ломтик", "quantity": 1, "unit": "pcs", "removable": true },
+        { "ingredient": "Помидор", "quantity": 13, "unit": "g", "removable": true },
+        { "ingredient": "Огурец свежий", "quantity": 11, "unit": "g", "removable": true },
+        { "ingredient": "Лук красный", "quantity": 3, "unit": "g", "removable": true }
+      ]
+    },
+    {
+      "slug": "beef-roll",
+      "name": "Бифролл",
+      "image_url": "/assets/products/burgers/beef-roll.webp",
+      "lines": [
+        { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
+        { "ingredient": "Соус фирменный барбекю", "quantity": 30, "unit": "g", "removable": true },
+        { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
+        { "ingredient": "Котлета говяжья", "quantity": 110, "unit": "g" },
+        { "ingredient": "Сыр Чеддер, ломтик", "quantity": 1, "unit": "pcs", "removable": true },
+        { "ingredient": "Помидор", "quantity": 13, "unit": "g", "removable": true },
+        { "ingredient": "Огурец маринованный", "quantity": 11, "unit": "g", "removable": true },
+        { "ingredient": "Лук красный", "quantity": 3, "unit": "g", "removable": true }
+      ]
+    },
+    {
+      "slug": "mini-shaurma",
+      "name": "Мини-шаурма",
+      "image_url": "/assets/products/shaurma/mini-shaurma.webp",
+      "lines": [
+        { "ingredient": "Лаваш мини", "quantity": 40, "unit": "g" },
+        { "ingredient": "Капуста", "quantity": 41.5, "unit": "g", "removable": true },
+        { "ingredient": "Огурец свежий", "quantity": 3, "unit": "g", "removable": true },
+        { "ingredient": "Помидор", "quantity": 10, "unit": "g", "removable": true },
+        { "ingredient": "Лук красный", "quantity": 2.5, "unit": "g", "removable": true },
+        { "ingredient": "Курица запечённая", "quantity": 50, "unit": "g" },
+        { "ingredient": "Соус чесночный", "quantity": 40, "unit": "g", "removable": true }
+      ]
+    },
+    {
+      "slug": "tatarin",
+      "name": "Татарин",
+      "image_url": "/assets/products/burgers/tatarin.webp",
+      "lines": [
+        { "ingredient": "Булочка для бургера белая", "quantity": 1, "unit": "pcs" },
+        { "ingredient": "Соус барбекю обычный", "quantity": 15, "unit": "g", "removable": true },
+        { "ingredient": "Котлета говяжья", "quantity": 330, "unit": "g" },
+        { "ingredient": "Сыр Чеддер, ломтик", "quantity": 6, "unit": "pcs", "removable": true },
+        { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
+        { "ingredient": "Помидор", "quantity": 13, "unit": "g", "removable": true },
+        { "ingredient": "Лук красный", "quantity": 3, "unit": "g", "removable": true },
+        { "ingredient": "Огурец маринованный", "quantity": 11, "unit": "g", "removable": true },
+        { "ingredient": "Картофель фри", "quantity": 30, "unit": "g", "removable": true },
+        { "ingredient": "Соус чесночный", "quantity": 15, "unit": "g", "removable": true }
+      ]
+    }
+  ]
+}
