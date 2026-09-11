@@ -1,5 +1,5 @@
 {
-  "status": "awaiting_catalog_prices_and_images",
+  "status": "activated_with_30_percent_food_cost",
   "source": "Owner production notes, 11.09.2026",
   "assumptions": [
     "Classic burger vegetables: lettuce 12 g, tomato 13 g, red onion 3 g, pickled cucumber 11 g.",
@@ -14,6 +14,8 @@
       "slug": "chickenburger",
       "name": "Чикенбургер",
       "image_url": "/assets/products/burgers/chickenburger.webp",
+      "food_cost": 117.52,
+      "price": 390,
       "lines": [
         { "ingredient": "Булочка для бургера белая", "quantity": 1, "unit": "pcs" },
         { "ingredient": "Соус чесночный", "quantity": 30, "unit": "g", "removable": true },
@@ -27,6 +29,8 @@
       "slug": "chicken-roll",
       "name": "Чикенролл",
       "image_url": "/assets/products/burgers/chicken-roll.webp",
+      "food_cost": 97.66,
+      "price": 330,
       "lines": [
         { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
         { "ingredient": "Соус чесночный", "quantity": 30, "unit": "g", "removable": true },
@@ -42,6 +46,8 @@
       "slug": "beef-roll",
       "name": "Бифролл",
       "image_url": "/assets/products/burgers/beef-roll.webp",
+      "food_cost": 122.46,
+      "price": 410,
       "lines": [
         { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
         { "ingredient": "Соус фирменный барбекю", "quantity": 30, "unit": "g", "removable": true },
@@ -57,6 +63,8 @@
       "slug": "mini-shaurma",
       "name": "Мини-шаурма",
       "image_url": "/assets/products/shaurma/mini-shaurma.webp",
+      "food_cost": 59.07,
+      "price": 200,
       "lines": [
         { "ingredient": "Лаваш мини", "quantity": 40, "unit": "g" },
         { "ingredient": "Капуста", "quantity": 41.5, "unit": "g", "removable": true },
@@ -71,6 +79,8 @@
       "slug": "tatarin",
       "name": "Татарин",
       "image_url": "/assets/products/burgers/tatarin.webp",
+      "food_cost": 332.98,
+      "price": 1110,
       "lines": [
         { "ingredient": "Булочка для бургера белая", "quantity": 1, "unit": "pcs" },
         { "ingredient": "Соус барбекю обычный", "quantity": 15, "unit": "g", "removable": true },

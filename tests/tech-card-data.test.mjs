@@ -26,15 +26,15 @@ const normalizeName = (value) =>
     .toLowerCase();
 
 test("technical card data has stable unique references", () => {
-  assert.equal(data.ingredients.length, 44);
+  assert.equal(data.ingredients.length, 47);
   assert.equal(new Set(data.ingredients.map((ingredient) => ingredient.key)).size, data.ingredients.length);
-  assert.equal(data.recipes.length, 40);
+  assert.equal(data.recipes.length, 45);
   assert.equal(new Set(data.recipes.map((recipe) => recipe.product_slugs[0])).size, data.recipes.length);
   assert.equal(data.pending_source_recipes.length, 16);
   assert.equal(data.catalog_products_without_confirmed_recipe.length, 0);
   assert.equal(data.inactive_product_slugs.length, 8);
   assert.equal(new Set(data.inactive_product_slugs).size, data.inactive_product_slugs.length);
-  assert.equal(data.catalog_product_defaults.length, 7);
+  assert.equal(data.catalog_product_defaults.length, 12);
   assert.equal(
     new Set(data.catalog_product_defaults.map((product) => product.slug)).size,
     data.catalog_product_defaults.length
@@ -57,12 +57,13 @@ test("every recipe line references a supported ingredient and positive quantity"
     }
   }
 
-  assert.equal(data.recipes.flatMap((recipe) => recipe.lines).length, 164);
+  assert.equal(data.recipes.flatMap((recipe) => recipe.lines).length, 203);
 });
 
 test("only confirmed product mappings are imported", () => {
   assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "technical_card").length, 20);
   assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "catalog_purchase_unit").length, 20);
+  assert.equal(data.recipes.filter((recipe) => recipe.source_kind === "owner_recipe").length, 5);
 
   const danishHotDog = data.recipes.find((recipe) => recipe.product_slugs.includes("hot-dog-datskiy"));
   assert.ok(danishHotDog);
@@ -119,7 +120,7 @@ test("owner pricing and kitchen waste assumptions are explicit", () => {
   }
 });
 
-test("every beef burger and its purchase basis use the confirmed 110 gram patty", () => {
+test("every beef burger uses whole confirmed 110 gram patties", () => {
   const patty = data.ingredients.find((ingredient) => ingredient.key === "beef_patty");
   const pattyLines = data.recipes.flatMap((recipe) =>
     recipe.lines.filter((line) => line.ingredient === "beef_patty")
@@ -128,7 +129,12 @@ test("every beef burger and its purchase basis use the confirmed 110 gram patty"
   assert.equal(patty?.unit, "g");
   assert.equal(patty?.package_size, 110);
   assert.ok(pattyLines.length > 0);
-  assert.ok(pattyLines.every((line) => line.quantity === 110));
+  assert.ok(pattyLines.every((line) => line.quantity % 110 === 0));
+  assert.equal(
+    data.recipes.find((recipe) => recipe.product_slugs.includes("tatarin"))
+      ?.lines.find((line) => line.ingredient === "beef_patty")?.quantity,
+    330
+  );
 });
 
 test("all active menu products have complete food cost inputs and drinks are hidden", () => {
@@ -136,7 +142,7 @@ test("all active menu products have complete food cost inputs and drinks are hid
   const inactiveSlugs = new Set(data.inactive_product_slugs);
   const activeProducts = catalog.filter((product) => product.is_active);
 
-  assert.equal(activeProducts.length, 32);
+  assert.equal(activeProducts.length, 37);
   assert.equal(catalog.filter((product) => product.category === "Напитки" && product.is_active).length, 0);
 
   for (const slug of inactiveSlugs) {
@@ -158,6 +164,36 @@ test("all active menu products have complete food cost inputs and drinks are hid
       assert.ok(ingredient?.package_size > 0, `Missing package size for ${line.ingredient} in ${product.slug}`);
       assert.ok(ingredient?.package_price > 0, `Missing package price for ${line.ingredient} in ${product.slug}`);
     }
+  }
+});
+
+test("new owner products are active and priced at 30 percent food cost rounded to tens", () => {
+  const expectedPrices = new Map([
+    ["chickenburger", 390],
+    ["chicken-roll", 330],
+    ["beef-roll", 410],
+    ["mini-shaurma", 200],
+    ["tatarin", 1110]
+  ]);
+  const ingredients = new Map(data.ingredients.map((ingredient) => [ingredient.key, ingredient]));
+
+  for (const [slug, expectedPrice] of expectedPrices) {
+    const product = catalog.find((entry) => entry.slug === slug);
+    const defaults = data.catalog_product_defaults.find((entry) => entry.slug === slug);
+    const recipe = data.recipes.find((entry) => entry.product_slugs.includes(slug));
+
+    assert.equal(product?.is_active, true, `${slug} must be visible`);
+    assert.equal(product?.price, expectedPrice, `${slug} fallback price`);
+    assert.equal(defaults?.price, expectedPrice, `${slug} runtime price`);
+    assert.ok(recipe, `${slug} recipe`);
+
+    const foodCost = recipe.lines.reduce((total, line) => {
+      const ingredient = ingredients.get(line.ingredient);
+      const yieldRatio = 1 - Number(ingredient.waste_percent ?? 0) / 100;
+      return total + (line.quantity / yieldRatio) * (ingredient.package_price / ingredient.package_size);
+    }, 0);
+    const roundedPrice = Math.round((foodCost / 0.3) / 10) * 10;
+    assert.equal(expectedPrice, roundedPrice, `${slug} 30% rounded price`);
   }
 });
 

@@ -34,10 +34,35 @@
     "name": "Тайсон",
     "description": "Мощный говяжий бургер с жареным беконом, чеддером и соусом «Тейсти»."
   },
+  "chickenburger": {
+    "aliases": ["chickenburger"],
+    "name": "Чикенбургер",
+    "description": "Хрустящая куриная котлета, чеддер, свежие овощи и фирменный чесночный соус."
+  },
+  "chicken-roll": {
+    "aliases": ["chicken-roll"],
+    "name": "Чикенролл",
+    "description": "Куриная котлета с чеддером, свежими овощами и чесночным соусом в тортилье."
+  },
+  "beef-roll": {
+    "aliases": ["beef-roll"],
+    "name": "Бифролл",
+    "description": "Говяжья котлета с чеддером, овощами и фирменным барбекю в горячей тортилье."
+  },
+  "tatarin": {
+    "aliases": ["tatarin"],
+    "name": "Татарин",
+    "description": "Три говяжьи котлеты, шесть ломтиков чеддера, картофель фри, овощи и два соуса."
+  },
   "firmennaya-shaurma": {
     "aliases": ["firmennaya-shaurma"],
     "name": "Фирменная шаурма",
     "description": "Максимально сытная: курочка, бекон, картофель фри и сырные палочки в тандырном лаваше."
+  },
+  "mini-shaurma": {
+    "aliases": ["mini-shaurma"],
+    "name": "Мини-шаурма",
+    "description": "Компактная шаурма с курицей, свежими овощами и фирменным чесночным соусом."
   },
   "shaurma-v-lepeshke-s-zapechennoy-govyadinoy": {
     "aliases": ["shaurma-v-lepeshke-s-zapechennoy-govyadinoy", "shaurma-v-lepeshke-govyadina"],
