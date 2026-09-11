@@ -305,6 +305,7 @@ export async function getOrderFlowQueue(params: {
       and o.is_operational = true
       and o.is_test = ${process.env.TEST_ORDER_MODE === "true"}
       and o.kitchen_status = any(${statuses}::text[])
+      and coalesce(o.requested_at, o.created_at) >= (date_trunc('day', now() at time zone l.timezone) at time zone l.timezone)
     order by coalesce(o.requested_at, o.created_at), o.created_at
     limit ${limit}
   `;

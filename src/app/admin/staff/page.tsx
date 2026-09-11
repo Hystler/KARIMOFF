@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { redirect } from "next/navigation";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -38,8 +39,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
       {params.error ? <div role="alert" className="admin-alert admin-alert-error">{params.error}</div> : null}
       {params.saved ? <div className="admin-alert admin-alert-success">Изменения сохранены.</div> : null}
 
-      <details className="border-y border-karimoff-line bg-white p-4" open={Boolean(params.error)}>
-        <summary className="cursor-pointer text-sm font-bold">Добавить сотрудника</summary>
+      <details className="group border-y border-karimoff-line bg-white p-4" open={Boolean(params.error)}>
+        <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-bold">Добавить сотрудника<ChevronDown size={17} className="transition-transform group-open:rotate-180" /></summary>
         <form action={createStaffAction} className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="admin-field">Имя<input name="name" required placeholder="Имя сотрудника" /></label>
           <label className="admin-field">Телефон<PhoneInput name="phone" required /></label>

@@ -27,7 +27,7 @@ export function SiteChrome({
 
   if (isAdmin || isOperational) {
     return (
-      <ThemeProvider defaultTheme="light" forceTheme="light">
+      <ThemeProvider defaultTheme={defaultTheme}>
         <div className="admin-root min-h-screen">{children}</div>
         {maintenanceMode ? <MaintenanceBanner /> : null}
       </ThemeProvider>

@@ -15,6 +15,8 @@ export const extrasCatalog = [
   { key: "ketchup", name: "Кетчуп", label: "Кетчуп · 30 г", quantity: 30, unit: "g", price: 40 },
   { key: "mustard", name: "Соус медово-горчичный", label: "Соус медово-горчичный · 30 г", quantity: 30, unit: "g", price: 40 },
   { key: "patty", name: "Котлета говяжья", label: "Котлета говяжья · 110 г", quantity: 110, unit: "g", price: 200 },
+  { key: "chicken-patty", name: "Котлета куриная", label: "Котлета куриная · 1 шт.", quantity: 1, unit: "pcs", price: 150 },
+  { key: "shrimp", name: "Королевская креветка в панировке", label: "Королевская креветка · 1 шт.", quantity: 1, unit: "pcs", price: 50 },
   { key: "beef", name: "Говядина запечённая", label: "Говядина · 90 г", quantity: 90, unit: "g", price: 300 },
   { key: "pork", name: "Свинина запечённая", label: "Свинина · 90 г", quantity: 90, unit: "g", price: 140 },
   { key: "chicken", name: "Курица запечённая", label: "Курица · 90 г", quantity: 90, unit: "g", price: 110 },
@@ -25,4 +27,36 @@ export const extrasCatalog = [
 
 export function acceptsExtras(category: string) {
   return ["бургеры", "шаурма", "хот-доги", "хот доги", "боксы", "боксфуд", "горячие закуски", "закуски"].includes(category.trim().toLocaleLowerCase("ru-RU"));
+}
+
+function normalize(value: string) {
+  return value.toLocaleLowerCase("ru-RU").replaceAll("ё", "е").replace(/[^a-zа-я0-9]+/gi, " ").trim();
+}
+
+export function extraKeysForProduct(name: string, category: string): string[] {
+  const product = normalize(name);
+  const section = normalize(category);
+
+  if (!acceptsExtras(category)) return [];
+  if (product.includes("кревет")) return ["shrimp", "caesar", "garlic"];
+  if (section.includes("хот дог") || product.includes("хот дог")) return ["cheddar", "onion", "cheese-sauce"];
+
+  if (section.includes("шаур") || product.includes("шаур")) {
+    const meat = product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";
+    return [meat, "cheese-stick", "garlic"];
+  }
+
+  if (section.includes("бургер") || product.includes("бургер") || product.includes("ролл") || product === "татарин") {
+    const patty = product.includes("чикен") || product.includes("chicken") ? "chicken-patty" : "patty";
+    return [patty, "cheese-stick", "jalapeno"];
+  }
+
+  if (section.includes("бокс")) {
+    const protein = product.includes("кревет") ? "shrimp" : product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";
+    return [protein, "cheese-stick", "garlic"];
+  }
+
+  if (product.includes("крыл")) return ["bbq", "garlic", "mustard"];
+  if (product.includes("нагг")) return ["cheese-sauce", "bbq", "garlic"];
+  return ["cheese-sauce", "bbq", "garlic"];
 }

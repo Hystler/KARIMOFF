@@ -27,7 +27,7 @@ export function Hero({ imageUrl, title, subtitle }: HeroProps) {
         className="absolute inset-0 h-full w-full object-cover object-[58%_center] sm:object-[55%_center] lg:object-center"
       />
       <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(18,18,20,0.78)_0%,rgba(18,18,20,0.56)_42%,rgba(18,18,20,0.24)_100%),linear-gradient(180deg,rgba(18,18,20,0.16)_0%,rgba(18,18,20,0.42)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-px bg-karimoff-orange/45" />
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-karimoff-orange" />
 
       <div className="container-page relative flex min-h-[340px] items-center py-7 sm:min-h-[370px] sm:py-9 lg:min-h-[390px]">
         <div className="min-w-0 max-w-[560px]">

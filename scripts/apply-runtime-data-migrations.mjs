@@ -17,6 +17,110 @@ function normalizeName(value) {
     .toLowerCase();
 }
 
+const EXTRA_DEFAULTS = {
+  fries: { ingredient: "Картофель фри", quantity: 50, price: 40 },
+  onion: { ingredient: "Лук жареный гранулированный", quantity: 15, price: 40 },
+  "cheese-stick": { ingredient: "Сырная палочка", quantity: 1, price: 40 },
+  jalapeno: { ingredient: "Халапеньо", quantity: 30, price: 40 },
+  cheddar: { ingredient: "Сыр Чеддер, ломтик", quantity: 1, price: 40 },
+  bbq: { ingredient: "Соус фирменный барбекю", quantity: 30, price: 40 },
+  garlic: { ingredient: "Соус чесночный", quantity: 30, price: 40 },
+  caesar: { ingredient: "Соус Цезарь", quantity: 30, price: 40 },
+  "cheese-sauce": { ingredient: "Соус сырный", quantity: 30, price: 40 },
+  mustard: { ingredient: "Соус медово-горчичный", quantity: 30, price: 40 },
+  patty: { ingredient: "Котлета говяжья", quantity: 110, price: 200 },
+  "chicken-patty": { ingredient: "Котлета куриная", quantity: 1, price: 150 },
+  shrimp: { ingredient: "Королевская креветка в панировке", quantity: 1, price: 50 },
+  beef: { ingredient: "Говядина запечённая", quantity: 90, price: 300 },
+  pork: { ingredient: "Свинина запечённая", quantity: 90, price: 140 },
+  chicken: { ingredient: "Курица запечённая", quantity: 90, price: 110 }
+};
+
+function extraKeysForProduct(name, category) {
+  const product = normalizeName(name);
+  const section = normalizeName(category);
+  const accepts = ["бургеры", "шаурма", "хот доги", "боксы", "боксфуд", "горячие закуски", "закуски"].includes(section);
+  if (!accepts) return [];
+  if (product.includes("кревет")) return ["shrimp", "caesar", "garlic"];
+  if (section.includes("хот дог") || product.includes("хот дог")) return ["cheddar", "onion", "cheese-sauce"];
+  if (section.includes("шаур") || product.includes("шаур")) {
+    const meat = product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";
+    return [meat, "cheese-stick", "garlic"];
+  }
+  if (section.includes("бургер") || product.includes("бургер") || product.includes("ролл") || product === "татарин") {
+    return [product.includes("чикен") ? "chicken-patty" : "patty", "cheese-stick", "jalapeno"];
+  }
+  if (section.includes("бокс")) {
+    const protein = product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";
+    return [protein, "cheese-stick", "garlic"];
+  }
+  if (product.includes("крыл")) return ["bbq", "garlic", "mustard"];
+  if (product.includes("нагг")) return ["cheese-sauce", "bbq", "garlic"];
+  return ["cheese-sauce", "bbq", "garlic"];
+}
+
+async function applyLogicalExtras(transaction) {
+  await transaction`select pg_advisory_xact_lock(hashtext('karimoff-logical-extras-v2'))`;
+  const products = await transaction`select id,name,category from public.products where is_active order by id`;
+  const configuredProducts = products.map(product => ({ ...product, keys: extraKeysForProduct(product.name, product.category) })).filter(product => product.keys.length);
+  const needed = new Set(configuredProducts.flatMap(product => product.keys));
+  if (needed.has("jalapeno")) {
+    await transaction`insert into public.ingredients(name,unit,cost_per_unit,waste_percent,is_active,sort_order)
+      select 'Халапеньо','g',0,0,true,365
+      where not exists(select 1 from public.ingredients where name='Халапеньо')`;
+  }
+  const ingredientNames = [...needed].map(key => EXTRA_DEFAULTS[key].ingredient);
+  const ingredients = await transaction`select id,name,unit from public.ingredients where is_active and name=any(${ingredientNames}::text[])`;
+  const ingredientByName = new Map(ingredients.map(ingredient => [ingredient.name, ingredient]));
+  const missing = ingredientNames.filter(name => !ingredientByName.has(name));
+  if (missing.length) throw new Error(`Ingredients for logical extras are missing: ${[...new Set(missing)].join(", ")}`);
+
+  await transaction`update public.product_modifier_groups set is_active=false,updated_at=now()
+    where name='Допы KARIMOFF' and product_id=any(${configuredProducts.map(product => product.id)}::uuid[])`;
+  await transaction`update public.product_ingredients set is_extra_available=false
+    where product_id=any(${configuredProducts.map(product => product.id)}::uuid[]) and is_extra_available`;
+
+  let configured = 0;
+  for (const product of configuredProducts) {
+    for (const [index, key] of product.keys.entries()) {
+      const spec = EXTRA_DEFAULTS[key];
+      const ingredient = ingredientByName.get(spec.ingredient);
+      const [existing] = await transaction`select id,extra_price from public.product_ingredients
+        where product_id=${product.id} and ingredient_id=${ingredient.id} order by sort_order,id limit 1`;
+      if (existing) {
+        await transaction`update public.product_ingredients set is_extra_available=true,extra_quantity=${spec.quantity},
+          extra_price=case when extra_price>0 then extra_price else ${spec.price} end,max_extra_quantity=3,sort_order=${900 + index * 10}
+          where id=${existing.id}`;
+      } else {
+        await transaction`insert into public.product_ingredients(product_id,ingredient_id,quantity,unit,sort_order,is_removable,
+          is_extra_available,extra_quantity,extra_price,max_extra_quantity)
+          values(${product.id},${ingredient.id},0,${ingredient.unit},${900 + index * 10},false,true,${spec.quantity},${spec.price},3)`;
+      }
+      configured += 1;
+    }
+  }
+  return { products: configuredProducts.length, configured };
+}
+
+async function settleStaleOrders(transaction) {
+  const rows = await transaction`
+    update public.orders order_row
+    set status=case when order_row.payment_status in ('paid','partially_refunded','not_required') then 'completed' else 'cancelled' end,
+      kitchen_status=case when order_row.payment_status in ('paid','partially_refunded','not_required') then 'handed_out' else 'cancelled' end,
+      is_operational=false,
+      handed_out_at=case when order_row.payment_status in ('paid','partially_refunded','not_required') then coalesce(order_row.handed_out_at,now()) else order_row.handed_out_at end,
+      cancelled_at=case when order_row.payment_status in ('paid','partially_refunded','not_required') then order_row.cancelled_at else coalesce(order_row.cancelled_at,now()) end,
+      updated_at=now()
+    from public.order_locations location
+    where location.id=order_row.location_id
+      and order_row.is_operational=true
+      and order_row.kitchen_status in ('new','accepted','cooking','ready')
+      and coalesce(order_row.requested_at,order_row.created_at) < (date_trunc('day',now() at time zone location.timezone) at time zone location.timezone)
+    returning order_row.id
+  `;
+  return rows.length;
+}
+
 function validateExplicitMappingRules() {
   const claimedNames = new Set();
   for (const rule of explicitMappingRules) {
@@ -545,8 +649,10 @@ try {
   });
 
   const confirmedMappings = await sql.begin(applyExplicitEvotorMappings);
+  const logicalExtras = await sql.begin(applyLogicalExtras);
+  const settledStaleOrders = await sql.begin(settleStaleOrders);
 
-  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings })}`);
+  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings, logicalExtras, settledStaleOrders })}`);
 } finally {
   await sql.end({ timeout: 2 });
 }

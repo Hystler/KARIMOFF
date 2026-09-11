@@ -4,6 +4,7 @@ import { Check, Circle, Clock3, RefreshCw, Wifi } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CustomerOrder, CustomerOrderStatus } from "@/lib/customer-orders";
+import { isStaleActiveOrder } from "@/lib/order-recency";
 import { RepeatOrderButton } from "./RepeatOrderButton";
 
 type OrderPresentation = {
@@ -50,6 +51,9 @@ function presentation(order: CustomerOrder): OrderPresentation {
   if (order.payment_status === "refunded") {
     return { label: "Возвращён", description: "Оплата по заказу возвращена.", tone: "muted" };
   }
+  if (isStaleActiveOrder(order)) {
+    return { label: "Архивный", description: "Заказ завершён и перенесён в историю.", tone: "muted" };
+  }
   if (order.kitchen_status === "handed_out") {
     return { label: "Выдан", description: "Заказ передан вам. Спасибо!", tone: "emerald" };
   }
@@ -70,7 +74,7 @@ function completedStep(order: CustomerOrder) {
 }
 
 function OrderProgress({ order }: { order: CustomerOrder }) {
-  if (!["paid", "partially_refunded"].includes(order.payment_status) || order.kitchen_status === "cancelled") {
+  if (isStaleActiveOrder(order) || !["paid", "partially_refunded"].includes(order.payment_status) || order.kitchen_status === "cancelled") {
     return null;
   }
   const active = completedStep(order);

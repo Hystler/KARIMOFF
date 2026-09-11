@@ -18,7 +18,8 @@ const output = join(root, "outputs/admin-ui-audit", runId);
 mkdirSync(output, { recursive: true });
 const modulePath = process.env.PLAYWRIGHT_MODULE_PATH;
 assert.ok(modulePath, "Set PLAYWRIGHT_MODULE_PATH to an installed Playwright module");
-const { chromium } = await import(pathToFileURL(resolve(modulePath)).href);
+const playwrightModule = await import(pathToFileURL(resolve(modulePath)).href);
+const { chromium } = playwrightModule.default ?? playwrightModule;
 const sql = postgres(dsn, { max: 1, connect_timeout: 5, onnotice() {} });
 const phone = `+7999${randomInt(1000000, 9999999)}`;
 const password = randomBytes(24).toString("base64url");
@@ -280,22 +281,49 @@ try {
         await goto("/admin/ingredients/extras");
         await page.getByRole("button", { name: /Добавить допы в каталог|Добавить к новым блюдам/ }).click();
         await page.waitForURL(/saved=/);
-        assert.equal(await page.locator("tbody tr").count(), 20);
+        assert.ok(await page.locator("tbody tr").count() >= 3);
         const row = page.locator("tbody tr").first();
         const ingredientId = await row.locator('[name="ingredient_id"]').inputValue();
-        const label = await row.locator('[name="label"]').inputValue();
         const price = Number(await row.locator('[name="price"]').inputValue()) + 1;
         await row.locator('[name="price"]').fill(String(price));
         await row.locator('button[type="submit"]').click();
         await page.waitForTimeout(700);
-        const updated = await sql`select distinct o.price_delta from product_modifier_options o join product_modifier_groups g on g.id=o.group_id where o.ingredient_id=${ingredientId} and o.label=${label} and g.name='Допы KARIMOFF'`;
+        const updated = await sql`select distinct extra_price from product_ingredients where ingredient_id=${ingredientId} and is_extra_available`;
         assert.ok(updated.length > 0);
-        assert.ok(updated.every(item => Number(item.price_delta) === price));
+        assert.ok(updated.every(item => Number(item.extra_price) === price));
         await goto("/admin/ingredients/extras");
         assert.equal(await page.locator("tbody tr").first().locator('[name="price"]').inputValue(), String(price));
       });
     }
     for (const [name, path] of selectedRoutes) await capture(name, path, viewport);
+    if (viewport === selectedViewports[0]) {
+      await action("admin dark theme survives a hard reload without a light transition", async () => {
+        await goto("/admin");
+        await page.evaluate(() => localStorage.setItem("karimoff_theme_preference_v2", "dark"));
+        await page.addInitScript(() => {
+          window.__karimoffThemeTransitions = [];
+          const record = () => window.__karimoffThemeTransitions.push(document.documentElement.dataset.theme ?? "unset");
+          record();
+          new MutationObserver(record).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+        });
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForLoadState("networkidle", { timeout: 4000 }).catch(() => {});
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+        const transitions = await page.evaluate(() => window.__karimoffThemeTransitions);
+        assert.equal(transitions.includes("light"), false, `Unexpected theme transitions: ${transitions.join(", ")}`);
+        for (const [name, path] of [["overview", "/admin"], ["economics", "/admin/economics"], ["analytics", "/admin/analytics"], ["notifications", "/admin/notifications"], ["pos", "/pos"]]) {
+          if (path !== "/admin") await goto(path);
+          assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark", `${path} lost the dark theme`);
+          assert.equal((await layout()).overflow, false, `${path} overflowed in the dark theme`);
+          const routeTransitions = await page.evaluate(() => window.__karimoffThemeTransitions);
+          assert.equal(routeTransitions.includes("light"), false, `${path} flashed light: ${routeTransitions.join(", ")}`);
+          await page.screenshot({ path: join(output, `${name}-dark-${viewport.label}.png`), fullPage: false, animations: "disabled" });
+        }
+        await goto("/admin");
+        await page.getByRole("button", { name: "Включить светлую тему" }).first().click();
+        assert.equal(await page.evaluate(() => localStorage.getItem("karimoff_theme_preference_v2")), "light");
+      });
+    }
     if (!process.env.AUDIT_ROUTE_FILTER) {
     await action(`filled production screenshots ${viewport.label}`, async () => {
       await goto("/admin/production/new");

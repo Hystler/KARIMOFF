@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ActualManagementResultCalculator } from "@/components/admin/ActualManagementResult";
 import { EconomicsCalculator } from "@/components/admin/EconomicsCalculator";
@@ -13,7 +12,6 @@ import { formatPercent, formatRub } from "@/lib/format";
 import { getProductsFoodCosts } from "@/lib/ingredients";
 import { getInventoryStockValue } from "@/lib/inventory";
 import { getAdminProducts } from "@/lib/products";
-import { logoutAction } from "../login/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -94,23 +92,14 @@ export default async function AdminEconomicsPage({ searchParams }: PageProps) {
   });
 
   return (
-    <main className="admin-page">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="admin-content economics-page">
+      <div>
+        <header className="admin-heading">
           <div>
-            <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-              Админка
-            </Link>
-            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Экономика точки</h1>
+            <p className="admin-eyebrow">Финансы</p>
+            <h1>Экономика точки</h1>
+            <p>Фактический результат, план и юнит-экономика меню.</p>
           </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
-            >
-              Выйти
-            </button>
-          </form>
         </header>
 
         {economicsResult.error ? (
@@ -145,7 +134,7 @@ export default async function AdminEconomicsPage({ searchParams }: PageProps) {
 
         <EconomicsCalculator initialValues={economicsResult.settings} />
 
-        <section className="mt-8 rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
+        <section className="admin-card economics-highlight mt-8 p-5">
           <p className="text-sm font-semibold text-karimoff-orange">Склад</p>
           <h2 className="mt-2 text-3xl font-black">Складская стоимость остатков</h2>
           {inventoryStock.error ? (
@@ -158,7 +147,7 @@ export default async function AdminEconomicsPage({ searchParams }: PageProps) {
           </p>
         </section>
 
-        <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
+        <section className="admin-card economics-unit mt-8 overflow-hidden">
           <div className="border-b border-karimoff-line p-5">
             <p className="text-sm font-semibold text-karimoff-orange">Себестоимость</p>
             <h2 className="mt-2 text-3xl font-black">Юнит-экономика товаров</h2>

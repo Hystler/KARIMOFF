@@ -19,6 +19,7 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { getMoscowDateKey, ORDER_TIME_ZONE } from "@/lib/order-time";
+import { isStaleActiveOrder } from "@/lib/order-recency";
 
 const cards = [
   { title: "Кухня", description: "Живая очередь и отметка готовности", href: "/admin/kitchen", icon: ChefHat },
@@ -47,7 +48,7 @@ export default async function AdminPage() {
     ? null
     : locations.map((location) => location.id);
   const { orders, error, notConfigured } = await getAdminOrders(locationIds);
-  const activeOrders = orders.filter((order) => order.is_operational && !["handed_out", "cancelled"].includes(order.kitchen_status))
+  const activeOrders = orders.filter((order) => order.is_operational && !isStaleActiveOrder(order) && !["handed_out", "cancelled"].includes(order.kitchen_status))
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const newCount = activeOrders.filter((order) => ["new", "accepted"].includes(order.kitchen_status)).length;
   const inProgressCount = activeOrders.filter((order) => order.kitchen_status === "cooking").length;

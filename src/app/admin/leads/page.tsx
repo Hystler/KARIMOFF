@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { createDatabaseServerClient, type LeadRow } from "@/lib/database/server";
-import { logoutAction } from "../login/actions";
 import { deleteLeadAction } from "./actions";
 
 const interestLabels: Record<LeadRow["interest"], string> = {
@@ -90,23 +88,14 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
   const { leads, notConfigured, error } = await getLeads();
 
   return (
-    <main className="admin-page">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="admin-content leads-page">
+      <div>
+        <header className="admin-heading">
           <div>
-            <Link href="/admin" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-              Админка
-            </Link>
-            <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Заявки</h1>
+            <p className="admin-eyebrow">Обращения</p>
+            <h1>Заявки</h1>
+            <p>Контакты по заказам, работе, сотрудничеству и франшизе.</p>
           </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
-            >
-              Выйти
-            </button>
-          </form>
         </header>
 
         {message ? (
@@ -121,7 +110,7 @@ export default async function AdminLeadsPage({ searchParams }: AdminLeadsPagePro
           </div>
         ) : null}
 
-        <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
+        <section className="admin-card mt-5 overflow-hidden border-t-[3px] !border-t-sky-600">
           {notConfigured ? (
             <div className="p-8 text-karimoff-muted">База данных не подключена. Заполните переменные окружения.</div>
           ) : error ? (

@@ -24,6 +24,8 @@ test("cart auth navigation closes the drawer and checkout loading always recover
 test("public theme follows the device until the guest makes a manual choice", () => {
   const provider = read("src/components/theme/ThemeProvider.tsx");
   const layout = read("src/app/layout.tsx");
+  const chrome = read("src/components/SiteChrome.tsx");
+  const adminShell = read("src/components/admin/AdminWorkspaceShell.tsx");
 
   assert.match(provider, /karimoff_theme_preference_v2/);
   assert.match(provider, /prefers-color-scheme: dark/);
@@ -32,6 +34,9 @@ test("public theme follows the device until the guest makes a manual choice", ()
   assert.match(layout, /karimoff_theme_preference_v2/);
   assert.match(layout, /suppressHydrationWarning/);
   assert.match(layout, /document\.documentElement\.dataset\.theme = theme/);
+  assert.doesNotMatch(chrome, /forceTheme=/);
+  assert.match(adminShell, /useTheme\(\)/);
+  assert.match(adminShell, /onClick=\{toggleTheme\}/);
 });
 
 test("every imported menu item has concise guest copy separated from composition", () => {
@@ -118,4 +123,9 @@ test("public actions share premium accessible states without touching provider b
   assert.match(checkout, /public-button-primary/);
   assert.match(telegram, /bg-\[#229ED9\]/);
   assert.match(max, /bg-\[#471AFF\]/);
+});
+
+test("the public hero keeps its orange boundary in both themes", () => {
+  const hero = read("src/components/Hero.tsx");
+  assert.match(hero, /h-1 bg-karimoff-orange/);
 });

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pencil, Plus, Save } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Save } from "lucide-react";
 import { IngredientNutritionSource, IngredientNutritionValues } from "@/components/admin/IngredientNutritionDisplay";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { listExtrasCatalog } from "@/lib/extras-service";
@@ -23,15 +23,16 @@ export default async function ExtrasPage({ searchParams }: { searchParams: Promi
   const { ingredients, error: ingredientError, notConfigured } = await getAdminIngredients();
   const ingredientsById = new Map(ingredients.map(ingredient => [ingredient.id, ingredient]));
 
-  return <main className="admin-page">
-    <div className="mx-auto w-full max-w-[1480px]">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+  return <main className="admin-content admin-content-wide">
+    <div>
+      <header className="admin-heading">
         <div>
-          <Link href="/admin" className="text-sm font-semibold text-karimoff-muted hover:text-karimoff-orange">Админка</Link>
-          <h1 className="mt-1 text-2xl font-bold leading-tight">Допы к блюдам</h1>
+          <p className="admin-eyebrow">Меню и состав</p>
+          <h1>Допы к блюдам</h1>
+          <p>Три уместных варианта для каждого блюда, порция и пищевая ценность.</p>
         </div>
         <form action={installExtrasAction}>
-          <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-karimoff-black px-3 py-2 text-sm font-bold text-white hover:bg-black/80" type="submit">
+          <button className="admin-primary-button" type="submit">
             <Plus size={16} aria-hidden="true" />
             {extras.length ? "Добавить к новым блюдам" : "Добавить допы в каталог"}
           </button>
@@ -44,7 +45,13 @@ export default async function ExtrasPage({ searchParams }: { searchParams: Promi
         КБЖУ ингредиентов недоступны: {ingredientError ?? "база данных не подключена"}.
       </p> : null}
 
-      <section className="mt-5 border-y border-karimoff-line bg-white">
+      <section className="admin-metrics mt-5" aria-label="Сводка допов">
+        <article><span>Доступных допов</span><strong>{extras.length}</strong></article>
+        <article><span>Связей с блюдами</span><strong>{extras.reduce((sum, extra) => sum + extra.product_count, 0)}</strong></article>
+        <article><span>Максимум на блюдо</span><strong>3</strong></article>
+      </section>
+
+      <section className="admin-card mt-5 overflow-hidden">
         {!extras.length ? <p className="p-8 text-karimoff-muted">Допы ещё не добавлены.</p> : (
           <div className="relative overflow-x-auto" role="region" aria-label="Список допов" tabIndex={0}>
             <table className="admin-table min-w-[1080px] table-fixed [&_td]:!px-2 [&_td]:!py-2 [&_th]:!px-2 [&_th]:!py-2">
@@ -79,8 +86,8 @@ export default async function ExtrasPage({ searchParams }: { searchParams: Promi
                     <td className="break-words">
                       <p className="font-semibold">{extra.label}</p>
                       <IngredientNutritionSource display={nutrition} />
-                      {extra.note ? <details className="mt-1 text-xs leading-5 text-amber-800">
-                        <summary className="cursor-pointer font-semibold">Порция требует сверки</summary>
+                      {extra.note ? <details className="group mt-1 text-xs leading-5 text-amber-800">
+                        <summary className="flex cursor-pointer items-center gap-1 font-semibold">Порция требует сверки<ChevronDown size={14} className="transition-transform group-open:rotate-180" /></summary>
                         <p>{extra.note}</p>
                       </details> : null}
                     </td>

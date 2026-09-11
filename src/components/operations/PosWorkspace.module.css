@@ -2,15 +2,22 @@
 .workspace :is(h1, h2, p, button, label) { overflow-wrap: anywhere; letter-spacing: 0; }
 .catalog {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
   gap: 10px;
   margin-top: 12px;
   align-items: stretch;
 }
+.catalogCard {
+  border-top: 3px solid #fb670a;
+  box-shadow: 0 5px 16px rgba(18, 18, 20, 0.07);
+}
+.catalogCard:hover { box-shadow: 0 12px 26px rgba(18, 18, 20, 0.13); }
+.catalogMedia { border-bottom: 1px solid var(--admin-border, rgba(18, 18, 20, 0.1)); }
+.catalogBody { background: var(--admin-surface, #fff); }
 .checkout { min-width: 0; }
 
 @media (min-width: 1024px) {
-  .layout { grid-template-columns: minmax(0, 1fr) 340px; }
+  .layout { grid-template-columns: minmax(0, 1fr) 360px; }
   .checkout {
     position: sticky;
     top: 56px;

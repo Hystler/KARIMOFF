@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
+import { CalendarDays, ChevronDown, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { channelLabels } from "@/lib/analytics/channels";
@@ -152,11 +152,12 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
           </div>
         ) : null}
 
-        <details className="analytics-more-filters" ref={filtersRef}>
+        <details className="analytics-more-filters group" ref={filtersRef}>
           <summary>
             <Filter size={17} />
             Фильтры
             {hasDetailedFilters ? <span className="analytics-filter-dot" /> : null}
+            <ChevronDown size={15} className="ml-auto transition-transform group-open:rotate-180" />
           </summary>
           <div className="analytics-filter-popover">
             <div className="analytics-filter-sheet-heading">

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { loadTypeScript } from "./helpers/load-typescript.mjs";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -110,4 +111,13 @@ test("My Orders is authenticated, live, provider-aware, and uses Moscow business
   assert.match(profile, /Оплаченных заказов/);
   assert.match(profile, /CustomerOrdersLive initialOrders=\{orders\} preview/);
   assert.match(header, /href="\/profile\/orders"/);
+});
+
+test("active orders from a previous Moscow day move out of live queues", () => {
+  const { isStaleActiveOrder } = loadTypeScript("src/lib/order-recency.ts");
+  const now = new Date("2026-09-11T00:30:00.000Z");
+
+  assert.equal(isStaleActiveOrder({ created_at: "2026-09-10T20:30:00.000Z", kitchen_status: "cooking" }, now), true);
+  assert.equal(isStaleActiveOrder({ created_at: "2026-09-10T21:30:00.000Z", kitchen_status: "accepted" }, now), false);
+  assert.equal(isStaleActiveOrder({ created_at: "2026-09-10T20:30:00.000Z", kitchen_status: "handed_out" }, now), false);
 });

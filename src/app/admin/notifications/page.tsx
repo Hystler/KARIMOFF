@@ -28,7 +28,7 @@ export default async function NotificationsPage({ searchParams }: {
       : params.result === "unavailable" ? "Не удалось подтвердить повтор. Обновите данные перед следующим действием." : null;
 
   return (
-    <main className="admin-content admin-content-wide min-w-0">
+    <main className="admin-content admin-content-wide min-w-0 notifications-page">
       <header className="admin-heading flex-wrap gap-4">
         <div className="min-w-0">
           <Link href="/admin" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-karimoff-muted"><ArrowLeft size={16} /> Администрирование</Link>
@@ -42,7 +42,7 @@ export default async function NotificationsPage({ searchParams }: {
       </header>
 
       {resultLabel ? <p role="status" className={`admin-alert ${params.result === "queued" ? "admin-alert-success" : "admin-alert-error"}`}>{resultLabel}</p> : null}
-      <section className="border-y border-karimoff-line py-5">
+      <section className="admin-toned-section" data-accent="orange">
         <h2 className="flex items-center gap-2 text-lg font-bold"><Activity size={20} /> Состояние доставки</h2>
         <dl className="mt-4 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div><dt className="text-karimoff-muted">Отправка</dt><dd className="mt-1 font-bold">{configuration.maintenance ? "Пауза обслуживания" : enabled ? "Включена" : "Выключена"}</dd></div>
@@ -55,7 +55,7 @@ export default async function NotificationsPage({ searchParams }: {
         {old > 0 ? <p className="mt-3 text-sm text-red-700">В очереди есть старые события. До включения доставки нужна проверка накопленных записей.</p> : null}
       </section>
 
-      <section className="border-b border-karimoff-line py-5">
+      <section className="admin-toned-section" data-accent="emerald">
         <h2 className="text-lg font-bold">Конфигурация</h2>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
           {[["Telegram: токен задан", configuration.telegramConfigured], ["MAX: токен задан", configuration.maxConfigured], ["HTTPS-адрес кабинета корректен", configuration.appOriginValid]].map(([label, configured]) => (
@@ -72,7 +72,7 @@ export default async function NotificationsPage({ searchParams }: {
           : "Очередь недоступна. Счётчики и статусы не получены."}</p>
       ) : (
         <>
-          <section className="border-b border-karimoff-line py-5">
+          <section className="admin-toned-section" data-accent="blue">
             <h2 className="text-lg font-bold">Очередь за всё время</h2>
             <div className="mt-3 overflow-x-auto">
               <table className="admin-table min-w-[640px]">
@@ -87,7 +87,7 @@ export default async function NotificationsPage({ searchParams }: {
               {["telegram", "max"].map((provider) => <p key={provider}>{provider === "telegram" ? "Telegram" : "MAX"}: последнее принятие {dateLabel(counts.find((row) => row.provider === provider && row.status === "sent")?.last_sent_at ?? null)}</p>)}
             </div>
           </section>
-          <section className="border-b border-karimoff-line py-5">
+          <section className="admin-toned-section" data-accent="violet">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-lg font-bold">Последние 50 записей</h2>
               <nav aria-label="Фильтр доставок" className="flex gap-4 text-sm">
@@ -115,7 +115,7 @@ export default async function NotificationsPage({ searchParams }: {
         </>
       )}
 
-      <section className="py-5">
+      <section className="admin-toned-section" data-accent="amber">
         <h2 className="flex items-center gap-2 text-lg font-bold"><ShieldCheck size={20} /> Предложения и рассылки</h2>
         <p className="mt-3 text-sm font-bold">Не активированы</p>
         <ul className="mt-3 grid gap-2 text-sm text-karimoff-muted">

@@ -48,6 +48,9 @@ test("listing and detail keep quick add, quantity, and server-authoritative modi
   const schema = read("src/lib/order-schema.ts");
   assert.match(card, /href=\{href\}/);
   assert.match(listingAdd, /addItem\(product, customization\)/);
+  assert.match(listingAdd, /option\.is_removable \|\| option\.is_extra_available/);
+  assert.match(listingAdd, /router\.push\(`\/menu\/\$\{encodeURIComponent\(product\.slug\)\}`\)/);
+  assert.match(listingAdd, /needsConfiguration \? "Настроить"/);
   assert.match(detail, /addItem\(product, customization, quantity\)/);
   assert.match(detail, /modifierOptionIds/);
   assert.match(detail, /Убрать из состава/);

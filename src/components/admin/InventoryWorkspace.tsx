@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownToLine, ArrowUpFromLine, History, Plus, SlidersHorizontal } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, History, Plus, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { OperationsSubmitButton } from "./OperationsSubmitButton";
@@ -53,8 +53,8 @@ export function InventoryWorkspace({ cards, receiptAction, writeOffAction, corre
 
   return (
     <>
-      <details ref={disclosure} className={`${styles.disclosure} ${styles.section}`}>
-        <summary><SlidersHorizontal size={16} />Складская операция</summary>
+      <details ref={disclosure} className={`${styles.disclosure} ${styles.section} group`}>
+        <summary><SlidersHorizontal size={16} />Складская операция<ChevronDown size={16} className="ml-auto transition-transform group-open:rotate-180" /></summary>
         <div className={styles.disclosureBody}>
           <div className={styles.modeSwitch} role="group" aria-label="Тип складской операции">
             {operations.map((item) => <button key={item.id} type="button" aria-pressed={operation === item.id} aria-controls={item.id} onClick={() => setOperation(item.id)}>{item.label}</button>)}

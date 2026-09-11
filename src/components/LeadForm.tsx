@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createLeadAction } from "@/app/actions/leads";
 import { PhoneInput } from "@/components/forms/PhoneInput";
@@ -106,16 +107,16 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               ))}
             </select>
           </label>
-          <div className="grid gap-3 rounded-lg border border-karimoff-line bg-karimoff-cream/70 p-4 text-sm">
-            <label className="flex items-start gap-3">
+          <div className="grid gap-2 border-t border-karimoff-line pt-3 text-xs">
+            <label className="flex items-start gap-2.5">
               <input
                 type="checkbox"
                 name="personal_data_consent"
                 required
-                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange"
               />
-              <span className="leading-6 text-karimoff-muted">
-                Я даю согласие на обработку персональных данных для{" "}
+              <span className="leading-5 text-karimoff-muted">
+                Согласие на обработку данных для{" "}
                 {selectedInterest === "career"
                   ? "рассмотрения отклика на вакансию"
                   : selectedInterest === "franchise"
@@ -137,19 +138,16 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
                 </Link>
               </span>
             </label>
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                name="marketing_consent"
-                className="mt-0.5 h-5 w-5 shrink-0 accent-karimoff-orange"
-              />
-              <span className="leading-6 text-karimoff-muted">
-                Хочу получать акции и предложения KARIMOFF.{" "}
-                <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">
-                  Условия
-                </Link>
-              </span>
-            </label>
+            <details className="group">
+              <summary className="flex min-h-8 cursor-pointer items-center gap-2 font-bold text-karimoff-muted">
+                Получать акции KARIMOFF
+                <ChevronDown size={15} className="transition-transform group-open:rotate-180" />
+              </summary>
+              <label className="flex items-start gap-2.5 pb-1 pl-1">
+                <input type="checkbox" name="marketing_consent" className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange" />
+                <span className="leading-5 text-karimoff-muted">Согласен получать акции и предложения. <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">Условия</Link></span>
+              </label>
+            </details>
           </div>
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-karimoff-muted">Комментарий</span>

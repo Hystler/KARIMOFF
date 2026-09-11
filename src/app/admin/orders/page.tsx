@@ -6,6 +6,7 @@ import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
 import { kitchenStatusLabel, orderSourceLabel, type KitchenStatus } from "@/lib/order-flow/types";
+import { isStaleActiveOrder } from "@/lib/order-recency";
 import { checkYooKassaPaymentStatusAction, updateOrderStatusAction } from "./actions";
 
 const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
@@ -84,7 +85,7 @@ export default async function AdminOrdersPage({
   const { orders, notConfigured, error } = await getAdminOrders(locationIds);
   const history = params.view === "history";
   const visibleOrders = orders.filter((order) => {
-    const archived = !order.is_operational || ["handed_out", "cancelled"].includes(order.kitchen_status);
+    const archived = !order.is_operational || isStaleActiveOrder(order) || ["handed_out", "cancelled"].includes(order.kitchen_status);
     return history ? archived : !archived;
   });
 

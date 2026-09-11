@@ -15,6 +15,9 @@ export function ProductCustomizer({ product }: { product: Product }) {
   const { addItem } = useCart();
   const router = useRouter();
   const [isAdded, setIsAdded] = useState(false);
+  const needsConfiguration = Boolean(getPortionGroup(product)) ||
+    Boolean(product.modifier_options?.some((option) => option.is_removable || option.is_extra_available)) ||
+    Boolean(product.modifier_groups?.length);
 
   useEffect(() => {
     if (!isAdded) return undefined;
@@ -27,7 +30,7 @@ export function ProductCustomizer({ product }: { product: Product }) {
       type="button"
       onClick={() => {
         const customization = getDefaultCartCustomization(product);
-        if (getPortionGroup(product) || !isCartCustomizationValid(product, customization)) {
+        if (needsConfiguration || !isCartCustomizationValid(product, customization)) {
           router.push(`/menu/${encodeURIComponent(product.slug)}`);
           return;
         }
@@ -38,7 +41,7 @@ export function ProductCustomizer({ product }: { product: Product }) {
       aria-live="polite"
     >
       {isAdded ? <Check aria-hidden size={18} strokeWidth={2.8} /> : <ShoppingBasket aria-hidden size={18} strokeWidth={2.4} />}
-      <span>{isAdded ? "Добавлено" : getPortionGroup(product) ? "Выбрать порцию" : "В корзину"}</span>
+      <span>{isAdded ? "Добавлено" : getPortionGroup(product) ? "Выбрать порцию" : needsConfiguration ? "Настроить" : "В корзину"}</span>
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import styles from "./PosWorkspace.module.css";
 import {
   CheckCircle2,
+  ChevronDown,
   ChefHat,
   CirclePlus,
   Minus,
@@ -210,13 +211,13 @@ export function PosWorkspace({
                 const quantity = cart.filter((line) => line.product.id === product.id).reduce((sum, line) => sum + line.quantity, 0);
                 const customizable = isCustomizable(product);
                 return (
-                  <article key={product.id} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition hover:border-[#FB670A]/60 hover:shadow-lg">
-                    <button type="button" onClick={() => setCustomizer({ product, line: null })} className="relative aspect-[2/1] w-full overflow-hidden bg-[#F7F8F9] p-2 text-left active:scale-[0.99]" aria-label={`Настроить ${product.name}`}>
+                  <article key={product.id} className={`${styles.catalogCard} group flex min-w-0 flex-col overflow-hidden rounded-lg border border-black/10 bg-white transition hover:border-[#FB670A]/60`}>
+                    <button type="button" onClick={() => setCustomizer({ product, line: null })} className={`${styles.catalogMedia} relative aspect-[2/1] w-full overflow-hidden bg-[#F7F8F9] p-2 text-left active:scale-[0.99]`} aria-label={`Настроить ${product.name}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={productImage(product)} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
                       {quantity ? <span className="absolute right-2 top-2 grid h-9 min-w-9 place-items-center rounded-full bg-[#FB670A] px-2 text-sm font-black text-white shadow-lg">{quantity}</span> : null}
                     </button>
-                    <div className="flex flex-1 flex-col p-2.5">
+                    <div className={`${styles.catalogBody} flex flex-1 flex-col p-2.5`}>
                       <button type="button" onClick={() => setCustomizer({ product, line: null })} className="text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FB670A]/15">
                         <h2 className="min-h-10 text-sm font-bold leading-5">{product.name}</h2>
                         <p className="mt-1 text-base font-black tabular-nums text-[#D95405]">{formatRub(product.price)} ₽</p>
@@ -284,8 +285,8 @@ export function PosWorkspace({
                 <span className="mb-1.5 flex items-center gap-2 text-xs font-black text-black/60"><UserRound size={15} /> Имя для выдачи</span>
                 <input name="customer_name" value={customerName} onChange={(event) => setCustomerName(event.target.value.slice(0, 40))} onFocus={(event) => { if (event.currentTarget.value === "Гость") event.currentTarget.select(); }} maxLength={40} autoComplete="off" inputMode="text" className="min-h-12 w-full rounded-lg border border-black/10 px-4 text-base font-bold outline-none focus:border-[#FB670A] focus:ring-4 focus:ring-[#FB670A]/10" />
               </label>
-              <details className="rounded-lg border border-black/10 bg-[#FAF9F7] px-3 py-2">
-                <summary className="cursor-pointer text-sm font-black text-black/60">Комментарий ко всему заказу</summary>
+              <details className="group rounded-lg border border-black/10 bg-[#FAF9F7] px-3 py-2">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-black text-black/60">Комментарий ко всему заказу<ChevronDown size={17} className="shrink-0 transition-transform group-open:rotate-180" /></summary>
                 <textarea name="comment" maxLength={500} rows={2} placeholder="Пожелание гостя" className="mt-2 w-full resize-none rounded-lg border border-black/10 bg-white px-4 py-3 text-base outline-none focus:border-[#FB670A] focus:ring-4 focus:ring-[#FB670A]/10" />
               </details>
               {locations.length > 1 ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Точка</span><select name="location_id" defaultValue={initialLocationId} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold outline-none focus:border-[#FB670A]">{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label> : <input type="hidden" name="location_id" value={initialLocationId} />}

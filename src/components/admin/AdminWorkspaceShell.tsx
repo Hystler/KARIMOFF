@@ -13,12 +13,14 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   PackageOpen,
   ListPlus,
   Plug,
   Settings,
   ShoppingBag,
   SquareTerminal,
+  Sun,
   Users,
   UtensilsCrossed,
   WalletCards,
@@ -28,6 +30,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/login/actions";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import type { CurrentStaff } from "@/lib/admin-auth";
 
 const navigation = [
@@ -63,6 +66,7 @@ const roleLabels = {
 
 export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const items = navigation.filter((item) => (item.roles as readonly string[]).includes(staff.role));
   const activeHref = items.filter(({ href }) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`)))
@@ -96,6 +100,10 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
             <p className="truncate text-sm font-bold text-white">{staff.name}</p>
             <p className="mt-1 text-xs text-white/55">{roleLabels[staff.role]}</p>
           </div>
+          <button type="button" className="admin-theme-toggle" onClick={toggleTheme} aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}>
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</span>
+          </button>
           <form action={logoutAction} className="mt-3">
             <button type="submit" className="admin-logout">
               <LogOut size={18} />
@@ -114,6 +122,9 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
             <p className="truncate text-sm font-black">{staff.name}</p>
             <p className="text-xs text-karimoff-muted">{roleLabels[staff.role]}</p>
           </div>
+          <button type="button" className="admin-mobile-theme" onClick={toggleTheme} aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}>
+            {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
         </header>
         {children}
       </div>

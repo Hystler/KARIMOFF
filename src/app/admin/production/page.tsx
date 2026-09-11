@@ -1,4 +1,4 @@
-import { CircleAlert, Pencil, Plus, Trash2, WalletCards } from "lucide-react";
+import { ChevronDown, CircleAlert, Pencil, Plus, Trash2, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProductionRunForm } from "@/components/admin/ProductionRunForm";
@@ -102,8 +102,8 @@ export default async function ProductionPage({ searchParams }: PageProps) {
 
       <section className={styles.section} aria-labelledby="production-overhead-heading">
         <div className={styles.sectionHeading}><h2 id="production-overhead-heading">Ежемесячная база</h2><span className={styles.muted}>{formatRub(workspace.monthlyOverhead)} / месяц</span></div>
-        <details className={styles.disclosure}>
-          <summary><WalletCards size={16} />Новый ежемесячный расход</summary>
+        <details className={`${styles.disclosure} group`}>
+          <summary><WalletCards size={16} />Новый ежемесячный расход<ChevronDown size={16} className="ml-auto transition-transform group-open:rotate-180" /></summary>
           <div className={styles.disclosureBody}><OverheadForm /></div>
         </details>
         {workspace.overheads.length ? (

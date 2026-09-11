@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { redirect } from "next/navigation";
 import { KitchenWorkspace } from "@/components/operations/KitchenWorkspace";
 import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
@@ -47,8 +48,8 @@ export default async function KitchenPage({
       {params.saved ? <div className="admin-alert admin-alert-success">Настройки кухни сохранены.</div> : null}
       {params.error ? <div className="admin-alert admin-alert-error">{params.error}</div> : null}
       {staff.legacy || ["owner", "admin", "manager"].includes(staff.role) ? (
-        <details className="admin-card mb-6 p-5 sm:p-6">
-          <summary className="cursor-pointer list-none font-black">Настройки SLA и допуска заказов</summary>
+        <details className="admin-card group mb-6 p-5 sm:p-6">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-black">Настройки SLA и допуска заказов<ChevronDown size={18} className="transition-transform group-open:rotate-180" /></summary>
           <form action={saveKitchenSlaAction} className="mt-5 grid gap-4 md:grid-cols-3">
             <input type="hidden" name="location_id" value={location.id} />
             <label className="admin-field">Предупреждение, мин<input name="warning_minutes" type="number" min="1" max="120" defaultValue={Math.round(sla.warningSeconds / 60)} required /></label>
