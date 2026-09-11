@@ -43,3 +43,17 @@ test("Timeweb keeps standalone output while Vercel uses its native build adapter
 
   assert.match(config, /output: process\.env\.VERCEL \? undefined : "standalone"/);
 });
+
+test("every startup migration is included in the Timeweb runtime image", () => {
+  const runner = readFileSync("scripts/apply-runtime-schema-migrations.mjs", "utf8");
+  const dockerfile = readFileSync("Dockerfile", "utf8");
+  const allowedFiles = new Set(readFileSync(".dockerignore", "utf8").split(/\r?\n/));
+  const names = [...runner.matchAll(/name:\s*"(\d{14}_[a-z0-9_]+)"/g)].map(match => match[1]);
+  assert.ok(names.length > 0);
+  for (const name of names) {
+    const file = `supabase/migrations/${name}.sql`;
+    assert.ok(readFileSync(file, "utf8").trim(), file);
+    assert.ok(allowedFiles.has(`!${file}`), `Docker build context excludes ${file}`);
+    assert.ok(dockerfile.includes(`COPY --from=builder --chown=nextjs:nodejs /app/${file} ./${file}`), `Runtime image omits ${file}`);
+  }
+});
