@@ -38,7 +38,7 @@ export function extraKeysForProduct(name: string, category: string): string[] {
   const section = normalize(category);
 
   if (!acceptsExtras(category)) return [];
-  if (product.includes("кревет")) return ["shrimp", "caesar", "garlic"];
+  if (product.includes("кревет") || product === "себастиан") return ["shrimp", "caesar", "garlic"];
   if (section.includes("хот дог") || product.includes("хот дог")) return ["cheddar", "onion", "cheese-sauce"];
 
   if (section.includes("шаур") || product.includes("шаур")) {

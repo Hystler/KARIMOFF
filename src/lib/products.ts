@@ -383,6 +383,7 @@ export async function getPublicProductComposition(productId: string): Promise<Pr
     .from("product_ingredients")
     .select("ingredient_id, quantity, unit, sort_order")
     .eq("product_id", productId)
+    .gt("quantity", 0)
     .order("sort_order", { ascending: true });
 
   if (error || !lines?.length) {

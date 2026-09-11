@@ -26,6 +26,7 @@ test("product details use stable active slugs and expose complete SEO metadata",
   assert.match(page, /openGraph:/);
   assert.match(page, /"@type": "Product"/);
   assert.match(page, /getPublicProductComposition/);
+  assert.match(products, /\.gt\("quantity", 0\)/);
   assert.doesNotMatch(page, /food_cost|cost_per_unit|line_cost/);
 });
 

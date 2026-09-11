@@ -41,7 +41,7 @@ function extraKeysForProduct(name, category) {
   const section = normalizeName(category);
   const accepts = ["бургеры", "шаурма", "хот доги", "боксы", "боксфуд", "горячие закуски", "закуски"].includes(section);
   if (!accepts) return [];
-  if (product.includes("кревет")) return ["shrimp", "caesar", "garlic"];
+  if (product.includes("кревет") || product === "себастиан") return ["shrimp", "caesar", "garlic"];
   if (section.includes("хот дог") || product.includes("хот дог")) return ["cheddar", "onion", "cheese-sauce"];
   if (section.includes("шаур") || product.includes("шаур")) {
     const meat = product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";

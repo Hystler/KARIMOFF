@@ -27,6 +27,7 @@ test('every food type exposes three logical extras and shrimp never receives jal
   assert.deepEqual(catalog.extraKeysForProduct('Чикенбургер','Бургеры'),['chicken-patty','cheese-stick','jalapeno']);
   assert.deepEqual(catalog.extraKeysForProduct('Шаурма с говядиной','Шаурма'),['beef','cheese-stick','garlic']);
   assert.deepEqual(catalog.extraKeysForProduct('Хот-дог Итали','Хот-Доги'),['cheddar','onion','cheese-sauce']);
+  assert.deepEqual(catalog.extraKeysForProduct('Себастиан','Бургеры'),['shrimp','caesar','garlic']);
   const shrimp=catalog.extraKeysForProduct('Шаурма с королевской креветкой','Шаурма');
   assert.deepEqual(shrimp,['shrimp','caesar','garlic']);
   assert.equal(shrimp.includes('jalapeno'),false);
