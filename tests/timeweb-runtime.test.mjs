@@ -37,3 +37,9 @@ test("database and object storage are server-only Timeweb adapters", () => {
   assert.match(storage, /uploadS3Object/);
   assert.doesNotMatch(storage, /\.storage\.from/);
 });
+
+test("Timeweb keeps standalone output while Vercel uses its native build adapter", () => {
+  const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+
+  assert.match(config, /output: process\.env\.VERCEL \? undefined : "standalone"/);
+});

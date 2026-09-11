@@ -58,7 +58,7 @@ const maxMiniAppContentSecurityPolicy = buildContentSecurityPolicy({ maxMiniApp:
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   experimental: {
     serverActions: {
       bodySizeLimit: "6mb"
