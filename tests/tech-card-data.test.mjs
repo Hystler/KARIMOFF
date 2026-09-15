@@ -196,9 +196,9 @@ test("all ingredients used by active menu products have complete nutrition refer
 test("new owner products are active and priced at 30 percent food cost rounded to tens", () => {
   const expectedPrices = new Map([
     ["chickenburger", 390],
-    ["chicken-roll", 330],
-    ["beef-roll", 410],
-    ["mini-shaurma", 200],
+    ["chicken-roll", 320],
+    ["beef-roll", 400],
+    ["mini-shaurma", 210],
     ["tatarin", 1110]
   ]);
   const ingredients = new Map(data.ingredients.map((ingredient) => [ingredient.key, ingredient]));

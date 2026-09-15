@@ -51,6 +51,7 @@ export type ProductCompositionItem = {
   sort_order: number;
   quantity: number;
   unit: "g" | "ml" | "pcs";
+  is_extra_available?: boolean;
   nutrition_basis_quantity: number;
   calories_kcal: number | null;
   proteins_g: number | null;

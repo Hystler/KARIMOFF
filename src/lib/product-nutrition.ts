@@ -23,8 +23,9 @@ function nutritionItems(values: {
 }
 
 export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
+  const recipeLines = lines.filter((line) => !(line.is_extra_available === true && line.quantity === 0));
   const sources = new Map<string, { ingredient: string; name: string; url: string; estimated: boolean }>();
-  lines = lines.map(line => {
+  const normalizedLines = recipeLines.map(line => {
     const reference = line.nutrition_basis_quantity > 0 ? getIngredientNutritionReference(line) : undefined;
     if (reference) sources.set(line.ingredient_id, {
       ingredient: line.name,
@@ -35,7 +36,7 @@ export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
     return reference ? { ...line, nutrition_basis_quantity: reference.nutrition_basis_quantity, calories_kcal: reference.calories_kcal,
       proteins_g: reference.proteins_g, fats_g: reference.fats_g, carbohydrates_g: reference.carbohydrates_g } : line;
   });
-  const missingIngredients = Array.from(new Set(lines
+  const missingIngredients = Array.from(new Set(normalizedLines
     .filter((line) => (
       !Number.isFinite(line.nutrition_basis_quantity) || line.nutrition_basis_quantity <= 0
       || !Number.isFinite(line.quantity) || line.quantity <= 0
@@ -46,7 +47,7 @@ export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
       || line.carbohydrates_g === null
     ))
     .map((line) => line.name)));
-  const complete = lines.length > 0 && missingIngredients.length === 0;
+  const complete = normalizedLines.length > 0 && missingIngredients.length === 0;
 
   if (!complete) {
     return {
@@ -59,7 +60,7 @@ export function calculateRecipeNutrition(lines: ProductCompositionItem[]) {
     };
   }
 
-  const total = lines.reduce((sum, line) => {
+  const total = normalizedLines.reduce((sum, line) => {
     const multiplier = line.quantity / line.nutrition_basis_quantity;
     return {
       calories: sum.calories + (line.calories_kcal ?? 0) * multiplier,

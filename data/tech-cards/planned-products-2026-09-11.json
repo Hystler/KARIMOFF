@@ -6,7 +6,7 @@
     "A single burger sauce is 30 g; when two sauces are used, each is 15 g.",
     "Cheddar is one 10 g slice unless an explicit slice count is given.",
     "Beef and chicken patties are one 110 g piece.",
-    "Tortilla is 85 g and mini lavash is 40 g.",
+    "Tortilla is 80 g and mini lavash is 40 g.",
     "Mini shawarma vegetables are 50% of the current chicken shawarma quantities."
   ],
   "products": [
@@ -29,10 +29,10 @@
       "slug": "chicken-roll",
       "name": "Чикенролл",
       "image_url": "/assets/products/burgers/chicken-roll.webp",
-      "food_cost": 97.66,
-      "price": 330,
+      "food_cost": 96.51,
+      "price": 320,
       "lines": [
-        { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
+        { "ingredient": "Тортилья", "quantity": 80, "unit": "g" },
         { "ingredient": "Соус чесночный", "quantity": 30, "unit": "g", "removable": true },
         { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
         { "ingredient": "Котлета куриная", "quantity": 1, "unit": "pcs" },
@@ -46,10 +46,10 @@
       "slug": "beef-roll",
       "name": "Бифролл",
       "image_url": "/assets/products/burgers/beef-roll.webp",
-      "food_cost": 122.46,
-      "price": 410,
+      "food_cost": 121.31,
+      "price": 400,
       "lines": [
-        { "ingredient": "Тортилья", "quantity": 85, "unit": "g" },
+        { "ingredient": "Тортилья", "quantity": 80, "unit": "g" },
         { "ingredient": "Соус фирменный барбекю", "quantity": 30, "unit": "g", "removable": true },
         { "ingredient": "Лист салата", "quantity": 12, "unit": "g", "removable": true },
         { "ingredient": "Котлета говяжья", "quantity": 110, "unit": "g" },
@@ -63,8 +63,8 @@
       "slug": "mini-shaurma",
       "name": "Мини-шаурма",
       "image_url": "/assets/products/shaurma/mini-shaurma.webp",
-      "food_cost": 59.07,
-      "price": 200,
+      "food_cost": 62.23,
+      "price": 210,
       "lines": [
         { "ingredient": "Лаваш мини", "quantity": 40, "unit": "g" },
         { "ingredient": "Капуста", "quantity": 41.5, "unit": "g", "removable": true },

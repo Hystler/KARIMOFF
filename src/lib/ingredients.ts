@@ -111,6 +111,7 @@ function calculateMetrics(product: Product, lines: ProductIngredientLine[]): Pro
     sort_order: line.sort_order,
     quantity: line.quantity,
     unit: line.unit,
+    is_extra_available: line.is_extra_available,
     nutrition_basis_quantity: line.nutrition_basis_quantity,
     calories_kcal: line.calories_kcal,
     proteins_g: line.proteins_g,

@@ -57,6 +57,15 @@ test('missing modifier nutrition and mismatched units never produce a false comp
     assert.equal(nutrition.calculateRecipeNutrition([{...line,...change}]).complete,false);
   }
 });
+test('zero-quantity extra catalog rows do not invalidate the base recipe',()=>{
+  const extra={...line,ingredient_id:'extra',name:'Халапеньо',quantity:0,unit:'g',is_extra_available:true,
+    nutrition_basis_quantity:100,calories_kcal:null,proteins_g:null,fats_g:null,carbohydrates_g:null};
+  const value=nutrition.calculateRecipeNutrition([line,extra]);
+  assert.equal(value.complete,true);
+  assert.equal(value.items[0].value,240);
+  assert.deepEqual(value.missingIngredients,[]);
+  assert.equal(nutrition.calculateRecipeNutrition([{...extra,is_extra_available:false}]).complete,false);
+});
 test('reference nutrition is exact-name, unit-aware and never overrides partial or entered data',()=>{
   const cabbage={...line,name:'Капуста',unit:'g',quantity:100,nutrition_basis_quantity:100,calories_kcal:null,proteins_g:null,fats_g:null,carbohydrates_g:null};
   assert.equal(reference.getIngredientNutritionReference(cabbage).sourceFoodId,2346407);
@@ -70,11 +79,13 @@ test('reference nutrition is exact-name, unit-aware and never overrides partial 
 test('temporary prepared-food references use the confirmed production piece weights',()=>{
   const empty=(name,unit)=>({...line,name,unit,quantity:1,nutrition_basis_quantity:unit==='pcs'?1:100,calories_kcal:null,proteins_g:null,fats_g:null,carbohydrates_g:null});
   const calories=(name,unit)=>reference.getIngredientNutritionReference(empty(name,unit)).calories_kcal;
-  assert.equal(calories('Лаваш','pcs'),200.75);
+  assert.equal(calories('Лаваш','pcs'),203.5);
+  assert.equal(calories('Лепёшка','pcs'),495);
   assert.equal(calories('Бекон жареный','pcs'),16.23);
   assert.equal(calories('Крыло куриное Барбекю','pcs'),147.66);
   assert.equal(calories('Королевская креветка в панировке','pcs'),58.52);
-  assert.equal(calories('Соус медово-горчичный','g'),464);
+  assert.equal(calories('Соус медово-горчичный','g'),230);
+  assert.equal(calories('Халапеньо','g'),15);
   assert.equal(calories('Соус чесночный','g'),526.63);
   assert.equal(calories('Тортилья','g'),320);
   assert.equal(calories('Соус барбекю обычный','g'),120);

@@ -1,7 +1,7 @@
 {
-  "version": "2026-09-11",
+  "version": "2026-09-15-nutrition-v5",
   "source_document": "Тех карта.docx",
-  "migration_marker": "data_migration.tech_card.20260911_new_products_v4",
+  "migration_marker": "data_migration.tech_card.20260915_nutrition_v5",
   "inactive_product_slugs": [
     "dobryy-apelsin-1-l",
     "dobryy-kola-1-l",
@@ -15,9 +15,9 @@
   "catalog_product_defaults": [
     { "slug": "kantrigrand", "name": "КантриГранд", "category": "Бургеры", "description": "Большой говяжий бургер с чеддером, барбекю и хрустящим огурцом.", "price": 390, "image_url": "/assets/products/burgers/kantrigrand.webp", "sort_order": 3, "weight": "1 шт." },
     { "slug": "chickenburger", "name": "Чикенбургер", "category": "Бургеры", "description": "Куриная котлета, чеддер, свежие овощи и фирменный чесночный соус.", "price": 390, "image_url": "/assets/products/burgers/chickenburger.webp", "sort_order": 41, "weight": "1 шт." },
-    { "slug": "chicken-roll", "name": "Чикенролл", "category": "Бургеры", "description": "Куриная котлета с чеддером, овощами и чесночным соусом в тортилье.", "price": 330, "image_url": "/assets/products/burgers/chicken-roll.webp", "sort_order": 42, "weight": "1 шт." },
-    { "slug": "beef-roll", "name": "Бифролл", "category": "Бургеры", "description": "Говяжья котлета с чеддером, овощами и фирменным барбекю в тортилье.", "price": 410, "image_url": "/assets/products/burgers/beef-roll.webp", "sort_order": 43, "weight": "1 шт." },
-    { "slug": "mini-shaurma", "name": "Мини-шаурма", "category": "Шаурма", "description": "Компактная шаурма с курицей, свежими овощами и чесночным соусом.", "price": 200, "image_url": "/assets/products/shaurma/mini-shaurma.webp", "sort_order": 44, "weight": "1 шт." },
+    { "slug": "chicken-roll", "name": "Чикенролл", "category": "Бургеры", "description": "Куриная котлета с чеддером, овощами и чесночным соусом в тортилье.", "price": 320, "image_url": "/assets/products/burgers/chicken-roll.webp", "sort_order": 42, "weight": "1 шт." },
+    { "slug": "beef-roll", "name": "Бифролл", "category": "Бургеры", "description": "Говяжья котлета с чеддером, овощами и фирменным барбекю в тортилье.", "price": 400, "image_url": "/assets/products/burgers/beef-roll.webp", "sort_order": 43, "weight": "1 шт." },
+    { "slug": "mini-shaurma", "name": "Мини-шаурма", "category": "Шаурма", "description": "Компактная шаурма с курицей, свежими овощами и чесночным соусом.", "price": 210, "image_url": "/assets/products/shaurma/mini-shaurma.webp", "sort_order": 44, "weight": "1 шт." },
     { "slug": "tatarin", "name": "Татарин", "category": "Бургеры", "description": "Тройной говяжий бургер с шестью ломтиками чеддера, овощами, фри и двумя соусами.", "price": 1110, "image_url": "/assets/products/burgers/tatarin.webp", "sort_order": 45, "weight": "1 шт." },
     { "slug": "ketchup", "name": "Кетчуп", "category": "Соусы", "description": "Насыщенный томатный соус с лёгкой кислинкой и пряной сладостью.", "price": 40, "image_url": "/assets/products/sauces/ketchup.webp", "sort_order": 35, "weight": "25 г." },
     { "slug": "syrnyy", "name": "Сырный соус", "category": "Соусы", "description": "Нежный сливочно-сырный соус для картофеля, бургеров и закусок.", "price": 40, "image_url": "/assets/products/sauces/syrnyy.webp", "sort_order": 36, "weight": "25 г." },
@@ -33,8 +33,8 @@
     { "key": "black_bun", "name": "Булочка для бургера чёрная", "aliases": ["Булочка чёрная", "Булочка черная"], "category": "Основа", "unit": "pcs", "sort_order": 40, "package_size": 1, "package_price": 41.7, "waste_percent": 0 },
     { "key": "hotdog_bun_open", "name": "Булочка для хот-дога открытая", "aliases": ["Булочка для хот-догов открытая"], "category": "Основа", "unit": "pcs", "sort_order": 50, "package_size": 1, "package_price": 21.6, "waste_percent": 0 },
     { "key": "hotdog_bun_closed", "name": "Булочка для хот-дога закрытая", "aliases": ["Булочка для хот-догов закрытая"], "category": "Основа", "unit": "pcs", "sort_order": 60, "package_size": 1, "package_price": 26.1, "waste_percent": 0 },
-    { "key": "mini_lavash", "name": "Лаваш мини", "aliases": ["Мини-лаваш"], "category": "Основа", "unit": "g", "sort_order": 70, "package_size": 73, "package_price": 7, "waste_percent": 0 },
-    { "key": "tortilla", "name": "Тортилья", "aliases": [], "category": "Основа", "unit": "g", "sort_order": 80, "package_size": 73, "package_price": 7, "waste_percent": 0 },
+    { "key": "mini_lavash", "name": "Лаваш мини", "aliases": ["Мини-лаваш"], "category": "Основа", "unit": "g", "sort_order": 70, "package_size": 40, "package_price": 7, "waste_percent": 0 },
+    { "key": "tortilla", "name": "Тортилья", "aliases": [], "category": "Основа", "unit": "g", "sort_order": 80, "package_size": 80, "package_price": 7, "waste_percent": 0 },
     { "key": "beef_patty", "name": "Котлета говяжья", "aliases": ["Котлета"], "category": "Мясо", "unit": "g", "sort_order": 100, "package_size": 110, "package_price": 67.4, "waste_percent": 0 },
     { "key": "chicken_patty", "name": "Котлета куриная", "aliases": [], "category": "Мясо", "unit": "pcs", "sort_order": 105, "package_size": 1, "package_price": 44.7, "waste_percent": 0 },
     { "key": "chicken", "name": "Курица запечённая", "aliases": ["Курица", "Сочная курочка", "Курица запеченная"], "category": "Мясо", "unit": "g", "sort_order": 110, "package_size": 90, "package_price": 54, "waste_percent": 0 },
@@ -319,7 +319,7 @@
     {
       "product_slugs": ["chicken-roll"], "product_names": ["Чикенролл"], "source_name": "Чикенролл", "source_kind": "owner_recipe",
       "lines": [
-        { "ingredient": "tortilla", "quantity": 85 }, { "ingredient": "garlic_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "tortilla", "quantity": 80 }, { "ingredient": "garlic_sauce", "quantity": 30, "removable": true },
         { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "chicken_patty", "quantity": 1 },
         { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
         { "ingredient": "cucumber", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true }
@@ -328,7 +328,7 @@
     {
       "product_slugs": ["beef-roll"], "product_names": ["Бифролл"], "source_name": "Бифролл", "source_kind": "owner_recipe",
       "lines": [
-        { "ingredient": "tortilla", "quantity": 85 }, { "ingredient": "bbq_sauce", "quantity": 30, "removable": true },
+        { "ingredient": "tortilla", "quantity": 80 }, { "ingredient": "bbq_sauce", "quantity": 30, "removable": true },
         { "ingredient": "lettuce", "quantity": 12, "removable": true }, { "ingredient": "beef_patty", "quantity": 110 },
         { "ingredient": "cheddar", "quantity": 1, "removable": true }, { "ingredient": "tomato", "quantity": 13, "removable": true },
         { "ingredient": "pickle", "quantity": 11, "removable": true }, { "ingredient": "onion", "quantity": 3, "removable": true }
