@@ -98,7 +98,7 @@ export function parseAnalyticsFilters(params: RawParams): AnalyticsFilters {
     heatmapMetric: heatmapValue === "sales" || heatmapValue === "items" ? heatmapValue : "revenue",
     demandMetric: demandValue === "items" ? "items" : "revenue",
     calendarMetric: calendarValue === "sales" || calendarValue === "average_check" ? calendarValue : "revenue",
-    treemapMetric: treemapValue === "items" ? "items" : "revenue",
+    treemapMetric: treemapValue === "items" || treemapValue === "gross_profit" ? treemapValue : "revenue",
     productRanking:
       rankingValue === "quantity" || rankingValue === "growth" || rankingValue === "decline"
         ? rankingValue

@@ -9,6 +9,7 @@ import {
   RESTAURANT_OPEN_HOUR
 } from "@/lib/analytics/operating-hours";
 import type { AnalyticsDashboard, AnalyticsFilters, KpiValue } from "@/lib/analytics/types";
+import { rankTreemapItems } from "@/lib/analytics/intelligence-math";
 import { getAnalyticsCategoryPalette } from "@/lib/analytics/palette";
 import { formatNumber, formatPercent, formatRub } from "@/lib/format";
 import { AnalyticsFullscreenButton } from "./AnalyticsFullscreenButton";
@@ -179,6 +180,7 @@ export function AnalyticsIntelligenceHub({ dashboard }: { dashboard: AnalyticsDa
             <nav className="analytics-mini-tabs" aria-label="Метрика карты продаж">
               <Link href={analyticsHref(dashboard.filters, { treemap: null })} className={dashboard.filters.treemapMetric === "revenue" ? "is-active" : ""} scroll={false}>Выручка</Link>
               <Link href={analyticsHref(dashboard.filters, { treemap: "items" })} className={dashboard.filters.treemapMetric === "items" ? "is-active" : ""} scroll={false}>Количество</Link>
+              <Link href={analyticsHref(dashboard.filters, { treemap: "gross_profit" })} className={dashboard.filters.treemapMetric === "gross_profit" ? "is-active" : ""} scroll={false}>Прибыль по food cost</Link>
             </nav>
             <Link className="analytics-export-link" href={`/api/admin/analytics/report/export?report=products&${analyticsFiltersToParams(dashboard.filters).toString()}`}><Download size={15} />CSV</Link>
             <AnalyticsFullscreenButton targetId="sales-treemap" />
@@ -323,24 +325,25 @@ function SalesTreemap({ dashboard }: { dashboard: AnalyticsDashboard }) {
   const rows = dashboard.intelligence.treemap;
   if (!rows.length) return <AnalyticsEmpty text="Нет товарных данных для карты продаж." />;
   const metric = dashboard.filters.treemapMetric;
-  const total = rows.reduce((sum, row) => sum + Math.max(0, metric === "items" ? row.quantity : row.revenue), 0);
+  const rankedRows = rankTreemapItems(rows, metric);
+  const incompleteFoodCost = metric === "gross_profit" ? rows.filter((row) => !row.foodCostComplete).length : 0;
+  if (!rankedRows.length) return <AnalyticsEmpty text={metric === "gross_profit" ? "Нет товаров с подтверждённым food cost за период." : "Нет положительных товарных данных для карты продаж."} />;
   return (
-    <div className="analytics-treemap">
-      {rows.filter((row) => (metric === "items" ? row.quantity : row.revenue) > 0).map((row) => {
-        const current = metric === "items" ? row.quantity : row.revenue;
-        const share = total > 0 ? (current / total) * 100 : 0;
-        return (
+    <>
+      <div className="analytics-treemap">
+        {rankedRows.map((row) => (
           <Link
             key={row.key}
             href={analyticsHref(dashboard.filters, { product: row.key })}
-            style={{ ...categoryStyle(row.category ?? "Без категории"), flexBasis: `${Math.max(12, Math.min(42, share * 2.1))}%` }}
+            style={{ ...categoryStyle(row.category ?? "Без категории"), flexBasis: `${Math.max(12, Math.min(42, row.metricShare * 2.1))}%` }}
             scroll={false}
           >
-            <span>{row.category}</span><strong>{row.name}</strong><b>{metric === "items" ? formatNumber(row.quantity, 2) : formatRub(row.revenue)}</b><small>{formatPercent(share)}{row.mappingStatus === "unmapped" ? " · Не сопоставлено" : ""}</small>
+            <span>{row.category}</span><strong>{row.name}</strong><b>{metric === "items" ? formatNumber(row.metricValue, 2) : formatRub(row.metricValue)}</b><small>{formatPercent(row.metricShare)}{row.mappingStatus === "unmapped" ? " · Не сопоставлено" : ""}</small>
           </Link>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+      {incompleteFoodCost ? <p className="analytics-method-note">Не включено позиций без полного food cost: {formatNumber(incompleteFoodCost)}.</p> : null}
+    </>
   );
 }
 

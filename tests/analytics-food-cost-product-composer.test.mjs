@@ -76,9 +76,10 @@ test("empty station is persisted as null and never violates the station check", 
 test("analytics exposes covered gross profit and does not invent food cost for unmapped items", () => {
   const dashboard = read("src/lib/analytics/dashboard.ts");
   const overview = read("src/components/admin/analytics/AnalyticsOverview.tsx");
+  const foodCostSql = read("src/lib/analytics/sale-food-cost.ts");
 
-  assert.match(dashboard, /product_food_costs as/);
-  assert.match(dashboard, /ingredient\.waste_percent/);
+  assert.match(foodCostSql, /product_food_costs as/);
+  assert.match(foodCostSql, /ingredient\.waste_percent/);
   assert.match(dashboard, /i\.net_quantity \* product_cost\.unit_food_cost/);
   assert.match(dashboard, /i\.product_id is not null and coalesce\(product_cost\.is_complete, false\)/);
   assert.match(dashboard, /grossProfitAvailable/);
@@ -86,6 +87,8 @@ test("analytics exposes covered gross profit and does not invent food cost for u
   assert.match(overview, /покрытие/);
   assert.match(overview, /Food cost/);
   assert.match(overview, /Валовая прибыль/);
+  assert.match(read("src/components/admin/analytics/AnalyticsIntelligenceHub.tsx"), /Прибыль по food cost/);
+  assert.match(read("src/lib/analytics/intelligence.ts"), /SALE_FOOD_COST_JOIN/);
   assert.doesNotMatch(overview, /Чистая прибыль/);
 });
 

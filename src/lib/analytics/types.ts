@@ -31,6 +31,7 @@ export type AnalyticsGranularity = "hour" | "day" | "week" | "month";
 export type ProductRankingMode = "revenue" | "quantity" | "growth" | "decline";
 export type HeatmapMetric = "revenue" | "sales" | "items";
 export type DemandMetric = "revenue" | "items";
+export type TreemapMetric = "revenue" | "items" | "gross_profit";
 export type CalendarMetric = "revenue" | "sales" | "average_check";
 
 export type AnalyticsFilters = {
@@ -55,7 +56,7 @@ export type AnalyticsFilters = {
   heatmapMetric: HeatmapMetric;
   demandMetric: DemandMetric;
   calendarMetric: CalendarMetric;
-  treemapMetric: DemandMetric;
+  treemapMetric: TreemapMetric;
   productRanking: ProductRankingMode;
   search: string;
   sort: "date" | "number" | "channel" | "location" | "total" | "net" | "status";
@@ -228,6 +229,8 @@ export type AnalyticsTreemapItem = {
   category: string;
   revenue: number;
   quantity: number;
+  grossProfit: number | null;
+  foodCostComplete: boolean;
   share: number;
   mappingStatus: "mapped" | "unmapped";
 };

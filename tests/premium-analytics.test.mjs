@@ -49,7 +49,7 @@ test("premium filters combine categories, product, weekdays, and Moscow intraday
   try {
     result = runTypeScript(`
       const module = await import(${JSON.stringify(files.url("filters"))});
-      const filters = module.parseAnalyticsFilters(new URLSearchParams("period=last_quarter&category=Бургеры&category=Шаурма&product=p-1&weekday=1&weekday=6&hourFrom=17&hourTo=21"));
+      const filters = module.parseAnalyticsFilters(new URLSearchParams("period=last_quarter&category=Бургеры&category=Шаурма&product=p-1&weekday=1&weekday=6&hourFrom=17&hourTo=21&treemap=gross_profit"));
       const invalid = module.parseAnalyticsFilters(new URLSearchParams("hourFrom=21&hourTo=17&weekday=9"));
       console.log(JSON.stringify({ filters, serialized: module.analyticsFiltersToParams(filters).toString(), invalid }));
     `);
@@ -60,8 +60,10 @@ test("premium filters combine categories, product, weekdays, and Moscow intraday
   assert.deepEqual(result.filters.weekdays, [1, 6]);
   assert.equal(result.filters.hourFrom, 17);
   assert.equal(result.filters.hourTo, 21);
+  assert.equal(result.filters.treemapMetric, "gross_profit");
   assert.match(result.serialized, /category=%D0%91%D1%83%D1%80%D0%B3%D0%B5%D1%80%D1%8B/);
   assert.match(result.serialized, /weekday=6/);
+  assert.match(result.serialized, /treemap=gross_profit/);
   assert.equal(result.invalid.hourFrom, null);
   assert.deepEqual(result.invalid.weekdays, []);
 });
@@ -102,6 +104,33 @@ test("Pareto and ABC use cumulative revenue without reclassifying the catalog", 
   assert.equal(result.productsTo50, 1);
   assert.equal(result.productsTo80, 1);
   assert.equal(result.productsTo90, 2);
+});
+
+test("sales map re-ranks values and shares for revenue, quantity, and food-cost profit", () => {
+  const files = fixture();
+  let result;
+  try {
+    result = runTypeScript(`
+      const module = await import(${JSON.stringify(files.url("intelligence-math"))});
+      const rows = [
+        { key: "a", name: "Шаурма", category: "Шаурма", revenue: 900, quantity: 3, grossProfit: 300, foodCostComplete: true, share: 0, mappingStatus: "mapped" },
+        { key: "b", name: "Бургер", category: "Бургеры", revenue: 600, quantity: 8, grossProfit: 420, foodCostComplete: true, share: 0, mappingStatus: "mapped" },
+        { key: "c", name: "Хот-дог", category: "Хот-доги", revenue: 500, quantity: 5, grossProfit: null, foodCostComplete: false, share: 0, mappingStatus: "unmapped" }
+      ];
+      console.log(JSON.stringify({
+        revenue: module.rankTreemapItems(rows, "revenue"),
+        quantity: module.rankTreemapItems(rows, "items"),
+        profit: module.rankTreemapItems(rows, "gross_profit")
+      }));
+    `);
+  } finally {
+    files.cleanup();
+  }
+  assert.deepEqual(result.revenue.map((row) => row.key), ["a", "b", "c"]);
+  assert.deepEqual(result.quantity.map((row) => row.key), ["b", "c", "a"]);
+  assert.deepEqual(result.profit.map((row) => row.key), ["b", "a"]);
+  assert.equal(result.quantity[0].metricShare, 50);
+  assert.equal(result.profit[0].metricShare, 420 / 720 * 100);
 });
 
 test("average-ticket and revenue decomposition handle empty comparison bases", () => {
@@ -151,7 +180,8 @@ test("premium analytics aggregates on the server and preserves stable product id
   assert.match(query, /at time zone 'Europe\/Moscow'/);
   assert.match(query, /analyticsCategorySql/);
   assert.match(query, /= any/);
-  assert.doesNotMatch(hub, /food cost|gross profit|margin/i);
+  assert.match(hub, /Прибыль по food cost/);
+  assert.match(intelligence, /SALE_FOOD_COST_JOIN/);
 });
 
 test("location analytics configuration is optional, server-only, and schema-validated", () => {

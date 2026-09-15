@@ -10,6 +10,7 @@ import { calculateMetricDelta, safeAverage } from "./metrics";
 import { OPERATING_HOURS, RESTAURANT_CLOSE_HOUR, RESTAURANT_OPEN_HOUR } from "./operating-hours";
 import { addCalendarDays } from "./periods";
 import { buildItemWhere, buildSalesWhere } from "./query";
+import { PRODUCT_FOOD_COST_CTE, SALE_FOOD_COST_JOIN } from "./sale-food-cost";
 import type {
   AnalyticsBasketPair,
   AnalyticsBasketSizeRow,
@@ -268,6 +269,9 @@ type ProductAggregate = {
   category: string;
   revenue: string | number;
   quantity: string | number;
+  covered_revenue: string | number;
+  food_cost: string | number;
+  food_cost_complete: boolean;
   mapping_status: string;
 };
 
@@ -275,14 +279,23 @@ async function getProductAggregates(filters: AnalyticsFilters, range: AnalyticsR
   const context = itemContext(filters, range, scope);
   const itemCategory = analyticsCategorySql("i");
   return query<ProductAggregate>(`
+    with ${PRODUCT_FOOD_COST_CTE}
     select coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as key,
       i.product_name as name,
       coalesce(max(${itemCategory}), 'Категория не указана') as category,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
+      coalesce(sum(i.net_revenue) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as covered_revenue,
+      coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as food_cost,
+      bool_and(i.product_id is not null and coalesce(product_cost.is_complete, false)) as food_cost_complete,
       case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
+    ${SALE_FOOD_COST_JOIN}
     where ${context.text}
     group by 1, 2
     order by revenue desc
@@ -291,15 +304,21 @@ async function getProductAggregates(filters: AnalyticsFilters, range: AnalyticsR
 
 function treemapFromProducts(rows: ProductAggregate[]): AnalyticsTreemapItem[] {
   const positiveTotal = rows.reduce((sum, row) => sum + Math.max(0, number(row.revenue)), 0);
-  return rows.slice(0, 48).map((row) => ({
-    key: row.key,
-    name: row.name,
-    category: row.category,
-    revenue: number(row.revenue),
-    quantity: number(row.quantity),
-    share: positiveTotal > 0 ? (Math.max(0, number(row.revenue)) / positiveTotal) * 100 : 0,
-    mappingStatus: row.mapping_status === "mapped" ? "mapped" : "unmapped"
-  }));
+  return rows.map((row) => {
+    const foodCostComplete = Boolean(row.food_cost_complete);
+    const grossProfit = foodCostComplete ? number(row.covered_revenue) - number(row.food_cost) : null;
+    return {
+      key: row.key,
+      name: row.name,
+      category: row.category,
+      revenue: number(row.revenue),
+      quantity: number(row.quantity),
+      grossProfit,
+      foodCostComplete,
+      share: positiveTotal > 0 ? (Math.max(0, number(row.revenue)) / positiveTotal) * 100 : 0,
+      mappingStatus: row.mapping_status === "mapped" ? "mapped" : "unmapped"
+    };
+  });
 }
 
 async function getBasketPairs(filters: AnalyticsFilters, range: AnalyticsRange, scope: AnalyticsScope): Promise<AnalyticsBasketPair[]> {

@@ -1,3 +1,25 @@
+export const PRODUCT_FOOD_COST_CTE = `
+  product_food_costs as (
+    select
+      recipe.product_id,
+      count(*) > 0
+        and bool_and(coalesce(
+          ingredient.cost_per_unit > 0
+          and recipe.unit = ingredient.unit
+          and recipe.quantity >= 0,
+          false
+        )) as is_complete,
+      sum(
+        recipe.quantity
+        / (1 - least(95, greatest(0, coalesce(ingredient.waste_percent, 0))) / 100)
+        * ingredient.cost_per_unit
+      )::numeric as unit_food_cost
+    from public.product_ingredients recipe
+    left join public.ingredients ingredient on ingredient.id = recipe.ingredient_id
+    group by recipe.product_id
+  )
+`;
+
 // Item source stays "web" for native POS/kiosk orders even when the sale channel is "pos_evotor".
 // Snapshot quantities already include waste; only the current ingredient price is applied here.
 export const SALE_FOOD_COST_JOIN = `

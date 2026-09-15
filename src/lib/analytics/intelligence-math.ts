@@ -1,7 +1,33 @@
 import { calculateMetricDelta, safeAverage } from "./metrics";
-import type { AnalyticsParetoSummary, KpiValue } from "./types";
+import type { AnalyticsParetoSummary, AnalyticsTreemapItem, KpiValue, TreemapMetric } from "./types";
 
 type ProductValue = { key: string; name: string; revenue: number; quantity: number };
+
+export function getTreemapMetricValue(row: AnalyticsTreemapItem, metric: TreemapMetric) {
+  if (metric === "items") return row.quantity;
+  if (metric === "gross_profit") return row.grossProfit ?? 0;
+  return row.revenue;
+}
+
+export function rankTreemapItems(
+  rows: AnalyticsTreemapItem[],
+  metric: TreemapMetric,
+  limit = 48
+) {
+  const ranked = [...rows]
+    .filter((row) => getTreemapMetricValue(row, metric) > 0)
+    .sort((left, right) => {
+      const difference = getTreemapMetricValue(right, metric) - getTreemapMetricValue(left, metric);
+      return difference || left.name.localeCompare(right.name, "ru");
+    });
+  const total = ranked.reduce((sum, row) => sum + getTreemapMetricValue(row, metric), 0);
+
+  return ranked.slice(0, limit).map((row) => ({
+    ...row,
+    metricValue: getTreemapMetricValue(row, metric),
+    metricShare: total > 0 ? (getTreemapMetricValue(row, metric) / total) * 100 : 0
+  }));
+}
 
 export function buildPareto(
   products: ProductValue[],

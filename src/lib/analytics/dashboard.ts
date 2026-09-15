@@ -13,7 +13,7 @@ import {
   getComparisonRange
 } from "./periods";
 import { buildItemWhere, buildSalesWhere, buildScopeWhere, offsetPlaceholders } from "./query";
-import { SALE_FOOD_COST_JOIN } from "./sale-food-cost";
+import { PRODUCT_FOOD_COST_CTE, SALE_FOOD_COST_JOIN } from "./sale-food-cost";
 import type {
   AnalyticsBreakdownRow,
   AnalyticsChannel,
@@ -53,28 +53,6 @@ type FoodCostMetricRow = {
   food_cost: string | number;
   total_revenue: string | number;
 };
-
-const PRODUCT_FOOD_COST_CTE = `
-  product_food_costs as (
-    select
-      recipe.product_id,
-      count(*) > 0
-        and bool_and(coalesce(
-          ingredient.cost_per_unit > 0
-          and recipe.unit = ingredient.unit
-          and recipe.quantity >= 0,
-          false
-        )) as is_complete,
-      sum(
-        recipe.quantity
-        / (1 - least(95, greatest(0, coalesce(ingredient.waste_percent, 0))) / 100)
-        * ingredient.cost_per_unit
-      )::numeric as unit_food_cost
-    from public.product_ingredients recipe
-    left join public.ingredients ingredient on ingredient.id = recipe.ingredient_id
-    group by recipe.product_id
-  )
-`;
 
 function number(value: unknown) {
   const parsed = Number(value ?? 0);

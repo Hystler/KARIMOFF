@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { loadTypeScript } from "./helpers/load-typescript.mjs";
 
 const data = JSON.parse(
   readFileSync(new URL("../data/tech-cards/karimoff-tech-card-2026-08-11.json", import.meta.url), "utf8")
@@ -16,6 +17,7 @@ const economicsPage = readFileSync(
   new URL("../src/app/admin/economics/page.tsx", import.meta.url),
   "utf8"
 );
+const { ingredientNutritionReference } = loadTypeScript("src/data/ingredient-nutrition-reference.ts");
 
 const normalizeName = (value) =>
   String(value)
@@ -163,6 +165,30 @@ test("all active menu products have complete food cost inputs and drinks are hid
       const ingredient = ingredients.get(line.ingredient);
       assert.ok(ingredient?.package_size > 0, `Missing package size for ${line.ingredient} in ${product.slug}`);
       assert.ok(ingredient?.package_price > 0, `Missing package price for ${line.ingredient} in ${product.slug}`);
+    }
+  }
+});
+
+test("all ingredients used by active menu products have complete nutrition references", () => {
+  const activeProducts = new Set(catalog.filter((product) => product.is_active).map((product) => normalizeName(product.slug)));
+  const activeProductNames = new Set(catalog.filter((product) => product.is_active).map((product) => normalizeName(product.name)));
+  const usedIngredientKeys = new Set(
+    data.recipes
+      .filter((recipe) =>
+        recipe.product_slugs.some((slug) => activeProducts.has(normalizeName(slug))) ||
+        recipe.product_names.some((name) => activeProductNames.has(normalizeName(name)))
+      )
+      .flatMap((recipe) => recipe.lines.map((line) => line.ingredient))
+  );
+  const references = new Map(ingredientNutritionReference.map((reference) => [`${reference.name}:${reference.unit}`, reference]));
+
+  for (const key of usedIngredientKeys) {
+    const ingredient = data.ingredients.find((entry) => entry.key === key);
+    assert.ok(ingredient, `Missing ingredient ${key}`);
+    const reference = references.get(`${ingredient.name}:${ingredient.unit}`);
+    assert.ok(reference, `Missing nutrition reference for ${ingredient.name}`);
+    for (const value of [reference.calories_kcal, reference.proteins_g, reference.fats_g, reference.carbohydrates_g]) {
+      assert.ok(Number.isFinite(value) && value >= 0, `Invalid nutrition for ${ingredient.name}`);
     }
   }
 });
