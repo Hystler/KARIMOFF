@@ -37,6 +37,9 @@ export async function createStaffAction(formData: FormData) {
     is_active: true
   }).select("id").single();
 
+  if (error?.code === "23505") {
+    redirect("/admin/staff?error=Сотрудник с таким номером телефона уже существует");
+  }
   if (error) redirect(`/admin/staff?error=${encodeURIComponent(error.message)}`);
   await writeAuditLog({
     action: "staff.create",
@@ -77,4 +80,40 @@ export async function toggleStaffAction(formData: FormData) {
   });
   revalidatePath("/admin/staff");
   redirect("/admin/staff?saved=1");
+}
+
+export async function deleteStaffAction(formData: FormData) {
+  await assertTrustedRequestOrigin();
+  const actor = await requireOwnerAdmin();
+  const id = String(formData.get("id") || "");
+  if (!id || id === actor.id) redirect("/admin/staff?error=Нельзя удалить собственную учётную запись");
+
+  const database = createDatabaseServerClient();
+  if (!database) redirect("/admin/staff?error=database");
+  const { data: deletedStaff, error } = await database
+    .from("staff_users")
+    .delete()
+    .eq("id", id)
+    .select("id, name, role")
+    .maybeSingle();
+
+  if (error) redirect(`/admin/staff?error=${encodeURIComponent(error.message)}`);
+  if (!deletedStaff) redirect("/admin/staff?error=Сотрудник уже удалён");
+
+  await database
+    .from("app_sessions")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("subject_type", "staff")
+    .eq("subject_id", id);
+  await writeAuditLog({
+    action: "staff.delete",
+    actorId: actor.id,
+    actorType: actor.legacy ? "admin" : "staff",
+    entityId: id,
+    entityType: "staff",
+    metadata: { name: String(deletedStaff.name), role: String(deletedStaff.role) },
+    sourcePath: "/admin/staff"
+  });
+  revalidatePath("/admin/staff");
+  redirect("/admin/staff?deleted=1");
 }
