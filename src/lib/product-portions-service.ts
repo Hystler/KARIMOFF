@@ -12,7 +12,7 @@ export async function saveProductPortions(productId: string, portions: Array<{ q
     const [product] = await sql`select id,price,weight from products where id=${productId}::uuid for update`;
     if (!product) throw new Error("Товар не найден");
     const lines = await sql`select pi.id,pi.ingredient_id,pi.quantity,pi.unit,pi.is_removable,i.unit as ingredient_unit from product_ingredients pi
-      join ingredients i on i.id=pi.ingredient_id where pi.product_id=${productId}::uuid for update of pi`;
+      join ingredients i on i.id=pi.ingredient_id where pi.product_id=${productId}::uuid and pi.quantity>0 for update of pi`;
     if (lines.length !== 1 || lines[0].unit !== lines[0].ingredient_unit) throw new Error("Для порций нужна одна основная строка рецептуры с согласованными единицами");
     const line = lines[0];
     if (line.unit === "pcs" && sorted.some(item => !Number.isInteger(item.quantity))) throw new Error("Укажите целое количество штук");

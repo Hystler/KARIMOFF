@@ -10,6 +10,7 @@ import { deleteProductAction, toggleProductActiveAction } from "./actions";
 
 type AdminProductsPageProps = {
   searchParams?: Promise<{
+    archived?: string;
     deleted?: string;
     error?: string;
     saved?: string;
@@ -142,10 +143,10 @@ function ProductActions({ product }: { product: Product }) {
       <form action={deleteProductAction}>
         <input type="hidden" name="id" value={product.id} />
         <ConfirmSubmitButton
-          message={`Удалить товар «${product.name}»?`}
+          message={`Перенести товар «${product.name}» в архив? Он исчезнет из меню, а история продаж сохранится.`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"
         >
-          Удалить
+          В архив
         </ConfirmSubmitButton>
       </form>
     </div>
@@ -153,6 +154,10 @@ function ProductActions({ product }: { product: Product }) {
 }
 
 function getMessage(params: Awaited<NonNullable<AdminProductsPageProps["searchParams"]>>) {
+  if (params.archived) {
+    return { tone: "success", text: "Товар перенесён в архив. История продаж сохранена." };
+  }
+
   if (params.saved) {
     return { tone: "success", text: "Изменения сохранены." };
   }

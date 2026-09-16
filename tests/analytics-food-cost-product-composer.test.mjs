@@ -135,13 +135,15 @@ test("dayparts are restricted to the restaurant operating window", () => {
 test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
   const mappings = JSON.parse(read("data/analytics/evotor-product-mappings.json"));
   const techCard = JSON.parse(read("data/tech-cards/karimoff-tech-card-2026-08-11.json"));
+  const menuPricing = JSON.parse(read("data/catalog/menu-prices-2026-09-16.json"));
   const catalog = JSON.parse(read("data/import/juikaifui-products.json"));
   const sync = read("src/lib/integrations/evotor/sync.ts");
   const runtimeMigration = read("scripts/apply-runtime-data-migrations.mjs");
   const dockerfile = read("Dockerfile");
   const knownSlugs = new Set([
     ...catalog.map((product) => product.slug),
-    ...techCard.recipes.flatMap((recipe) => recipe.product_slugs)
+    ...techCard.recipes.flatMap((recipe) => recipe.product_slugs),
+    ...menuPricing.new_products.map((product) => product.slug)
   ]);
   const normalizedNames = mappings.flatMap((mapping) => mapping.evotor_names)
     .map((name) => name.normalize("NFKC").replaceAll("ё", "е").trim().toLowerCase());
@@ -157,17 +159,20 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
     "Айдахо Бокс с курицей",
     "Хот-дог Датский Свинина",
     "Королевские креветки в панировке 6 шт.",
-    "Картофель фри 150 гр."
+    "Королевские креветки в панировке 12 шт.",
+    "Картофель фри 150 гр.",
+    "Картофель фри 200 гр.",
+    "Сырные палочки 6 шт.",
+    "Шаурма Курица/Говядина",
+    "Айдахо Бокс с говядиной",
+    "Бокс Фуд со свининой"
   ]) {
     assert.ok(mappings.some((mapping) => mapping.evotor_names.includes(expected)), expected);
   }
 
   for (const unsafe of [
     "Хот-дог Датский Курица",
-    "Хот-дог Датский Говядина",
-    "Картофель фри 200 гр.",
-    "Сырные палочки 6 шт.",
-    "Айдахо Бокс с говядиной"
+    "Хот-дог Датский Говядина"
   ]) {
     assert.ok(!mappings.some((mapping) => mapping.evotor_names.includes(unsafe)), unsafe);
   }

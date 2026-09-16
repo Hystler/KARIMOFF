@@ -5,6 +5,15 @@ export function getPortionGroup(product: Pick<Product, "modifier_groups">): Prod
   return product.modifier_groups?.find(group => group.name === PORTION_GROUP_NAME && group.selection_type === "single" && group.options.length > 0);
 }
 
+export function getReplacementControlledIngredientIds(product: Pick<Product, "modifier_groups">) {
+  return new Set(
+    (product.modifier_groups ?? [])
+      .flatMap((group) => group.options)
+      .filter((option) => option.modifier_type === "replace" && option.ingredient_id)
+      .map((option) => option.ingredient_id as string)
+  );
+}
+
 export function formatServing(quantity: number, unit: "g" | "ml" | "pcs") {
   return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(quantity)} ${unit === "pcs" ? "шт." : unit === "g" ? "г" : "мл"}`;
 }

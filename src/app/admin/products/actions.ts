@@ -337,22 +337,23 @@ export async function deleteProductAction(formData: FormData) {
 
   const id = getProductId(formData);
   const database = getDatabaseOrRedirect();
-  const { error } = await database.from("products").delete().eq("id", id);
+  const { error } = await database.from("products").update({ is_active: false }).eq("id", id);
 
   if (error) {
     redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
   }
 
   await writeAuditLog({
-    action: "product.delete",
+    action: "product.archive",
     actorRefHash: getAdminActorHash(),
     actorType: "admin",
     entityId: id,
     entityType: "product",
+    metadata: { is_active: false, preserves_sales_history: true },
     sourcePath: "/admin/products"
   });
   revalidateProductViews();
-  redirect("/admin/products?deleted=1");
+  redirect("/admin/products?archived=1");
 }
 
 export async function uploadProductImagesAction(formData: FormData) {

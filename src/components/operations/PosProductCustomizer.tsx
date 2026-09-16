@@ -17,6 +17,7 @@ import {
   type PosCartLine
 } from "@/lib/order-flow/pos-cart";
 import type { Product, ProductModifierGroup } from "@/lib/product-types";
+import { getReplacementControlledIngredientIds } from "@/lib/product-serving";
 
 function formatRub(value: number) {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value);
@@ -65,7 +66,8 @@ export function PosProductCustomizer({
   }, [onClose, product]);
 
   const ingredientOptions = product?.modifier_options ?? [];
-  const removable = ingredientOptions.filter((option) => option.is_removable);
+  const controlledIngredients = product ? getReplacementControlledIngredientIds(product) : new Set<string>();
+  const removable = ingredientOptions.filter((option) => option.is_removable && !controlledIngredients.has(option.ingredient_id));
   const addable = ingredientOptions.filter((option) => option.is_extra_available);
   const groups = product?.modifier_groups ?? [];
   const groupsValid = groups.every((group) => {

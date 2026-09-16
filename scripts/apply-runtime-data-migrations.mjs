@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 
 const dataPath = new URL("../data/tech-cards/karimoff-tech-card-2026-08-11.json", import.meta.url);
 const mappingPath = new URL("../data/analytics/evotor-product-mappings.json", import.meta.url);
+const menuPricingPath = new URL("../data/catalog/menu-prices-2026-09-16.json", import.meta.url);
 const techCard = JSON.parse(readFileSync(dataPath, "utf8"));
 const explicitMappingRules = JSON.parse(readFileSync(mappingPath, "utf8"));
+const menuPricing = JSON.parse(readFileSync(menuPricingPath, "utf8"));
 const databaseUrl = process.env.DATABASE_URL;
 
 function normalizeName(value) {
@@ -28,7 +31,7 @@ const EXTRA_DEFAULTS = {
   caesar: { ingredient: "Соус Цезарь", quantity: 30, price: 40 },
   "cheese-sauce": { ingredient: "Соус сырный", quantity: 30, price: 40 },
   mustard: { ingredient: "Соус медово-горчичный", quantity: 30, price: 40 },
-  patty: { ingredient: "Котлета говяжья", quantity: 110, price: 200 },
+  patty: { ingredient: "Котлета говяжья", quantity: 110, price: 130 },
   "chicken-patty": { ingredient: "Котлета куриная", quantity: 1, price: 150 },
   shrimp: { ingredient: "Королевская креветка в панировке", quantity: 1, price: 50 },
   beef: { ingredient: "Говядина запечённая", quantity: 90, price: 300 },
@@ -119,6 +122,254 @@ async function settleStaleOrders(transaction) {
     returning order_row.id
   `;
   return rows.length;
+}
+
+function menuServingLabel(quantity, unit) {
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(quantity)} ${unit === "pcs" ? "шт." : unit === "g" ? "г" : "мл"}`;
+}
+
+async function getOrCreateModifierGroup(transaction, productId, name, sortOrder = 0) {
+  const groups = await transaction`
+    select id from public.product_modifier_groups
+    where product_id=${productId}::uuid and name=${name}
+    order by created_at
+    for update
+  `;
+  if (groups.length > 1) throw new Error(`Duplicate modifier group ${name} for ${productId}`);
+  const id = groups[0]?.id ?? randomUUID();
+  await transaction`
+    insert into public.product_modifier_groups (
+      id,product_id,name,selection_type,min_selections,max_selections,sort_order,is_active
+    ) values (${id}::uuid,${productId}::uuid,${name},'single',1,1,${sortOrder},true)
+    on conflict(id) do update set
+      name=excluded.name,selection_type='single',min_selections=1,max_selections=1,
+      sort_order=excluded.sort_order,is_active=true,updated_at=now()
+  `;
+  return id;
+}
+
+async function applyMenuPricing(transaction) {
+  await transaction`select pg_advisory_xact_lock(hashtext(${menuPricing.migration_marker}))`;
+  const [existingMarker] = await transaction`
+    select id from public.audit_logs where action=${menuPricing.migration_marker} limit 1
+  `;
+  if (existingMarker) return { status: "already_applied" };
+
+  let updatedProducts = 0;
+  let configuredPortions = 0;
+  let configuredBoxVariants = 0;
+  let configuredExtras = 0;
+  let createdProducts = 0;
+
+  for (const spec of menuPricing.products) {
+    const rows = await transaction`
+      update public.products set price=${spec.price},updated_at=now()
+      where slug=${spec.slug}
+      returning id
+    `;
+    if (rows.length !== 1) throw new Error(`Menu product is missing: ${spec.slug}`);
+    updatedProducts += 1;
+  }
+
+  for (const spec of menuPricing.portions) {
+    const [product] = await transaction`
+      select id from public.products where slug=${spec.slug} for update
+    `;
+    if (!product) throw new Error(`Portion product is missing: ${spec.slug}`);
+    const lines = await transaction`
+      select pi.id,pi.ingredient_id,pi.unit,i.unit as ingredient_unit
+      from public.product_ingredients pi
+      join public.ingredients i on i.id=pi.ingredient_id
+      where pi.product_id=${product.id}::uuid and pi.quantity>0
+      order by pi.sort_order,pi.id
+      for update of pi
+    `;
+    if (lines.length !== 1 || lines[0].unit !== lines[0].ingredient_unit) {
+      throw new Error(`Portion recipe must have one compatible base line: ${spec.slug}`);
+    }
+    const portions = [...spec.values].sort((left, right) => left.quantity - right.quantity);
+    const groupId = await getOrCreateModifierGroup(transaction, product.id, "Размер порции", 0);
+    const options = await transaction`
+      select id,quantity_delta from public.product_modifier_options
+      where group_id=${groupId}::uuid for update
+    `;
+    const activeIds = [];
+    for (const [index, portion] of portions.entries()) {
+      const id = options.find((option) => Number(option.quantity_delta) === Number(portion.quantity))?.id ?? randomUUID();
+      activeIds.push(id);
+      const label = menuServingLabel(portion.quantity, lines[0].unit);
+      await transaction`
+        insert into public.product_modifier_options (
+          id,group_id,label,modifier_type,ingredient_id,replacement_ingredient_id,
+          quantity_delta,unit,price_delta,kitchen_note,is_default,is_active,sort_order
+        ) values (
+          ${id}::uuid,${groupId}::uuid,${label},'replace',${lines[0].ingredient_id}::uuid,
+          ${lines[0].ingredient_id}::uuid,${portion.quantity},${lines[0].unit},
+          ${portion.price - portions[0].price},${`Порция: ${label}`},false,true,${index}
+        )
+        on conflict(id) do update set
+          label=excluded.label,modifier_type='replace',ingredient_id=excluded.ingredient_id,
+          replacement_ingredient_id=excluded.replacement_ingredient_id,
+          quantity_delta=excluded.quantity_delta,unit=excluded.unit,price_delta=excluded.price_delta,
+          kitchen_note=excluded.kitchen_note,is_default=false,is_active=true,sort_order=excluded.sort_order
+      `;
+    }
+    await transaction`
+      update public.product_modifier_options set is_active=false,updated_at=now()
+      where group_id=${groupId}::uuid and not(id=any(${activeIds}::uuid[]))
+    `;
+    await transaction`
+      update public.products set price=${portions[0].price},weight=${menuServingLabel(portions[0].quantity, lines[0].unit)},updated_at=now()
+      where id=${product.id}::uuid
+    `;
+    await transaction`
+      update public.product_ingredients set quantity=${portions[0].quantity},is_removable=true
+      where id=${lines[0].id}::uuid
+    `;
+    configuredPortions += 1;
+  }
+
+  for (const spec of menuPricing.box_variants) {
+    const [product] = await transaction`
+      select id from public.products where slug=${spec.slug} for update
+    `;
+    if (!product) throw new Error(`Box product is missing: ${spec.slug}`);
+    const [baseLine] = await transaction`
+      select pi.id,pi.ingredient_id,pi.unit
+      from public.product_ingredients pi
+      join public.ingredients i on i.id=pi.ingredient_id
+      where pi.product_id=${product.id}::uuid and i.name='Курица запечённая' and pi.quantity>0
+      for update of pi
+    `;
+    if (!baseLine) throw new Error(`Chicken base line is missing: ${spec.slug}`);
+    const proteinNames = Object.keys(spec.prices);
+    const proteins = await transaction`
+      select id,name,unit from public.ingredients where name=any(${proteinNames}::text[])
+    `;
+    if (proteins.length !== proteinNames.length || proteins.some((protein) => protein.unit !== baseLine.unit)) {
+      throw new Error(`Box proteins are incomplete: ${spec.slug}`);
+    }
+    const groupId = await getOrCreateModifierGroup(transaction, product.id, "Начинка", 10);
+    const options = await transaction`
+      select id,replacement_ingredient_id from public.product_modifier_options
+      where group_id=${groupId}::uuid for update
+    `;
+    const activeIds = [];
+    const basePrice = Number(spec.prices["Курица запечённая"]);
+    for (const [index, name] of proteinNames.entries()) {
+      const protein = proteins.find((item) => item.name === name);
+      const id = options.find((option) => option.replacement_ingredient_id === protein.id)?.id ?? randomUUID();
+      activeIds.push(id);
+      const label = name.replace(" запечённая", "");
+      await transaction`
+        insert into public.product_modifier_options (
+          id,group_id,label,modifier_type,ingredient_id,replacement_ingredient_id,
+          quantity_delta,unit,price_delta,kitchen_note,is_default,is_active,sort_order
+        ) values (
+          ${id}::uuid,${groupId}::uuid,${label},'replace',${baseLine.ingredient_id}::uuid,
+          ${protein.id}::uuid,90,${baseLine.unit},${Number(spec.prices[name]) - basePrice},
+          ${`Начинка: ${label}`},${name === "Курица запечённая"},true,${index}
+        )
+        on conflict(id) do update set
+          label=excluded.label,modifier_type='replace',ingredient_id=excluded.ingredient_id,
+          replacement_ingredient_id=excluded.replacement_ingredient_id,
+          quantity_delta=excluded.quantity_delta,unit=excluded.unit,price_delta=excluded.price_delta,
+          kitchen_note=excluded.kitchen_note,is_default=excluded.is_default,is_active=true,sort_order=excluded.sort_order
+      `;
+    }
+    await transaction`
+      update public.product_modifier_options set is_active=false,updated_at=now()
+      where group_id=${groupId}::uuid and not(id=any(${activeIds}::uuid[]))
+    `;
+    await transaction`update public.product_ingredients set is_removable=true where id=${baseLine.id}::uuid`;
+    await transaction`update public.products set price=${basePrice},updated_at=now() where id=${product.id}::uuid`;
+    configuredBoxVariants += 1;
+  }
+
+  for (const spec of menuPricing.extras) {
+    const [ingredient] = await transaction`select id from public.ingredients where name=${spec.ingredient}`;
+    if (!ingredient) throw new Error(`Extra ingredient is missing: ${spec.ingredient}`);
+    const changedLines = await transaction`
+      update public.product_ingredients set extra_price=${spec.price}
+      where ingredient_id=${ingredient.id}::uuid and is_extra_available=true
+      returning id
+    `;
+    const changedOptions = await transaction`
+      update public.product_modifier_options set price_delta=${spec.price},updated_at=now()
+      where ingredient_id=${ingredient.id}::uuid and modifier_type='add'
+      returning id
+    `;
+    configuredExtras += changedLines.length + changedOptions.length;
+  }
+
+  const [source] = await transaction`
+    select id,category,weight,tags from public.products where slug='shaurma-kurinaya'
+  `;
+  if (!source) throw new Error("Mix shawarma source is missing");
+  for (const spec of menuPricing.new_products) {
+    let [product] = await transaction`select id from public.products where slug=${spec.slug} for update`;
+    if (!product) {
+      [product] = await transaction`
+        insert into public.products (
+          slug,name,category,description,price,image_url,is_active,sort_order,weight,tags
+        ) values (
+          ${spec.slug},${spec.name},${source.category},
+          ${`Два вида мяса, свежие овощи и фирменный чесночный соус в тандырном лаваше.`},
+          ${spec.price},'/assets/products/placeholder-shaurma.svg',true,${spec.sort_order},${source.weight},${source.tags}
+        ) returning id
+      `;
+      createdProducts += 1;
+    } else {
+      await transaction`update public.products set price=${spec.price},is_active=true,updated_at=now() where id=${product.id}::uuid`;
+    }
+    const [{ count: recipeCount }] = await transaction`
+      select count(*)::int as count from public.product_ingredients
+      where product_id=${product.id}::uuid and quantity>0
+    `;
+    if (Number(recipeCount) > 0) continue;
+    const sourceLines = await transaction`
+      select pi.ingredient_id,pi.quantity,pi.unit,pi.sort_order,pi.is_removable,i.name
+      from public.product_ingredients pi
+      join public.ingredients i on i.id=pi.ingredient_id
+      where pi.product_id=${source.id}::uuid and pi.quantity>0
+      order by pi.sort_order
+    `;
+    const proteins = await transaction`
+      select id,name,unit from public.ingredients where name=any(${spec.proteins}::text[])
+    `;
+    if (proteins.length !== 2) throw new Error(`Mix proteins are incomplete: ${spec.slug}`);
+    for (const line of sourceLines) {
+      const isProtein = line.name === "Курица запечённая";
+      const ingredientId = isProtein ? proteins.find((item) => item.name === spec.proteins[0]).id : line.ingredient_id;
+      await transaction`
+        insert into public.product_ingredients (
+          product_id,ingredient_id,quantity,unit,sort_order,is_removable,
+          is_extra_available,extra_quantity,extra_price,max_extra_quantity
+        ) values (
+          ${product.id}::uuid,${ingredientId}::uuid,${isProtein ? 45 : line.quantity},${line.unit},
+          ${line.sort_order},${line.is_removable},false,0,0,1
+        )
+      `;
+    }
+    const secondProtein = proteins.find((item) => item.name === spec.proteins[1]);
+    await transaction`
+      insert into public.product_ingredients (
+        product_id,ingredient_id,quantity,unit,sort_order,is_removable,
+        is_extra_available,extra_quantity,extra_price,max_extra_quantity
+      ) values (${product.id}::uuid,${secondProtein.id}::uuid,45,${secondProtein.unit},75,false,false,0,0,1)
+    `;
+  }
+
+  await transaction`
+    insert into public.audit_logs (
+      actor_type,action,entity_type,entity_id,metadata,source_path
+    ) values (
+      'system',${menuPricing.migration_marker},'menu_pricing',${menuPricing.version},
+      ${transaction.json({ updatedProducts, configuredPortions, configuredBoxVariants, configuredExtras, createdProducts })},
+      'scripts/apply-runtime-data-migrations.mjs'
+    )
+  `;
+  return { status: "applied", updatedProducts, configuredPortions, configuredBoxVariants, configuredExtras, createdProducts };
 }
 
 function validateExplicitMappingRules() {
@@ -648,11 +899,12 @@ try {
     };
   });
 
+  const menuPricingResult = await sql.begin(applyMenuPricing);
   const confirmedMappings = await sql.begin(applyExplicitEvotorMappings);
   const logicalExtras = await sql.begin(applyLogicalExtras);
   const settledStaleOrders = await sql.begin(settleStaleOrders);
 
-  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings, logicalExtras, settledStaleOrders })}`);
+  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings, menuPricingResult, logicalExtras, settledStaleOrders })}`);
 } finally {
   await sql.end({ timeout: 2 });
 }

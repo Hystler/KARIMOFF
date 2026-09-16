@@ -10,7 +10,7 @@ import {
   type CartCustomization
 } from "@/components/cart/CartProvider";
 import type { Product, ProductCompositionItem, ProductModifierGroup } from "@/lib/product-types";
-import { getPortionGroup, getServingLabel } from "@/lib/product-serving";
+import { getPortionGroup, getReplacementControlledIngredientIds, getServingLabel } from "@/lib/product-serving";
 import { getCustomizedNutrition } from "@/lib/product-nutrition";
 
 function formatPrice(value: number) {
@@ -32,7 +32,8 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
   const [added, setAdded] = useState(false);
   const ingredientOptions = product.modifier_options ?? [];
   const portion = getPortionGroup(product);
-  const removable = ingredientOptions.filter((option) => option.is_removable && !portion?.options.some(size => size.ingredient_id === option.ingredient_id));
+  const controlledIngredients = getReplacementControlledIngredientIds(product);
+  const removable = ingredientOptions.filter((option) => option.is_removable && !controlledIngredients.has(option.ingredient_id));
   const addable = ingredientOptions.filter((option) => option.is_extra_available);
   const groups = (product.modifier_groups ?? []).filter(group => group.id !== portion?.id);
   const customization: CartCustomization = {

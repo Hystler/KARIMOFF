@@ -1,0 +1,35 @@
+{
+  "version": "2026-09-16",
+  "migration_marker": "data_migration.menu_prices.20260916_v1",
+  "products": [
+    { "slug": "firmennaya-shaurma", "price": 590 },
+    { "slug": "shaurma-v-lepeshke-kuritsa", "price": 330 },
+    { "slug": "boxfood", "price": 340 },
+    { "slug": "aydahobox", "price": 350 }
+  ],
+  "portions": [
+    { "slug": "krevetki-v-panirovke", "values": [{ "quantity": 6, "price": 390 }, { "quantity": 12, "price": 730 }] },
+    { "slug": "syrnye-palochki", "values": [{ "quantity": 6, "price": 320 }, { "quantity": 12, "price": 590 }] },
+    { "slug": "naggetsy", "values": [{ "quantity": 6, "price": 210 }, { "quantity": 12, "price": 390 }] },
+    { "slug": "krylyshki-barbekyu", "values": [{ "quantity": 8, "price": 370 }, { "quantity": 16, "price": 650 }] },
+    { "slug": "kartofel-po-derevenski", "values": [{ "quantity": 150, "price": 260 }, { "quantity": 200, "price": 330 }] },
+    { "slug": "kartoshka-fri", "values": [{ "quantity": 150, "price": 210 }, { "quantity": 200, "price": 260 }] }
+  ],
+  "box_variants": [
+    { "slug": "boxfood", "prices": { "Курица запечённая": 340, "Свинина запечённая": 350, "Говядина запечённая": 540 } },
+    { "slug": "aydahobox", "prices": { "Курица запечённая": 350, "Свинина запечённая": 390, "Говядина запечённая": 540 } }
+  ],
+  "extras": [
+    { "ingredient": "Котлета говяжья", "price": 130 },
+    { "ingredient": "Бекон жареный", "price": 50 },
+    { "ingredient": "Картофель фри", "price": 40 },
+    { "ingredient": "Сыр Чеддер, ломтик", "price": 40 },
+    { "ingredient": "Лук жареный гранулированный", "price": 40 },
+    { "ingredient": "Халапеньо", "price": 40 }
+  ],
+  "new_products": [
+    { "slug": "shaurma-miks-kuritsa-govyadina", "name": "Шаурма микс курица-говядина", "price": 540, "proteins": ["Курица запечённая", "Говядина запечённая"], "sort_order": 48 },
+    { "slug": "shaurma-miks-svinina-govyadina", "name": "Шаурма микс свинина-говядина", "price": 530, "proteins": ["Свинина запечённая", "Говядина запечённая"], "sort_order": 49 },
+    { "slug": "shaurma-miks-kuritsa-svinina", "name": "Шаурма микс курица-свинина", "price": 490, "proteins": ["Курица запечённая", "Свинина запечённая"], "sort_order": 50 }
+  ]
+}

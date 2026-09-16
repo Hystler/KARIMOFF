@@ -51,9 +51,15 @@ test("native snapshots use canonical item provenance and do not apply current wa
   assert.match(SALE_FOOD_COST_JOIN, /usage\.order_item_id = i\.source_record_id/);
   assert.match(SALE_FOOD_COST_JOIN, /i\.source = 'web'/);
   assert.match(SALE_FOOD_COST_JOIN, /sum\(usage\.quantity_per_item \* ingredient\.cost_per_unit\)/);
-  assert.doesNotMatch(SALE_FOOD_COST_JOIN, /waste_percent|split_part|substring|s\.source\b/);
+  assert.doesNotMatch(SALE_FOOD_COST_JOIN, /split_part|substring|s\.source\b/);
   assert.match(SALE_FOOD_COST_JOIN, /when i\.source = 'web' then\s+case when snapshot_cost\.is_complete then snapshot_cost\.unit_food_cost end/);
   assert.doesNotMatch(SALE_FOOD_COST_JOIN, /coalesce\(snapshot_cost\.unit_food_cost/);
+});
+
+test("confirmed Evotor portions require an explicit size in the source product name", () => {
+  assert.match(SALE_FOOD_COST_JOIN, /regexp_match\(lower\(i\.product_name\)/);
+  assert.match(SALE_FOOD_COST_JOIN, /option\.quantity_delta = replace/);
+  assert.match(SALE_FOOD_COST_JOIN, /portion_cost\.is_complete then portion_cost\.unit_food_cost/);
 });
 
 const fixtures = {
@@ -62,7 +68,9 @@ const fixtures = {
     { id: "piece", cost_per_unit: 10, waste_percent: 20, unit: "pcs" },
     { id: "extra", cost_per_unit: 4, waste_percent: 0, unit: "pcs" },
     { id: "zero-price", cost_per_unit: 0, waste_percent: 0, unit: "pcs" },
-    { id: "null-price", cost_per_unit: null, waste_percent: 0, unit: "pcs" }
+    { id: "null-price", cost_per_unit: null, waste_percent: 0, unit: "pcs" },
+    { id: "chicken", cost_per_unit: 1, waste_percent: 0, unit: "g" },
+    { id: "beef", cost_per_unit: 2, waste_percent: 0, unit: "g" }
   ],
   recipes: [
     { product_id: "actual-portion", ingredient_id: "portion-piece", quantity: 6, unit: "pcs" },
@@ -73,12 +81,19 @@ const fixtures = {
     { product_id: "broken-recipe", ingredient_id: "piece", quantity: 6, unit: "pcs" },
     { product_id: "broken-recipe", ingredient_id: "missing", quantity: 2, unit: "pcs" },
     { product_id: "null-price-recipe", ingredient_id: "piece", quantity: 6, unit: "pcs" },
-    { product_id: "null-price-recipe", ingredient_id: "null-price", quantity: 2, unit: "pcs" }
+    { product_id: "null-price-recipe", ingredient_id: "null-price", quantity: 2, unit: "pcs" },
+    { product_id: "box", ingredient_id: "chicken", quantity: 90, unit: "g" }
   ],
   groups: [
-    { product_id: "actual-portion", name: "Размер порции", is_active: true },
-    { product_id: "portion", name: "Размер порции", is_active: true },
-    { product_id: "retired-portion", name: "Размер порции", is_active: false }
+    { id: "actual-portion-group", product_id: "actual-portion", name: "Размер порции", is_active: true },
+    { id: "portion-group", product_id: "portion", name: "Размер порции", is_active: true },
+    { id: "retired-portion-group", product_id: "retired-portion", name: "Размер порции", is_active: false },
+    { id: "box-filling-group", product_id: "box", name: "Начинка", is_active: true }
+  ],
+  options: [
+    { id: "portion-six", group_id: "portion-group", modifier_type: "replace", ingredient_id: "piece", replacement_ingredient_id: "piece", quantity_delta: 6, unit: "pcs", is_active: true, sort_order: 0 },
+    { id: "portion-twelve", group_id: "portion-group", modifier_type: "replace", ingredient_id: "piece", replacement_ingredient_id: "piece", quantity_delta: 12, unit: "pcs", is_active: true, sort_order: 1 },
+    { id: "box-beef", group_id: "box-filling-group", modifier_type: "replace", ingredient_id: "chicken", replacement_ingredient_id: "beef", quantity_delta: 90, unit: "g", is_active: true, sort_order: 1 }
   ],
   usage: [],
   items: [],
@@ -120,6 +135,8 @@ item("refunded-native", { netQuantity: 0, snapshot: [["piece", 15]] });
 item("evotor-plain", { source: "pos_evotor", product: "plain" });
 item("evotor-return", { source: "pos_evotor", product: "plain", netQuantity: -2 });
 item("evotor-portion", { source: "pos_evotor" });
+item("Snack 6 шт.", { source: "pos_evotor", product: "portion", netQuantity: 1 });
+item("Айдахо Бокс с говядиной", { source: "pos_evotor", product: "box", netQuantity: 1 });
 item("evotor-retired-portion", { source: "pos_evotor", product: "retired-portion" });
 item("evotor-unconfirmed", { source: "pos_evotor", product: "plain", mapping: "suggested" });
 item("evotor-broken-recipe", { source: "pos_evotor", product: "broken-recipe" });
@@ -133,6 +150,8 @@ const expectedCosts = {
   six: 150, twelve: 300, extras: 474, removal: 8, "changed-recipe": 300,
   "native-pos": 300, "zero-usage": 0, "refunded-native": 0,
   "evotor-plain": 150, "evotor-return": -150, "evotor-id-collision": 150,
+  "Snack 6 шт.": 75,
+  "Айдахо Бокс с говядиной": 180,
   "portion-six": 86.4, "portion-twelve": 172.8
 };
 
@@ -145,18 +164,22 @@ const fixtureCtes = `
       as x(product_id text, ingredient_id text, quantity numeric, unit text)
   ), fixture_groups as (
     select * from jsonb_to_recordset($3::text::jsonb)
-      as x(product_id text, name text, is_active boolean)
-  ), fixture_usage as (
+      as x(id text, product_id text, name text, is_active boolean)
+  ), fixture_options as (
     select * from jsonb_to_recordset($4::text::jsonb)
+      as x(id text, group_id text, modifier_type text, ingredient_id text, replacement_ingredient_id text,
+        quantity_delta numeric, unit text, is_active boolean, sort_order integer)
+  ), fixture_usage as (
+    select * from jsonb_to_recordset($5::text::jsonb)
       as x(order_item_id text, ingredient_id text, quantity_per_item numeric, unit text)
   ), fixture_items as (
-    select * from jsonb_to_recordset($5::text::jsonb) as x(
+    select * from jsonb_to_recordset($6::text::jsonb) as x(
       sale_id text, sale_item_id text, source_record_id text, source text,
       source_product_id text, external_source_id text, product_id text,
       product_name text, category text, mapping_status text, net_quantity numeric, net_revenue numeric
     )
   ), fixture_sales as (
-    select * from jsonb_to_recordset($6::text::jsonb)
+    select * from jsonb_to_recordset($7::text::jsonb)
       as x(sale_id text, source text, sale_count_eligible boolean)
   )
 `;
@@ -164,7 +187,8 @@ const fixtureCtes = `
 function fixtureQuery(query) {
   const tables = {
     product_ingredients: "fixture_recipes", ingredients: "fixture_ingredients",
-    product_modifier_groups: "fixture_groups", order_item_ingredient_usage: "fixture_usage",
+    product_modifier_groups: "fixture_groups", product_modifier_options: "fixture_options",
+    order_item_ingredient_usage: "fixture_usage",
     analytics_sale_items: "fixture_items", canonical_analytics_sales: "fixture_sales"
   };
   assert.match(query.trimStart(), /^with /);
@@ -191,7 +215,7 @@ test("PostgreSQL: portions, extras, removals, unknown coverage and canonical sou
     const queries = await dashboardQueries();
     // Check the migrated schema without executing a query against application rows.
     for (const query of queries) await connection.unsafe(`explain ${query}`);
-    const values = [fixtures.ingredients, fixtures.recipes, fixtures.groups, fixtures.usage, fixtures.items, fixtures.sales].map(JSON.stringify);
+    const values = [fixtures.ingredients, fixtures.recipes, fixtures.groups, fixtures.options, fixtures.usage, fixtures.items, fixtures.sales].map(JSON.stringify);
     const [metric] = await connection.unsafe(fixtureQuery(queries[0]), values);
     const products = await connection.unsafe(fixtureQuery(queries[1]), values);
     assert.equal(products.length, fixtures.items.length);
@@ -212,7 +236,7 @@ test("PostgreSQL: portions, extras, removals, unknown coverage and canonical sou
     const groupedItems = fixtures.items.filter((item) => item.product_id === "actual-portion")
       .map((item) => ({ ...item, product_name: "Same product, two serving sizes" }));
     const groupedValues = [...values];
-    groupedValues[4] = JSON.stringify(groupedItems);
+    groupedValues[5] = JSON.stringify(groupedItems);
     const [grouped] = await connection.unsafe(fixtureQuery(queries[1]), groupedValues);
     assert.equal(Number(grouped.food_cost), 259.2);
     assert.equal(Number(grouped.quantity), 2);
@@ -220,14 +244,14 @@ test("PostgreSQL: portions, extras, removals, unknown coverage and canonical sou
     assert.equal(Number(grouped.receipts), 2);
     assert.equal(grouped.food_cost_complete, true);
 
-    groupedValues[3] = JSON.stringify(fixtures.usage.filter((usage) => usage.order_item_id !== "portion-twelve"));
+    groupedValues[4] = JSON.stringify(fixtures.usage.filter((usage) => usage.order_item_id !== "portion-twelve"));
     const [incomplete] = await connection.unsafe(fixtureQuery(queries[1]), groupedValues);
     assert.equal(incomplete.food_cost_complete, false);
     assert.equal(Number(incomplete.food_cost), 86.4);
     assert.equal(Number(incomplete.covered_revenue), 100);
     assert.equal(Number(incomplete.revenue), 200);
 
-    groupedValues[3] = values[3];
+    groupedValues[4] = values[4];
     groupedValues[0] = JSON.stringify(fixtures.ingredients.map((ingredient) => ingredient.id === "portion-piece"
       ? { ...ingredient, cost_per_unit: 28.8 }
       : ingredient));
