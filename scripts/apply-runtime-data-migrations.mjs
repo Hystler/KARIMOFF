@@ -5,9 +5,11 @@ import postgres from "postgres";
 const dataPath = new URL("../data/tech-cards/karimoff-tech-card-2026-08-11.json", import.meta.url);
 const mappingPath = new URL("../data/analytics/evotor-product-mappings.json", import.meta.url);
 const menuPricingPath = new URL("../data/catalog/menu-prices-2026-09-16.json", import.meta.url);
+const hotdogVariantsPath = new URL("../data/catalog/hotdog-variants-2026-09-16.json", import.meta.url);
 const techCard = JSON.parse(readFileSync(dataPath, "utf8"));
 const explicitMappingRules = JSON.parse(readFileSync(mappingPath, "utf8"));
 const menuPricing = JSON.parse(readFileSync(menuPricingPath, "utf8"));
+const hotdogVariants = JSON.parse(readFileSync(hotdogVariantsPath, "utf8"));
 const databaseUrl = process.env.DATABASE_URL;
 
 function normalizeName(value) {
@@ -45,6 +47,7 @@ function extraKeysForProduct(name, category) {
   const accepts = ["бургеры", "шаурма", "хот доги", "боксы", "боксфуд", "горячие закуски", "закуски"].includes(section);
   if (!accepts) return [];
   if (product.includes("кревет") || product === "себастиан") return ["shrimp", "caesar", "garlic"];
+  if (product.includes("френчдог")) return ["cheddar", "onion"];
   if (section.includes("хот дог") || product.includes("хот дог")) return ["cheddar", "onion", "cheese-sauce"];
   if (section.includes("шаур") || product.includes("шаур")) {
     const meat = product.includes("свинин") ? "pork" : product.includes("говядин") ? "beef" : "chicken";
@@ -146,6 +149,156 @@ async function getOrCreateModifierGroup(transaction, productId, name, sortOrder 
       sort_order=excluded.sort_order,is_active=true,updated_at=now()
   `;
   return id;
+}
+
+async function configureReplacementGroup(transaction, productId, spec, sortOrder) {
+  const ingredientNames = [spec.base_ingredient, ...spec.options.map((option) => option.ingredient)];
+  const ingredients = await transaction`
+    select id,name,unit from public.ingredients where name=any(${ingredientNames}::text[])
+  `;
+  const ingredientByName = new Map(ingredients.map((ingredient) => [ingredient.name, ingredient]));
+  const missingIngredients = ingredientNames.filter((name) => !ingredientByName.has(name));
+  if (missingIngredients.length) {
+    throw new Error(`Replacement ingredients are missing: ${[...new Set(missingIngredients)].join(", ")}`);
+  }
+
+  const baseIngredient = ingredientByName.get(spec.base_ingredient);
+  const [baseLine] = await transaction`
+    select id,unit from public.product_ingredients
+    where product_id=${productId}::uuid and ingredient_id=${baseIngredient.id}::uuid and quantity>0
+    order by sort_order,id limit 1 for update
+  `;
+  if (!baseLine || baseLine.unit !== baseIngredient.unit) {
+    throw new Error(`Replacement base line is missing for ${spec.name}`);
+  }
+
+  const groupId = await getOrCreateModifierGroup(transaction, productId, spec.name, sortOrder);
+  const existingOptions = await transaction`
+    select id,replacement_ingredient_id from public.product_modifier_options
+    where group_id=${groupId}::uuid for update
+  `;
+  const activeIds = [];
+
+  for (const [index, option] of spec.options.entries()) {
+    const replacement = ingredientByName.get(option.ingredient);
+    if (replacement.unit !== baseLine.unit) {
+      throw new Error(`Replacement unit mismatch for ${spec.name}: ${option.ingredient}`);
+    }
+    const id = existingOptions.find((item) => item.replacement_ingredient_id === replacement.id)?.id ?? randomUUID();
+    activeIds.push(id);
+    await transaction`
+      insert into public.product_modifier_options (
+        id,group_id,label,modifier_type,ingredient_id,replacement_ingredient_id,
+        quantity_delta,unit,price_delta,kitchen_note,is_default,is_active,sort_order
+      ) values (
+        ${id}::uuid,${groupId}::uuid,${option.label},'replace',${baseIngredient.id}::uuid,
+        ${replacement.id}::uuid,${option.quantity},${replacement.unit},${option.price_delta},
+        ${`${spec.name}: ${option.label}`},${Boolean(option.is_default)},true,${index}
+      )
+      on conflict(id) do update set
+        label=excluded.label,modifier_type='replace',ingredient_id=excluded.ingredient_id,
+        replacement_ingredient_id=excluded.replacement_ingredient_id,
+        quantity_delta=excluded.quantity_delta,unit=excluded.unit,price_delta=excluded.price_delta,
+        kitchen_note=excluded.kitchen_note,is_default=excluded.is_default,is_active=true,sort_order=excluded.sort_order
+    `;
+  }
+
+  await transaction`
+    update public.product_modifier_options set is_active=false,updated_at=now()
+    where group_id=${groupId}::uuid and not(id=any(${activeIds}::uuid[]))
+  `;
+  await transaction`update public.product_ingredients set is_removable=true where id=${baseLine.id}::uuid`;
+  return spec.options.length;
+}
+
+async function applyHotdogVariants(transaction) {
+  await transaction`select pg_advisory_xact_lock(hashtext(${hotdogVariants.migration_marker}))`;
+  const [existingMarker] = await transaction`
+    select id from public.audit_logs where action=${hotdogVariants.migration_marker} limit 1
+  `;
+  if (existingMarker) return { status: "already_applied" };
+
+  let configuredProducts = 0;
+  let configuredOptions = 0;
+  for (const slug of hotdogVariants.existing_products) {
+    const [product] = await transaction`select id from public.products where slug=${slug} for update`;
+    if (!product) throw new Error(`Hotdog product is missing: ${slug}`);
+    configuredOptions += await configureReplacementGroup(
+      transaction,
+      product.id,
+      hotdogVariants.sausage_group,
+      5
+    );
+    configuredProducts += 1;
+  }
+
+  const frenchdogSpec = hotdogVariants.frenchdog;
+  let [frenchdog] = await transaction`select id from public.products where slug=${frenchdogSpec.slug} for update`;
+  let createdFrenchdog = false;
+  if (!frenchdog) {
+    [frenchdog] = await transaction`
+      insert into public.products (
+        slug,name,category,description,price,image_url,is_active,sort_order,weight
+      ) values (
+        ${frenchdogSpec.slug},${frenchdogSpec.name},${frenchdogSpec.category},${frenchdogSpec.description},
+        ${frenchdogSpec.price},${frenchdogSpec.image_url},true,${frenchdogSpec.sort_order},${frenchdogSpec.weight}
+      ) returning id
+    `;
+    createdFrenchdog = true;
+  } else {
+    await transaction`update public.products set is_active=true,updated_at=now() where id=${frenchdog.id}::uuid`;
+  }
+
+  const [{ count: frenchdogLineCount }] = await transaction`
+    select count(*)::int as count from public.product_ingredients
+    where product_id=${frenchdog.id}::uuid and quantity>0
+  `;
+  if (Number(frenchdogLineCount) === 0) {
+    const ingredientNames = frenchdogSpec.recipe.map((line) => line.ingredient);
+    const ingredients = await transaction`
+      select id,name,unit from public.ingredients where name=any(${ingredientNames}::text[])
+    `;
+    const ingredientByName = new Map(ingredients.map((ingredient) => [ingredient.name, ingredient]));
+    const missingIngredients = ingredientNames.filter((name) => !ingredientByName.has(name));
+    if (missingIngredients.length) throw new Error(`Frenchdog ingredients are missing: ${missingIngredients.join(", ")}`);
+    for (const line of frenchdogSpec.recipe) {
+      const ingredient = ingredientByName.get(line.ingredient);
+      await transaction`
+        insert into public.product_ingredients (
+          product_id,ingredient_id,quantity,unit,sort_order,is_removable,
+          is_extra_available,extra_quantity,extra_price,max_extra_quantity
+        ) values (
+          ${frenchdog.id}::uuid,${ingredient.id}::uuid,${line.quantity},${ingredient.unit},
+          ${line.sort_order},${Boolean(line.is_removable)},false,0,0,1
+        )
+      `;
+    }
+  }
+
+  configuredOptions += await configureReplacementGroup(
+    transaction,
+    frenchdog.id,
+    hotdogVariants.sausage_group,
+    5
+  );
+  configuredOptions += await configureReplacementGroup(
+    transaction,
+    frenchdog.id,
+    frenchdogSpec.sauce_group,
+    10
+  );
+  configuredProducts += 1;
+
+  await transaction`
+    insert into public.audit_logs (
+      actor_type,action,entity_type,entity_id,metadata,source_path
+    ) values (
+      'system',${hotdogVariants.migration_marker},'hotdog_variants',${hotdogVariants.version},
+      ${transaction.json({ configuredProducts, configuredOptions, createdFrenchdog })},
+      'scripts/apply-runtime-data-migrations.mjs'
+    )
+  `;
+  return { status: "applied", configuredProducts, configuredOptions, createdFrenchdog };
 }
 
 async function applyMenuPricing(transaction) {
@@ -435,7 +588,6 @@ async function applyExplicitEvotorMappings(transaction) {
         confirmed_at = now(),
         updated_at = now()
       where public.evotor_product_mappings.status = 'suggested'
-        and public.evotor_product_mappings.karimoff_product_id = excluded.karimoff_product_id
       returning id
     `;
     confirmedMappings += changed.length;
@@ -900,11 +1052,12 @@ try {
   });
 
   const menuPricingResult = await sql.begin(applyMenuPricing);
+  const hotdogVariantResult = await sql.begin(applyHotdogVariants);
   const confirmedMappings = await sql.begin(applyExplicitEvotorMappings);
   const logicalExtras = await sql.begin(applyLogicalExtras);
   const settledStaleOrders = await sql.begin(settleStaleOrders);
 
-  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings, menuPricingResult, logicalExtras, settledStaleOrders })}`);
+  console.log(`Runtime data migration ${techCard.version}: ${JSON.stringify({ ...result, confirmedMappings, menuPricingResult, hotdogVariantResult, logicalExtras, settledStaleOrders })}`);
 } finally {
   await sql.end({ timeout: 2 });
 }

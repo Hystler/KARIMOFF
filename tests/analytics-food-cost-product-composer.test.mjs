@@ -136,6 +136,7 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
   const mappings = JSON.parse(read("data/analytics/evotor-product-mappings.json"));
   const techCard = JSON.parse(read("data/tech-cards/karimoff-tech-card-2026-08-11.json"));
   const menuPricing = JSON.parse(read("data/catalog/menu-prices-2026-09-16.json"));
+  const hotdogs = JSON.parse(read("data/catalog/hotdog-variants-2026-09-16.json"));
   const catalog = JSON.parse(read("data/import/juikaifui-products.json"));
   const sync = read("src/lib/integrations/evotor/sync.ts");
   const runtimeMigration = read("scripts/apply-runtime-data-migrations.mjs");
@@ -143,7 +144,8 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
   const knownSlugs = new Set([
     ...catalog.map((product) => product.slug),
     ...techCard.recipes.flatMap((recipe) => recipe.product_slugs),
-    ...menuPricing.new_products.map((product) => product.slug)
+    ...menuPricing.new_products.map((product) => product.slug),
+    hotdogs.frenchdog.slug
   ]);
   const normalizedNames = mappings.flatMap((mapping) => mapping.evotor_names)
     .map((name) => name.normalize("NFKC").replaceAll("ё", "е").trim().toLowerCase());
@@ -158,6 +160,13 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
     "Кантри Биф",
     "Айдахо Бокс с курицей",
     "Хот-дог Датский Свинина",
+    "Хот-дог Датский Курица",
+    "Хот-дог Датский Говядина",
+    "Хот-дог Барбекю Курица",
+    "Хот-дог Итали Говядина",
+    "Френчдог Свинина",
+    "Френчдог Курица",
+    "Френчдог Говядина",
     "Королевские креветки в панировке 6 шт.",
     "Королевские креветки в панировке 12 шт.",
     "Картофель фри 150 гр.",
@@ -170,19 +179,20 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
     assert.ok(mappings.some((mapping) => mapping.evotor_names.includes(expected)), expected);
   }
 
-  for (const unsafe of [
-    "Хот-дог Датский Курица",
-    "Хот-дог Датский Говядина"
-  ]) {
-    assert.ok(!mappings.some((mapping) => mapping.evotor_names.includes(unsafe)), unsafe);
-  }
-
   assert.match(sync, /EXPLICIT_EVOTOR_PRODUCT_MAPPINGS/);
   assert.match(sync, /system:explicit-catalog-alias/);
   assert.match(sync, /status = 'suggested'/);
   assert.match(runtimeMigration, /applyExplicitEvotorMappings/);
   assert.match(runtimeMigration, /confirmedMappings/);
   assert.match(dockerfile, /data\/analytics/);
+});
+
+test("Evotor food cost resolves sausage variants by the meat in the receipt name", () => {
+  const foodCostSql = read("src/lib/analytics/sale-food-cost.ts");
+
+  assert.match(foodCostSql, /variant_group\.name in \('Начинка', 'Колбаска'\)/);
+  assert.match(foodCostSql, /replacement_ingredient\.name\) like '%курин%'/);
+  assert.match(foodCostSql, /i\.product_name\) like '%говядин%'/);
 });
 
 test("unmapped Evotor products still receive useful analytics categories without false recipe mappings", () => {

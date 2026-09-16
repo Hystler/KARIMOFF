@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const pricing = JSON.parse(readFileSync("data/catalog/menu-prices-2026-09-16.json", "utf8"));
+const hotdogs = JSON.parse(readFileSync("data/catalog/hotdog-variants-2026-09-16.json", "utf8"));
 const migration = readFileSync("scripts/apply-runtime-data-migrations.mjs", "utf8");
 const overview = readFileSync("src/app/admin/page.tsx", "utf8");
 const productActions = readFileSync("src/app/admin/products/actions.ts", "utf8");
@@ -37,6 +38,29 @@ test("printed menu portions, box proteins, extras and mixes are represented exac
 
   assert.match(migration, /applyMenuPricing\(transaction\)/);
   assert.match(migration, /data_migration\.menu_prices\.20260916_v1|menuPricing\.migration_marker/);
+});
+
+test("owner-approved hotdog variants share recipes and expose the correct required choices", () => {
+  assert.deepEqual(hotdogs.existing_products, ["hot-dog-datskiy", "hot-dog-barbekyu", "hot-dog-itali"]);
+  assert.deepEqual(
+    hotdogs.sausage_group.options.map((option) => [option.label, option.ingredient, option.quantity, option.is_default]),
+    [
+      ["Свиная", "Колбаска свиная", 1, true],
+      ["Куриная", "Колбаска куриная", 1, false],
+      ["Говяжья", "Колбаска говяжья", 1, false]
+    ]
+  );
+  assert.equal(hotdogs.frenchdog.slug, "frenchdog");
+  assert.deepEqual(
+    hotdogs.frenchdog.sauce_group.options.map((option) => [option.label, option.ingredient, option.quantity, option.is_default]),
+    [
+      ["Кетчуп", "Кетчуп", 30, true],
+      ["Чесночный", "Соус чесночный", 30, false],
+      ["Сырный", "Соус сырный", 30, false]
+    ]
+  );
+  assert.match(migration, /applyHotdogVariants\(transaction\)/);
+  assert.match(migration, /configureReplacementGroup/);
 });
 
 test("admin overview is operational and no longer advertises cashier shortcuts", () => {

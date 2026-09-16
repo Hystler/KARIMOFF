@@ -278,7 +278,6 @@ async function persistSnapshot(params: {
           confirmed_at = now(),
           updated_at = now()
         where public.evotor_product_mappings.status = 'suggested'
-          and public.evotor_product_mappings.karimoff_product_id = excluded.karimoff_product_id
       `;
     }
 

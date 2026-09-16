@@ -92,11 +92,16 @@ export const SALE_FOOD_COST_JOIN = `
     where i.source = 'pos_evotor'
       and i.mapping_status = 'confirmed'
       and variant_group.product_id = i.product_id
-      and variant_group.name = 'Начинка'
+      and variant_group.name in ('Начинка', 'Колбаска')
       and variant_group.is_active
       and option.modifier_type = 'replace'
       and option.is_active
-      and lower(i.product_name) like '%' || left(lower(replacement_ingredient.name), 5) || '%'
+      and (
+        lower(i.product_name) like '%' || left(lower(replacement_ingredient.name), 5) || '%'
+        or (lower(replacement_ingredient.name) like '%курин%' and lower(i.product_name) like '%куриц%')
+        or (lower(replacement_ingredient.name) like '%свин%' and lower(i.product_name) like '%свин%')
+        or (lower(replacement_ingredient.name) like '%говяж%' and lower(i.product_name) like '%говядин%')
+      )
     order by option.sort_order, option.id
     limit 1
   ) variant_cost on true

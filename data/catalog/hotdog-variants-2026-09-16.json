@@ -1,0 +1,42 @@
+{
+  "version": "2026-09-16-owner-approved-v1",
+  "migration_marker": "data_migration.hotdog_variants.20260916_v1",
+  "sausage_group": {
+    "name": "Колбаска",
+    "base_ingredient": "Колбаска свиная",
+    "options": [
+      { "label": "Свиная", "ingredient": "Колбаска свиная", "quantity": 1, "price_delta": 0, "is_default": true },
+      { "label": "Куриная", "ingredient": "Колбаска куриная", "quantity": 1, "price_delta": 0, "is_default": false },
+      { "label": "Говяжья", "ingredient": "Колбаска говяжья", "quantity": 1, "price_delta": 0, "is_default": false }
+    ]
+  },
+  "existing_products": [
+    "hot-dog-datskiy",
+    "hot-dog-barbekyu",
+    "hot-dog-itali"
+  ],
+  "frenchdog": {
+    "slug": "frenchdog",
+    "name": "Френчдог",
+    "category": "Хот-Доги",
+    "description": "Французский хот-дог с колбаской и соусом на выбор.",
+    "price": 250,
+    "image_url": "/assets/products/placeholder-hotdog.svg",
+    "sort_order": 19,
+    "weight": "1 шт.",
+    "recipe": [
+      { "ingredient": "Булочка для хот-дога закрытая", "quantity": 1, "sort_order": 10, "is_removable": false },
+      { "ingredient": "Колбаска свиная", "quantity": 1, "sort_order": 20, "is_removable": false },
+      { "ingredient": "Кетчуп", "quantity": 30, "sort_order": 30, "is_removable": true }
+    ],
+    "sauce_group": {
+      "name": "Соус",
+      "base_ingredient": "Кетчуп",
+      "options": [
+        { "label": "Кетчуп", "ingredient": "Кетчуп", "quantity": 30, "price_delta": 0, "is_default": true },
+        { "label": "Чесночный", "ingredient": "Соус чесночный", "quantity": 30, "price_delta": 0, "is_default": false },
+        { "label": "Сырный", "ingredient": "Соус сырный", "quantity": 30, "price_delta": 0, "is_default": false }
+      ]
+    }
+  }
+}

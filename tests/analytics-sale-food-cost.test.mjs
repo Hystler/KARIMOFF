@@ -70,7 +70,10 @@ const fixtures = {
     { id: "zero-price", cost_per_unit: 0, waste_percent: 0, unit: "pcs" },
     { id: "null-price", cost_per_unit: null, waste_percent: 0, unit: "pcs" },
     { id: "chicken", cost_per_unit: 1, waste_percent: 0, unit: "g" },
-    { id: "beef", cost_per_unit: 2, waste_percent: 0, unit: "g" }
+    { id: "beef", cost_per_unit: 2, waste_percent: 0, unit: "g" },
+    { id: "pork-sausage", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
+    { id: "chicken-sausage", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
+    { id: "beef-sausage", cost_per_unit: 76, waste_percent: 0, unit: "pcs" }
   ],
   recipes: [
     { product_id: "actual-portion", ingredient_id: "portion-piece", quantity: 6, unit: "pcs" },
@@ -82,18 +85,23 @@ const fixtures = {
     { product_id: "broken-recipe", ingredient_id: "missing", quantity: 2, unit: "pcs" },
     { product_id: "null-price-recipe", ingredient_id: "piece", quantity: 6, unit: "pcs" },
     { product_id: "null-price-recipe", ingredient_id: "null-price", quantity: 2, unit: "pcs" },
-    { product_id: "box", ingredient_id: "chicken", quantity: 90, unit: "g" }
+    { product_id: "box", ingredient_id: "chicken", quantity: 90, unit: "g" },
+    { product_id: "hotdog", ingredient_id: "pork-sausage", quantity: 1, unit: "pcs" }
   ],
   groups: [
     { id: "actual-portion-group", product_id: "actual-portion", name: "Размер порции", is_active: true },
     { id: "portion-group", product_id: "portion", name: "Размер порции", is_active: true },
     { id: "retired-portion-group", product_id: "retired-portion", name: "Размер порции", is_active: false },
-    { id: "box-filling-group", product_id: "box", name: "Начинка", is_active: true }
+    { id: "box-filling-group", product_id: "box", name: "Начинка", is_active: true },
+    { id: "hotdog-sausage-group", product_id: "hotdog", name: "Колбаска", is_active: true }
   ],
   options: [
     { id: "portion-six", group_id: "portion-group", modifier_type: "replace", ingredient_id: "piece", replacement_ingredient_id: "piece", quantity_delta: 6, unit: "pcs", is_active: true, sort_order: 0 },
     { id: "portion-twelve", group_id: "portion-group", modifier_type: "replace", ingredient_id: "piece", replacement_ingredient_id: "piece", quantity_delta: 12, unit: "pcs", is_active: true, sort_order: 1 },
-    { id: "box-beef", group_id: "box-filling-group", modifier_type: "replace", ingredient_id: "chicken", replacement_ingredient_id: "beef", quantity_delta: 90, unit: "g", is_active: true, sort_order: 1 }
+    { id: "box-beef", group_id: "box-filling-group", modifier_type: "replace", ingredient_id: "chicken", replacement_ingredient_id: "beef", quantity_delta: 90, unit: "g", is_active: true, sort_order: 1 },
+    { id: "hotdog-pork", group_id: "hotdog-sausage-group", modifier_type: "replace", ingredient_id: "pork-sausage", replacement_ingredient_id: "pork-sausage", quantity_delta: 1, unit: "pcs", is_active: true, sort_order: 0 },
+    { id: "hotdog-chicken", group_id: "hotdog-sausage-group", modifier_type: "replace", ingredient_id: "pork-sausage", replacement_ingredient_id: "chicken-sausage", quantity_delta: 1, unit: "pcs", is_active: true, sort_order: 1 },
+    { id: "hotdog-beef", group_id: "hotdog-sausage-group", modifier_type: "replace", ingredient_id: "pork-sausage", replacement_ingredient_id: "beef-sausage", quantity_delta: 1, unit: "pcs", is_active: true, sort_order: 2 }
   ],
   usage: [],
   items: [],
@@ -137,6 +145,8 @@ item("evotor-return", { source: "pos_evotor", product: "plain", netQuantity: -2 
 item("evotor-portion", { source: "pos_evotor" });
 item("Snack 6 шт.", { source: "pos_evotor", product: "portion", netQuantity: 1 });
 item("Айдахо Бокс с говядиной", { source: "pos_evotor", product: "box", netQuantity: 1 });
+item("Хот-дог Датский Курица", { source: "pos_evotor", product: "hotdog", netQuantity: 1 });
+item("Хот-дог Датский Говядина", { source: "pos_evotor", product: "hotdog", netQuantity: 1 });
 item("evotor-retired-portion", { source: "pos_evotor", product: "retired-portion" });
 item("evotor-unconfirmed", { source: "pos_evotor", product: "plain", mapping: "suggested" });
 item("evotor-broken-recipe", { source: "pos_evotor", product: "broken-recipe" });
@@ -152,6 +162,8 @@ const expectedCosts = {
   "evotor-plain": 150, "evotor-return": -150, "evotor-id-collision": 150,
   "Snack 6 шт.": 75,
   "Айдахо Бокс с говядиной": 180,
+  "Хот-дог Датский Курица": 50,
+  "Хот-дог Датский Говядина": 76,
   "portion-six": 86.4, "portion-twelve": 172.8
 };
 
