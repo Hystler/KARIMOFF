@@ -51,6 +51,8 @@ test("terminal health check is read-only and uses an Evotor-supported method", (
 test("terminal jobs are device-scoped and live order previews require an explicit switch", () => {
   assert.match(nextRoute, /authenticateTerminal\(request\)/);
   assert.match(ackRoute, /authenticateTerminal\(request\)/);
+  assert.match(bridge, /x-karimoff-terminal-token/);
+  assert.doesNotMatch(bridge, /authorization\.slice\(7\)/);
   assert.match(bridge, /where device_id = \$\{deviceId\}::uuid/);
   assert.match(bridge, /and device_id = \$\{deviceId\}::uuid/);
   assert.match(bridge, /!order\.is_test && process\.env\.EVOTOR_TERMINAL_ALLOW_LIVE_PREVIEW !== "true"/);
@@ -63,7 +65,8 @@ test("Evotor APK uses hosted HTTPS pairing without cleartext or fiscal actions",
   assert.doesNotMatch(manifest, /usesCleartextTraffic="true"/);
   assert.match(strings, /https:\/\/karimoff\.site\/api\/terminal/);
   assert.match(activity, /getSharedPreferences\(PREFERENCES, MODE_PRIVATE\)/);
-  assert.match(activity, /"Authorization", "Bearer " \+ token/);
+  assert.match(activity, /"X-Karimoff-Terminal-Token", token/);
+  assert.doesNotMatch(activity, /setRequestProperty\("Authorization"/);
   assert.match(activity, /\/orders\/next/);
   assert.match(activity, /\/orders\/" \+ jobId \+ "\/ack/);
   assert.doesNotMatch(activity, /ReceiptApi|PaymentIntent|SellApi|PaybackApi/);

@@ -13,6 +13,8 @@ It deliberately has no cash-operation grants, push receiver, receipt commands, o
 The hosted preview uses `https://karimoff.site` through the external-service proxy configured for
 the application in the Evotor developer portal. A terminal is paired with a one-time code and
 stores its revocable bearer token in private application preferences.
+Evotor Cloud replaces the standard `Authorization` header, so the paired-device token is sent
+as `X-Karimoff-Terminal-Token` and remains validated by its server-side HMAC digest.
 For Android 11 terminals, the app also carries the official Let's Encrypt Root YE CA scoped only
 to the bridge domain; normal hostname and certificate validation remain enabled.
 The per-connection TLS context combines platform anchors with the self-signed Root YE from

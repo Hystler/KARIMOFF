@@ -249,7 +249,9 @@ public final class MainActivity extends Activity {
         try {
             connection.setRequestMethod(method);
             connection.setRequestProperty("Accept", "application/json");
-            if (token != null) connection.setRequestProperty("Authorization", "Bearer " + token);
+            if (token != null) {
+                connection.setRequestProperty("X-Karimoff-Terminal-Token", token);
+            }
             if (body != null) {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");

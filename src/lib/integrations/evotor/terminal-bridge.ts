@@ -162,9 +162,9 @@ export async function pairTerminal(params: {
 
 export async function authenticateTerminal(request: Request) {
   if (!terminalBridgeReady()) return null;
-  const authorization = request.headers.get("authorization")?.trim() ?? "";
-  if (!authorization.toLowerCase().startsWith("bearer ")) return null;
-  const token = authorization.slice(7).trim();
+  // Evotor Cloud replaces Authorization while proxying terminal traffic.
+  // Keep the per-device credential in an application-specific header instead.
+  const token = request.headers.get("x-karimoff-terminal-token")?.trim() ?? "";
   if (!TOKEN_PATTERN.test(token)) return null;
   const [device] = await getPostgresSql()<{
     id: string;
