@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <package android:name="ru.atol.tabletpos" />
+        <package android:name="ru.sberbank.uposnative" />
+        <package android:name="ru.sberbank.uposinitloader" />
+        <package android:name="ru.evotor.drivers.kozenpaysystem" />
+        <package android:name="ru.evotor.drivers.kkm" />
+        <intent>
+            <action android:name="ru.evotor.devices.drivers.PaySystemService" />
+        </intent>
+        <intent>
+            <action android:name="ru.evotor.devices.drivers.VirtualDriverManager" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <meta-data
+            android:name="app_uuid"
+            android:value="41b078b3-cb82-4f85-8dd7-987c0b5ab3cf" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.EVOTOR" />
+            </intent-filter>
+            <meta-data
+                android:name="ru.evotor.launcher.BACKGROUND_COLOR"
+                android:value="#202124" />
+        </activity>
+    </application>
+
+</manifest>

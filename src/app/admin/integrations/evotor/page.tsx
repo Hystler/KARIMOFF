@@ -12,7 +12,13 @@ import Link from "next/link";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { evotorRecoveryState } from "@/lib/integrations/evotor/recovery";
 import { getEvotorAdminData } from "@/lib/integrations/evotor/repository";
+import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import {
+  getTerminalBridgeDevices,
+  terminalBridgeReady
+} from "@/lib/integrations/evotor/terminal-bridge";
 import { checkEvotorAction, incrementalEvotorAction, syncEvotorAction } from "./actions";
+import { TerminalBridgePanel } from "./TerminalBridgePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +61,11 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");
 
   const params = searchParams ? await searchParams : {};
-  const data = await getEvotorAdminData();
+  const [data, terminalLocations] = await Promise.all([
+    getEvotorAdminData(),
+    getAccessibleOrderLocations(staff)
+  ]);
+  const terminalDevices = await getTerminalBridgeDevices(terminalLocations.map((location) => location.id));
   const enabled = process.env.EVOTOR_ENABLED === "true";
   const callbackReady = Boolean(
     process.env.EVOTOR_WEBHOOK_AUTH_TOKEN && process.env.EVOTOR_TOKEN_ENCRYPTION_KEY
@@ -83,6 +93,14 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
         <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
           Не удалось запустить операцию. Проверьте подключение или повторите позже.
         </div>
+      ) : null}
+
+      {terminalLocations[0] ? (
+        <TerminalBridgePanel
+          enabled={terminalBridgeReady()}
+          devices={terminalDevices}
+          locationId={terminalLocations[0].id}
+        />
       ) : null}
 
       {!enabled || !callbackReady ? (

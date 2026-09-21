@@ -635,6 +635,28 @@ migrations.push({
     return Boolean(objects?.line_state && objects?.station_transition && objects?.inventory_policy && objects?.policy_function && objects?.ready_guard);
   }
 });
+migrations.push({
+  name: "20260921193000_add_evotor_terminal_bridge",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select
+        to_regclass('public.evotor_terminal_devices') is not null as devices,
+        to_regclass('public.evotor_terminal_pairing_codes') is not null as pairing_codes,
+        to_regclass('public.evotor_terminal_preview_jobs') is not null as preview_jobs,
+        coalesce((
+          select relrowsecurity
+          from pg_class
+          where oid = to_regclass('public.evotor_terminal_preview_jobs')
+        ), false) as preview_jobs_rls
+    `;
+    return Boolean(
+      objects?.devices &&
+      objects?.pairing_codes &&
+      objects?.preview_jobs &&
+      objects?.preview_jobs_rls
+    );
+  }
+});
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 

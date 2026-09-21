@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KARIMOFF Bridge</string>
+    <string name="read_only_badge">ТОЛЬКО ЧТЕНИЕ</string>
+    <string name="title">Диагностика Эвотора</string>
+    <string name="description">Проверка доступных платёжных компонентов без открытия чека и запуска оплаты.</string>
+    <string name="diagnostic_loading">Чтение локальных компонентов…</string>
+    <string name="refresh">Обновить диагностику</string>
+    <string name="receive_preview">Получить тестовый заказ</string>
+    <string name="bridge_api_base">https://karimoff.site/api/terminal</string>
+    <string name="preview_loading">Получение тестового заказа…</string>
+    <string name="preview_network_error">Не удалось получить тестовый заказ. Проверьте интернет и повторите.</string>
+    <string name="preview_queue_empty">На сервере пока нет тестовых заказов для этой кассы.</string>
+    <string name="pairing_hint">Код привязки из админки KARIMOFF</string>
+    <string name="pair_terminal">Привязать кассу</string>
+    <string name="pairing_loading">Привязываем…</string>
+    <string name="pairing_required">Сначала получите код в админке KARIMOFF и привяжите кассу.</string>
+    <string name="pairing_ready">Касса привязана к серверу KARIMOFF.</string>
+    <string name="pairing_failed">Код неверный, просрочен или сервер ещё не готов.</string>
+    <string name="preview_badge">ТЕСТОВЫЙ ЗАКАЗ</string>
+    <string name="preview_title">Заказ получен</string>
+    <string name="preview_description">Только предварительный просмотр. Чек, оплата и печать не запускались.</string>
+    <string name="preview_empty">Данные тестового заказа не переданы.</string>
+    <string name="back_to_diagnostics">Вернуться к диагностике</string>
+</resources>

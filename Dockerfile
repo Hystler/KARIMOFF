@@ -50,6 +50,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/2026082822000
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901120000_add_ingredient_nutrition.sql ./supabase/migrations/20260901120000_add_ingredient_nutrition.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql ./supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql ./supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql
+COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260921193000_add_evotor_terminal_bridge.sql ./supabase/migrations/20260921193000_add_evotor_terminal_bridge.sql
 
 USER nextjs
 
