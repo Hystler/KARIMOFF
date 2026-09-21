@@ -17,6 +17,9 @@
     <string name="pairing_required">Сначала получите код в админке KARIMOFF и привяжите кассу.</string>
     <string name="pairing_ready">Касса привязана к серверу KARIMOFF.</string>
     <string name="pairing_failed">Код неверный, просрочен или сервер ещё не готов.</string>
+    <string name="pairing_failed_detail">Ошибка привязки: %1$s</string>
+    <string name="bridge_connection_ok">Bridge %1$s: облачный канал проверен (HTTP %2$d).</string>
+    <string name="bridge_connection_failed">Bridge %1$s: ошибка HTTPS: %2$s</string>
     <string name="preview_badge">ТЕСТОВЫЙ ЗАКАЗ</string>
     <string name="preview_title">Заказ получен</string>
     <string name="preview_description">Только предварительный просмотр. Чек, оплата и печать не запускались.</string>

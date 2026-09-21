@@ -33,7 +33,8 @@ import java.util.concurrent.Executors;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.UUID;
+import javax.net.ssl.HttpsURLConnection;
 
 import kotlin.Pair;
 import ru.evotor.devices.drivers.IPaySystemDriverService;
@@ -49,6 +50,7 @@ public final class MainActivity extends Activity {
     private static final String ORDER_PREVIEW_EXTRA = "order_preview";
     private static final String PREFERENCES = "karimoff_bridge";
     private static final String TOKEN_KEY = "device_token";
+    private static final String DEVICE_KEY = "device_key";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private LinearLayout diagnosticContainer;
@@ -62,6 +64,7 @@ public final class MainActivity extends Activity {
     private TextView pairingStatusView;
     private ServiceConnection paySystemConnection;
     private boolean paySystemBound;
+    private BridgeHttps bridgeHttps;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,8 +113,40 @@ public final class MainActivity extends Activity {
 
         executor.execute(() -> {
             String report = buildReport();
-            runOnUiThread(() -> probeBankTerminals(report));
+            String serverStatus = checkBridgeConnection();
+            String fullReport = "Bridge " + appVersion() + "\n" + serverStatus + "\n\n" + report;
+            runOnUiThread(() -> {
+                probeBankTerminals(fullReport);
+                pairingStatusView.setText(serverStatus + "\n" + getString(
+                    deviceToken().isEmpty() ? R.string.pairing_required : R.string.pairing_ready
+                ));
+            });
         });
+    }
+
+    private HttpsURLConnection openBridgeConnection(String endpoint) throws Exception {
+        if (bridgeHttps == null) {
+            try (InputStream certificate = getResources().openRawResource(R.raw.lets_encrypt_root_ye)) {
+                bridgeHttps = new BridgeHttps(certificate);
+            }
+        }
+        return bridgeHttps.open(endpoint);
+    }
+
+    private String checkBridgeConnection() {
+        HttpsURLConnection connection = null;
+        try {
+            connection = openBridgeConnection(getString(R.string.bridge_api_base) + "/health");
+            connection.setRequestMethod("GET");
+            int status = connection.getResponseCode();
+            return getString(R.string.bridge_connection_ok, appVersion(), status);
+        } catch (Exception error) {
+            return getString(R.string.bridge_connection_failed, appVersion(), errorMessage(error))
+                + "\n" + (bridgeHttps == null ? "TLS context unavailable" : bridgeHttps.trustDiagnostics())
+                + "\n\n" + PeerCertificateProbe.inspect();
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
     }
 
     private void showDiagnostics() {
@@ -193,7 +228,10 @@ public final class MainActivity extends Activity {
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
-                    pairingStatusView.setText(R.string.pairing_failed);
+                    pairingStatusView.setText(getString(
+                        R.string.pairing_failed_detail,
+                        errorMessage(error)
+                    ));
                     pairButton.setEnabled(true);
                     pairButton.setText(R.string.pair_terminal);
                 });
@@ -207,22 +245,26 @@ public final class MainActivity extends Activity {
         String token,
         JSONObject body
     ) throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection();
-        connection.setRequestMethod(method);
-        connection.setConnectTimeout(4000);
-        connection.setReadTimeout(4000);
-        connection.setRequestProperty("Accept", "application/json");
-        if (token != null) connection.setRequestProperty("Authorization", "Bearer " + token);
-        if (body != null) {
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            byte[] requestBody = body.toString().getBytes(StandardCharsets.UTF_8);
-            if (requestBody.length > 16 * 1024) throw new IllegalArgumentException("Request too large");
-            connection.getOutputStream().write(requestBody);
-        }
+        HttpURLConnection connection = openBridgeConnection(endpoint);
         try {
-            if (connection.getResponseCode() != 200) {
-                throw new IllegalStateException("Unexpected response");
+            connection.setRequestMethod(method);
+            connection.setRequestProperty("Accept", "application/json");
+            if (token != null) connection.setRequestProperty("Authorization", "Bearer " + token);
+            if (body != null) {
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                byte[] requestBody = body.toString().getBytes(StandardCharsets.UTF_8);
+                if (requestBody.length > 16 * 1024) throw new IllegalArgumentException("Request too large");
+                try (java.io.OutputStream output = connection.getOutputStream()) {
+                    output.write(requestBody);
+                }
+            }
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                String responseBody = readResponse(connection.getErrorStream(), 4096);
+                throw new IllegalStateException(
+                    "HTTP " + responseCode + (responseBody.isEmpty() ? "" : ": " + responseBody)
+                );
             }
             try (InputStream input = connection.getInputStream();
                  ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -271,7 +313,17 @@ public final class MainActivity extends Activity {
 
     private String deviceKey() {
         String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        return "android:" + safe(androidId);
+        if (androidId != null && androidId.matches("[A-Za-z0-9._:-]{8,120}")) {
+            return "android:" + androidId;
+        }
+
+        SharedPreferences preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
+        String stored = preferences.getString(DEVICE_KEY, "").trim();
+        if (!stored.isEmpty()) return stored;
+
+        String generated = "android:" + UUID.randomUUID();
+        preferences.edit().putString(DEVICE_KEY, generated).apply();
+        return generated;
     }
 
     private String appVersion() {
@@ -554,5 +606,28 @@ public final class MainActivity extends Activity {
 
     private static String safe(String value) {
         return value == null || value.trim().isEmpty() ? "не указано" : value;
+    }
+
+    private static String readResponse(InputStream input, int limit) {
+        if (input == null) return "";
+        try (InputStream stream = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int total = 0;
+            int read;
+            while ((read = stream.read(buffer)) != -1 && total < limit) {
+                int allowed = Math.min(read, limit - total);
+                output.write(buffer, 0, allowed);
+                total += allowed;
+            }
+            return output.toString(StandardCharsets.UTF_8.name()).trim();
+        } catch (Throwable ignored) {
+            return "";
+        }
+    }
+
+    private static String errorMessage(Throwable error) {
+        String message = error.getMessage();
+        if (message == null || message.trim().isEmpty()) return error.getClass().getSimpleName();
+        return message.trim();
     }
 }

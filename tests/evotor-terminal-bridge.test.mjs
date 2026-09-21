@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const bridge = read("src/lib/integrations/evotor/terminal-bridge.ts");
+const healthRoute = read("src/app/api/terminal/health/route.ts");
 const pairRoute = read("src/app/api/terminal/pair/route.ts");
 const nextRoute = read("src/app/api/terminal/orders/next/route.ts");
 const ackRoute = read("src/app/api/terminal/orders/[id]/ack/route.ts");
@@ -38,6 +39,13 @@ test("pairing is one-time, rate-limited, and stores only token digests", () => {
   assert.match(bridge, /set consumed_at = now\(\)/);
   assert.doesNotMatch(pairRoute, /console\.(log|info|warn|error)/);
   assert.doesNotMatch(migration, /\bdevice_token\b/);
+});
+
+test("terminal health check is read-only and uses an Evotor-supported method", () => {
+  assert.match(healthRoute, /export async function GET/);
+  assert.doesNotMatch(healthRoute, /export async function (POST|PUT|DELETE)/);
+  assert.match(healthRoute, /mode: "read-only"/);
+  assert.match(healthRoute, /terminalBridgeReady\(\)/);
 });
 
 test("terminal jobs are device-scoped and live order previews require an explicit switch", () => {
