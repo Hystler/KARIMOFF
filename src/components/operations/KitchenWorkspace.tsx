@@ -22,6 +22,7 @@ import {
 import {
   transitionKitchenOrderAction
 } from "@/app/kitchen/actions";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import { initialKitchenActionState } from "@/lib/order-flow/kitchen-action-state";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
@@ -137,7 +138,7 @@ function RecipeDrawer({ item, onClose }: { item: OrderFlowItem; onClose: () => v
                 <li key={line.id} className={`rounded-lg border bg-white p-4 ${removed ? "border-amber-300 opacity-55" : "border-black/10"}`}>
                   {line.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={line.imageUrl} alt="" loading="lazy" decoding="async" className="mb-4 aspect-[16/9] w-full rounded-md bg-[#F3F1ED] object-cover" />
+                    <img src={getProductImageUrl(line.imageUrl) ?? undefined} alt="" loading="lazy" decoding="async" className="mb-4 aspect-[4/3] w-full rounded-md bg-[#F3F1ED] object-cover" />
                   ) : null}
                   <div className="flex items-start gap-4">
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#121214] text-sm font-black text-white">{index + 1}</span>

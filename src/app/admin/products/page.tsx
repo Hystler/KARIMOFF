@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getProductsFoodCosts, type ProductFoodCost } from "@/lib/ingredients";
 import type { Product } from "@/lib/product-types";
@@ -255,10 +256,10 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                   return (
                     <article key={product.id} className="min-w-0 overflow-hidden rounded-lg border border-karimoff-line bg-white p-4">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-karimoff-line bg-[#F8F2EA] p-2">
+                        <div className="relative aspect-[4/3] w-20 shrink-0 overflow-hidden rounded-lg border border-karimoff-line bg-[#F8F2EA]">
                           {product.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
+                            <img src={getProductImageUrl(product.image_url) ?? undefined} alt={product.name} className="h-full w-full object-cover" />
                           ) : (
                             <span className="text-[11px] font-semibold text-karimoff-muted">нет фото</span>
                           )}
@@ -339,10 +340,10 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       return (
                         <tr key={product.id}>
                           <td>
-                            <div className="flex h-14 w-[72px] items-center justify-center overflow-hidden rounded-lg border border-karimoff-line bg-[#F8F2EA] p-2">
+                            <div className="relative aspect-[4/3] w-[72px] overflow-hidden rounded-lg border border-karimoff-line bg-[#F8F2EA]">
                               {product.image_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={product.image_url} alt={product.name} className="h-full w-full object-contain" />
+                                <img src={getProductImageUrl(product.image_url) ?? undefined} alt={product.name} className="h-full w-full object-cover" />
                               ) : (
                                 <span className="text-[11px] font-semibold text-karimoff-muted">нет фото</span>
                               )}

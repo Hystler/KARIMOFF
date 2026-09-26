@@ -16,6 +16,7 @@
     "db:test": "node scripts/supabase-db-test.mjs",
     "db:audit": "node scripts/supabase-security-audit.mjs",
     "data:migrate": "node scripts/apply-runtime-data-migrations.mjs",
+    "data:menu-images": "node scripts/apply-menu-images.mjs",
     "db:runtime:migrate": "node scripts/apply-runtime-schema-migrations.mjs",
     "admin:credential:generate": "node scripts/generate-admin-credential.mjs"
   },

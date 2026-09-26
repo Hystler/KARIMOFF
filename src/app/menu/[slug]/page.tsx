@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ArrowLeft, Info, Utensils } from "lucide-react";
 import { ProductDetailPurchase } from "@/components/products/ProductDetailPurchase";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import type { Product } from "@/lib/product-types";
 import { getPortionGroup, getServingLabel } from "@/lib/product-serving";
 import { getActiveProductBySlug, getPublicProductComposition, getPublicModifierNutrition } from "@/lib/products";
@@ -34,9 +35,9 @@ function productPlaceholder(category: string) {
 }
 
 function ProductImage({ product }: { product: Product }) {
-  const source = product.image_url || productPlaceholder(product.category);
+  const source = getProductImageUrl(product.image_url || productPlaceholder(product.category));
 
-  if (source.startsWith("/")) {
+  if (source?.startsWith("/")) {
     return (
       <Image
         src={source}
@@ -44,14 +45,14 @@ function ProductImage({ product }: { product: Product }) {
         fill
         priority
         sizes="(min-width: 1024px) 48vw, 100vw"
-        className="object-contain"
+        className="object-cover"
       />
     );
   }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={source} alt={product.name} className="h-full w-full object-contain" fetchPriority="high" />
+    <img src={source ?? undefined} alt={product.name} className="h-full w-full object-cover" fetchPriority="high" />
   );
 }
 
@@ -68,6 +69,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const description = productDescription(product).slice(0, 180);
   const canonical = `/menu/${encodeURIComponent(product.slug)}`;
+  const productImage = getProductImageUrl(product.image_url);
 
   return {
     title: `${product.name} | Меню KARIMOFF`,
@@ -78,7 +80,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       description,
       type: "website",
       url: canonical,
-      ...(product.image_url ? { images: [{ url: product.image_url, alt: product.name }] } : {})
+      ...(productImage ? { images: [{ url: productImage, alt: product.name }] } : {})
     }
   };
 }
@@ -95,12 +97,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const nutritionIngredients = await getPublicModifierNutrition(product);
   const canonicalUrl = `${PUBLIC_ORIGIN}/menu/${encodeURIComponent(product.slug)}`;
   const servingLabel = getServingLabel(product);
+  const productImage = getProductImageUrl(product.image_url);
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: productDescription(product),
-    ...(product.image_url ? { image: [product.image_url] } : {}),
+    ...(productImage ? { image: [productImage] } : {}),
     category: product.category,
     sku: product.slug,
     offers: {
@@ -128,7 +131,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </Link>
 
         <section className="mt-4 overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.09)] lg:grid lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.98fr)]">
-          <div className="product-photo relative aspect-square self-start border-b border-karimoff-line p-6 lg:sticky lg:top-24 lg:border-b-0">
+          <div className="product-photo relative aspect-[4/3] self-start border-b border-karimoff-line lg:sticky lg:top-24 lg:border-b-0">
             <ProductImage product={product} />
           </div>
           <div className="p-5 sm:p-8 lg:p-10">

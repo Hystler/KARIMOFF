@@ -1,5 +1,6 @@
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { ProductImageUploadForm } from "@/components/admin/ProductImageUploadForm";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import type { ProductImage } from "@/lib/product-types";
 import {
   deleteProductImageAction,
@@ -35,12 +36,12 @@ export function ProductImagesManager({ images, productId, productName }: Product
         <div className="mt-5 grid gap-4">
           {images.map((image) => (
             <article key={image.id} className="grid gap-4 rounded-lg border border-karimoff-line bg-karimoff-cream/70 p-4 md:grid-cols-[180px_1fr]">
-              <div className="overflow-hidden rounded-lg border border-karimoff-line bg-white p-3">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-karimoff-line bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={image.image_url}
+                  src={getProductImageUrl(image.image_url) ?? undefined}
                   alt={image.alt ?? productName}
-                  className="aspect-[4/3] h-auto w-full object-contain"
+                  className="h-full w-full object-cover"
                 />
               </div>
               <div className="grid gap-3">

@@ -16,6 +16,7 @@ import {
   type PosCartCustomization,
   type PosCartLine
 } from "@/lib/order-flow/pos-cart";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import type { Product, ProductModifierGroup } from "@/lib/product-types";
 import { getReplacementControlledIngredientIds } from "@/lib/product-serving";
 
@@ -24,7 +25,7 @@ function formatRub(value: number) {
 }
 
 function productImage(product: Product) {
-  return product.image_url || "/assets/products/placeholder-burger.svg";
+  return getProductImageUrl(product.image_url || "/assets/products/placeholder-burger.svg");
 }
 
 function selectedCount(group: ProductModifierGroup, selected: Set<string>) {
@@ -146,9 +147,9 @@ export function PosProductCustomizer({
 
             <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
               <div className="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
-                <div className="aspect-[4/3] overflow-hidden rounded-lg border border-black/10 bg-[#FCF7F0] p-4">
+                <div className="aspect-[4/3] overflow-hidden rounded-lg border border-black/10 bg-[#FCF7F0]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={productImage(product)} alt={product.name} className="h-full w-full object-contain" />
+                  <img src={productImage(product) ?? undefined} alt={product.name} className="h-full w-full object-cover" />
                 </div>
                 <div>
                   <p className="text-sm font-black text-black/60">Количество</p>

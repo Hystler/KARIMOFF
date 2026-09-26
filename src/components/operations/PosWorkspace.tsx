@@ -22,6 +22,7 @@ import {
 } from "@/app/pos/actions";
 import { PosProductCustomizer } from "@/components/operations/PosProductCustomizer";
 import { PosLoyaltyIdentifier, type PosLoyaltyCustomer } from "@/components/operations/PosLoyaltyIdentifier";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import {
   initialPosOrderActionState,
   type PosOrderActionState
@@ -43,7 +44,7 @@ function formatRub(value: number) {
 }
 
 function productImage(product: Product) {
-  return product.image_url || "/assets/products/placeholder-burger.svg";
+  return getProductImageUrl(product.image_url || "/assets/products/placeholder-burger.svg");
 }
 
 function isCustomizable(product: Product) {
@@ -212,9 +213,9 @@ export function PosWorkspace({
                 const customizable = isCustomizable(product);
                 return (
                   <article key={product.id} className={`${styles.catalogCard} group flex min-w-0 flex-col overflow-hidden rounded-lg border border-black/10 bg-white transition hover:border-[#FB670A]/60`}>
-                    <button type="button" onClick={() => setCustomizer({ product, line: null })} className={`${styles.catalogMedia} relative aspect-[2/1] w-full overflow-hidden bg-[#F7F8F9] p-2 text-left active:scale-[0.99]`} aria-label={`Настроить ${product.name}`}>
+                    <button type="button" onClick={() => setCustomizer({ product, line: null })} className={`${styles.catalogMedia} relative aspect-[4/3] w-full overflow-hidden bg-[#F7F8F9] text-left active:scale-[0.99]`} aria-label={`Настроить ${product.name}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={productImage(product)} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                      <img src={productImage(product) ?? undefined} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                       {quantity ? <span className="absolute right-2 top-2 grid h-9 min-w-9 place-items-center rounded-full bg-[#FB670A] px-2 text-sm font-black text-white shadow-lg">{quantity}</span> : null}
                     </button>
                     <div className={`${styles.catalogBody} flex flex-1 flex-col p-2.5`}>

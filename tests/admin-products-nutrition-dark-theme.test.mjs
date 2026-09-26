@@ -70,6 +70,7 @@ const AdminProductsPage = loadComponent('src/app/admin/products/page.tsx', {
   '@/components/admin/ConfirmSubmitButton': {
     ConfirmSubmitButton: ({ children, ...props }) => createElement('button', props, children)
   },
+  '@/lib/product-image-url': { getProductImageUrl: imageUrl => imageUrl ?? null },
   '@/lib/admin-auth': { isAdminAuthenticated: async () => true },
   '@/lib/ingredients': { getProductsFoodCosts: async () => ({ items: [foodCost], notConfigured: false, error: null }) },
   '@/lib/products': { getAdminProducts: async () => ({ products: [product], notConfigured: false, error: null }) },

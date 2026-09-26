@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductCustomizer } from "@/components/products/ProductCustomizer";
+import { getProductImageUrl } from "@/lib/product-image-url";
 import type { Product } from "@/lib/product-types";
 import { getPortionGroup, getServingLabel } from "@/lib/product-serving";
 
@@ -39,9 +40,10 @@ function getProductPlaceholder(category: string) {
 }
 
 function ProductImage({ product }: { product: Product }) {
-  const src = product.image_url || getProductPlaceholder(product.category);
+  const rawSrc = product.image_url || getProductPlaceholder(product.category);
+  const src = getProductImageUrl(rawSrc) ?? rawSrc;
 
-  if (src.endsWith(".svg")) {
+  if (rawSrc.endsWith(".svg")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -50,7 +52,7 @@ function ProductImage({ product }: { product: Product }) {
         loading="lazy"
         decoding="async"
         fetchPriority="low"
-        className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]"
+        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
       />
     );
   }
@@ -64,7 +66,7 @@ function ProductImage({ product }: { product: Product }) {
         sizes="(min-width: 1280px) 280px, (min-width: 1024px) calc((100vw - 7rem) / 3), (min-width: 520px) calc((100vw - 3.25rem) / 2), calc(100vw - 2.5rem)"
         loading="lazy"
         fetchPriority="low"
-        className="object-contain transition duration-500 group-hover:scale-[1.03]"
+        className="object-cover transition duration-500 group-hover:scale-[1.03]"
       />
     );
   }
@@ -77,7 +79,7 @@ function ProductImage({ product }: { product: Product }) {
       loading="lazy"
       decoding="async"
       fetchPriority="low"
-      className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]"
+      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
     />
   );
 }
@@ -92,7 +94,7 @@ export function ProductCard({ product }: ProductCardProps) {
     >
       <Link
         href={href}
-        className="product-photo relative block aspect-[4/3] shrink-0 overflow-hidden border-b border-karimoff-line/70 p-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-karimoff-orange sm:p-4"
+        className="product-photo relative block aspect-[4/3] shrink-0 overflow-hidden border-b border-karimoff-line/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-karimoff-orange"
         aria-label={`Открыть ${product.name}`}
       >
         <ProductImage product={product} />
