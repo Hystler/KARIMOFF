@@ -68,6 +68,12 @@ const nextConfig = {
     formats: ["image/webp"],
     imageSizes: [128, 192, 256, 320, 384, 480, 512],
     minimumCacheTTL: 2678400,
+    localPatterns: [
+      {
+        pathname: "/assets/products/**",
+        search: "?v=20260926"
+      }
+    ],
     remotePatterns: [
       {
         hostname: "s3.twcstorage.ru",
