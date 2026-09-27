@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">KARIMOFF Bridge</string>
-    <string name="read_only_badge">ТОЛЬКО ЧТЕНИЕ</string>
-    <string name="title">Диагностика Эвотора</string>
-    <string name="description">Проверка доступных платёжных компонентов без открытия чека и запуска оплаты.</string>
+    <string name="read_only_badge">POS И ОПЛАТА</string>
+    <string name="title">Касса KARIMOFF</string>
+    <string name="description">Приложение получает заказы из KARIMOFF POS, открывает оплату картой на терминале Эвотор и возвращает результат на сайт. Не оплачивайте повторно заказ с неопределённым статусом.</string>
     <string name="diagnostic_loading">Чтение локальных компонентов…</string>
     <string name="refresh">Обновить диагностику</string>
     <string name="receive_preview">Получить тестовый заказ</string>
+    <string name="payment_test_button">Проверить экран оплаты · 1 ₽</string>
+    <string name="payment_test_confirm_title">Открыть тестовый экран оплаты?</string>
+    <string name="payment_test_confirm_message">Создастся черновик на 1 ₽ и откроется экран способов оплаты. Не прикладывайте карту и не подтверждайте оплату. Если появится запрос карты, отмените его и проверьте, что черновик закрыт.</string>
+    <string name="payment_test_confirm_action">Открыть экран</string>
+    <string name="payment_test_item">Тест экрана оплаты · не оплачивать</string>
+    <string name="payment_test_loading">Проверяем кассу и готовим неоплачиваемый черновик…</string>
+    <string name="payment_test_opening">Черновик готов. Открываем способы оплаты…</string>
+    <string name="payment_test_open_failed">Эвотор не открыл черновик продажи.</string>
+    <string name="payment_test_no_performers">На кассе не найдено приложений для приёма оплаты.</string>
+    <string name="payment_test_receipt_exists">На кассе уже открыт чек. Закройте его в Эвоторе; тест не заменил существующий чек.</string>
+    <string name="payment_test_failed">Тест экрана оплаты не запущен: %1$s</string>
     <string name="bridge_api_base">https://karimoff.site/api/terminal</string>
     <string name="preview_loading">Получение тестового заказа…</string>
     <string name="preview_network_error">Не удалось получить тестовый заказ. Проверьте интернет и повторите.</string>
@@ -25,4 +36,28 @@
     <string name="preview_description">Только предварительный просмотр. Чек, оплата и печать не запускались.</string>
     <string name="preview_empty">Данные тестового заказа не переданы.</string>
     <string name="back_to_diagnostics">Вернуться к диагностике</string>
+    <string name="payment_waiting_open_receipt">На терминале уже открыт чек. Закройте или проверьте его перед приёмом заказа с сайта.</string>
+    <string name="payment_poll_error">Не удалось проверить очередь оплаты: %1$s</string>
+    <string name="payment_invalid_job">Терминал получил неполное задание на оплату. Заказ оставлен без оплаты.</string>
+    <string name="payment_preparing">Подготавливаем заказ %1$s к оплате…</string>
+    <string name="payment_no_card_method">Карточный способ оплаты недоступен: %1$s</string>
+    <string name="payment_choose_card_method">Выберите карточный терминал для заказа %1$s</string>
+    <string name="payment_selection_cancelled">Выбор способа оплаты отменён до открытия чека.</string>
+    <string name="payment_existing_receipt_check_failed">Не удалось проверить открытый чек: %1$s</string>
+    <string name="payment_existing_receipt">На терминале уже открыт другой чек. Заказ сайта не запускался.</string>
+    <string name="payment_empty_order">В заказе нет позиций.</string>
+    <string name="payment_invalid_item">В заказе обнаружена некорректная позиция.</string>
+    <string name="payment_opening_receipt">Готовим чек заказа %1$s…</string>
+    <string name="payment_open_receipt_failed">Эвотор не подтвердил создание чека.</string>
+    <string name="payment_open_receipt_error">Чек не удалось подготовить: %1$s</string>
+    <string name="payment_prepare_error">Оплата не запускалась: %1$s</string>
+    <string name="payment_starting">Передаём заказ %1$s в карточную оплату…</string>
+    <string name="payment_success_receipt_reference_missing">Терминал сообщил об успешной операции, но не вернул идентификатор чека. Проверьте кассу в POS; заказ пока не передан на кухню.</string>
+    <string name="payment_terminal_success">Терминал подтвердил оплату и фискальный чек.</string>
+    <string name="payment_terminal_error">Терминал не подтвердил результат. Проверьте экран кассы: %1$s</string>
+    <string name="payment_result_save_failed">Не удалось сохранить ответ оплаты: %1$s</string>
+    <string name="payment_server_confirmed">Сервер принял подтверждение оплаты и чека.</string>
+    <string name="payment_server_unknown">Результат сохранён для ручной проверки в POS. Не запускайте оплату повторно.</string>
+    <string name="payment_server_cancelled">Оплата не запускалась. Заказ можно отправить повторно из POS.</string>
+    <string name="payment_result_network_error">Не удалось передать результат на сервер: %1$s. Приложение повторит отправку.</string>
 </resources>

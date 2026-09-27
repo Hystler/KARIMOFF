@@ -50,6 +50,16 @@ final class PeerCertificateProbe {
                 .append("\nValid: ").append(date.format(cert.getNotBefore()))
                 .append(" / ").append(date.format(cert.getNotAfter())).append('\n');
             try {
+                report.append("SAN: ").append(bounded(String.valueOf(cert.getSubjectAlternativeNames())))
+                    .append('\n');
+                boolean selfSigned = false;
+                if (cert.getSubjectX500Principal().equals(cert.getIssuerX500Principal())) {
+                    try {
+                        cert.verify(cert.getPublicKey());
+                        selfSigned = true;
+                    } catch (Exception ignored) { }
+                }
+                report.append("Self-signed: ").append(selfSigned).append('\n');
                 byte[] hash = MessageDigest.getInstance("SHA-256").digest(cert.getEncoded());
                 report.append("SHA256: ");
                 for (byte value : hash) report.append(String.format(Locale.ROOT, "%02X", value & 0xff));

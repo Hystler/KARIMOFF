@@ -113,6 +113,16 @@
             android:text="@string/receive_preview"
             android:textColor="@android:color/white"
             android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/payment_test_button"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginBottom="12dp"
+            android:backgroundTint="@color/action"
+            android:text="@string/payment_test_button"
+            android:textColor="@android:color/white"
+            android:textSize="15sp" />
         </LinearLayout>
 
         <LinearLayout

@@ -12,10 +12,16 @@ import javax.net.ssl.SSLSocketFactory;
 final class ServerNameSocketFactory extends SSLSocketFactory {
     private final SSLSocketFactory delegate;
     private final String serverName;
+    private final boolean verifyEndpoint;
 
     ServerNameSocketFactory(SSLSocketFactory delegate, String serverName) {
+        this(delegate, serverName, true);
+    }
+
+    ServerNameSocketFactory(SSLSocketFactory delegate, String serverName, boolean verifyEndpoint) {
         this.delegate = delegate;
         this.serverName = serverName;
+        this.verifyEndpoint = verifyEndpoint;
     }
 
     @Override
@@ -67,8 +73,10 @@ final class ServerNameSocketFactory extends SSLSocketFactory {
             Object name = serverNameClass.getConstructor(String.class).newInstance(serverName);
             SSLParameters.class.getMethod("setServerNames", java.util.List.class)
                 .invoke(parameters, Collections.singletonList(name));
-            SSLParameters.class.getMethod("setEndpointIdentificationAlgorithm", String.class)
-                .invoke(parameters, "HTTPS");
+            if (verifyEndpoint) {
+                SSLParameters.class.getMethod("setEndpointIdentificationAlgorithm", String.class)
+                    .invoke(parameters, "HTTPS");
+            }
         } catch (ReflectiveOperationException error) {
             try {
                 tls.close();

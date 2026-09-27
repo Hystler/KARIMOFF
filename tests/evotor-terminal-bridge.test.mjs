@@ -60,7 +60,7 @@ test("terminal jobs are device-scoped and live order previews require an explici
   assert.match(bridge, /device\.location_id = \$\{order\.location_id\}::uuid/);
 });
 
-test("Evotor APK uses hosted HTTPS pairing without cleartext or fiscal actions", () => {
+test("Evotor APK keeps hosted pairing separate from terminal payment requests", () => {
   assert.match(manifest, /android\.permission\.INTERNET/);
   assert.doesNotMatch(manifest, /usesCleartextTraffic="true"/);
   assert.match(strings, /https:\/\/karimoff\.site\/api\/terminal/);
@@ -69,5 +69,7 @@ test("Evotor APK uses hosted HTTPS pairing without cleartext or fiscal actions",
   assert.doesNotMatch(activity, /setRequestProperty\("Authorization"/);
   assert.match(activity, /\/orders\/next/);
   assert.match(activity, /\/orders\/" \+ jobId \+ "\/ack/);
-  assert.doesNotMatch(activity, /ReceiptApi|PaymentIntent|SellApi|PaybackApi/);
+  assert.match(activity, /\/payments\/next/);
+  assert.match(activity, /SellApi\.INSTANCE\.moveCurrentReceiptDraftToPaymentStage/);
+  assert.doesNotMatch(healthRoute, /ReceiptApi|SellApi|PaybackApi/);
 });

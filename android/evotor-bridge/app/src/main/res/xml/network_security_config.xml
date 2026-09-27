@@ -10,6 +10,7 @@
         <trust-anchors>
             <certificates src="system" />
             <certificates src="@raw/lets_encrypt_root_ye" />
+            <certificates src="@raw/evotor_root_ca_2025" />
         </trust-anchors>
     </domain-config>
 </network-security-config>

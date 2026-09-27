@@ -1,6 +1,7 @@
 package ru.karimoff.evotor.bridge;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -12,9 +13,12 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -25,7 +29,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -40,9 +47,21 @@ import kotlin.Pair;
 import ru.evotor.devices.drivers.IPaySystemDriverService;
 import ru.evotor.framework.component.PaymentPerformer;
 import ru.evotor.framework.component.PaymentPerformerApi;
+import ru.evotor.framework.core.IntegrationManagerFuture;
+import ru.evotor.framework.core.action.command.open_receipt_command.OpenSellReceiptCommand;
+import ru.evotor.framework.core.action.event.receipt.changes.position.PositionAdd;
+import ru.evotor.framework.navigation.NavigationApi;
+import ru.evotor.framework.receipt.Measure;
+import ru.evotor.framework.receipt.Position;
+import ru.evotor.framework.receipt.Receipt;
+import ru.evotor.framework.receipt.ReceiptApi;
+import ru.evotor.framework.payment.PaymentType;
 import ru.evotor.framework.payment.PaymentAccount;
 import ru.evotor.framework.payment.PaymentSystem;
 import ru.evotor.framework.payment.PaymentSystemApi;
+import ru.evotor.framework.receipt.formation.api.SellApi;
+import ru.evotor.framework.receipt.formation.api.move_receipt_to_payment_stage.MoveCurrentReceiptDraftToPaymentStageCallback;
+import ru.evotor.framework.receipt.formation.api.move_receipt_to_payment_stage.MoveCurrentReceiptDraftToPaymentStageException;
 
 public final class MainActivity extends Activity {
     private static final String PAY_SYSTEM_ACTION = "ru.evotor.devices.drivers.PaySystemService";
@@ -51,20 +70,28 @@ public final class MainActivity extends Activity {
     private static final String PREFERENCES = "karimoff_bridge";
     private static final String TOKEN_KEY = "device_token";
     private static final String DEVICE_KEY = "device_key";
+    private static final String PENDING_PAYMENT_RESULT_KEY = "pending_payment_result";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler paymentPollHandler = new Handler(Looper.getMainLooper());
+    private final Runnable paymentPollRunnable = this::pollTerminalPaymentQueue;
     private LinearLayout diagnosticContainer;
     private LinearLayout previewContainer;
     private TextView resultView;
     private TextView orderPreviewView;
     private Button refreshButton;
     private Button receivePreviewButton;
+    private Button paymentTestButton;
     private Button pairButton;
     private EditText pairingCodeInput;
     private TextView pairingStatusView;
     private ServiceConnection paySystemConnection;
     private boolean paySystemBound;
     private BridgeHttps bridgeHttps;
+    private boolean paymentPollingEnabled;
+    private boolean paymentRequestInFlight;
+    private boolean paymentFlowBusy;
+    private boolean paymentResultRequestInFlight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,11 +104,13 @@ public final class MainActivity extends Activity {
         orderPreviewView = findViewById(R.id.order_preview);
         refreshButton = findViewById(R.id.refresh_button);
         receivePreviewButton = findViewById(R.id.receive_preview_button);
+        paymentTestButton = findViewById(R.id.payment_test_button);
         pairButton = findViewById(R.id.pair_button);
         pairingCodeInput = findViewById(R.id.pairing_code);
         pairingStatusView = findViewById(R.id.pairing_status);
         refreshButton.setOnClickListener(view -> runDiagnostics());
         receivePreviewButton.setOnClickListener(view -> receiveOrderPreview());
+        paymentTestButton.setOnClickListener(view -> confirmPaymentScreenTest());
         pairButton.setOnClickListener(view -> pairTerminal());
         findViewById(R.id.diagnostics_button).setOnClickListener(view -> showDiagnostics());
         updatePairingUi();
@@ -89,6 +118,21 @@ public final class MainActivity extends Activity {
         if (!showOrderPreview(getIntent())) {
             runDiagnostics();
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        paymentPollingEnabled = true;
+        retryPendingPaymentResult();
+        schedulePaymentPoll(1500);
+    }
+
+    @Override
+    protected void onPause() {
+        paymentPollingEnabled = false;
+        paymentPollHandler.removeCallbacks(paymentPollRunnable);
+        super.onPause();
     }
 
     @Override
@@ -100,6 +144,8 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        paymentPollingEnabled = false;
+        paymentPollHandler.removeCallbacks(paymentPollRunnable);
         unbindPaySystem();
         executor.shutdownNow();
         super.onDestroy();
@@ -126,24 +172,59 @@ public final class MainActivity extends Activity {
 
     private HttpsURLConnection openBridgeConnection(String endpoint) throws Exception {
         if (bridgeHttps == null) {
-            try (InputStream certificate = getResources().openRawResource(R.raw.lets_encrypt_root_ye)) {
-                bridgeHttps = new BridgeHttps(certificate);
-            }
+            bridgeHttps = new BridgeHttps();
         }
         return bridgeHttps.open(endpoint);
     }
 
     private String checkBridgeConnection() {
+        StringBuilder result = new StringBuilder("ANDROID HTTPS\n");
+        boolean platformHealthy = false;
+        boolean proxyHealthy = false;
+        try {
+            BridgeHttps platformClient = new BridgeHttps();
+            result.append(checkBridgeHealth(platformClient));
+            bridgeHttps = platformClient;
+            platformHealthy = true;
+        } catch (Exception error) {
+            result.append(getString(R.string.bridge_connection_failed, appVersion(), errorMessage(error)));
+        }
+        result.append("\n\nPINNED EVOTOR PROXY\n");
+        try {
+            BridgeHttps proxyClient = BridgeHttps.pinnedEvotorProxy();
+            result.append(checkBridgeHealth(proxyClient));
+            if (!platformHealthy) bridgeHttps = proxyClient;
+            proxyHealthy = true;
+        } catch (Exception error) {
+            result.append(errorMessage(error));
+        }
+        if (!platformHealthy && !proxyHealthy) {
+            bridgeHttps = null;
+            result.append("\n\n").append(PeerCertificateProbe.inspect());
+        }
+        // This report contains only health status and public TLS metadata, never pairing data.
+        Log.i("KarimoffBridge", result.toString());
+        return result.toString();
+    }
+
+    private String checkBridgeHealth(BridgeHttps client) throws Exception {
         HttpsURLConnection connection = null;
         try {
-            connection = openBridgeConnection(getString(R.string.bridge_api_base) + "/health");
+            connection = client.open(getString(R.string.bridge_api_base) + "/health");
             connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
             int status = connection.getResponseCode();
-            return getString(R.string.bridge_connection_ok, appVersion(), status);
-        } catch (Exception error) {
-            return getString(R.string.bridge_connection_failed, appVersion(), errorMessage(error))
-                + "\n" + (bridgeHttps == null ? "TLS context unavailable" : bridgeHttps.trustDiagnostics())
-                + "\n\n" + PeerCertificateProbe.inspect();
+            if (status != 200) throw new IllegalStateException("Health HTTP " + status);
+            JSONObject health = new JSONObject(readResponse(connection.getInputStream(), 4096));
+            if (!health.optBoolean("ok") || !health.optBoolean("bridgeEnabled")
+                || !"read-only".equals(health.optString("mode"))) {
+                throw new IllegalStateException("Unexpected bridge health response");
+            }
+            java.security.cert.X509Certificate peer = (java.security.cert.X509Certificate)
+                connection.getServerCertificates()[0];
+            return getString(R.string.bridge_connection_ok, appVersion(), status)
+                + "\nAPI: read-only\n" + client.trustDiagnostics()
+                + "\nVerified issuer: " + peer.getIssuerX500Principal().getName();
         } finally {
             if (connection != null) connection.disconnect();
         }
@@ -196,6 +277,376 @@ public final class MainActivity extends Activity {
         });
     }
 
+    private void schedulePaymentPoll(long delayMs) {
+        if (!paymentPollingEnabled || deviceToken().isEmpty()) return;
+        paymentPollHandler.removeCallbacks(paymentPollRunnable);
+        paymentPollHandler.postDelayed(paymentPollRunnable, delayMs);
+    }
+
+    private void pollTerminalPaymentQueue() {
+        if (!paymentPollingEnabled || deviceToken().isEmpty()) return;
+        if (!getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getString(PENDING_PAYMENT_RESULT_KEY, "").trim().isEmpty()) {
+            retryPendingPaymentResult();
+            schedulePaymentPoll(3000);
+            return;
+        }
+        if (paymentFlowBusy || paymentRequestInFlight) {
+            schedulePaymentPoll(3000);
+            return;
+        }
+
+        paymentRequestInFlight = true;
+        String token = deviceToken();
+        executor.execute(() -> {
+            JSONObject job = null;
+            String problem = null;
+            try {
+                if (ReceiptApi.getReceipt(this, Receipt.Type.SELL) != null) {
+                    problem = getString(R.string.payment_waiting_open_receipt);
+                } else {
+                    JSONObject envelope = requestJson(
+                        "GET",
+                        getString(R.string.bridge_api_base) + "/payments/next",
+                        token,
+                        null
+                    );
+                    if (!envelope.isNull("job")) job = envelope.getJSONObject("job");
+                }
+            } catch (Throwable error) {
+                problem = getString(R.string.payment_poll_error, errorMessage(error));
+            }
+            JSONObject foundJob = job;
+            String finalProblem = problem;
+            runOnUiThread(() -> {
+                paymentRequestInFlight = false;
+                if (!paymentPollingEnabled) return;
+                if (foundJob != null) {
+                    paymentFlowBusy = true;
+                    handleTerminalPaymentJob(foundJob, token);
+                } else {
+                    if (finalProblem != null) resultView.setText(finalProblem);
+                    schedulePaymentPoll(finalProblem == null ? 2500 : 5000);
+                }
+            });
+        });
+    }
+
+    private void handleTerminalPaymentJob(JSONObject job, String token) {
+        String intentId = job.optString("id", "");
+        JSONObject payload = job.optJSONObject("payload");
+        if (intentId.isEmpty() || payload == null) {
+            queuePaymentResult(intentId, "unknown", null,
+                getString(R.string.payment_invalid_job), false);
+            return;
+        }
+        String displayNumber = payload.optString("displayNumber", "");
+        resultView.setText(getString(R.string.payment_preparing, displayNumber));
+        executor.execute(() -> {
+            List<PaymentPerformer> electronicPerformers = new ArrayList<>();
+            String problem = null;
+            try {
+                List<PaymentPerformer> performers = PaymentPerformerApi.INSTANCE
+                    .getAllPaymentPerformers(getPackageManager());
+                if (performers != null) {
+                    for (PaymentPerformer performer : performers) {
+                        PaymentSystem system = performer.getPaymentSystem();
+                        if (system != null && system.getPaymentType() == PaymentType.ELECTRON) {
+                            electronicPerformers.add(performer);
+                        }
+                    }
+                }
+            } catch (Throwable error) {
+                problem = errorMessage(error);
+            }
+            List<PaymentPerformer> foundPerformers = electronicPerformers;
+            String finalProblem = problem;
+            runOnUiThread(() -> {
+                if (finalProblem != null) {
+                    queuePaymentResult(intentId, "cancelled", null,
+                        getString(R.string.payment_no_card_method, finalProblem), true);
+                    return;
+                }
+                if (foundPerformers.isEmpty()) {
+                    queuePaymentResult(intentId, "cancelled", null,
+                        getString(R.string.payment_no_card_method, "карточный способ оплаты не найден"), true);
+                    return;
+                }
+                choosePaymentPerformer(job, token, foundPerformers);
+            });
+        });
+    }
+
+    private void choosePaymentPerformer(
+        JSONObject job,
+        String token,
+        List<PaymentPerformer> performers
+    ) {
+        JSONObject payload = job.optJSONObject("payload");
+        String intentId = job.optString("id", "");
+        String orderNumber = payload == null ? "" : payload.optString("displayNumber", "");
+        if (performers.size() == 1) {
+            startTerminalOrderPayment(job, token, performers.get(0));
+            return;
+        }
+        String[] labels = new String[performers.size()];
+        for (int index = 0; index < performers.size(); index++) {
+            PaymentPerformer performer = performers.get(index);
+            PaymentSystem system = performer.getPaymentSystem();
+            labels[index] = system == null ? safe(performer.getAppName()) : safe(system.getUserDescription());
+        }
+        new AlertDialog.Builder(this)
+            .setTitle(getString(R.string.payment_choose_card_method, orderNumber))
+            .setItems(labels, (dialog, which) -> startTerminalOrderPayment(job, token, performers.get(which)))
+            .setNegativeButton(android.R.string.cancel, (dialog, which) -> queuePaymentResult(
+                intentId, "cancelled", null, getString(R.string.payment_selection_cancelled), true
+            ))
+            .setOnCancelListener(dialog -> queuePaymentResult(
+                intentId, "cancelled", null, getString(R.string.payment_selection_cancelled), true
+            ))
+            .show();
+    }
+
+    private void startTerminalOrderPayment(
+        JSONObject job,
+        String token,
+        PaymentPerformer performer
+    ) {
+        String intentId = job.optString("id", "");
+        executor.execute(() -> {
+            boolean existingReceipt;
+            try {
+                existingReceipt = ReceiptApi.getReceipt(this, Receipt.Type.SELL) != null;
+            } catch (Throwable error) {
+                runOnUiThread(() -> queuePaymentResult(
+                    intentId, "unknown", null,
+                    getString(R.string.payment_existing_receipt_check_failed, errorMessage(error)), false
+                ));
+                return;
+            }
+            if (existingReceipt) {
+                runOnUiThread(() -> queuePaymentResult(
+                    intentId, "cancelled", null, getString(R.string.payment_existing_receipt), true
+                ));
+                return;
+            }
+            runOnUiThread(() -> openReceiptAndStartPayment(job, token, performer));
+        });
+    }
+
+    private void openReceiptAndStartPayment(
+        JSONObject job,
+        String token,
+        PaymentPerformer performer
+    ) {
+        String intentId = job.optString("id", "");
+        JSONObject payload = job.optJSONObject("payload");
+        String orderNumber = payload == null ? "" : payload.optString("displayNumber", "");
+        try {
+            if (payload == null) throw new IllegalArgumentException(getString(R.string.payment_invalid_job));
+            JSONArray items = payload.getJSONArray("items");
+            if (items.length() == 0) throw new IllegalArgumentException(getString(R.string.payment_empty_order));
+            List<PositionAdd> positions = new ArrayList<>();
+            for (int index = 0; index < items.length(); index++) {
+                JSONObject item = items.getJSONObject(index);
+                String name = item.getString("name").trim();
+                int quantity = item.getInt("quantity");
+                BigDecimal unitPrice = new BigDecimal(item.getString("unitPrice"));
+                if (name.isEmpty() || quantity < 1 || unitPrice.signum() <= 0) {
+                    throw new IllegalArgumentException(getString(R.string.payment_invalid_item));
+                }
+                Position position = Position.Builder.newInstance(
+                    UUID.randomUUID().toString(),
+                    null,
+                    name,
+                    new Measure("шт", 0, 0),
+                    unitPrice,
+                    BigDecimal.valueOf(quantity)
+                ).build();
+                positions.add(new PositionAdd(position));
+            }
+
+            OpenSellReceiptCommand command = new OpenSellReceiptCommand(positions, null);
+            resultView.setText(getString(R.string.payment_opening_receipt, orderNumber));
+            command.process(this, future -> {
+                String problem = null;
+                try {
+                    IntegrationManagerFuture.Result result = future.getResult();
+                    if (result.getType() != IntegrationManagerFuture.Result.Type.OK) {
+                        problem = getString(R.string.payment_open_receipt_failed);
+                    }
+                } catch (Throwable error) {
+                    problem = errorMessage(error);
+                }
+                String finalProblem = problem;
+                runOnUiThread(() -> {
+                    if (finalProblem != null) {
+                        boolean receiptStillOpen;
+                        try {
+                            receiptStillOpen = ReceiptApi.getReceipt(this, Receipt.Type.SELL) != null;
+                        } catch (Throwable ignored) {
+                            receiptStillOpen = true;
+                        }
+                        queuePaymentResult(
+                            intentId,
+                            receiptStillOpen ? "unknown" : "cancelled",
+                            null,
+                            getString(R.string.payment_open_receipt_error, finalProblem),
+                            !receiptStillOpen
+                        );
+                        return;
+                    }
+                    moveReceiptToCardPayment(job, token, performer);
+                });
+            });
+        } catch (Throwable error) {
+            boolean receiptStillOpen;
+            try {
+                receiptStillOpen = ReceiptApi.getReceipt(this, Receipt.Type.SELL) != null;
+            } catch (Throwable ignored) {
+                receiptStillOpen = true;
+            }
+            queuePaymentResult(intentId, receiptStillOpen ? "unknown" : "cancelled", null,
+                getString(R.string.payment_prepare_error, errorMessage(error)), !receiptStillOpen);
+        }
+    }
+
+    private void moveReceiptToCardPayment(
+        JSONObject job,
+        String token,
+        PaymentPerformer performer
+    ) {
+        String intentId = job.optString("id", "");
+        JSONObject payload = job.optJSONObject("payload");
+        String orderNumber = payload == null ? "" : payload.optString("displayNumber", "");
+        resultView.setText(getString(R.string.payment_starting, orderNumber));
+        try {
+            SellApi.INSTANCE.moveCurrentReceiptDraftToPaymentStage(
+                this,
+                performer,
+                new MoveCurrentReceiptDraftToPaymentStageCallback() {
+                    @Override
+                    public void onSuccess() {
+                        String receiptReference = null;
+                        try {
+                            Receipt receipt = ReceiptApi.getReceipt(MainActivity.this, Receipt.Type.SELL);
+                            if (receipt != null && receipt.getHeader() != null
+                                && receipt.getHeader().getUuid() != null) {
+                                receiptReference = receipt.getHeader().getUuid().toString();
+                            }
+                        } catch (Throwable ignored) {
+                            // A missing local receipt reference requires cashier review before kitchen release.
+                        }
+                        if (receiptReference == null || receiptReference.trim().isEmpty()) {
+                            queuePaymentResult(intentId, "unknown", null,
+                                getString(R.string.payment_success_receipt_reference_missing), false);
+                        } else {
+                            queuePaymentResult(intentId, "paid", receiptReference,
+                                getString(R.string.payment_terminal_success), false);
+                        }
+                    }
+
+                    @Override
+                    public void onError(MoveCurrentReceiptDraftToPaymentStageException error) {
+                        queuePaymentResult(intentId, "unknown", null,
+                            getString(R.string.payment_terminal_error, errorMessage(error)), false);
+                    }
+                }
+            );
+        } catch (Throwable error) {
+            queuePaymentResult(intentId, "unknown", null,
+                getString(R.string.payment_terminal_error, errorMessage(error)), false);
+        }
+    }
+
+    private void queuePaymentResult(
+        String intentId,
+        String status,
+        String receiptReference,
+        String details,
+        boolean safeBeforePayment
+    ) {
+        if (intentId == null || intentId.trim().isEmpty()) {
+            paymentFlowBusy = false;
+            resultView.setText(getString(R.string.payment_invalid_job));
+            schedulePaymentPoll(5000);
+            return;
+        }
+        try {
+            JSONObject body = new JSONObject();
+            body.put("status", status);
+            body.put("details", details);
+            body.put("safeBeforePayment", safeBeforePayment);
+            if (receiptReference != null) body.put("receiptReference", receiptReference);
+            JSONObject saved = new JSONObject();
+            saved.put("intentId", intentId);
+            saved.put("body", body);
+            getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .putString(PENDING_PAYMENT_RESULT_KEY, saved.toString())
+                .apply();
+            retryPendingPaymentResult();
+        } catch (Throwable error) {
+            resultView.setText(getString(R.string.payment_result_save_failed, errorMessage(error)));
+        }
+    }
+
+    private void retryPendingPaymentResult() {
+        if (paymentResultRequestInFlight) return;
+        String saved = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getString(PENDING_PAYMENT_RESULT_KEY, "").trim();
+        if (saved.isEmpty()) return;
+        paymentResultRequestInFlight = true;
+        executor.execute(() -> {
+            boolean accepted = false;
+            String status = "unknown";
+            String problem = null;
+            try {
+                JSONObject pending = new JSONObject(saved);
+                String intentId = pending.getString("intentId");
+                JSONObject body = pending.getJSONObject("body");
+                JSONObject response = requestJson(
+                    "POST",
+                    getString(R.string.bridge_api_base) + "/payments/" + intentId + "/result",
+                    deviceToken(),
+                    body
+                );
+                accepted = response.optBoolean("ok");
+                status = response.optString("status", body.optString("status", "unknown"));
+            } catch (Throwable error) {
+                problem = errorMessage(error);
+            }
+            boolean resultAccepted = accepted;
+            String finalStatus = status;
+            String finalProblem = problem;
+            runOnUiThread(() -> {
+                paymentResultRequestInFlight = false;
+                if (resultAccepted) {
+                    String current = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+                        .getString(PENDING_PAYMENT_RESULT_KEY, "");
+                    if (saved.equals(current)) {
+                        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                            .remove(PENDING_PAYMENT_RESULT_KEY)
+                            .apply();
+                    }
+                    paymentFlowBusy = false;
+                    if ("paid".equals(finalStatus)) {
+                        resultView.setText(R.string.payment_server_confirmed);
+                    } else if ("unknown".equals(finalStatus)) {
+                        resultView.setText(R.string.payment_server_unknown);
+                    } else {
+                        resultView.setText(R.string.payment_server_cancelled);
+                    }
+                    schedulePaymentPoll(2500);
+                } else {
+                    resultView.setText(getString(R.string.payment_result_network_error,
+                        finalProblem == null ? "сервер не принял результат" : finalProblem));
+                    schedulePaymentPoll(3000);
+                }
+            });
+        });
+    }
+
     private void pairTerminal() {
         String code = pairingCodeInput.getText().toString().replace(" ", "").trim();
         if (!code.matches("\\d{8}")) {
@@ -225,6 +676,7 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     pairingCodeInput.setText("");
                     updatePairingUi();
+                    schedulePaymentPoll(500);
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
@@ -234,6 +686,80 @@ public final class MainActivity extends Activity {
                     ));
                     pairButton.setEnabled(true);
                     pairButton.setText(R.string.pair_terminal);
+                });
+            }
+        });
+    }
+
+    private void confirmPaymentScreenTest() {
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.payment_test_confirm_title)
+            .setMessage(R.string.payment_test_confirm_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.payment_test_confirm_action, (dialog, which) -> openPaymentScreenTest())
+            .show();
+    }
+
+    private void openPaymentScreenTest() {
+        paymentTestButton.setEnabled(false);
+        resultView.setText(R.string.payment_test_loading);
+
+        executor.execute(() -> {
+            try {
+                Receipt currentReceipt = ReceiptApi.getReceipt(this, Receipt.Type.SELL);
+                if (currentReceipt != null) {
+                    throw new IllegalStateException(getString(R.string.payment_test_receipt_exists));
+                }
+
+                List<PaymentPerformer> performers = PaymentPerformerApi.INSTANCE
+                    .getAllPaymentPerformers(getPackageManager());
+                if (performers == null || performers.isEmpty()) {
+                    throw new IllegalStateException(getString(R.string.payment_test_no_performers));
+                }
+
+                Position testPosition = Position.Builder.newInstance(
+                    UUID.randomUUID().toString(),
+                    null,
+                    getString(R.string.payment_test_item),
+                    new Measure("шт", 0, 0),
+                    new BigDecimal("1.00"),
+                    BigDecimal.ONE
+                ).build();
+                OpenSellReceiptCommand command = new OpenSellReceiptCommand(
+                    Collections.singletonList(new PositionAdd(testPosition)),
+                    null
+                );
+
+                runOnUiThread(() -> command.process(this, future -> {
+                    String errorMessage = null;
+                    try {
+                        IntegrationManagerFuture.Result result = future.getResult();
+                        if (result.getType() != IntegrationManagerFuture.Result.Type.OK) {
+                            errorMessage = getString(R.string.payment_test_open_failed);
+                        }
+                    } catch (Throwable error) {
+                        errorMessage = errorMessage(error);
+                    }
+
+                    String finalErrorMessage = errorMessage;
+                    runOnUiThread(() -> {
+                        paymentTestButton.setEnabled(true);
+                        if (finalErrorMessage != null) {
+                            resultView.setText(getString(R.string.payment_test_failed, finalErrorMessage));
+                            return;
+                        }
+                        resultView.setText(R.string.payment_test_opening);
+                        try {
+                            startActivity(NavigationApi.createIntentForSellReceiptPayment(false, this));
+                        } catch (Throwable error) {
+                            resultView.setText(getString(R.string.payment_test_failed, errorMessage(error)));
+                        }
+                    });
+                }));
+            } catch (Throwable error) {
+                runOnUiThread(() -> {
+                    resultView.setText(getString(R.string.payment_test_failed, errorMessage(error)));
+                    paymentTestButton.setEnabled(true);
                 });
             }
         });
