@@ -1,4 +1,4 @@
--- Holds POS orders outside the kitchen until the Evotor payment and receipt callback succeeds.
+-- Tracks Evotor card payment while the POS order is already visible in the kitchen.
 -- Additive schema migration for the KARIMOFF POS to Evotor payment flow.
 
 create table if not exists public.evotor_terminal_payment_intents (
@@ -38,36 +38,13 @@ alter table public.evotor_terminal_payment_intents enable row level security;
 revoke all on table public.evotor_terminal_payment_intents from public;
 
 do $$
-declare
-  v_role text;
 begin
-  foreach v_role in array array['service_role', 'karimoff_app'] loop
-    if exists (select 1 from pg_roles where rolname = v_role) then
-      execute format(
-        'drop policy if exists %I on public.evotor_terminal_payment_intents',
-        'evotor_terminal_payment_intents_' || v_role
-      );
-      execute format(
-        'grant select, insert, update, delete on table public.evotor_terminal_payment_intents to %I',
-        v_role
-      );
-      execute format(
-        'create policy evotor_terminal_payment_intents_%I on public.evotor_terminal_payment_intents for all to %I using (true) with check (true)',
-        v_role, v_role
-      );
-    end if;
-  end loop;
-end
-$$;
-
-do $$
-declare
-  v_role text;
-begin
-  foreach v_role in array array['anon', 'authenticated'] loop
-    if exists (select 1 from pg_roles where rolname = v_role) then
-      execute format('revoke all on table public.evotor_terminal_payment_intents from %I', v_role);
-    end if;
-  end loop;
+  if exists (select 1 from pg_roles where rolname = 'karimoff_app') then
+    grant select, insert, update, delete
+      on table public.evotor_terminal_payment_intents to karimoff_app;
+    create policy evotor_terminal_payment_intents_app_all
+      on public.evotor_terminal_payment_intents
+      for all to karimoff_app using (true) with check (true);
+  end if;
 end
 $$;
