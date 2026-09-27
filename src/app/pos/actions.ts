@@ -1,12 +1,11 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentStaff } from "@/lib/admin-auth";
+import { createEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
 import { canStaffAccessOrderLocation } from "@/lib/order-flow/access";
 import type { PosOrderActionState } from "@/lib/order-flow/pos-action-state";
-import { createOrder } from "@/lib/order-flow/service";
 
 const itemSchema = z.object({
   product_id: z.string().uuid(),
@@ -63,35 +62,32 @@ export async function createPosOrderAction(
   }
 
   try {
-    const order = await createOrder({
-      source: "pos",
+    const payment = await createEvotorPosPayment({
       locationId: parsed.data.locationId,
-      customerName: parsed.data.customerName || "Гость",
       customerId: parsed.data.customerId,
+      customerName: parsed.data.customerName || "Гость",
       comment: parsed.data.comment || null,
       items: parsed.data.items,
       idempotencyKey: parsed.data.idempotencyKey,
       actorId: staff.id,
       actorRole: staff.role
     });
-    revalidatePath("/kitchen");
-    revalidatePath("/admin/kitchen");
-    revalidatePath("/admin/orders");
-    revalidatePath("/display");
     return {
       status: "success",
-      message: `Заказ ${order.displayNumber || "создан"} отправлен на кухню.`,
-      orderId: order.orderId,
-      displayNumber: order.displayNumber || undefined,
-      resetKey: randomUUID()
+      message: `Заказ ${payment.displayNumber || "создан"} отправлен на терминал. Ожидаем оплату.`,
+      orderId: payment.orderId,
+      displayNumber: payment.displayNumber || undefined,
+      paymentIntentId: payment.intentId,
+      paymentStatus: payment.status,
+      amount: payment.amount
     };
   } catch (error) {
     const failure = error as { code?: string; message?: string };
     return {
       status: "error",
-      message: failure.code === "P0001"
+      message: failure.code === "P0001" || failure.code === "EVOTOR_POS_PAYMENT"
         ? failure.message || "Проверьте заказ."
-        : "Не удалось отправить заказ на кухню. Повторите попытку."
+        : "Не удалось отправить заказ на терминал. Повторите попытку."
     };
   }
 }

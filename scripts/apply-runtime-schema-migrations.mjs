@@ -657,6 +657,28 @@ migrations.push({
     );
   }
 });
+migrations.push({
+  name: "20260927000233_evotor_terminal_pos_payment_flow",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select
+        to_regclass('public.evotor_terminal_payment_intents') is not null as payment_intents,
+        to_regclass('public.evotor_terminal_payment_queue_idx') is not null as queue_index,
+        to_regclass('public.evotor_terminal_payment_one_active_per_device_idx') is not null as device_lock_index,
+        coalesce((
+          select relrowsecurity
+          from pg_class
+          where oid = to_regclass('public.evotor_terminal_payment_intents')
+        ), false) as rls_enabled
+    `;
+    return Boolean(
+      objects?.payment_intents
+      && objects?.queue_index
+      && objects?.device_lock_index
+      && objects?.rls_enabled
+    );
+  }
+});
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 

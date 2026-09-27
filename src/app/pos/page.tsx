@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PosWorkspace } from "@/components/operations/PosWorkspace";
 import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
 import { getCurrentStaff } from "@/lib/admin-auth";
+import { getActiveEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCreatePosOrder } from "@/lib/order-flow/permissions";
 import { getActiveProducts } from "@/lib/products";
@@ -15,11 +16,13 @@ export default async function PosPage() {
   if (!canCreatePosOrder(staff.role)) redirect("/kitchen");
   let products;
   let locations;
+  let initialPayment: Awaited<ReturnType<typeof getActiveEvotorPosPayment>> = null;
   try {
     [products, locations] = await Promise.all([
       getActiveProducts(250),
       getAccessibleOrderLocations(staff)
     ]);
+    initialPayment = await getActiveEvotorPosPayment(locations.map((item) => item.id));
   } catch {
     return <OperationsUnavailable title="POS временно недоступен" message="Не удалось загрузить меню и точку. Проверьте связь и повторите." />;
   }
@@ -33,6 +36,14 @@ export default async function PosPage() {
       initialIdempotencyKey={randomUUID()}
       staffName={staff.name}
       testMode={process.env.TEST_ORDER_MODE === "true"}
+      initialPayment={initialPayment ? {
+        intentId: initialPayment.intentId,
+        orderId: initialPayment.orderId,
+        displayNumber: initialPayment.displayNumber,
+        status: initialPayment.status,
+        amount: initialPayment.amount,
+        result: initialPayment.result
+      } : null}
     />
   );
 }
