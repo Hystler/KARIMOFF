@@ -7,8 +7,8 @@ import test from "node:test";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
-const migration = read("supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql");
-const legacyInventoryMigration = read("supabase/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
+const migration = read("database/migrations/20260814120000_add_canonical_order_flow_kds.sql");
+const legacyInventoryMigration = read("database/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
 const orderService = read("src/lib/order-flow/service.ts");
 const orderAction = read("src/app/actions/orders.ts");
 const posAction = read("src/app/pos/actions.ts");
@@ -76,7 +76,11 @@ test("KDS SLA and role transitions remain deterministic", () => {
         managerCannotCancelReady: permissions.canTransitionKitchen("manager", "ready", "cancelled"),
         onlineVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "web", paymentStatus: "unpaid" }, settings),
         testOnlineVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "web", paymentStatus: "unpaid", isTest: true }, settings),
-        posVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "pos", paymentStatus: "unpaid" }, settings)
+        posVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "pos", paymentStatus: "unpaid" }, settings),
+        evotorVisiblePending: permissions.isOrderVisibleToKitchen(
+          { source: "pos", paymentProvider: "evotor", paymentStatus: "pending" },
+          { ...settings, posRequiresPaid: true }
+        )
       }));
     `);
   } finally {
@@ -90,6 +94,7 @@ test("KDS SLA and role transitions remain deterministic", () => {
   assert.equal(result.onlineVisibleUnpaid, false);
   assert.equal(result.testOnlineVisibleUnpaid, true);
   assert.equal(result.posVisibleUnpaid, true);
+  assert.equal(result.evotorVisiblePending, true);
   assert.match(kitchenSettingsAction, /criticalMinutes > value\.warningMinutes/);
   assert.match(kitchenSettingsAction, /inventory_trigger[\s\S]+'ready'/);
 });
@@ -176,7 +181,7 @@ test("canonical analytics suppresses only confirmed reconciliations", () => {
   assert.match(migration, /create or replace view public\.canonical_analytics_sales/);
   assert.match(analyticsDashboard, /public\.canonical_analytics_sales/);
   assert.match(analyticsSales, /public\.canonical_analytics_sales/);
-  assert.match(read("supabase/migrations/20260812213000_add_unified_sales_analytics.sql"), /where status = 'confirmed'/);
+  assert.match(read("database/migrations/20260812213000_add_unified_sales_analytics.sql"), /where status = 'confirmed'/);
   assert.doesNotMatch(migration, /same amount|similar time|lower\(.*product_name/);
 });
 
@@ -210,7 +215,7 @@ test("KDS presents modifiers and the shared recipe without duplicating inventory
 test("the standalone container verifies the Order Flow migration before startup", () => {
   const dockerfile = read("Dockerfile");
   const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
-  assert.match(dockerfile, /20260814120000_add_canonical_order_flow_kds\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
   assert.match(runtimeMigrations, /name: "20260814120000_add_canonical_order_flow_kds"/);
   assert.match(runtimeMigrations, /to_regclass\('public\.order_outbox'\)/);
   assert.match(runtimeMigrations, /to_regprocedure\('public\.create_pos_order_atomic/);

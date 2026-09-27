@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const migration = read("supabase/migrations/20260812153000_add_production_accounting.sql");
+const migration = read("database/migrations/20260812153000_add_production_accounting.sql");
 const productionPage = read("src/app/admin/production/page.tsx");
 const productionRunForm = read("src/components/admin/ProductionRunForm.tsx");
 const navigation = read("src/components/admin/AdminWorkspaceShell.tsx");

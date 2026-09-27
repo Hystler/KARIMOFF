@@ -342,7 +342,7 @@ function buildSql(products) {
 
   const slugList = products.map((product) => sqlString(product.slug)).join(", ");
 
-  return `-- Seed generated from juikaifui.ru menu.\n-- Run supabase/products.sql before this seed if the products table is not created yet.\n\ninsert into public.products (\n  slug,\n  name,\n  category,\n  description,\n  price,\n  image_url,\n  is_active,\n  sort_order,\n  weight\n) values\n${rows}\non conflict (slug) do update set\n  name = excluded.name,\n  category = excluded.category,\n  description = excluded.description,\n  price = excluded.price,\n  image_url = excluded.image_url,\n  is_active = excluded.is_active,\n  sort_order = excluded.sort_order,\n  weight = excluded.weight,\n  updated_at = now();\n\n-- Optional manual cleanup for old demo placeholder products after you verify this import:\n-- update public.products\n-- set is_active = false, updated_at = now()\n-- where image_url like '/assets/products/placeholder-%'\n--   and slug not in (${slugList});\n`;
+  return `-- Seed generated from juikaifui.ru menu.\n-- Apply database/migrations/202607070001_karimoff_baseline_schema.sql first if the products table is missing.\n\ninsert into public.products (\n  slug,\n  name,\n  category,\n  description,\n  price,\n  image_url,\n  is_active,\n  sort_order,\n  weight\n) values\n${rows}\non conflict (slug) do update set\n  name = excluded.name,\n  category = excluded.category,\n  description = excluded.description,\n  price = excluded.price,\n  image_url = excluded.image_url,\n  is_active = excluded.is_active,\n  sort_order = excluded.sort_order,\n  weight = excluded.weight,\n  updated_at = now();\n\n-- Optional manual cleanup for old demo placeholder products after you verify this import:\n-- update public.products\n-- set is_active = false, updated_at = now()\n-- where image_url like '/assets/products/placeholder-%'\n--   and slug not in (${slugList});\n`;
 }
 
 function buildReport({ products, categories, modifiers, duplicateSlugs, downloadedCount, imageErrors }) {
@@ -408,8 +408,8 @@ async function main() {
   await fs.writeFile(path.join(OUTPUT_DIR, "juikaifui-products.csv"), `${buildCsv(products)}\n`, "utf8");
 
   const sql = buildSql(products);
-  await fs.writeFile(path.join(rootDir, "supabase", "seed-products-from-juikaifui.sql"), sql, "utf8");
-  await fs.writeFile(path.join(rootDir, "supabase", "seed-products.sql"), sql, "utf8");
+  await fs.writeFile(path.join(rootDir, "database", "seeds", "seed-products-from-juikaifui.sql"), sql, "utf8");
+  await fs.writeFile(path.join(rootDir, "database", "seeds", "seed-products.sql"), sql, "utf8");
   await fs.writeFile(
     path.join(OUTPUT_DIR, "juikaifui-scrape-report.md"),
     buildReport({ products, categories, modifiers, duplicateSlugs, downloadedCount, imageErrors }),

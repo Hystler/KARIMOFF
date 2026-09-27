@@ -7,9 +7,9 @@ import test from "node:test";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
-const migration = read("supabase/migrations/20260827120000_add_yookassa_payment_integration.sql");
-const fiscalRefinement = read("supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql");
-const analyticsMigration = read("supabase/migrations/20260812213000_add_unified_sales_analytics.sql");
+const migration = read("database/migrations/20260827120000_add_yookassa_payment_integration.sql");
+const fiscalRefinement = read("database/migrations/20260827143000_refine_yookassa_fiscal_operations.sql");
+const analyticsMigration = read("database/migrations/20260812213000_add_unified_sales_analytics.sql");
 const analyticsDashboard = read("src/lib/analytics/dashboard.ts");
 const analyticsFilterBar = read("src/components/admin/analytics/AnalyticsFilterBar.tsx");
 const analyticsQuery = read("src/lib/analytics/query.ts");
@@ -524,8 +524,8 @@ test("runtime migration is wired into image startup with postconditions", () => 
   assert.match(runtimeMigrations, /payments_yookassa_order_key/);
   assert.match(runtimeMigrations, /create_site_order_with_payment/);
   assert.match(runtimeMigrations, /apply_yookassa_payment_state/);
-  assert.match(dockerfile, /20260827120000_add_yookassa_payment_integration\.sql/);
-  assert.match(dockerignore, /!supabase\/migrations\/20260827120000_add_yookassa_payment_integration\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
+  assert.match(dockerignore, /!database\/migrations\/\*\.sql/);
   assert.match(runtimeMigrations, /20260827143000_refine_yookassa_fiscal_operations/);
   assert.match(runtimeMigrations, /payment_receipt_snapshot/);
   assert.match(runtimeMigrations, /analytics_payment_provider/);
@@ -538,6 +538,6 @@ test("runtime migration is wired into image startup with postconditions", () => 
   assert.doesNotMatch(fiscalRefinement, /from public, anon, authenticated/i);
   assert.match(migration, /rolname in \('anon', 'authenticated'\)/);
   assert.match(fiscalRefinement, /rolname in \('anon', 'authenticated'\)/);
-  assert.match(dockerfile, /20260827143000_refine_yookassa_fiscal_operations\.sql/);
-  assert.match(dockerignore, /!supabase\/migrations\/20260827143000_refine_yookassa_fiscal_operations\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
+  assert.match(dockerignore, /!database\/migrations\/\*\.sql/);
 });

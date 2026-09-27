@@ -7,7 +7,7 @@ import test from "node:test";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
-const migration = read("supabase/migrations/20260812213000_add_unified_sales_analytics.sql");
+const migration = read("database/migrations/20260812213000_add_unified_sales_analytics.sql");
 const dashboard = read("src/lib/analytics/dashboard.ts");
 const sales = read("src/lib/analytics/sales.ts");
 const query = read("src/lib/analytics/query.ts");
@@ -234,5 +234,5 @@ test("the standalone container applies the analytics migration idempotently", ()
   assert.match(runtimeMigrations, /to_regclass\('public\.analytics_sales'\)/);
   assert.match(runtimeMigrations, /to_regclass\('public\.analytics_sale_items'\)/);
   assert.match(runtimeMigrations, /to_regclass\('public\.analytics_sale_payments'\)/);
-  assert.match(dockerfile, /20260812213000_add_unified_sales_analytics\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
 });

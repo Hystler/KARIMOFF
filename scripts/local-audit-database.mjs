@@ -138,7 +138,7 @@ if (query("select to_regclass('local_audit.applied_migrations') is not null;") =
   `);
 }
 
-const directory = join(root, "supabase/migrations");
+const directory = join(root, "database/migrations");
 const migrations = readdirSync(directory).filter(name => /^\d+_[a-z0-9_]+\.sql$/.test(name)).sort();
 assert.ok(migrations.length > 0);
 for (const name of migrations) {
@@ -155,7 +155,7 @@ for (const name of migrations) {
     query(`insert into local_audit.applied_migrations(name,sha256) values('${name}','${digest}');`);
   }
   if (name === "202607070001_karimoff_baseline_schema.sql" && query("select count(*) from public.products;") === "0") {
-    apply("local menu seed", `begin;\n${readFileSync(join(root, "supabase/seed-products-from-juikaifui.sql"), "utf8")}\ncommit;`);
+    apply("local menu seed", `begin;\n${readFileSync(join(root, "database/seeds/seed-products-from-juikaifui.sql"), "utf8")}\ncommit;`);
   }
 }
 
@@ -179,7 +179,7 @@ try {
     status: "schema-ready", checkedAt: new Date().toISOString(), container, image, volume, network,
     dsn, identity, counts, latestMigration: migrations.at(-1), migrations,
     persistent: true, autoRemove: false, hostBind: `127.0.0.1:${port}`,
-    auth: "Local-only trust; minimal auth helper stubs, not a Supabase Auth service",
+    auth: "Local-only trust; minimal authentication helper stubs for SQL migrations",
     seed: "Repository menu seed after baseline; order_locations seeded by canonical order migration",
     logPath
   };

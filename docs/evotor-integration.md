@@ -60,7 +60,7 @@
 
 ## Миграция и таблицы
 
-Миграция: `supabase/migrations/20260812190000_add_evotor_cloud_integration.sql`.
+Миграция: `database/migrations/20260812190000_add_evotor_cloud_integration.sql`.
 
 Создаются:
 

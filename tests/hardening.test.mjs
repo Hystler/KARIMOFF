@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-const migration = read("supabase/migrations/20260724110535_harden_mvp_security_and_legal.sql");
+const migration = read("database/migrations/20260724110535_harden_mvp_security_and_legal.sql");
 const orderAction = read("src/app/actions/orders.ts");
 const orderSchema = read("src/lib/order-schema.ts");
 const cartDrawer = read("src/components/cart/CartDrawer.tsx");

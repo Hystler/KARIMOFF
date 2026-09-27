@@ -10,7 +10,7 @@ const callback = read("src/app/api/integrations/evotor/token/route.ts");
 const callbackAuth = read("src/lib/integrations/evotor/auth.ts");
 const repository = read("src/lib/integrations/evotor/repository.ts");
 const sync = read("src/lib/integrations/evotor/sync.ts");
-const migration = read("supabase/migrations/20260812190000_add_evotor_cloud_integration.sql");
+const migration = read("database/migrations/20260812190000_add_evotor_cloud_integration.sql");
 const adminAction = read("src/app/admin/integrations/evotor/actions.ts");
 
 function runTypeScript(source, env = {}) {

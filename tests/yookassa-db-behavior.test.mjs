@@ -112,7 +112,7 @@ async function partialRefund(sql, order, receiptRegistration = "succeeded") {
 
 test("disposable PG17: existing YooKassa SQL transaction suite", localDatabase, async () => {
   await withDatabase(async (sql) => {
-    await sql.unsafe(readFileSync(resolve("supabase/tests/yookassa.sql"), "utf8"));
+    await sql.unsafe(readFileSync(resolve("database/tests/yookassa.sql"), "utf8"));
   });
 });
 

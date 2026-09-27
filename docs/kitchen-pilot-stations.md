@@ -2,7 +2,7 @@
 
 ## Policy and Rollout
 
-- New migration: `supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql`.
+- New migration: `database/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql`.
 - `kitchen_sla_settings.inventory_shortage_policy` defaults to `allow_negative`, including existing location settings. Locations without a settings row use the same explicit pilot default.
 - No new long-lived application flags. Do not enable `TEST_ORDER_MODE` for normal pilot orders.
 - Switch a location to `block` in `/admin/kitchen` to restore strict shortage rejection. This changes future deductions, not completed accounting or existing negative balances. Settings remain staff/location-scoped and audited.

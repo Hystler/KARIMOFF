@@ -4,9 +4,9 @@ import { join } from "node:path";
 import test from "node:test";
 
 const read = (path) => readFileSync(join(process.cwd(), path), "utf8");
-const migration = read("supabase/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
-const productIterationMigration = read("supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql");
-const orderFlowMigration = read("supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql");
+const migration = read("database/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
+const productIterationMigration = read("database/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql");
+const orderFlowMigration = read("database/migrations/20260814120000_add_canonical_order_flow_kds.sql");
 const orderAction = read("src/app/actions/orders.ts");
 const cart = read("src/components/cart/CartProvider.tsx");
 const cartDrawer = read("src/components/cart/CartDrawer.tsx");

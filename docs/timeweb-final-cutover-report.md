@@ -99,19 +99,10 @@ Production revision после удаления старых env:
 
 ## Runtime
 
-- удалён клиент `@supabase/supabase-js`;
-- удалены browser/server clients прежнего Data API;
 - PostgreSQL и S3 являются единственными runtime-адаптерами;
-- `DATABASE_PROVIDER` и `STORAGE_PROVIDER` удалены;
-- старые URL удалены из CSP и Next Image remote patterns;
-- старые build args удалены из Dockerfile;
 - `DATABASE_URL` и S3 secret остаются server-only;
-- production и stand не содержат `SUPABASE_*` и публичные ключи прежнего
-  провайдера.
-
-Исторические SQL migrations, migration scripts и документы сохранены только
-для аудита и аварийного восстановления. Они не копируются в standalone runtime
-image и не выполняются приложением.
+- production и stand используют прямое подключение к PostgreSQL и Timeweb S3;
+- startup migrator читает SQL из `database/migrations`.
 
 ## Проверки
 
@@ -130,15 +121,3 @@ image и не выполняются приложением.
 - тест регистрации, входа, заказа, склада, бонусов и admin/kitchen: pass;
 - тест нескольких product images и hero upload/delete в S3: pass;
 - тестовые данные удалены, финальные row counts восстановлены.
-
-## Backups
-
-Финальный source backup находится вне Git:
-
-`/Users/akimkovalenko/Desktop/karimoff-final-supabase-backup.dump`
-
-Дополнительно сохранены schema, data, object list, grants, extensions и row
-count reports рядом с backup. Все защищённые файлы имеют mode `0600`.
-
-Исходный облачный проект не удалён и оставлен как аварийный архив. Порядок
-отката описан в `docs/timeweb-rollback-archive.md`.

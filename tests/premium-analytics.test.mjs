@@ -14,7 +14,7 @@ const filterBar = read("src/components/admin/analytics/AnalyticsFilterBar.tsx");
 const hub = read("src/components/admin/analytics/AnalyticsIntelligenceHub.tsx");
 const rangePicker = read("src/components/admin/RussianDateRangePicker.tsx");
 const reportExport = read("src/app/api/admin/analytics/report/export/route.ts");
-const operationalMigration = read("supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql");
+const operationalMigration = read("database/migrations/20260815103000_refine_pos_kds_display_operations.sql");
 
 function fixture() {
   const cacheDirectory = join(root, ".next", "cache");
@@ -253,6 +253,6 @@ test("TEST orders bypass stock only inside the explicit test branch", () => {
   assert.match(testBranch, /склад, бонусы и фискализация не изменены/);
   assert.doesNotMatch(testBranch, /set_order_status_staff_atomic/);
   assert.match(productionReadyBranch, /set_order_status_staff_atomic/);
-  assert.match(read("supabase/migrations/20260724110535_harden_mvp_security_and_legal.sql"), /Недостаточно остатков/);
+  assert.match(read("database/migrations/20260724110535_harden_mvp_security_and_legal.sql"), /Недостаточно остатков/);
   assert.match(operationalMigration, /where o\.id is null or not o\.is_test/);
 });

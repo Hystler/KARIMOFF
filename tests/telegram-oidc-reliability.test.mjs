@@ -229,11 +229,11 @@ test("existing Telegram identity signs in without phone while new missing-phone 
 test("Telegram lifecycle migration is applied by the standalone runtime without touching MAX", () => {
   const runtime = read("scripts/apply-runtime-schema-migrations.mjs");
   const dockerfile = read("Dockerfile");
-  const migration = read("supabase/migrations/20260824120000_add_telegram_browser_consume.sql");
+  const migration = read("database/migrations/20260824120000_add_telegram_browser_consume.sql");
   const maxChallenge = read("src/lib/auth/social/max-challenge.ts");
   assert.match(runtime, /20260824120000_add_telegram_browser_consume/);
   assert.match(runtime, /objects\?\.lifecycle_columns/);
-  assert.match(dockerfile, /20260824120000_add_telegram_browser_consume\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
   assert.match(migration, /enable row level security|oauth_login_attempts/);
   assert.match(migration, /to karimoff_app/);
   assert.match(maxChallenge, /getMaxBrowserChallengeStatus/);

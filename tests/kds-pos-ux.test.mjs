@@ -7,7 +7,7 @@ import test from "node:test";
 
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
-const migration = read("supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql");
+const migration = read("database/migrations/20260815103000_refine_pos_kds_display_operations.sql");
 const pos = read("src/components/operations/PosWorkspace.tsx");
 const customizer = read("src/components/operations/PosProductCustomizer.tsx");
 const kitchen = read("src/components/operations/KitchenWorkspace.tsx");
@@ -206,5 +206,5 @@ test("standalone startup applies the POS/KDS refinement migration", () => {
   assert.match(runtimeMigrations, /name: "20260815103000_refine_pos_kds_display_operations"/);
   assert.match(runtimeMigrations, /to_regclass\('public\.product_modifier_groups'\)/);
   assert.match(runtimeMigrations, /create_site_order\(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamp with time zone,boolean\)/);
-  assert.match(dockerfile, /20260815103000_refine_pos_kds_display_operations\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
 });

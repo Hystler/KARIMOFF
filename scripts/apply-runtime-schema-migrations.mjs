@@ -707,7 +707,7 @@ try {
     if (readOnly) {
       throw new Error(`required migration missing in read-only startup: ${migration.name}`);
     }
-    const migrationPath = new URL(`../supabase/migrations/${migration.name}.sql`, import.meta.url);
+    const migrationPath = new URL(`../database/migrations/${migration.name}.sql`, import.meta.url);
     const migrationSql = readFileSync(migrationPath, "utf8");
     await sql.begin(async (transaction) => {
       await transaction`select pg_advisory_xact_lock(hashtext(${migration.name}))`;

@@ -35,24 +35,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-schema-migr
 COPY --from=builder --chown=nextjs:nodejs /app/data/tech-cards ./data/tech-cards
 COPY --from=builder --chown=nextjs:nodejs /app/data/analytics ./data/analytics
 COPY --from=builder --chown=nextjs:nodejs /app/data/catalog ./data/catalog
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql ./supabase/migrations/20260811223000_same_day_orders_waste_evotor_analytics.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812153000_add_production_accounting.sql ./supabase/migrations/20260812153000_add_production_accounting.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812190000_add_evotor_cloud_integration.sql ./supabase/migrations/20260812190000_add_evotor_cloud_integration.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260812213000_add_unified_sales_analytics.sql ./supabase/migrations/20260812213000_add_unified_sales_analytics.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql ./supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql ./supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql ./supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260820190000_add_max_social_auth.sql ./supabase/migrations/20260820190000_add_max_social_auth.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260824120000_add_telegram_browser_consume.sql ./supabase/migrations/20260824120000_add_telegram_browser_consume.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827120000_add_yookassa_payment_integration.sql ./supabase/migrations/20260827120000_add_yookassa_payment_integration.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql ./supabase/migrations/20260827143000_refine_yookassa_fiscal_operations.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828190000_refine_public_product_copy.sql ./supabase/migrations/20260828190000_refine_public_product_copy.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260828220000_add_order_status_notifications.sql ./supabase/migrations/20260828220000_add_order_status_notifications.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901120000_add_ingredient_nutrition.sql ./supabase/migrations/20260901120000_add_ingredient_nutrition.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql ./supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql ./supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260921193000_add_evotor_terminal_bridge.sql ./supabase/migrations/20260921193000_add_evotor_terminal_bridge.sql
-COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations/20260927000233_evotor_terminal_pos_payment_flow.sql ./supabase/migrations/20260927000233_evotor_terminal_pos_payment_flow.sql
+COPY --from=builder --chown=nextjs:nodejs /app/database/migrations/ ./database/migrations/
 
 USER nextjs
 

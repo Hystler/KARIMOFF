@@ -9,7 +9,7 @@ const healthRoute = read("src/app/api/terminal/health/route.ts");
 const pairRoute = read("src/app/api/terminal/pair/route.ts");
 const nextRoute = read("src/app/api/terminal/orders/next/route.ts");
 const ackRoute = read("src/app/api/terminal/orders/[id]/ack/route.ts");
-const migration = read("supabase/migrations/20260921193000_add_evotor_terminal_bridge.sql");
+const migration = read("database/migrations/20260921193000_add_evotor_terminal_bridge.sql");
 const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
 const dockerfile = read("Dockerfile");
 const manifest = read("android/evotor-bridge/app/src/main/AndroidManifest.xml");
@@ -26,7 +26,7 @@ test("terminal bridge storage is private, scoped, and included in runtime startu
   assert.match(migration, /revoke all on table public\.evotor_terminal_pairing_codes from %I/);
   assert.match(migration, /revoke all on table public\.evotor_terminal_preview_jobs from %I/);
   assert.match(runtimeMigrations, /20260921193000_add_evotor_terminal_bridge/);
-  assert.match(dockerfile, /20260921193000_add_evotor_terminal_bridge\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
 });
 
 test("pairing is one-time, rate-limited, and stores only token digests", () => {

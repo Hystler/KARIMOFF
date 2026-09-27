@@ -1,5 +1,5 @@
 -- Seed generated from juikaifui.ru menu.
--- Run supabase/products.sql before this seed if the products table is not created yet.
+-- Apply database/migrations/202607070001_karimoff_baseline_schema.sql first if the products table is missing.
 
 insert into public.products (
   slug,

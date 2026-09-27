@@ -85,7 +85,7 @@ test("the last authentication method cannot be unlinked", () => {
 
 test("OAuth state is server-authoritative, one-time and expires", () => {
   const state = read("src/lib/auth/social/state.ts");
-  const migration = read("supabase/migrations/20260824120000_add_telegram_browser_consume.sql");
+  const migration = read("database/migrations/20260824120000_add_telegram_browser_consume.sql");
   assert.match(state, /randomBase64Url\(32\)/);
   assert.match(state, /state_hash[\s\S]*hashOAuthSecret\(browserBinding\)/);
   assert.match(state, /requireTelegramBrowserBinding/);
@@ -137,7 +137,7 @@ test("configured app origin wins when a reverse proxy hides the public host", ()
 });
 
 test("VK runtime is retired without destructively removing historical identities", () => {
-  const migration = read("supabase/migrations/20260820190000_add_max_social_auth.sql");
+  const migration = read("database/migrations/20260820190000_add_max_social_auth.sql");
   const env = read(".env.example");
   const socialButtons = read("src/components/auth/SocialAuthButtons.tsx");
   assert.equal(existsSync(join(root, "src/lib/auth/social/vk.ts")), false);
@@ -149,7 +149,7 @@ test("VK runtime is retired without destructively removing historical identities
 });
 
 test("identity schema prevents duplicate provider identities and denies public access", () => {
-  const migration = read("supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
+  const migration = read("database/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
   assert.match(migration, /unique \(provider, provider_user_id\)/);
   assert.match(migration, /unique \(user_id, provider\)/);
   assert.match(migration, /enable row level security/);
@@ -172,7 +172,7 @@ test("admin credentials are bcrypt-only and no default plaintext password remain
 });
 
 test("admin rate limiting has exponential temporary lockout and session rotation", () => {
-  const migration = read("supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
+  const migration = read("database/migrations/20260818170000_add_social_identities_and_auth_hardening.sql");
   const adminAuth = read("src/lib/admin-auth.ts");
   assert.match(migration, /v_lock_multiplier/);
   assert.match(migration, /least\(86400/);

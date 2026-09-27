@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
 test("ingredient nutrition is complete, non-negative, and uses a unit-aware basis", () => {
-  const migration = read("supabase/migrations/20260901120000_add_ingredient_nutrition.sql");
+  const migration = read("database/migrations/20260901120000_add_ingredient_nutrition.sql");
   const schema = read("src/lib/ingredient-schema.ts");
   const actions = read("src/app/admin/ingredients/actions.ts");
   const form = read("src/components/admin/IngredientForm.tsx");
@@ -29,8 +29,8 @@ test("ingredient nutrition is complete, non-negative, and uses a unit-aware basi
   assert.match(actions, /nutrition_basis_quantity: parsed\.data\.unit === "pcs" \? 1 : 100/);
   assert.match(runtimeMigrations, /20260901120000_add_ingredient_nutrition/);
   assert.match(runtimeMigrations, /ingredients_nutrition_values_check/);
-  assert.match(dockerfile, /20260901120000_add_ingredient_nutrition\.sql/);
-  assert.match(dockerignore, /!supabase\/migrations\/20260901120000_add_ingredient_nutrition\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
+  assert.match(dockerignore, /!database\/migrations\/\*\.sql/);
 });
 
 test("recipe nutrition scales grams and pieces without applying kitchen waste twice", () => {

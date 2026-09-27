@@ -71,7 +71,7 @@ test("inactive drinks stay out of public menu and product detail fallbacks", () 
 
 test("catalog copy migration is one-time, slug-based, and leaves business values intact", () => {
   const copy = JSON.parse(read("data/catalog/public-product-copy.json"));
-  const migration = read("supabase/migrations/20260828190000_refine_public_product_copy.sql");
+  const migration = read("database/migrations/20260828190000_refine_public_product_copy.sql");
   const runtime = read("scripts/apply-runtime-schema-migrations.mjs");
   const dockerfile = read("Dockerfile");
 
@@ -86,7 +86,7 @@ test("catalog copy migration is one-time, slug-based, and leaves business values
   assert.doesNotMatch(migration, /\bprice\s*=|\bis_active\s*=|\bimage_url\s*=|product_ingredients|inventory_/);
   assert.match(runtime, /20260828190000_refine_public_product_copy/);
   assert.match(runtime, /schema_migration\.20260828190000_refine_public_product_copy/);
-  assert.match(dockerfile, /20260828190000_refine_public_product_copy\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
 });
 
 test("menu cards show complete guest copy and use a readable mobile layout", () => {

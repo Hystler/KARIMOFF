@@ -123,7 +123,7 @@ test("MAX contact validation binds a fresh signed phone to the validated user", 
 
 test("MAX challenge is random, hashed, browser-bound, expiring and one-time", () => {
   const challenge = read("src/lib/auth/social/max-challenge.ts");
-  const migration = read("supabase/migrations/20260820190000_add_max_social_auth.sql");
+  const migration = read("database/migrations/20260820190000_add_max_social_auth.sql");
   const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
   const start = read("src/app/api/auth/social/max/start/route.ts");
   const status = read("src/app/api/auth/social/max/status/route.ts");

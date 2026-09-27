@@ -47,13 +47,13 @@ Limitations: fixture fonts used Arial in place of Next's loaded webfont; no prod
 
 Prefer a separate, already-migrated disposable PostgreSQL database and an isolated browser context. Point a separate local app process at that database, with the same test-only `SESSION_SECRET` as the harness. Do not load production secrets or use the user's existing browser profile. Keep payment, notification, and integration workers disabled and provider credentials empty; intercept any provider network/auto-resume requests if testing configured provider buttons.
 
-The app uses the direct PostgreSQL adapter, not Supabase Auth/JWT. See `src/lib/customer-auth.ts`: `setCustomerSession()` stores a random base64url token in cookie `karimoff_customer_session` and its HMAC-SHA256 hex digest in `public.app_sessions.token_hash`. `getCustomerSession()` requires `subject_type='customer'`, a matching `subject_id`, `revoked_at IS NULL`, and a future `expires_at`. No password, OTP, provider identity, or user-agent binding is required to read these routes.
+The app uses direct PostgreSQL sessions. See `src/lib/customer-auth.ts`: `setCustomerSession()` stores a random base64url token in cookie `karimoff_customer_session` and its HMAC-SHA256 hex digest in `public.app_sessions.token_hash`. `getCustomerSession()` requires `subject_type='customer'`, a matching `subject_id`, `revoked_at IS NULL`, and a future `expires_at`. No password, OTP, provider identity, or user-agent binding is required to read these routes.
 
 Schema references:
 
-- `supabase/migrations/202607070001_karimoff_baseline_schema.sql`: customers (line 126), loyalty accounts/transactions (435/444), customer avatars (496), avatar assets.
-- `supabase/migrations/20260724110535_harden_mvp_security_and_legal.sql`: legal consents (35), app sessions (57).
-- `supabase/migrations/20260818170000_add_social_identities_and_auth_hardening.sql`: user identities. Use the current migrated schema for subsequent MAX/ordering fields.
+- `database/migrations/202607070001_karimoff_baseline_schema.sql`: customers (line 126), loyalty accounts/transactions (435/444), customer avatars (496), avatar assets.
+- `database/migrations/20260724110535_harden_mvp_security_and_legal.sql`: legal consents (35), app sessions (57).
+- `database/migrations/20260818170000_add_social_identities_and_auth_hardening.sql`: user identities. Use the current migrated schema for subsequent MAX/ordering fields.
 
 Use the current complete fixture schema: `/profile` also queries orders, loyalty transactions, legal consents, identities, and the shared site chrome/settings. Empty tables are sufficient for empty states. `/profile/avatar` needs `avatar_assets` present; an empty assets table falls back to the built-in choices.
 

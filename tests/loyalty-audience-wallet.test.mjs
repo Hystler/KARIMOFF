@@ -22,7 +22,7 @@ test("loyalty card QR is signed, private, rotatable, and cannot authorize redemp
 });
 
 test("loyalty migration is additive, RLS-protected, and preserves the old POS RPC", () => {
-  const migration = read("supabase/migrations/20260901170000_add_loyalty_cards_and_audience.sql");
+  const migration = read("database/migrations/20260901170000_add_loyalty_cards_and_audience.sql");
   const runtime = read("scripts/apply-runtime-schema-migrations.mjs");
   const dockerfile = read("Dockerfile");
   const dockerignore = read(".dockerignore");
@@ -36,8 +36,8 @@ test("loyalty migration is additive, RLS-protected, and preserves the old POS RP
   assert.match(migration, /from public\.create_pos_order_atomic\([\s\S]+p_is_test/);
   assert.doesNotMatch(migration, /drop table|delete from public\.customers|truncate/i);
   assert.match(runtime, /20260901170000_add_loyalty_cards_and_audience/);
-  assert.match(dockerfile, /20260901170000_add_loyalty_cards_and_audience\.sql/);
-  assert.match(dockerignore, /20260901170000_add_loyalty_cards_and_audience\.sql/);
+  assert.match(dockerfile, /database\/migrations/);
+  assert.match(dockerignore, /!database\/migrations\/\*\.sql/);
 });
 
 test("POS resolves cards server-side and attaches a customer to the canonical order", () => {

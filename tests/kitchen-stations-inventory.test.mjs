@@ -5,7 +5,7 @@ import test from "node:test";
 import postgres from "postgres";
 import ts from "typescript";
 
-const migration = readFileSync("supabase/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql", "utf8");
+const migration = readFileSync("database/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql", "utf8");
 const dsn = process.env.KITCHEN_TEST_DATABASE_URL;
 const localOnly = { skip: !dsn && "Requires explicit disposable 55440 KITCHEN_TEST_DATABASE_URL" };
 const rollback = new Error("ROLLBACK_KITCHEN_FIXTURE");
@@ -105,7 +105,7 @@ test("two station views partition lines and never report a mixed order fully rea
 });
 
 test("forward SQL retains existing loyalty accounting and protected commercial lines", () => {
-  const old = readFileSync("supabase/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql", "utf8");
+  const old = readFileSync("database/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql", "utf8");
   const loyalty = (source) => source.slice(source.indexOf("    select loyalty_enabled, loyalty_percent"), source.indexOf("  insert into public.audit_logs (", source.indexOf("    select loyalty_enabled, loyalty_percent")));
   assert.equal(loyalty(migration), loyalty(old));
   assert.doesNotMatch(migration, /update public\.order_items|disable trigger|security definer/i);

@@ -87,13 +87,13 @@ Runtime role получает только необходимые grants/RLS. Br
 
 ## Миграция
 
-Файл: `supabase/migrations/20260814120000_add_canonical_order_flow_kds.sql`.
+Файл: `database/migrations/20260814120000_add_canonical_order_flow_kds.sql`.
 
 Миграция additive и idempotent: существующие orders backfill-ятся в default location, старые completed/cancelled/in_progress получают соответствующий kitchen status. Перед тестовым deploy её нужно применить migration/schema-owner ролью и затем проверить RPC от `karimoff_app`.
 
 ## Уточнение POS/KDS 2026-08-15
 
-Дополнительная миграция: `supabase/migrations/20260815103000_refine_pos_kds_display_operations.sql`.
+Дополнительная миграция: `database/migrations/20260815103000_refine_pos_kds_display_operations.sql`.
 
 Она добавляет:
 
