@@ -13,6 +13,7 @@ export type TerminalBridgeDevice = {
   appVersion: string | null;
   pairedAt: string | null;
   lastSeenAt: string | null;
+  isOnline: boolean;
 };
 
 function secret() {
@@ -43,8 +44,10 @@ export async function getTerminalBridgeDevices(
     app_version: string | null;
     paired_at: string | null;
     last_seen_at: string | null;
+    is_online: boolean;
   }[]>`
-    select id, label, app_version, paired_at, last_seen_at
+    select id, label, app_version, paired_at, last_seen_at,
+      last_seen_at >= now() - interval '90 seconds' as is_online
     from public.evotor_terminal_devices
     where revoked_at is null and token_hash is not null
     order by paired_at desc nulls last, created_at desc
@@ -54,8 +57,10 @@ export async function getTerminalBridgeDevices(
     app_version: string | null;
     paired_at: string | null;
     last_seen_at: string | null;
+    is_online: boolean;
   }[]>`
-    select id, label, app_version, paired_at, last_seen_at
+    select id, label, app_version, paired_at, last_seen_at,
+      last_seen_at >= now() - interval '90 seconds' as is_online
     from public.evotor_terminal_devices
     where revoked_at is null
       and token_hash is not null
@@ -67,7 +72,8 @@ export async function getTerminalBridgeDevices(
     label: row.label,
     appVersion: row.app_version,
     pairedAt: row.paired_at,
-    lastSeenAt: row.last_seen_at
+    lastSeenAt: row.last_seen_at,
+    isOnline: row.is_online
   }));
 }
 

@@ -79,11 +79,16 @@ export function TerminalBridgePanel({
             <select name="device_id" className="admin-field" disabled={!devices.length} required>
               {devices.length ? devices.map((device) => (
                 <option key={device.id} value={device.id}>
-                  {device.label}{device.lastSeenAt ? " · подключалась" : ""}
+                  {device.label} · {device.isOnline ? "в сети" : "нет связи"}{device.appVersion ? ` · версия при привязке ${device.appVersion}` : ""}
                 </option>
               )) : <option value="">Сначала привяжите кассу</option>}
             </select>
           </label>
+          {devices.length ? (
+            <p className="mt-2 text-xs leading-5 text-karimoff-muted">
+              «В сети» означает, что касса связывалась с сервером за последние 90 секунд. Обновите страницу, чтобы проверить статус снова.
+            </p>
+          ) : null}
           {preview.message ? (
             <p className={`mt-3 text-sm font-semibold ${preview.status === "error" ? "text-red-700" : "text-emerald-800"}`}>
               {preview.message}
