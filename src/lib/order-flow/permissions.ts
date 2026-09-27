@@ -40,6 +40,8 @@ export function canTransitionKitchen(
 export function isOrderVisibleToKitchen(order: OrderFlowOrder, sla: KitchenSla) {
   // Test orders exercise the full operational flow without depending on a real payment provider.
   if (order.isTest) return true;
+  // Evotor POS orders appear in the kitchen as soon as they are sent to the terminal.
+  if (order.source === "pos" && order.paymentProvider === "evotor") return true;
   const paid = order.paymentStatus === "paid" || order.paymentStatus === "partially_refunded";
   if ((order.source === "web" || order.source === "mobile") && sla.onlineRequiresPaid) return paid;
   if ((order.source === "pos" || order.source === "kiosk") && sla.posRequiresPaid) return paid;

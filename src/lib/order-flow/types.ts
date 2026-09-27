@@ -68,6 +68,7 @@ export type OrderFlowOrder = {
   kitchenStatus: KitchenStatus;
   orderStatus: string;
   paymentStatus: string;
+  paymentProvider: string | null;
   fiscalStatus: string;
   publicDisplayName: string;
   publicAvatarSeed: string;

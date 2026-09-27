@@ -241,8 +241,8 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
       update public.orders
       set payment_status = 'pending',
           fiscal_status = 'pending',
-          is_operational = false,
-          operational_started_at = null,
+          is_operational = true,
+          operational_started_at = coalesce(operational_started_at, now()),
           source_metadata = coalesce(source_metadata, '{}'::jsonb)
             || jsonb_build_object(
               'payment_required', true,
@@ -457,6 +457,16 @@ export async function recordEvotorTerminalPaymentResult(params: {
             updated_at = now()
         where id = ${intent.order_id}::uuid and payment_status = 'pending'
       `;
+      await sql`
+        insert into public.order_outbox (aggregate_id, event_type, payload, idempotency_key)
+        select order_row.id, 'order.payment_cancelled',
+               jsonb_build_object('order_id', order_row.id, 'location_id', order_row.location_id,
+                 'provider', 'evotor'),
+               'order:' || order_row.id::text || ':payment:cancelled'
+        from public.orders order_row
+        where order_row.id = ${intent.order_id}::uuid and order_row.payment_status = 'cancelled'
+        on conflict (idempotency_key) do nothing
+      `;
     }
 
     await sql`
@@ -645,6 +655,16 @@ export async function resolveUnknownEvotorPosPayment(params: {
               || jsonb_build_object('payment_confirmed', false, 'payment_provider', 'evotor'),
             updated_at = now()
         where id = ${intent.order_id}::uuid and payment_status = 'pending'
+      `;
+      await sql`
+        insert into public.order_outbox (aggregate_id, event_type, payload, idempotency_key)
+        select order_row.id, 'order.payment_cancelled',
+               jsonb_build_object('order_id', order_row.id, 'location_id', order_row.location_id,
+                 'provider', 'evotor', 'manual_resolution', true),
+               'order:' || order_row.id::text || ':payment:cancelled'
+        from public.orders order_row
+        where order_row.id = ${intent.order_id}::uuid and order_row.payment_status = 'cancelled'
+        on conflict (idempotency_key) do nothing
       `;
     }
     await sql`

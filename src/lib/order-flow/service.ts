@@ -157,13 +157,17 @@ export async function transitionOrder(params: {
   station?: "snacks" | "main";
 }) {
   const data = await getPostgresSql().begin(async (sql) => {
-    const [order] = await sql<{ kitchen_status: string; is_test: boolean; source: string; payment_status: string }[]>`
-      select kitchen_status, is_test, source, payment_status
+    const [order] = await sql<{ kitchen_status: string; is_test: boolean; source: string; payment_status: string; payment_provider: string | null }[]>`
+      select kitchen_status, is_test, source, payment_status,
+             source_metadata->>'payment_provider' as payment_provider
       from public.orders where id = ${params.orderId}::uuid for update
     `;
     const fail = (message: string): never => { throw Object.assign(new Error(message), { code: "P0001" }); };
     if (!order || order.is_test !== (process.env.TEST_ORDER_MODE === "true")) {
       fail("Этот заказ недоступен в текущем окружении.");
+    }
+    if (order.payment_provider === "evotor" && order.payment_status === "pending") {
+      fail("Заказ ожидает оплату на терминале. Начните готовить после подтверждения оплаты.");
     }
     if (params.status === "handed_out" && !order.is_test && ["pos", "kiosk"].includes(order.source)
       && !["paid", "partially_refunded"].includes(order.payment_status)) {

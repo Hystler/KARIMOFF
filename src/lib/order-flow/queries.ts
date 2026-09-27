@@ -30,6 +30,7 @@ type OrderRow = {
   kitchen_status: KitchenStatus;
   status: string;
   payment_status: string;
+  payment_provider: string | null;
   fiscal_status: string;
   public_display_name: string | null;
   public_avatar_seed: string | null;
@@ -139,6 +140,7 @@ function mapOrder(row: OrderRow, items: OrderFlowItem[]): OrderFlowOrder {
     kitchenStatus: row.kitchen_status,
     orderStatus: row.status,
     paymentStatus: row.payment_status,
+    paymentProvider: row.payment_provider,
     fiscalStatus: row.fiscal_status,
     publicDisplayName: row.public_display_name || "Гость",
     publicAvatarSeed: row.public_avatar_seed || row.id,
@@ -295,7 +297,8 @@ export async function getOrderFlowQueue(params: {
     select o.id, o.display_number, o.source, o.location_id, l.name as location_name,
       o.created_at, o.operational_started_at, o.accepted_at, o.cooking_started_at, o.ready_at,
       o.handed_out_at, o.requested_at, o.kitchen_status, o.status,
-      o.payment_status, o.fiscal_status, o.public_display_name,
+      o.payment_status, o.source_metadata->>'payment_provider' as payment_provider,
+      o.fiscal_status, o.public_display_name,
       o.public_avatar_seed, o.public_avatar_config, o.delivery_type, o.fulfillment_mode,
       o.comment, o.address, o.total, staff.name as assigned_staff_name, o.is_test
     from public.orders o

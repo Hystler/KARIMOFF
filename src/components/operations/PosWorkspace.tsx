@@ -415,7 +415,7 @@ export function PosWorkspace({
             <p className="mt-2 text-sm font-semibold leading-6 text-black/65">
               Заказ {payment.displayNumber || "создан"} · {formatRub(payment.amount)} ₽.
               {payment.status === "queued" ? " Приложение KARIMOFF Bridge должно быть открыто на терминале." : null}
-              {payment.status === "processing" ? " Подтвердите оплату на терминале. Заказ появится на кухне после успешной оплаты и фискального чека." : null}
+              {payment.status === "processing" ? " Заказ уже виден кухне. Приготовление станет доступно после успешной оплаты и чека." : null}
               {payment.status === "unknown" ? " Результат оплаты не подтвердился. Не запускайте оплату повторно, пока не проверите состояние кассы." : null}
             </p>
             {payment.status === "unknown" ? (

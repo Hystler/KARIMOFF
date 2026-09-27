@@ -210,8 +210,9 @@ function OrderTicket({
   const tone = elapsed === null ? "normal" : classifySla(elapsed, sla);
   const visibleItems = stationItems(order, view);
   const viewStatus = kitchenViewStatus(order, view);
+  const awaitingTerminalPayment = order.paymentProvider === "evotor" && order.paymentStatus === "pending";
   const target = order.kitchenStatus === "ready" ? "handed_out" : undefined;
-  const canAdvance = target ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
+  const canAdvance = target && !awaitingTerminalPayment ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
   const toneClasses = viewStatus === "ready"
     ? "border-emerald-500 bg-emerald-50"
     : viewStatus === "cooking"
@@ -226,6 +227,7 @@ function OrderTicket({
             <strong className="text-xl font-black tabular-nums">{order.displayNumber}</strong>
             <span className="rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-black uppercase text-black/55">{orderSourceLabel(order.source)}</span>
             {order.isTest ? <span className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-black uppercase text-sky-800">Test</span> : null}
+            {awaitingTerminalPayment ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black uppercase text-amber-900">Ожидает оплаты</span> : null}
           </div>
           <p className="mt-1 break-words text-sm font-bold text-black/65">{order.publicDisplayName}</p>
         </div>
@@ -283,8 +285,9 @@ function OrderTicket({
       ) : null}
 
       {view !== "all" && viewStatus === "ready" && order.kitchenStatus !== "ready" ? <p className={styles.waiting}>Станция готова. Остальные позиции: {order.items.filter((item) => item.kitchenStatus !== "ready").length}</p> : null}
+      {awaitingTerminalPayment ? <p className={styles.waiting}>Заказ виден кухне. Начните готовить после оплаты на терминале.</p> : null}
       <div className={styles.actions}>
-        {order.kitchenStatus !== "ready" ? kitchenStations.filter((station) => view === "all" || view === station).map((station) => {
+        {order.kitchenStatus !== "ready" && !awaitingTerminalPayment ? kitchenStations.filter((station) => view === "all" || view === station).map((station) => {
           const items = stationItems(order, station);
           if (!items.length) return null;
           const from = stationStatus(items);
@@ -315,7 +318,7 @@ function OrderTicket({
             </button>
           </form>
         ) : null}
-        {canCancelOrder(role) && order.kitchenStatus !== "ready" ? (
+        {canCancelOrder(role) && order.kitchenStatus !== "ready" && !awaitingTerminalPayment ? (
           <form action={action}>
             <input type="hidden" name="order_id" value={order.id} />
             <input type="hidden" name="from_status" value={order.kitchenStatus} />
