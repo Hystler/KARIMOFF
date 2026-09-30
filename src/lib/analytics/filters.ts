@@ -80,6 +80,9 @@ export function parseAnalyticsFilters(params: RawParams): AnalyticsFilters {
       channelValue === "all" || ANALYTICS_CHANNELS.includes(channelValue as never)
         ? (channelValue as AnalyticsFilters["channel"])
         : "all",
+    fulfillment: read(params, "fulfillment") === "pickup" || read(params, "fulfillment") === "delivery"
+      ? read(params, "fulfillment") as AnalyticsFilters["fulfillment"]
+      : "all",
     location: limited(read(params, "location")),
     terminal: limited(read(params, "terminal")),
     employee: limited(read(params, "employee")),
@@ -126,6 +129,7 @@ export function analyticsFiltersToParams(filters: AnalyticsFilters) {
   params.set("period", filters.period);
   params.set("compare", filters.comparison);
   params.set("channel", filters.channel);
+  params.set("fulfillment", filters.fulfillment);
   params.set("metric", filters.metric);
   if (filters.dateFrom) params.set("from", filters.dateFrom);
   if (filters.dateTo) params.set("to", filters.dateTo);

@@ -87,11 +87,11 @@ export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
         {page.rows.length ? (
           <>
             <div className="overflow-x-auto analytics-sales-desktop">
-              <table className="analytics-table min-w-[1220px]">
+              <table className="analytics-table min-w-[1360px]">
                 <thead><tr>
                   <th><SortLink label="Дата" field="date" filters={filters} /></th>
                   <th><SortLink label="Номер" field="number" filters={filters} /></th>
-                  <th><SortLink label="Канал" field="channel" filters={filters} /></th>
+                  <th><SortLink label="Канал" field="channel" filters={filters} /></th><th>Получение</th>
                   <th><SortLink label="Точка / касса" field="location" filters={filters} /></th>
                   <th>Сотрудник / клиент</th><th>Позиции</th>
                   <th><SortLink label="До скидки" field="total" filters={filters} /></th>
@@ -103,6 +103,7 @@ export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
                     <td><Link href={linkWith(filters, { sale: sale.saleId })} scroll={false}>{new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(sale.analyticsAt))}</Link></td>
                     <td><strong>{sale.number}</strong></td>
                     <td><span className="analytics-source-badge">{getChannelLabel(sale.channel)}</span></td>
+                    <td>{sale.fulfillment === "delivery" ? "Доставка" : "Самовывоз"}{sale.fulfillment === "delivery" ? <span>{sale.deliveryStatus ?? "Статус не указан"} · {formatRub(sale.deliveryFee)}</span> : null}</td>
                     <td><strong>{sale.location}</strong><span>{sale.terminal ?? "Без кассы"}</span></td>
                     <td>{sale.customer ?? sale.employee ?? "Не определён"}</td>
                     <td>{formatNumber(sale.itemsCount, 2)}</td>
@@ -121,6 +122,7 @@ export default async function AnalyticsSalesPage({ searchParams }: PageProps) {
                 <Link href={linkWith(filters, { sale: sale.saleId })} key={sale.saleId} className="analytics-sale-mobile-card" scroll={false}>
                   <div><span className="analytics-source-badge">{getChannelLabel(sale.channel)}</span><span>{new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(sale.analyticsAt))}</span></div>
                   <h2>{sale.channel === "pos_evotor" ? "Чек" : "Заказ"} {sale.number}</h2>
+                  <p>{sale.fulfillment === "delivery" ? `Доставка · ${sale.deliveryStatus ?? "Статус не указан"} · ${formatRub(sale.deliveryFee)}` : "Самовывоз"}</p>
                   <p>{sale.location} · {sale.terminal ?? "Онлайн"} · {providerLabel(sale.paymentProvider)}</p>
                   <div><strong>{formatRub(sale.netRevenue, 2)}</strong><span>{getSaleStatusLabel(sale.status)}</span></div>
                 </Link>

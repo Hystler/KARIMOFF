@@ -178,6 +178,7 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
              ) as modifiers
       from public.order_items item
       where item.order_id = ${createdOrder.order_id}::uuid
+        and item.item_type = 'food'
       order by item.id
     `;
     if (!orderItems.length) throw paymentError("Нельзя отправить на терминал пустой заказ.");

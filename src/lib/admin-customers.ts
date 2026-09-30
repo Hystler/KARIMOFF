@@ -60,6 +60,10 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
     updated_at: String(row.updated_at ?? row.created_at),
     display_number: typeof row.display_number === "string" ? row.display_number : String(row.id).slice(0, 8),
     delivery_type: row.delivery_type === "delivery" ? "delivery" : "pickup",
+    delivery_status: ["awaiting_payment", "paid", "preparing", "ready", "courier_in_transit", "delivered", "cancelled"].includes(String(row.delivery_status))
+      ? row.delivery_status as CustomerOrder["delivery_status"]
+      : null,
+    delivery_fee: Number(row.delivery_fee ?? 0),
     address: typeof row.address === "string" ? row.address : null,
     comment: typeof row.comment === "string" ? row.comment : null,
     status:
@@ -70,6 +74,7 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
       row.kitchen_status === "accepted" ||
       row.kitchen_status === "cooking" ||
       row.kitchen_status === "ready" ||
+      row.kitchen_status === "handed_to_courier" ||
       row.kitchen_status === "handed_out" ||
       row.kitchen_status === "cancelled"
         ? row.kitchen_status
@@ -96,6 +101,7 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
     cooking_started_at: typeof row.cooking_started_at === "string" ? row.cooking_started_at : null,
     ready_at: typeof row.ready_at === "string" ? row.ready_at : null,
     handed_out_at: typeof row.handed_out_at === "string" ? row.handed_out_at : null,
+    courier_handed_at: typeof row.courier_handed_at === "string" ? row.courier_handed_at : null,
     cancelled_at: typeof row.cancelled_at === "string" ? row.cancelled_at : null,
     total: Number(row.total ?? 0),
     items
@@ -300,7 +306,7 @@ export async function getAdminCustomerById(id: string) {
       database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").eq("customer_id", id).maybeSingle(),
       database
         .from("orders")
-        .select("id, created_at, updated_at, display_number, delivery_type, address, comment, status, kitchen_status, payment_status, fiscal_status, fulfillment_mode, requested_at, accepted_at, cooking_started_at, ready_at, handed_out_at, cancelled_at, total")
+        .select("id, created_at, updated_at, display_number, delivery_type, delivery_status, delivery_fee, address, comment, status, kitchen_status, payment_status, fiscal_status, fulfillment_mode, requested_at, accepted_at, cooking_started_at, ready_at, courier_handed_at, handed_out_at, cancelled_at, total")
         .eq("customer_id", id)
         .order("created_at", { ascending: false }),
       database

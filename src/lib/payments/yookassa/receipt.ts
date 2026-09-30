@@ -23,6 +23,7 @@ export type FiscalOrderItem = {
   lineTotal: string;
   modifiers?: FiscalOrderModifier[];
   orderItemId?: string;
+  paymentSubject?: "commodity" | "service";
   productName: string;
   quantity: number;
   unitPrice: string;
@@ -74,7 +75,7 @@ export function buildReceiptItems(
       amount: rubles(item.unitPrice),
       vat_code: YOOKASSA_FISCAL_CONFIG.vatCode,
       payment_mode: paymentMode,
-      payment_subject: YOOKASSA_FISCAL_CONFIG.paymentSubject,
+      payment_subject: item.paymentSubject ?? YOOKASSA_FISCAL_CONFIG.paymentSubject,
       measure: YOOKASSA_FISCAL_CONFIG.measure
     } satisfies YooKassaReceiptItem;
   });

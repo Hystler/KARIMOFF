@@ -6,7 +6,7 @@ import { createDatabaseServerClient } from "@/lib/database/server";
 import { LEGAL_CONTACTS } from "@/lib/legal";
 
 const SITE_SETTINGS_SELECT =
-  "id, site_name, phone, address, working_hours, delivery_enabled, pickup_enabled, theme, loyalty_enabled, loyalty_percent, loyalty_redemption_limit_percent, payments_enabled, hero_title, hero_subtitle, home_hero_image_url, menu_hero_image_url, business_hero_image_url, careers_hero_image_url, franchise_hero_image_url, about_hero_image_url, telegram_url, tiktok_url";
+  "id, site_name, phone, address, working_hours, delivery_enabled, delivery_coverage_enabled, pickup_enabled, theme, loyalty_enabled, loyalty_percent, loyalty_redemption_limit_percent, payments_enabled, hero_title, hero_subtitle, home_hero_image_url, menu_hero_image_url, business_hero_image_url, careers_hero_image_url, franchise_hero_image_url, about_hero_image_url, telegram_url, tiktok_url";
 
 export type SiteTheme = "light" | "dark";
 
@@ -17,6 +17,7 @@ export type SiteSettings = {
   address: string | null;
   working_hours: string | null;
   delivery_enabled: boolean;
+  delivery_coverage_enabled: boolean;
   pickup_enabled: boolean;
   theme: SiteTheme;
   loyalty_enabled: boolean;
@@ -42,6 +43,7 @@ export const fallbackSiteSettings: SiteSettings = {
   address: null,
   working_hours: null,
   delivery_enabled: true,
+  delivery_coverage_enabled: false,
   pickup_enabled: true,
   theme: "light",
   loyalty_enabled: true,
@@ -92,6 +94,7 @@ function normalizeSettings(row: Record<string, unknown> | null | undefined): Sit
     address: typeof row.address === "string" && row.address.length > 0 ? row.address : null,
     working_hours: typeof row.working_hours === "string" && row.working_hours.length > 0 ? row.working_hours : null,
     delivery_enabled: row.delivery_enabled !== false,
+    delivery_coverage_enabled: row.delivery_coverage_enabled === true,
     pickup_enabled: row.pickup_enabled !== false,
     theme: row.theme === "dark" ? "dark" : "light",
     loyalty_enabled: row.loyalty_enabled !== false,

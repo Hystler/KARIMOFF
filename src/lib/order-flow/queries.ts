@@ -38,7 +38,6 @@ type OrderRow = {
   delivery_type: string;
   fulfillment_mode: string;
   comment: string | null;
-  address: string | null;
   total: string | number;
   assigned_staff_name: string | null;
   is_test: boolean;
@@ -154,7 +153,6 @@ function mapOrder(row: OrderRow, items: OrderFlowItem[]): OrderFlowOrder {
     fulfillmentType: row.delivery_type === "delivery" ? "delivery" : "pickup",
     fulfillmentMode: row.fulfillment_mode === "scheduled" ? "scheduled" : "asap",
     comment: row.comment,
-    address: row.address,
     total: Number(row.total),
     assignedStaffName: row.assigned_staff_name,
     isTest: Boolean(row.is_test),
@@ -300,7 +298,7 @@ export async function getOrderFlowQueue(params: {
       o.payment_status, o.source_metadata->>'payment_provider' as payment_provider,
       o.fiscal_status, o.public_display_name,
       o.public_avatar_seed, o.public_avatar_config, o.delivery_type, o.fulfillment_mode,
-      o.comment, o.address, o.total, staff.name as assigned_staff_name, o.is_test
+      o.comment, o.total, staff.name as assigned_staff_name, o.is_test
     from public.orders o
     join public.order_locations l on l.id = o.location_id
     left join public.staff_users staff on staff.id = o.assigned_staff_id
@@ -326,6 +324,7 @@ export async function getOrderFlowQueue(params: {
     left join public.products product on product.id = item.product_id
     left join public.order_item_kitchen_state work on work.order_item_id = item.id
     where item.order_id = any(${orderIds}::uuid[])
+      and item.item_type = 'food'
     order by item.id
   `;
   const itemIds = items.map((item) => item.id);

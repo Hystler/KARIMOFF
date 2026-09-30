@@ -7,13 +7,14 @@ import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
 import { kitchenStatusLabel, orderSourceLabel, type KitchenStatus } from "@/lib/order-flow/types";
 import { isStaleActiveOrder } from "@/lib/order-recency";
-import { checkYooKassaPaymentStatusAction, updateOrderStatusAction } from "./actions";
+import { cancelAndRefundDeliveryAction, checkYooKassaPaymentStatusAction, updateOrderStatusAction } from "./actions";
 
 const nextStatus: Partial<Record<KitchenStatus, KitchenStatus>> = {
   new: "cooking",
   accepted: "cooking",
   cooking: "ready",
-  ready: "handed_out"
+  ready: "handed_out",
+  handed_to_courier: "handed_out"
 };
 
 function formatDate(date: string) {
@@ -66,6 +67,16 @@ const paymentModeLabels: Record<string, string> = {
   full_prepayment: "Полная предоплата"
 };
 
+const deliveryStatusLabels: Record<string, string> = {
+  awaiting_payment: "Ожидает оплаты",
+  paid: "Оплачен",
+  preparing: "Готовится",
+  ready: "Готов",
+  courier_in_transit: "Курьер в пути",
+  delivered: "Доставлен",
+  cancelled: "Отменён"
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage({
@@ -76,6 +87,7 @@ export default async function AdminOrdersPage({
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
   if (staff.role === "cook") redirect("/kitchen");
+  const canViewDeliveryAddress = staff.legacy || ["owner", "admin", "manager"].includes(staff.role);
 
   const params = await searchParams;
   const locations = await getAccessibleOrderLocations(staff);
@@ -131,7 +143,7 @@ export default async function AdminOrdersPage({
                       </a>
                     ) : null}
                   </div>
-                  <span className={`admin-order-status admin-order-status-${order.kitchen_status}`}>{kitchenStatusLabel(order.kitchen_status)}</span>
+                  <span className={`admin-order-status admin-order-status-${order.kitchen_status}`}>{kitchenStatusLabel(order.kitchen_status, order.delivery_type)}</span>
                 </div>
 
                 <div className="mt-4 grid gap-2 rounded-lg bg-karimoff-cream p-4 text-sm sm:grid-cols-2">
@@ -143,9 +155,38 @@ export default async function AdminOrdersPage({
                   </p>
                   <p className="flex items-center gap-2 text-karimoff-muted">
                     {order.delivery_type === "pickup" ? <PackageCheck size={17} /> : <MapPin size={17} />}
-                    {order.delivery_type === "pickup" ? "Самовывоз" : order.address || "Доставка"}
+                    {order.delivery_type === "pickup" ? "Самовывоз" : canViewDeliveryAddress ? order.address || "Доставка" : "Доставка"}
                   </p>
                 </div>
+
+                {order.delivery_type === "delivery" ? (
+                  <section className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm" aria-label="Данные доставки">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-black uppercase text-sky-950">Доставка</h3>
+                      {order.delivery_status ? (
+                        <span className="rounded-md bg-white px-2.5 py-1 text-xs font-bold text-sky-900">
+                          {deliveryStatusLabels[order.delivery_status] ?? order.delivery_status}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 grid gap-x-4 gap-y-1 text-sky-900 sm:grid-cols-2">
+                      {canViewDeliveryAddress ? (
+                        <>
+                          <p className="sm:col-span-2">Адрес: <strong>{order.address || [order.delivery_street, order.delivery_house].filter(Boolean).join(", ") || "не указан"}</strong></p>
+                          {order.delivery_apartment ? <p>Квартира: {order.delivery_apartment}</p> : null}
+                          {order.delivery_entrance ? <p>Подъезд: {order.delivery_entrance}</p> : null}
+                          {order.delivery_floor ? <p>Этаж: {order.delivery_floor}</p> : null}
+                          {order.delivery_intercom ? <p>Домофон: {order.delivery_intercom}</p> : null}
+                          {order.delivery_courier_comment ? <p className="sm:col-span-2">Комментарий курьеру: {order.delivery_courier_comment}</p> : null}
+                          {order.delivery_distance_meters !== null ? <p>Расстояние по прямой: {order.delivery_distance_meters} м</p> : null}
+                        </>
+                      ) : null}
+                      {order.delivery_eta_minutes ? <p>Обещанный срок: до {order.delivery_eta_minutes} минут</p> : null}
+                      <p>Стоимость: {order.delivery_fee ? `${formatPrice(order.delivery_fee)} ₽` : "Бесплатно"}</p>
+                      <p>Проверка зоны: {order.delivery_zone_validation === "available" ? "подтверждена" : "не подтверждена"}</p>
+                    </div>
+                  </section>
+                ) : null}
 
                 {order.comment ? <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">Комментарий: {order.comment}</p> : null}
 
@@ -250,24 +291,49 @@ export default async function AdminOrdersPage({
               </div>
 
               <div className="admin-order-actions">
-                {nextStatus[order.kitchen_status] && canTransitionKitchen(staff.role, order.kitchen_status, nextStatus[order.kitchen_status]!) ? (
+                {(order.kitchen_status === "ready" && order.delivery_type === "delivery"
+                  ? "handed_to_courier"
+                  : nextStatus[order.kitchen_status]) && canTransitionKitchen(
+                    staff.role,
+                    order.kitchen_status,
+                    order.kitchen_status === "ready" && order.delivery_type === "delivery"
+                      ? "handed_to_courier"
+                      : nextStatus[order.kitchen_status]!
+                  ) ? (
                   <form action={updateOrderStatusAction} className="grid gap-2">
                     <input type="hidden" name="id" value={order.id} />
                     <input type="hidden" name="from_status" value={order.kitchen_status} />
-                    <input type="hidden" name="status" value={nextStatus[order.kitchen_status]} />
-                    <button type="submit" className="admin-primary-button">{kitchenStatusLabel(nextStatus[order.kitchen_status]!)}</button>
+                    <input type="hidden" name="status" value={order.kitchen_status === "ready" && order.delivery_type === "delivery" ? "handed_to_courier" : nextStatus[order.kitchen_status]} />
+                    <button type="submit" className="admin-primary-button">
+                      {order.kitchen_status === "ready" && order.delivery_type === "delivery"
+                        ? "Передать курьеру"
+                        : order.kitchen_status === "handed_to_courier"
+                          ? "Отметить доставленным"
+                          : kitchenStatusLabel(nextStatus[order.kitchen_status]!, order.delivery_type)}
+                    </button>
                   </form>
                 ) : null}
                 <p className="text-xs leading-5 text-karimoff-muted">
                   Исполнитель: {order.assigned_staff_name || "не назначен"}
                 </p>
-                {canCancelOrder(staff.role) && !["ready", "cancelled", "handed_out"].includes(order.kitchen_status) ? (
-                  <form action={updateOrderStatusAction}>
-                    <input type="hidden" name="id" value={order.id} />
-                    <input type="hidden" name="from_status" value={order.kitchen_status} />
-                    <input type="hidden" name="status" value="cancelled" />
-                    <button type="submit" className="admin-danger-button w-full">Отменить заказ</button>
-                  </form>
+                {canCancelOrder(staff.role) && !["ready", "handed_to_courier", "cancelled", "handed_out"].includes(order.kitchen_status) ? (
+                  order.delivery_type === "delivery" && ["paid", "partially_refunded", "refunded"].includes(order.payment_status) ? (
+                    staff.legacy || !["owner", "admin"].includes(staff.role) ? (
+                      <p className="text-xs font-semibold text-karimoff-muted">Для полного возврата и отмены обратитесь к владельцу или администратору.</p>
+                    ) : (
+                      <form action={cancelAndRefundDeliveryAction}>
+                        <input type="hidden" name="id" value={order.id} />
+                        <button type="submit" className="admin-danger-button w-full">Полный возврат и отмена доставки</button>
+                      </form>
+                    )
+                  ) : (
+                    <form action={updateOrderStatusAction}>
+                      <input type="hidden" name="id" value={order.id} />
+                      <input type="hidden" name="from_status" value={order.kitchen_status} />
+                      <input type="hidden" name="status" value="cancelled" />
+                      <button type="submit" className="admin-danger-button w-full">Отменить заказ</button>
+                    </form>
+                  )
                 ) : null}
               </div>
             </article>

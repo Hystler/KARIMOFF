@@ -514,7 +514,8 @@ test("admin exposes a read-only verified status action and normalized payment da
   assert.match(adminPage, /Проверить статус/);
   assert.match(adminPage, /ЮKassa/);
   assert.match(adminPage, /Payment ID/);
-  assert.doesNotMatch(adminAction, /createYooKassaRefund/);
+  const statusAction = adminAction.slice(adminAction.indexOf("export async function checkYooKassaPaymentStatusAction"));
+  assert.doesNotMatch(statusAction, /createYooKassaRefund/);
 });
 
 test("runtime migration is wired into image startup with postconditions", () => {

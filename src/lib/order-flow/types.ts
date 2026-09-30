@@ -6,6 +6,7 @@ export const KITCHEN_STATUSES = [
   "accepted",
   "cooking",
   "ready",
+  "handed_to_courier",
   "handed_out",
   "cancelled"
 ] as const;
@@ -83,7 +84,6 @@ export type OrderFlowOrder = {
   fulfillmentType: "pickup" | "delivery";
   fulfillmentMode: "asap" | "scheduled";
   comment: string | null;
-  address: string | null;
   total: number;
   assignedStaffName: string | null;
   isTest: boolean;
@@ -146,7 +146,8 @@ export const kitchenTransitionMap: Record<KitchenStatus, KitchenStatus[]> = {
   new: ["cooking", "cancelled"],
   accepted: ["cooking", "cancelled"],
   cooking: ["ready", "cancelled"],
-  ready: ["handed_out"],
+  ready: ["handed_to_courier", "handed_out"],
+  handed_to_courier: ["handed_out"],
   handed_out: [],
   cancelled: []
 };
@@ -159,11 +160,12 @@ export function orderSourceLabel(source: OrderSource) {
   return "Агрегатор";
 }
 
-export function kitchenStatusLabel(status: KitchenStatus) {
+export function kitchenStatusLabel(status: KitchenStatus, fulfillmentType?: "pickup" | "delivery") {
   if (status === "new") return "Новый";
   if (status === "accepted") return "Принят";
   if (status === "cooking") return "Готовится";
   if (status === "ready") return "Готов";
-  if (status === "handed_out") return "Выдан";
+  if (status === "handed_to_courier") return "Передан курьеру";
+  if (status === "handed_out") return fulfillmentType === "delivery" ? "Доставлен" : "Выдан";
   return "Отменён";
 }

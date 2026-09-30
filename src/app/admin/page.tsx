@@ -74,7 +74,7 @@ export default async function AdminPage() {
   const todayOrders = orders.filter((order) => getMoscowDateKey(new Date(order.created_at)) === todayKey && order.status !== "cancelled");
   const todayTotal = todayOrders.reduce((sum, order) => sum + order.total, 0);
   const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", timeZone: ORDER_TIME_ZONE }).format(new Date());
-  const statusLabels = { new: "Новый", accepted: "Принят", cooking: "Готовится", ready: "Готов", handed_out: "Выдан", cancelled: "Отменён" };
+  const statusLabels = { new: "Новый", accepted: "Принят", cooking: "Готовится", ready: "Готов", handed_to_courier: "Курьер в пути", handed_out: "Выдан", cancelled: "Отменён" };
   const snapshot = overview.snapshot;
 
   return (

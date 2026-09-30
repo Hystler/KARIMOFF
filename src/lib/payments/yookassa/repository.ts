@@ -31,6 +31,7 @@ type PaymentContextRow = {
 
 type OrderItemRow = {
   id: string;
+  item_type: "food" | "delivery_fee";
   line_total: string;
   product_name: string;
   quantity: number | string;
@@ -123,6 +124,7 @@ function normalizeItems(rows: OrderItemRow[], modifiers: ModifierRow[]) {
     lineTotal: item.line_total,
     modifiers: modifiersByItem.get(item.id) ?? [],
     orderItemId: item.id,
+    paymentSubject: item.item_type === "delivery_fee" ? "service" as const : "commodity" as const,
     productName: item.product_name,
     quantity: Number(item.quantity),
     unitPrice: item.unit_price
@@ -146,6 +148,7 @@ function parseReceiptSnapshot(value: unknown): FiscalOrderItem[] | null {
     const quantity = Number(item.quantity);
     const unitPrice = typeof item.unit_price === "string" ? item.unit_price : "";
     const lineTotal = typeof item.line_total === "string" ? item.line_total : "";
+    const paymentSubject = item.payment_subject === "service" ? "service" : "commodity";
     if (
       !/^[0-9a-f-]{36}$/i.test(orderItemId) ||
       !productName ||
@@ -172,7 +175,7 @@ function parseReceiptSnapshot(value: unknown): FiscalOrderItem[] | null {
             : [];
         })
       : [];
-    items.push({ lineTotal, modifiers, orderItemId, productName, quantity, unitPrice });
+    items.push({ lineTotal, modifiers, orderItemId, paymentSubject, productName, quantity, unitPrice });
   }
   return items;
 }
@@ -182,6 +185,7 @@ async function loadOrderItems(orderId: string) {
   const items = await sql<OrderItemRow[]>`
     select
       id,
+      item_type,
       product_name,
       quantity,
       unit_price::text as unit_price,
@@ -923,7 +927,10 @@ export async function createYooKassaRefundAttempt(params: {
           ${quantity}::numeric,
           ${item.unitPrice}::numeric,
           ${lineAmount}::numeric,
-          ${transaction.json({ modifiers: item.modifiers ?? [] })}
+          ${transaction.json({
+            modifiers: item.modifiers ?? [],
+            payment_subject: item.paymentSubject ?? "commodity"
+          })}
         )
       `;
     }
@@ -965,7 +972,7 @@ async function loadRefundItems(refundId: string) {
   const rows = await sql<{
     amount: string;
     description_snapshot: string;
-    metadata: { modifiers?: unknown } | null;
+    metadata: { modifiers?: unknown; payment_subject?: unknown } | null;
     order_item_id: string;
     quantity: string;
     unit_amount: string;
@@ -996,6 +1003,7 @@ async function loadRefundItems(refundId: string) {
         })
       : [],
     orderItemId: row.order_item_id,
+    paymentSubject: row.metadata?.payment_subject === "service" ? "service" : "commodity",
     productName: row.description_snapshot,
     quantity: Number(row.quantity),
     unitPrice: row.unit_amount

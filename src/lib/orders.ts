@@ -7,6 +7,7 @@ export type AdminOrderItem = {
   id: string;
   order_id: string;
   product_id: string | null;
+  item_type: "food" | "delivery_fee";
   product_name: string;
   unit_price: number;
   quantity: number;
@@ -83,9 +84,22 @@ export type AdminOrder = {
   customer_phone: string;
   display_number: string;
   source: "web" | "pos" | "mobile" | "kiosk" | "aggregator";
-  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_out" | "cancelled";
+  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_to_courier" | "handed_out" | "cancelled";
   delivery_type: "pickup" | "delivery";
+  delivery_status: "awaiting_payment" | "paid" | "preparing" | "ready" | "courier_in_transit" | "delivered" | "cancelled" | null;
   address: string | null;
+  delivery_street: string | null;
+  delivery_house: string | null;
+  delivery_apartment: string | null;
+  delivery_entrance: string | null;
+  delivery_floor: string | null;
+  delivery_intercom: string | null;
+  delivery_courier_comment: string | null;
+  delivery_distance_meters: number | null;
+  delivery_eta_minutes: number | null;
+  delivery_zone_validation: string | null;
+  delivery_validated_at: string | null;
+  delivery_fee: number;
   comment: string | null;
   status: "new" | "in_progress" | "completed" | "cancelled";
   payment_status: "not_required" | "pending" | "paid" | "failed" | "cancelled" | "refunded" | "partially_refunded";
@@ -124,12 +138,28 @@ function normalizeOrder(
       row.kitchen_status === "accepted" ||
       row.kitchen_status === "cooking" ||
       row.kitchen_status === "ready" ||
+      row.kitchen_status === "handed_to_courier" ||
       row.kitchen_status === "handed_out" ||
       row.kitchen_status === "cancelled"
         ? row.kitchen_status
         : "new",
     delivery_type: row.delivery_type === "delivery" ? "delivery" : "pickup",
+    delivery_status: ["awaiting_payment", "paid", "preparing", "ready", "courier_in_transit", "delivered", "cancelled"].includes(String(row.delivery_status))
+      ? row.delivery_status as AdminOrder["delivery_status"]
+      : null,
     address: typeof row.address === "string" ? row.address : null,
+    delivery_street: typeof row.delivery_street === "string" ? row.delivery_street : null,
+    delivery_house: typeof row.delivery_house === "string" ? row.delivery_house : null,
+    delivery_apartment: typeof row.delivery_apartment === "string" ? row.delivery_apartment : null,
+    delivery_entrance: typeof row.delivery_entrance === "string" ? row.delivery_entrance : null,
+    delivery_floor: typeof row.delivery_floor === "string" ? row.delivery_floor : null,
+    delivery_intercom: typeof row.delivery_intercom === "string" ? row.delivery_intercom : null,
+    delivery_courier_comment: typeof row.delivery_courier_comment === "string" ? row.delivery_courier_comment : null,
+    delivery_distance_meters: Number.isFinite(Number(row.delivery_distance_meters)) ? Number(row.delivery_distance_meters) : null,
+    delivery_eta_minutes: Number.isFinite(Number(row.delivery_eta_minutes)) ? Number(row.delivery_eta_minutes) : null,
+    delivery_zone_validation: typeof row.delivery_zone_validation === "string" ? row.delivery_zone_validation : null,
+    delivery_validated_at: typeof row.delivery_validated_at === "string" ? row.delivery_validated_at : null,
+    delivery_fee: Number(row.delivery_fee ?? 0),
     comment: typeof row.comment === "string" ? row.comment : null,
     status:
       row.status === "in_progress" || row.status === "completed" || row.status === "cancelled"
@@ -173,6 +203,7 @@ function normalizeItem(
     id: String(row.id),
     order_id: String(row.order_id),
     product_id: row.product_id ? String(row.product_id) : null,
+    item_type: row.item_type === "delivery_fee" ? "delivery_fee" : "food",
     product_name: String(row.product_name ?? ""),
     unit_price: Number(row.unit_price ?? 0),
     quantity: Number(row.quantity ?? 0),
@@ -245,7 +276,7 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
 
   let ordersQuery = database
     .from("orders")
-    .select("id, created_at, customer_name, customer_phone, display_number, source, kitchen_status, delivery_type, address, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total, is_test, is_operational");
+    .select("id, created_at, customer_name, customer_phone, display_number, source, kitchen_status, delivery_type, delivery_status, address, delivery_street, delivery_house, delivery_apartment, delivery_entrance, delivery_floor, delivery_intercom, delivery_courier_comment, delivery_distance_meters, delivery_eta_minutes, delivery_zone_validation, delivery_validated_at, delivery_fee, comment, status, payment_status, fiscal_status, fulfillment_mode, requested_at, kitchen_started_at, kitchen_completed_at, assigned_staff_id, total, is_test, is_operational");
   ordersQuery = ordersQuery.eq("is_test", process.env.TEST_ORDER_MODE === "true");
   if (locationIds !== null) ordersQuery = ordersQuery.in("location_id", locationIds);
   const { data: ordersData, error: ordersError } = await ordersQuery.order("created_at", { ascending: false });
@@ -276,7 +307,7 @@ export async function getAdminOrders(locationIds: string[] | null = null) {
     await Promise.all([
       database
         .from("order_items")
-        .select("id, order_id, product_id, product_name, unit_price, quantity, line_total, item_note")
+        .select("id, order_id, product_id, item_type, product_name, unit_price, quantity, line_total, item_note")
         .in("order_id", orderIds),
       database.from("staff_users").select("id, name"),
       database

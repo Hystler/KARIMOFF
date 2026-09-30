@@ -90,6 +90,7 @@ export async function getErpDashboard(periodValue: string) {
     day.site += order.total;
     daily.set(date, day);
     for (const item of order.items) {
+      if (item.item_type !== "food") continue;
       const key = item.product_id ?? item.product_name;
       const current = topProducts.get(key) ?? { name: item.product_name, quantity: 0, revenue: 0 };
       current.quantity += item.quantity;

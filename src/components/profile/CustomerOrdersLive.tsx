@@ -21,7 +21,8 @@ const toneClasses = {
   red: "border-red-200 bg-red-50 text-red-700"
 } as const;
 
-const progressSteps = ["Принят", "Готовим", "Готов", "Выдан"];
+const pickupProgressSteps = ["Принят", "Готовим", "Готов", "Выдан"];
+const deliveryProgressSteps = ["Оплачен", "Готовится", "Готов", "Курьер в пути", "Доставлен"];
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -51,11 +52,31 @@ function presentation(order: CustomerOrder): OrderPresentation {
   if (order.payment_status === "refunded") {
     return { label: "Возвращён", description: "Оплата по заказу возвращена.", tone: "muted" };
   }
+  if (order.delivery_type === "delivery" && order.delivery_status === "courier_in_transit") {
+    return { label: "Курьер в пути", description: "Заказ у курьера и направляется к вам.", tone: "emerald" };
+  }
+  if (order.delivery_type === "delivery" && order.delivery_status === "delivered") {
+    return { label: "Доставлен", description: "Заказ доставлен. Спасибо!", tone: "emerald" };
+  }
+  if (order.delivery_type === "delivery" && order.delivery_status === "ready") {
+    return { label: "Заказ готов", description: "Заказ готов и ожидает передачи курьеру.", tone: "emerald" };
+  }
+  if (order.delivery_type === "delivery" && order.delivery_status === "preparing") {
+    return { label: "Готовится", description: "Кухня уже готовит ваш заказ.", tone: "orange" };
+  }
+  if (order.delivery_type === "delivery" && order.delivery_status === "paid") {
+    return { label: "Оплачен", description: "Оплата подтверждена, заказ передан в работу.", tone: "orange" };
+  }
   if (isStaleActiveOrder(order)) {
     return { label: "Архивный", description: "Заказ завершён и перенесён в историю.", tone: "muted" };
   }
+  if (order.kitchen_status === "handed_to_courier") {
+    return { label: "Передан курьеру", description: "Курьер забрал заказ и везёт его вам.", tone: "emerald" };
+  }
   if (order.kitchen_status === "handed_out") {
-    return { label: "Выдан", description: "Заказ передан вам. Спасибо!", tone: "emerald" };
+    return order.delivery_type === "delivery"
+      ? { label: "Доставлен", description: "Заказ доставлен. Спасибо!", tone: "emerald" }
+      : { label: "Выдан", description: "Заказ передан вам. Спасибо!", tone: "emerald" };
   }
   if (order.kitchen_status === "ready") {
     return { label: "Готов к выдаче", description: "Можно забирать заказ в KARIMOFF.", tone: "emerald" };
@@ -67,7 +88,15 @@ function presentation(order: CustomerOrder): OrderPresentation {
 }
 
 function completedStep(order: CustomerOrder) {
+  if (order.delivery_type === "delivery") {
+    if (order.delivery_status === "delivered" || order.kitchen_status === "handed_out") return 4;
+    if (order.delivery_status === "courier_in_transit" || order.kitchen_status === "handed_to_courier") return 3;
+    if (order.delivery_status === "ready" || order.kitchen_status === "ready") return 2;
+    if (order.delivery_status === "preparing" || order.kitchen_status === "cooking") return 1;
+    return 0;
+  }
   if (order.kitchen_status === "handed_out") return 3;
+  if (order.kitchen_status === "handed_to_courier") return 3;
   if (order.kitchen_status === "ready") return 2;
   if (order.kitchen_status === "cooking") return 1;
   return 0;
@@ -78,9 +107,11 @@ function OrderProgress({ order }: { order: CustomerOrder }) {
     return null;
   }
   const active = completedStep(order);
+  const isDelivery = order.delivery_type === "delivery";
+  const steps = isDelivery ? deliveryProgressSteps : pickupProgressSteps;
   return (
-    <ol className="mt-5 grid grid-cols-4 gap-1" aria-label="Статус приготовления">
-      {progressSteps.map((step, index) => {
+    <ol className={`mt-5 grid ${isDelivery ? "grid-cols-5" : "grid-cols-4"} gap-1`} aria-label="Статус приготовления и доставки">
+      {steps.map((step, index) => {
         const done = index <= active;
         return (
           <li key={step} className="min-w-0 text-center">
@@ -191,11 +222,17 @@ export function CustomerOrdersLive({
                       <span className={`rounded-full border px-3 py-1 text-xs font-bold ${toneClasses[state.tone]}`}>{state.label}</span>
                     </div>
                     <p className="mt-2 text-sm font-semibold text-karimoff-muted">{formatDate(order.created_at)} · {order.delivery_type === "delivery" ? "Доставка" : "Самовывоз"}</p>
+                    {order.delivery_type === "delivery" ? (
+                      <div className="mt-2 text-sm leading-6 text-karimoff-muted">
+                        {order.address ? <p>{order.address}</p> : null}
+                        <p>Доставка: {order.delivery_fee ? `${formatPrice(order.delivery_fee)} ₽` : "бесплатно"}</p>
+                      </div>
+                    ) : null}
                     <p className="mt-2 text-sm leading-6 text-karimoff-muted">{state.description}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <p className="text-xl font-black text-karimoff-orange">{formatPrice(order.total)} ₽</p>
-                    {canRepeat && order.items.length ? <RepeatOrderButton items={order.items} orderId={order.id} /> : null}
+                    {canRepeat && order.items.some((item) => item.product_id) ? <RepeatOrderButton items={order.items} /> : null}
                   </div>
                 </div>
 

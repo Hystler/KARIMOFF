@@ -17,7 +17,7 @@ export type YooKassaReceiptItem = {
   amount: YooKassaAmount;
   vat_code: 1;
   payment_mode: YooKassaPaymentMode;
-  payment_subject: "commodity";
+  payment_subject: "commodity" | "service";
   measure: "piece";
 };
 

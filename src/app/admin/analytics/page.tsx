@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { AnalyticsFilterBar } from "@/components/admin/analytics/AnalyticsFilterBar";
 import { AnalyticsOverview } from "@/components/admin/analytics/AnalyticsOverview";
 import { AnalyticsRefreshButton } from "@/components/admin/analytics/AnalyticsRefreshButton";
+import { DeliveryAnalyticsOverview } from "@/components/admin/analytics/DeliveryAnalyticsOverview";
 import { AnalyticsSubnav } from "@/components/admin/analytics/AnalyticsSubnav";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAnalyticsDashboard } from "@/lib/analytics/dashboard";
+import { getDeliveryAnalyticsSummary } from "@/lib/analytics/delivery";
 import { parseAnalyticsFilters } from "@/lib/analytics/filters";
 import { getAnalyticsScope } from "@/lib/analytics/permissions";
 import { getAnalyticsRange } from "@/lib/analytics/periods";
@@ -28,6 +30,9 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
   });
   const scope = await getAnalyticsScope();
   const dashboard = await getAnalyticsDashboard({ filters, range, scope });
+  const deliverySummary = filters.fulfillment === "pickup"
+    ? null
+    : await getDeliveryAnalyticsSummary({ filters, range, scope });
   const updatedLabel = dashboard.updatedAt
     ? new Intl.DateTimeFormat("ru-RU", {
         day: "2-digit",
@@ -78,6 +83,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
       </div>
 
       <AnalyticsOverview dashboard={dashboard} />
+      {deliverySummary ? <DeliveryAnalyticsOverview summary={deliverySummary} /> : null}
     </main>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ChevronDown, Clock3, Filter, LoaderCircle, RotateCcw, Tags, X } from "lucide-react";
+import { CalendarDays, ChevronDown, Clock3, Filter, LoaderCircle, RotateCcw, ShoppingBag, Tags, Truck, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { channelLabels } from "@/lib/analytics/channels";
@@ -108,6 +108,24 @@ export function AnalyticsFilterBar({ filters, options, showSearch = false }: Pro
             onClick={() => navigate({ channel: option.value })}
           >
             {channelLabels[option.value as keyof typeof channelLabels] ?? option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="analytics-fulfillment-row" aria-label="Способ получения">
+        {([
+          ["all", "Все", Filter],
+          ["pickup", "Самовывоз", ShoppingBag],
+          ["delivery", "Доставка", Truck]
+        ] as const).map(([value, label, Icon]) => (
+          <button
+            type="button"
+            key={value}
+            aria-pressed={filters.fulfillment === value}
+            className={filters.fulfillment === value ? "is-active" : ""}
+            onClick={() => navigate({ fulfillment: value })}
+          >
+            <Icon size={14} />{label}
           </button>
         ))}
       </div>

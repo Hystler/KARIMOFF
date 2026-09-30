@@ -1,6 +1,7 @@
 export const ANALYTICS_CHANNELS = ["pos_evotor", "web", "mobile", "aggregator"] as const;
 export type AnalyticsChannel = (typeof ANALYTICS_CHANNELS)[number];
 export type AnalyticsChannelFilter = "all" | AnalyticsChannel;
+export type AnalyticsFulfillmentFilter = "all" | "pickup" | "delivery";
 
 export const ANALYTICS_PERIODS = [
   "today",
@@ -40,6 +41,7 @@ export type AnalyticsFilters = {
   dateTo: string | null;
   comparison: AnalyticsComparison;
   channel: AnalyticsChannelFilter;
+  fulfillment: AnalyticsFulfillmentFilter;
   location: string | null;
   terminal: string | null;
   employee: string | null;
@@ -390,6 +392,25 @@ export type AnalyticsSaleRow = {
   paymentProvider: string;
   currency: string;
   included: boolean;
+  fulfillment: "pickup" | "delivery";
+  deliveryStatus: string | null;
+  deliveryFee: number;
+};
+
+export type DeliveryAnalyticsSummary = {
+  deliveredOrders: number;
+  revenue: number;
+  averageCheck: number | null;
+  merchandiseRevenue: number;
+  deliveryFeeRevenue: number;
+  paidDeliveries: number;
+  freeDeliveries: number;
+  freeDeliveryShare: number | null;
+  refundAmount: number;
+  cancelledOrders: number;
+  averagePaidToDeliveredSeconds: number | null;
+  averageReadyToDeliveredSeconds: number | null;
+  ordersPerDay: number | null;
 };
 
 export type AnalyticsSaleItem = {

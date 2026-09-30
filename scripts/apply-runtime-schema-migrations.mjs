@@ -679,6 +679,49 @@ migrations.push({
     );
   }
 });
+migrations.push({
+  name: "20260929150000_add_delivery_checkout_and_courier_status",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.site_settings')
+          and attname = 'delivery_coverage_enabled' and not attisdropped) as coverage_flag,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.orders')
+          and attname = 'delivery_fee' and not attisdropped) as order_fee,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.orders')
+          and attname = 'courier_handed_at' and not attisdropped) as courier_timestamp,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.order_items')
+          and attname = 'item_type' and not attisdropped) as item_type,
+        to_regprocedure('public.set_order_delivery_status_atomic(uuid,text,uuid,text,text)') is not null as delivery_transition,
+        to_regprocedure('public.build_yookassa_order_receipt_snapshot(uuid)') is not null as receipt_snapshot
+    `;
+    return Boolean(
+      objects?.coverage_flag && objects?.order_fee && objects?.courier_timestamp
+      && objects?.item_type && objects?.delivery_transition && objects?.receipt_snapshot
+    );
+  }
+});
+migrations.push({
+  name: "20260930120000_delivery_release_hardening",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select
+        to_regclass('public.delivery_location_settings') is not null as location_settings,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.orders')
+          and attname = 'delivery_address_snapshot' and not attisdropped) as address_snapshot,
+        to_regprocedure('public.create_site_order_with_payment(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamptz,text,text,jsonb)') is not null as delivery_checkout,
+        exists (select 1 from pg_trigger where tgrelid = to_regclass('public.orders')
+          and tgname = 'orders_protect_delivery_address_snapshot' and not tgisinternal) as snapshot_protection,
+        exists (select 1 from pg_trigger where tgrelid = to_regclass('public.orders')
+          and tgname = 'orders_require_delivery_refund_before_cancel' and not tgisinternal) as refund_guard,
+        coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.delivery_location_settings')), false) as settings_rls
+    `;
+    return Boolean(
+      objects?.location_settings && objects?.address_snapshot && objects?.delivery_checkout
+      && objects?.snapshot_protection && objects?.refund_guard && objects?.settings_rls
+    );
+  }
+});
 const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 

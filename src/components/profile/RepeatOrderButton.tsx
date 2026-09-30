@@ -5,21 +5,20 @@ import type { CustomerOrderItem } from "@/lib/customer-orders";
 
 type RepeatOrderButtonProps = {
   items: CustomerOrderItem[];
-  orderId: string;
 };
 
-export function RepeatOrderButton({ items, orderId }: RepeatOrderButtonProps) {
+export function RepeatOrderButton({ items }: RepeatOrderButtonProps) {
   const router = useRouter();
 
   return (
     <button
       type="button"
       onClick={() => {
-        const lines = items.map((item) => ({
+        const lines = items.filter((item) => item.product_id).map((item) => ({
           product: {
-            id: item.product_id ?? `repeat-${orderId}-${item.id}`,
+            id: item.product_id!,
             name: item.product_name,
-            slug: item.product_id ?? item.id,
+            slug: item.product_id!,
             price: item.unit_price,
             image_url: null
           },

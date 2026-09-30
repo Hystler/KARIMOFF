@@ -14,11 +14,51 @@ type CartItemInput = {
   note?: string;
 };
 
+export type DeliveryAddressSnapshot = {
+  addressText: string;
+  street: string;
+  house: string;
+  apartment: string | null;
+  entrance: string | null;
+  floor: string | null;
+  intercom: string | null;
+  courierComment: string | null;
+  latitude: number;
+  longitude: number;
+  distanceMeters: number;
+  deliveryFee: number;
+  etaMinutes: number;
+  zoneValidation: "available";
+  validatedAt: string;
+};
+
+function toDeliverySnapshotRpc(snapshot: DeliveryAddressSnapshot | null | undefined) {
+  if (!snapshot) return null;
+  return {
+    address_text: snapshot.addressText,
+    street: snapshot.street,
+    house: snapshot.house,
+    apartment: snapshot.apartment,
+    entrance: snapshot.entrance,
+    floor: snapshot.floor,
+    intercom: snapshot.intercom,
+    courier_comment: snapshot.courierComment,
+    latitude: snapshot.latitude,
+    longitude: snapshot.longitude,
+    distance_meters: snapshot.distanceMeters,
+    delivery_fee: snapshot.deliveryFee,
+    eta_minutes: snapshot.etaMinutes,
+    zone_validation: snapshot.zoneValidation,
+    validated_at: snapshot.validatedAt
+  };
+}
+
 type WebOrderInput = {
   source: "web";
   customerId: string;
   deliveryType: "pickup" | "delivery";
   address: string | null;
+  deliverySnapshot?: DeliveryAddressSnapshot | null;
   comment: string | null;
   items: CartItemInput[];
   idempotencyKey: string;
@@ -70,7 +110,9 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     const { data, error } = await database.rpc(
       input.requiresPayment ? "create_site_order_with_payment" : "create_site_order",
       {
-        p_address: input.deliveryType === "delivery" ? input.address : null,
+        p_address: input.deliveryType === "delivery"
+          ? input.deliverySnapshot?.addressText ?? input.address
+          : null,
         p_comment: input.comment,
         p_customer_id: input.customerId,
         p_delivery_type: input.deliveryType,
@@ -87,7 +129,8 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         ...(input.requiresPayment
           ? {
               p_receipt_email: input.receiptEmail,
-              p_payment_idempotency_key: input.idempotencyKey
+              p_payment_idempotency_key: input.idempotencyKey,
+              p_delivery_snapshot: toDeliverySnapshotRpc(input.deliverySnapshot)
             }
           : { p_is_test: isTest })
       }
@@ -157,8 +200,8 @@ export async function transitionOrder(params: {
   station?: "snacks" | "main";
 }) {
   const data = await getPostgresSql().begin(async (sql) => {
-    const [order] = await sql<{ kitchen_status: string; is_test: boolean; source: string; payment_status: string; payment_provider: string | null }[]>`
-      select kitchen_status, is_test, source, payment_status,
+    const [order] = await sql<{ delivery_type: string; kitchen_status: string; is_test: boolean; source: string; payment_status: string; payment_provider: string | null }[]>`
+      select delivery_type, kitchen_status, is_test, source, payment_status,
              source_metadata->>'payment_provider' as payment_provider
       from public.orders where id = ${params.orderId}::uuid for update
     `;
@@ -168,6 +211,12 @@ export async function transitionOrder(params: {
     }
     if (order.payment_provider === "evotor" && order.payment_status === "pending") {
       fail("Заказ ожидает оплату на терминале. Начните готовить после подтверждения оплаты.");
+    }
+    if (params.status === "handed_to_courier" && order.delivery_type !== "delivery") {
+      fail("Заказ не оформлен с доставкой.");
+    }
+    if (params.status === "cancelled" && order.kitchen_status === "handed_to_courier") {
+      fail("После передачи курьеру заказ нельзя отменить из кухни.");
     }
     if (params.status === "handed_out" && !order.is_test && ["pos", "kiosk"].includes(order.source)
       && !["paid", "partially_refunded"].includes(order.payment_status)) {
@@ -191,6 +240,15 @@ export async function transitionOrder(params: {
       `;
       return row.result;
     };
+    if (params.status === "handed_to_courier" || (params.status === "handed_out" && order.kitchen_status === "handed_to_courier")) {
+      const [row] = await sql<{ result: { ok?: boolean; warnings?: string[]; already_applied?: boolean } }[]>`
+        select public.set_order_delivery_status_atomic(
+          ${params.orderId}::uuid, ${params.status}::text, ${params.actorId}::uuid,
+          ${params.actorRole}::text, ${params.deviceSource}::text
+        ) as result
+      `;
+      return row.result;
+    }
     // Preserve existing SQL permissions/events, but commit acceptance and cooking together.
     if (params.status === "cooking" && order.kitchen_status === "new") await apply("accepted");
     return apply(params.status);

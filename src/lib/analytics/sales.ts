@@ -39,6 +39,9 @@ type SaleDatabaseRow = {
   analytics_included: boolean;
   source_record_id?: string;
   source_updated_at?: string | null;
+  delivery_type?: string | null;
+  delivery_status?: string | null;
+  delivery_fee?: string | number | null;
 };
 
 function number(value: unknown) {
@@ -68,7 +71,10 @@ function mapSale(row: SaleDatabaseRow): AnalyticsSaleRow {
     paymentMethod: row.payment_method,
     paymentProvider: row.payment_provider,
     currency: row.currency,
-    included: row.analytics_included
+    included: row.analytics_included,
+    fulfillment: row.delivery_type === "delivery" ? "delivery" : "pickup",
+    deliveryStatus: row.delivery_status ?? null,
+    deliveryFee: number(row.delivery_fee)
   };
 }
 
@@ -100,8 +106,9 @@ export async function getAnalyticsSaleDetail(params: {
   const values = [saleId, ...locationCondition.values];
   const sql = getPostgresSql();
   const sales = await sql.unsafe<SaleDatabaseRow[]>(`
-    select s.*
+    select s.*, o.delivery_type, o.delivery_status, o.delivery_fee
     from public.canonical_analytics_sales s
+    left join public.orders o on s.sale_id = 'web:' || o.id::text
     where s.sale_id = $1 and ${locationCondition.text}
     limit 1
   `, values as never[]);
@@ -205,8 +212,10 @@ export async function getAnalyticsSalesPage(params: {
       s.order_number, s.analytics_at, s.status, s.operation_type,
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
-      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included
+      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included,
+      o.delivery_type, o.delivery_status, o.delivery_fee
     from public.canonical_analytics_sales s
+    left join public.orders o on s.sale_id = 'web:' || o.id::text
     where ${where.text}
     order by ${sortExpression(filters)}
     limit ${limitPlaceholder} offset ${offsetPlaceholder}
@@ -253,8 +262,10 @@ export async function getAnalyticsSalesExportBatch(params: {
       s.order_number, s.analytics_at, s.status, s.operation_type,
       s.location_name, s.terminal_name, s.employee_name, s.customer_name,
       s.items_count, s.gross_amount, s.discount_amount, s.refund_amount,
-      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included
+      s.net_revenue, s.payment_method, s.payment_provider, s.currency, s.analytics_included,
+      o.delivery_type, o.delivery_status, o.delivery_fee
     from public.canonical_analytics_sales s
+    left join public.orders o on s.sale_id = 'web:' || o.id::text
     where ${where.text} ${cursorClause}
     order by s.analytics_at desc, s.sale_id desc
     limit ${limitPlaceholder}

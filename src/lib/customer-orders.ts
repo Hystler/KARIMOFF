@@ -24,10 +24,12 @@ export type CustomerOrder = {
   updated_at: string;
   display_number: string;
   delivery_type: "pickup" | "delivery";
+  delivery_status: "awaiting_payment" | "paid" | "preparing" | "ready" | "courier_in_transit" | "delivered" | "cancelled" | null;
+  delivery_fee: number;
   address: string | null;
   comment: string | null;
   status: "new" | "in_progress" | "completed" | "cancelled";
-  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_out" | "cancelled";
+  kitchen_status: "new" | "accepted" | "cooking" | "ready" | "handed_to_courier" | "handed_out" | "cancelled";
   payment_status: "not_required" | "pending" | "paid" | "failed" | "cancelled" | "refunded" | "partially_refunded";
   fiscal_status: "not_required" | "pending" | "issued" | "failed" | "refunded";
   fulfillment_mode: "asap" | "scheduled";
@@ -36,6 +38,7 @@ export type CustomerOrder = {
   cooking_started_at: string | null;
   ready_at: string | null;
   handed_out_at: string | null;
+  courier_handed_at: string | null;
   cancelled_at: string | null;
   total: number;
   items: CustomerOrderItem[];
@@ -46,7 +49,9 @@ export type CustomerOrderStatus = Pick<
   | "accepted_at"
   | "cancelled_at"
   | "cooking_started_at"
+  | "courier_handed_at"
   | "fiscal_status"
+  | "delivery_status"
   | "handed_out_at"
   | "id"
   | "kitchen_status"
@@ -68,6 +73,10 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
     updated_at: String(row.updated_at ?? row.created_at),
     display_number: typeof row.display_number === "string" ? row.display_number : id.slice(0, 8),
     delivery_type: row.delivery_type === "delivery" ? "delivery" : "pickup",
+    delivery_status: ["awaiting_payment", "paid", "preparing", "ready", "courier_in_transit", "delivered", "cancelled"].includes(String(row.delivery_status))
+      ? row.delivery_status as CustomerOrder["delivery_status"]
+      : null,
+    delivery_fee: Number(row.delivery_fee ?? 0),
     address: nullableString(row.address),
     comment: nullableString(row.comment),
     status:
@@ -78,6 +87,7 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
       row.kitchen_status === "accepted" ||
       row.kitchen_status === "cooking" ||
       row.kitchen_status === "ready" ||
+      row.kitchen_status === "handed_to_courier" ||
       row.kitchen_status === "handed_out" ||
       row.kitchen_status === "cancelled"
         ? row.kitchen_status
@@ -104,6 +114,7 @@ function normalizeOrder(row: Record<string, unknown>, items: CustomerOrderItem[]
     cooking_started_at: nullableString(row.cooking_started_at),
     ready_at: nullableString(row.ready_at),
     handed_out_at: nullableString(row.handed_out_at),
+    courier_handed_at: nullableString(row.courier_handed_at),
     cancelled_at: nullableString(row.cancelled_at),
     total: Number(row.total ?? 0),
     items
@@ -116,7 +127,7 @@ export async function getCustomerOrdersForCustomer(customerId: string, limit = 5
 
   const { data: ordersData, error: ordersError } = await database
     .from("orders")
-    .select("id, created_at, updated_at, display_number, delivery_type, address, comment, status, kitchen_status, payment_status, fiscal_status, fulfillment_mode, requested_at, accepted_at, cooking_started_at, ready_at, handed_out_at, cancelled_at, total")
+    .select("id, created_at, updated_at, display_number, delivery_type, delivery_status, delivery_fee, address, comment, status, kitchen_status, payment_status, fiscal_status, fulfillment_mode, requested_at, accepted_at, cooking_started_at, ready_at, courier_handed_at, handed_out_at, cancelled_at, total")
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false })
     .limit(Math.max(1, Math.min(100, limit)));
@@ -193,7 +204,7 @@ export async function getCustomerOrderStatusesForCustomer(customerId: string, li
 
   const { data, error } = await database
     .from("orders")
-    .select("id, created_at, updated_at, status, kitchen_status, payment_status, fiscal_status, accepted_at, cooking_started_at, ready_at, handed_out_at, cancelled_at")
+    .select("id, created_at, updated_at, status, delivery_status, kitchen_status, payment_status, fiscal_status, accepted_at, cooking_started_at, ready_at, courier_handed_at, handed_out_at, cancelled_at")
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false })
     .limit(Math.max(1, Math.min(100, limit)));
@@ -212,7 +223,9 @@ export async function getCustomerOrderStatusesForCustomer(customerId: string, li
         accepted_at: order.accepted_at,
         cancelled_at: order.cancelled_at,
         cooking_started_at: order.cooking_started_at,
+        courier_handed_at: order.courier_handed_at,
         fiscal_status: order.fiscal_status,
+        delivery_status: order.delivery_status,
         handed_out_at: order.handed_out_at,
         id: order.id,
         kitchen_status: order.kitchen_status,

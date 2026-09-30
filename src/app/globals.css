@@ -823,6 +823,30 @@ button:not(:disabled),
     @apply bg-karimoff-black text-white shadow-sm;
   }
 
+  .analytics-fulfillment-row {
+    @apply flex gap-1 overflow-x-auto border-b border-black/[0.07] px-1 py-2 scrollbar-hide;
+  }
+
+  .analytics-fulfillment-row button {
+    @apply inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold text-karimoff-muted transition hover:bg-karimoff-soft hover:text-karimoff-black;
+  }
+
+  .analytics-fulfillment-row button.is-active {
+    @apply bg-emerald-50 text-emerald-800 ring-1 ring-emerald-700/15;
+  }
+
+  .analytics-delivery-metrics {
+    @apply grid grid-cols-2 gap-px overflow-hidden rounded-md border border-karimoff-line bg-karimoff-line sm:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .analytics-delivery-metrics > div {
+    @apply flex min-h-[88px] min-w-0 flex-col justify-between gap-2 bg-white p-3;
+  }
+
+  .analytics-delivery-metrics > div > svg { @apply text-emerald-700; }
+  .analytics-delivery-metrics > div > span { @apply text-xs font-semibold leading-4 text-karimoff-muted; }
+  .analytics-delivery-metrics > div > strong { @apply text-sm font-black leading-5 text-karimoff-black; }
+
   .analytics-filter-main {
     @apply relative flex min-w-0 flex-wrap items-center gap-2 pt-2;
   }

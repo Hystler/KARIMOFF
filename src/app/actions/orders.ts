@@ -6,19 +6,60 @@ import { createDatabaseServerClient } from "@/lib/database/server";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
-import { createOrder } from "@/lib/order-flow/service";
+import { createOrder, type DeliveryAddressSnapshot } from "@/lib/order-flow/service";
 import { isYooKassaCheckoutEnabled } from "@/lib/payments/yookassa/config";
 import { safeYooKassaErrorCode } from "@/lib/payments/yookassa/errors";
 import { createYooKassaPaymentForOrder } from "@/lib/payments/yookassa/service";
 import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
+import { assessDeliveryZone } from "@/lib/delivery/geo";
+import { isDeliveryAcceptingAt } from "@/lib/delivery/hours";
+import { getDeliveryLocationSettings } from "@/lib/delivery/settings";
+import { geocodeDeliveryAddress, suggestDeliveryAddresses } from "@/lib/delivery/yandex";
+
+const unavailableAddressMessage = "Не удалось проверить адрес. Попробуйте ещё раз.";
+
+function cleanAddressPart(value: unknown, maxLength: number) {
+  return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
+}
+
+function addressSearchText(street: string, house: string) {
+  return `${street} ${house}, Щёлково, Московская область, Россия`;
+}
+
+function normalizeAddressPart(value: string) {
+  return value.toLocaleLowerCase("ru-RU").replace(/ё/g, "е").replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+async function resolveDeliveryAddress(street: string, house: string) {
+  const config = await getDeliveryLocationSettings();
+  if (!config || !config.enabled) throw new Error("DELIVERY_DISABLED");
+  const geocoded = await geocodeDeliveryAddress(addressSearchText(street, house));
+  const requestedStreet = normalizeAddressPart(street);
+  const resolvedStreet = normalizeAddressPart(geocoded.street);
+  if (!resolvedStreet.includes(requestedStreet) && !requestedStreet.includes(resolvedStreet)) {
+    throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
+  }
+  if (normalizeAddressPart(geocoded.house) !== normalizeAddressPart(house)) {
+    throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
+  }
+  const assessment = assessDeliveryZone({
+    address: geocoded.coordinates,
+    center: config.center,
+    radiusMeters: config.radiusMeters,
+    excludedAreas: config.excludedAreas
+  });
+  return { config, geocoded, assessment };
+}
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
 }
 
 export async function getCheckoutContextAction() {
-  const [customer, settings] = await Promise.all([getCurrentCustomer(), getSiteSettings()]);
+  const [customer, settings, deliveryConfig] = await Promise.all([
+    getCurrentCustomer(), getSiteSettings(), getDeliveryLocationSettings()
+  ]);
   let receiptEmail = "";
   if (customer) {
     const database = createDatabaseServerClient();
@@ -54,10 +95,56 @@ export async function getCheckoutContextAction() {
       receiptEmail
     },
     settings: {
-      delivery_enabled: settings.delivery_enabled,
-      pickup_enabled: settings.pickup_enabled
+      delivery_enabled: settings.delivery_enabled && settings.delivery_coverage_enabled && Boolean(deliveryConfig?.enabled),
+      pickup_enabled: settings.pickup_enabled,
+      delivery_fee: deliveryConfig?.deliveryFee ?? 200,
+      free_delivery_threshold: deliveryConfig?.freeThreshold ?? 2500,
+      delivery_eta_minutes: deliveryConfig?.etaMinutes ?? 60,
+      delivery_acceptance_start: deliveryConfig?.acceptanceStart ?? "11:00",
+      delivery_acceptance_end: deliveryConfig?.acceptanceEnd ?? "20:30",
+      delivery_timezone: deliveryConfig?.timezone ?? "Europe/Moscow"
     }
   };
+}
+
+export async function suggestDeliveryAddressesAction(query: string) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { suggestions: [], error: "Войдите, чтобы оформить заказ." };
+  try {
+    const config = await getDeliveryLocationSettings();
+    if (!config || !config.enabled) return { suggestions: [], error: "Доставка временно недоступна." };
+    const suggestions = await suggestDeliveryAddresses(cleanAddressPart(query, 160), config.center);
+    return { suggestions, error: null };
+  } catch {
+    return { suggestions: [], error: unavailableAddressMessage };
+  }
+}
+
+export async function validateDeliveryAddressAction(input: { street?: string; house?: string }) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { available: false, message: "Войдите, чтобы оформить заказ." };
+  const street = cleanAddressPart(input.street, 160);
+  const house = cleanAddressPart(input.house, 40);
+  if (!street || !house) return { available: false, message: "Укажите улицу и дом." };
+
+  try {
+    const { assessment, config } = await resolveDeliveryAddress(street, house);
+    if (!assessment.available) {
+      return {
+        available: false,
+        distanceMeters: assessment.distanceMeters,
+        message: "По этому адресу доставка пока недоступна. Вы можете выбрать самовывоз или указать другой адрес."
+      };
+    }
+    return {
+      available: true,
+      distanceMeters: assessment.distanceMeters,
+      etaMinutes: config.etaMinutes,
+      message: "Доставим по этому адресу. Стоимость доставки зависит от суммы товаров в корзине."
+    };
+  } catch {
+    return { available: false, message: unavailableAddressMessage };
+  }
 }
 
 export async function createOrderAction(
@@ -105,6 +192,13 @@ export async function createOrderAction(
     fulfillment_mode: formData.get("fulfillment_mode"),
     requested_at: String(formData.get("requested_at") || ""),
     address: String(formData.get("address") || ""),
+    delivery_street: String(formData.get("delivery_street") || ""),
+    delivery_house: String(formData.get("delivery_house") || ""),
+    delivery_apartment: String(formData.get("delivery_apartment") || ""),
+    delivery_entrance: String(formData.get("delivery_entrance") || ""),
+    delivery_floor: String(formData.get("delivery_floor") || ""),
+    delivery_intercom: String(formData.get("delivery_intercom") || ""),
+    delivery_courier_comment: String(formData.get("delivery_courier_comment") || ""),
     comment: String(formData.get("comment") || ""),
     receipt_email: String(formData.get("receipt_email") || ""),
     cart: parsedCart
@@ -131,13 +225,6 @@ export async function createOrderAction(
     };
   }
 
-  if (parsed.data.delivery_type === "delivery" && !parsed.data.address) {
-    return {
-      status: "error",
-      message: "Укажите адрес доставки."
-    };
-  }
-
   if (parsed.data.fulfillment_mode === "scheduled") {
     const validation = validateSameDayMoscowRequestedAt(parsed.data.requested_at || "");
     if (!validation.ok) return { status: "error", message: validation.message };
@@ -150,6 +237,53 @@ export async function createOrderAction(
       status: "error",
       message: "Доставка временно недоступна."
     };
+  }
+
+  if (parsed.data.delivery_type === "delivery" && !settings.delivery_coverage_enabled) {
+    return {
+      status: "error",
+      message: "Доставка пока не подключена: нужно настроить проверку адреса по границе зоны. Самовывоз доступен."
+    };
+  }
+
+  let deliverySnapshot: DeliveryAddressSnapshot | null = null;
+  let canonicalDeliveryAddress: string | null = null;
+  if (parsed.data.delivery_type === "delivery") {
+    try {
+      const resolved = await resolveDeliveryAddress(parsed.data.delivery_street || "", parsed.data.delivery_house || "");
+      if (!isDeliveryAcceptingAt(new Date(), resolved.config)) {
+        return {
+          status: "error",
+          message: "Сегодня доставка уже закончилась. Вы можете выбрать самовывоз."
+        };
+      }
+      if (!resolved.assessment.available) {
+        return {
+          status: "error",
+          message: "По этому адресу доставка пока недоступна. Вы можете выбрать самовывоз или указать другой адрес."
+        };
+      }
+      canonicalDeliveryAddress = resolved.geocoded.addressText;
+      deliverySnapshot = {
+        addressText: resolved.geocoded.addressText,
+        street: resolved.geocoded.street,
+        house: resolved.geocoded.house,
+        apartment: parsed.data.delivery_apartment || null,
+        entrance: parsed.data.delivery_entrance || null,
+        floor: parsed.data.delivery_floor || null,
+        intercom: parsed.data.delivery_intercom || null,
+        courierComment: parsed.data.delivery_courier_comment || null,
+        latitude: resolved.geocoded.coordinates[1],
+        longitude: resolved.geocoded.coordinates[0],
+        distanceMeters: resolved.assessment.distanceMeters,
+        deliveryFee: resolved.config.deliveryFee,
+        etaMinutes: resolved.config.etaMinutes,
+        zoneValidation: "available",
+        validatedAt: new Date().toISOString()
+      };
+    } catch {
+      return { status: "error", message: unavailableAddressMessage };
+    }
   }
 
   if (parsed.data.delivery_type === "pickup" && !settings.pickup_enabled) {
@@ -166,7 +300,8 @@ export async function createOrderAction(
   try {
     const order = await createOrder({
       source: "web",
-      address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
+      address: canonicalDeliveryAddress,
+      deliverySnapshot,
       comment: parsed.data.comment || null,
       customerId: customer.id,
       deliveryType: parsed.data.delivery_type,

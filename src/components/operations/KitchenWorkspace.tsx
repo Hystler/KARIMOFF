@@ -35,7 +35,8 @@ import {
   type OrderActorRole,
   type OrderFlowItem,
   type OrderFlowOrder,
-  type OrderLocation
+  type OrderLocation,
+  kitchenStatusLabel
 } from "@/lib/order-flow/types";
 import { kitchenStations, kitchenStationLabels, kitchenViewStatus, stationItems, stationStatus, type KitchenView } from "@/lib/order-flow/kitchen-stations";
 
@@ -211,7 +212,9 @@ function OrderTicket({
   const visibleItems = stationItems(order, view);
   const viewStatus = kitchenViewStatus(order, view);
   const awaitingTerminalPayment = order.paymentProvider === "evotor" && order.paymentStatus === "pending";
-  const target = order.kitchenStatus === "ready" ? "handed_out" : undefined;
+  const target = order.kitchenStatus === "ready"
+    ? order.fulfillmentType === "delivery" ? "handed_to_courier" : "handed_out"
+    : undefined;
   const canAdvance = target && !awaitingTerminalPayment ? canTransitionKitchen(role, order.kitchenStatus, target) : false;
   const toneClasses = viewStatus === "ready"
     ? "border-emerald-500 bg-emerald-50"
@@ -314,7 +317,7 @@ function OrderTicket({
             <input type="hidden" name="device_source" value="kds" />
             <button type="submit" disabled={pending} className={`${styles.advance} ${styles.ready}`}>
               <CheckCircle2 size={18} />
-              {pending ? "Сохраняем…" : actionLabels[target]}
+              {pending ? "Сохраняем…" : order.fulfillmentType === "delivery" ? "Передать курьеру" : kitchenStatusLabel(target)}
             </button>
           </form>
         ) : null}
