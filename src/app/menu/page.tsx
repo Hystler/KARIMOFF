@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { LeadForm } from "@/components/LeadForm";
+import { MenuCategoryRail } from "@/components/MenuCategoryRail";
 import { PageHero } from "@/components/PageHero";
 import { ProductCard } from "@/components/ProductCard";
 import { menuCategoryFilters, normalizeProductCategory, type NormalizedProductCategory } from "@/lib/product-categories";
@@ -41,26 +41,7 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
         objectPosition="center"
       />
       <section className="container-page py-8 sm:py-12">
-        <div className="scrollbar-hide -mx-5 mb-7 flex gap-2 overflow-x-auto overflow-y-hidden px-5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {availableCategoryFilters.map((filter) => {
-            const isActive = activeCategory === filter.value;
-            const href = filter.value === "all" ? "/menu" : `/menu?category=${filter.value}`;
-
-            return (
-              <Link
-                key={filter.value}
-                href={href}
-                className={`public-filter-chip ${
-                  isActive
-                    ? "public-filter-chip-active"
-                    : ""
-                }`}
-              >
-                {filter.label}
-              </Link>
-            );
-          })}
-        </div>
+        <MenuCategoryRail filters={availableCategoryFilters} activeCategory={activeCategory} />
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleProducts.map((product) => (
             <ProductCard key={product.id} product={product} />

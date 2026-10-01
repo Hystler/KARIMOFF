@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCart } from "@/components/cart/CartProvider";
 
 const STORAGE_KEY = "karimoff_cookie_consent";
 const COOKIE_NAME = "karimoff_cookie_consent";
@@ -38,6 +39,9 @@ function setConsentCookie(consentId: string) {
 }
 
 export function CookieConsentBanner() {
+  const { isOpen: isCartOpen } = useCart();
+  const reduceMotion = useReducedMotion() ?? false;
+  const bannerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +67,22 @@ export function CookieConsentBanner() {
       window.removeEventListener("karimoff-open-cookie-settings", openSettings);
     };
   }, [openSettings]);
+
+  useEffect(() => {
+    if (!isVisible || isCartOpen || !bannerRef.current) return undefined;
+    const banner = bannerRef.current;
+    const updateOffset = () => {
+      document.documentElement.style.setProperty("--cookie-consent-offset", `${banner.getBoundingClientRect().height}px`);
+    };
+    updateOffset();
+    const resizeObserver = new ResizeObserver(updateOffset);
+    resizeObserver.observe(banner);
+    window.addEventListener("resize", updateOffset);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateOffset);
+    };
+  }, [isCartOpen, isSettingsOpen, isVisible]);
 
   async function saveConsent(categories: CookieCategories) {
     const previous = readSavedChoice();
@@ -92,19 +112,19 @@ export function CookieConsentBanner() {
   }
 
   return (
-    <AnimatePresence>
-      {isVisible ? (
+    <AnimatePresence onExitComplete={() => document.documentElement.style.setProperty("--cookie-consent-offset", "0px")}>
+      {isVisible && !isCartOpen ? (
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          ref={bannerRef}
+          initial={reduceMotion ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
-          transition={{ duration: 0.24, ease: "easeOut" }}
-          className="fixed inset-x-0 bottom-0 z-[80] px-3 pb-3 sm:px-6 sm:pb-6"
-          role="dialog"
-          aria-modal="true"
+          exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+          transition={{ duration: reduceMotion ? 0 : 0.24, ease: "easeOut" }}
+          className="cookie-consent-position fixed inset-x-0 bottom-0 z-[60] pt-3"
+          role="region"
           aria-label="Настройки cookies"
         >
-          <div className="mx-auto max-w-5xl rounded-lg border border-white/10 bg-karimoff-black p-4 text-white shadow-[0_24px_80px_rgba(18,18,20,0.42)] sm:p-6">
+          <div className="mr-auto w-full max-w-lg rounded-panel border border-white/10 bg-karimoff-black p-4 text-white shadow-overlay sm:p-6">
             <div className="flex flex-col gap-5">
               <div className="max-w-3xl">
                 <p className="text-sm font-black text-karimoff-orange">Cookies</p>

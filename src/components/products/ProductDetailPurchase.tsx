@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, ChevronDown, Minus, Plus, ShoppingBasket } from "lucide-react";
-import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getConfiguredCartUnitPrice,
   getDefaultCartCustomization,
@@ -23,6 +24,9 @@ function selectedCount(group: ProductModifierGroup, selected: Set<string>) {
 
 export function ProductDetailPurchase({ product, composition = [], nutritionIngredients = [] }: { product: Product; composition?: ProductCompositionItem[]; nutritionIngredients?: ProductCompositionItem[] }) {
   const { addItem } = useCart();
+  const inlinePurchaseRef = useRef<HTMLButtonElement>(null);
+  const [inlinePurchaseVisible, setInlinePurchaseVisible] = useState(true);
+  const [cookieConsentOffset, setCookieConsentOffset] = useState(0);
   const defaults = useMemo(() => getDefaultCartCustomization(product), [product]);
   const [removed, setRemoved] = useState(new Set(defaults.removed.map((item) => item.ingredient_id)));
   const [extras, setExtras] = useState<Record<string, number>>({});
@@ -56,6 +60,35 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
   const total = getConfiguredCartUnitPrice(product, customization) * quantity;
   const nutrition = getCustomizedNutrition(product, composition, nutritionIngredients, customization);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateOffset = () => {
+      const offset = Number.parseFloat(getComputedStyle(root).getPropertyValue("--cookie-consent-offset")) || 0;
+      setCookieConsentOffset(offset);
+    };
+    updateOffset();
+
+    const mutationObserver = new MutationObserver(updateOffset);
+    mutationObserver.observe(root, { attributes: true, attributeFilter: ["style"] });
+    window.addEventListener("resize", updateOffset);
+    return () => {
+      mutationObserver.disconnect();
+      window.removeEventListener("resize", updateOffset);
+    };
+  }, []);
+
+  useEffect(() => {
+    const purchaseButton = inlinePurchaseRef.current;
+    if (!purchaseButton || !("IntersectionObserver" in window)) return undefined;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setInlinePurchaseVisible(Boolean(entry?.isIntersecting && (entry.intersectionRatio ?? 0) >= 0.99));
+    }, { rootMargin: `0px 0px -${Math.ceil(cookieConsentOffset)}px 0px`, threshold: 0.99 });
+
+    observer.observe(purchaseButton);
+    return () => observer.disconnect();
+  }, [cookieConsentOffset]);
+
   function toggleGroupOption(group: ProductModifierGroup, optionId: string) {
     setSelectedOptions((current) => {
       const next = new Set(current);
@@ -78,16 +111,22 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
     setAdded(true);
   }
 
+  function changeQuantity(delta: number) {
+    setQuantity((value) => Math.max(1, Math.min(20, value + delta)));
+    setAdded(false);
+  }
+
   return (
-    <div className="mt-8 border-t border-karimoff-line pt-7">
-      {portion ? <fieldset className="mb-7">
+    <>
+    <div className="product-detail-purchase mt-6 border-t border-karimoff-line pt-6">
+      {portion ? <fieldset className="mb-6">
         <legend className="text-lg font-bold text-karimoff-black">Размер порции</legend>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {portion.options.map(option => <button type="button" key={option.id} aria-pressed={selectedOptions.has(option.id)}
             onClick={() => toggleGroupOption(portion, option.id)}
             className={`min-h-16 rounded-lg border p-3 text-left text-karimoff-black ${selectedOptions.has(option.id) ? "border-karimoff-orange bg-karimoff-orange/10" : "border-karimoff-line bg-white"}`}>
             <strong className="block text-base">{option.label}</strong>
-            <span className="text-sm text-karimoff-orange">{formatPrice(product.price + option.price_delta)} ₽</span>
+            <span className="text-sm font-heading font-black text-karimoff-orange-contrast">{formatPrice(product.price + option.price_delta)} ₽</span>
           </button>)}
         </div>
       </fieldset> : null}
@@ -95,7 +134,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
         <fieldset>
           <legend className="text-lg font-black text-karimoff-black">Убрать из состава</legend>
           <p className="mt-1 text-sm leading-6 text-karimoff-muted">Удаление ингредиента не уменьшает цену.</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {removable.map((option) => {
               const checked = removed.has(option.ingredient_id);
               return (
@@ -125,16 +164,16 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
       ) : null}
 
       {addable.length ? (
-        <fieldset className="mt-7">
+        <fieldset className="mt-6">
           <legend className="text-lg font-black text-karimoff-black">Добавить</legend>
-          <div className="mt-3 grid gap-2">
+          <div className="mt-4 grid gap-3">
             {addable.map((option) => {
               const value = extras[option.ingredient_id] ?? 0;
               return (
                 <div key={option.ingredient_id} className="flex min-h-16 items-center justify-between gap-4 rounded-lg border border-karimoff-line bg-white px-4 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-karimoff-black">{option.name}</p>
-                    <p className="mt-1 text-sm font-bold text-karimoff-orange">+{formatPrice(option.extra_price)} ₽</p>
+                    <p className="mt-1 text-sm font-heading font-black text-karimoff-orange-contrast">+{formatPrice(option.extra_price)} ₽</p>
                   </div>
                   <div className="grid shrink-0 grid-cols-[44px_36px_44px] items-center rounded-lg border border-karimoff-line">
                     <button
@@ -181,17 +220,17 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
         const invalid = count < group.min_selections || count > group.max_selections;
         const optional = group.min_selections === 0;
         const fieldset = (
-          <fieldset key={group.id} className={optional ? "mt-4" : "mt-7"}>
+          <fieldset key={group.id} className={optional ? "mt-4" : "mt-6"}>
             <legend className={optional ? "sr-only" : "flex flex-wrap items-center gap-2 text-lg font-black text-karimoff-black"}>
               {group.name}
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${group.min_selections > 0 ? "bg-karimoff-orange/10 text-karimoff-orange" : "bg-karimoff-soft text-karimoff-muted"}`}>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${group.min_selections > 0 ? "bg-karimoff-orange/10 text-karimoff-orange-contrast" : "bg-karimoff-soft text-karimoff-muted"}`}>
                 {group.min_selections > 0 ? "Обязательно" : "По желанию"}
               </span>
             </legend>
             <p className={`mt-1 text-sm ${invalid ? "font-bold text-red-700" : "text-karimoff-muted"}`}>
               {group.selection_type === "single" ? "Выберите один вариант" : `Можно выбрать до ${group.max_selections}`}
             </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {group.options.map((option) => {
                 const checked = selectedOptions.has(option.id);
                 return (
@@ -204,16 +243,16 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
                   >
                     <span>
                       <span className="block text-sm font-black text-karimoff-black">{option.label}</span>
-                      {option.price_delta > 0 ? <span className="mt-1 block text-xs font-bold text-karimoff-orange">+{formatPrice(option.price_delta)} ₽</span> : null}
+                      {option.price_delta > 0 ? <span className="mt-1 block text-xs font-heading font-black text-karimoff-orange-contrast">+{formatPrice(option.price_delta)} ₽</span> : null}
                     </span>
-                    {checked ? <Check size={17} className="shrink-0 text-karimoff-orange" aria-hidden /> : null}
+                    {checked ? <Check size={17} className="shrink-0 text-karimoff-orange-contrast" aria-hidden /> : null}
                   </button>
                 );
               })}
             </div>
           </fieldset>
         );
-        return optional ? <details key={group.id} className="group/modifiers mt-7 border-y border-karimoff-line py-4">
+        return optional ? <details key={group.id} className="group/modifiers mt-6 border-y border-karimoff-line py-4">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-base font-bold text-karimoff-black [&::-webkit-details-marker]:hidden">
             <span>{group.name}<span className="mt-1 block text-xs font-normal text-karimoff-muted">{count ? `Выбрано: ${count}` : "По желанию"}</span></span>
             <ChevronDown size={20} aria-hidden className="shrink-0 transition-transform group-open/modifiers:rotate-180" />
@@ -222,7 +261,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
         </details> : fieldset;
       })}
 
-      <label className="mt-7 block">
+      <label className="mt-6 block">
         <span className="text-lg font-black text-karimoff-black">Комментарий к блюду</span>
         <textarea
           value={note}
@@ -232,17 +271,18 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
           }}
           rows={3}
           placeholder="Например: хорошо прожарить"
-          className="mt-3 w-full resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-base leading-6 outline-none transition focus:border-karimoff-orange focus:ring-4 focus:ring-karimoff-orange/10"
+          className="public-field mt-4 min-h-[96px] resize-none py-3 leading-6"
         />
       </label>
 
-      <div className="mt-7 flex flex-col gap-4 border-t border-karimoff-line pt-6 sm:flex-row sm:items-center">
+      <div className="mt-6 flex flex-col gap-4 border-t border-karimoff-line pt-6 sm:flex-row sm:items-center">
         <div className="grid w-fit grid-cols-[48px_56px_48px] items-center rounded-lg border border-karimoff-line bg-white p-1">
           <button type="button" onClick={() => { setQuantity((value) => Math.max(1, value - 1)); setAdded(false); }} className="grid h-12 place-items-center rounded-md hover:bg-karimoff-soft" aria-label="Уменьшить количество"><Minus size={20} /></button>
           <strong className="text-center text-xl tabular-nums">{quantity}</strong>
           <button type="button" onClick={() => { setQuantity((value) => Math.min(20, value + 1)); setAdded(false); }} className="grid h-12 place-items-center rounded-md hover:bg-karimoff-soft" aria-label="Увеличить количество"><Plus size={20} /></button>
         </div>
         <button
+          ref={inlinePurchaseRef}
           type="button"
           onClick={addToCart}
           disabled={!valid}
@@ -250,11 +290,11 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
           aria-live="polite"
         >
           {added ? <Check size={21} aria-hidden /> : <ShoppingBasket size={21} aria-hidden />}
-          <span>{!portionChosen ? "Выберите порцию" : `${added ? "Добавлено" : "Добавить в корзину"} · ${formatPrice(total)} ₽`}</span>
+          <span>{!portionChosen ? "Выберите порцию" : added ? "Добавлено" : <>Добавить в корзину · <span className="font-heading">{formatPrice(total)} ₽</span></>}</span>
         </button>
       </div>
       {!valid ? <p className="mt-3 text-sm text-karimoff-muted">{!portionChosen ? "Выберите размер порции выше." : "Выберите обязательные варианты блюда."}</p> : null}
-      <section className="mt-8 border-t border-karimoff-line pt-6" aria-label="Пищевая ценность выбранного блюда">
+      <section className="mt-6 border-t border-karimoff-line pt-6" aria-label="Пищевая ценность выбранного блюда">
         <h2 className="text-xl font-bold text-karimoff-black">КБЖУ на порцию</h2>
         {portion ? (
           <p className="mt-2 text-sm text-karimoff-muted">
@@ -272,5 +312,32 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
         </> : <p className="mt-3 text-sm text-karimoff-muted">{portionChosen ? "Данные уточняются." : "Пищевая ценность появится после выбора порции."}</p>}
       </section>
     </div>
+    {!inlinePurchaseVisible && typeof document !== "undefined" ? createPortal(
+      <div className="product-sticky-purchase xl:hidden" role="region" aria-label={`Добавить ${product.name} в корзину`}>
+        <div className="mx-auto flex w-full max-w-customer items-center gap-2 sm:gap-3">
+          <div className="grid shrink-0 grid-cols-[44px_36px_44px] items-center rounded-control border border-karimoff-line bg-white">
+            <button type="button" onClick={() => changeQuantity(-1)} className="grid h-11 place-items-center rounded-md" aria-label="Уменьшить количество"><Minus size={17} aria-hidden="true" /></button>
+            <strong className="text-center text-sm tabular-nums" aria-label={`Количество: ${quantity}`}>{quantity}</strong>
+            <button type="button" onClick={() => changeQuantity(1)} className="grid h-11 place-items-center rounded-md" aria-label="Увеличить количество"><Plus size={17} aria-hidden="true" /></button>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="mb-1 truncate font-heading text-base font-black leading-tight text-karimoff-orange-contrast" aria-live="polite">{formatPrice(total)} ₽</p>
+            <button
+              type="button"
+              onClick={addToCart}
+              disabled={!valid}
+              className={`public-button-primary min-h-14 w-full px-3 text-base ${added ? "public-button-success" : ""}`}
+              aria-label={`${added ? "Добавлено" : "Добавить"}: ${product.name}, ${formatPrice(total)} ₽`}
+              aria-live="polite"
+            >
+              {added ? <Check size={19} aria-hidden="true" /> : <ShoppingBasket size={19} aria-hidden="true" />}
+              <span>{added ? "Добавлено" : "Добавить"}</span>
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    ) : null}
+    </>
   );
 }

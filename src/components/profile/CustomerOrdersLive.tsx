@@ -17,7 +17,7 @@ const toneClasses = {
   amber: "border-amber-200 bg-amber-50 text-amber-800",
   emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
   muted: "border-karimoff-line bg-karimoff-soft text-karimoff-muted",
-  orange: "border-orange-200 bg-orange-50 text-karimoff-orange",
+  orange: "border-orange-200 bg-orange-50 text-karimoff-orange-contrast",
   red: "border-red-200 bg-red-50 text-red-700"
 } as const;
 
@@ -84,7 +84,7 @@ function OrderProgress({ order }: { order: CustomerOrder }) {
         const done = index <= active;
         return (
           <li key={step} className="min-w-0 text-center">
-            <span className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full border ${done ? "border-karimoff-orange bg-karimoff-orange text-white" : "border-karimoff-line bg-white text-karimoff-muted"}`}>
+            <span className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full border ${done ? "border-karimoff-orange bg-karimoff-orange text-karimoff-black" : "border-karimoff-line bg-white text-karimoff-muted"}`}>
               {done ? <Check size={15} aria-hidden="true" /> : <Circle size={11} aria-hidden="true" />}
             </span>
             <span className={`mt-2 block text-[10px] font-bold sm:text-xs ${done ? "text-karimoff-black" : "text-karimoff-muted"}`}>{step}</span>
@@ -159,7 +159,7 @@ export function CustomerOrdersLive({
     <section className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-karimoff-orange">Личный кабинет</p>
+          <p className="text-sm font-semibold text-karimoff-orange-contrast">Личный кабинет</p>
           <h2 className="mt-1 text-2xl font-black">{preview ? "Последние заказы" : "Мои заказы"}</h2>
         </div>
         <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export function CustomerOrdersLive({
             {connection === "refreshing" ? <RefreshCw className="animate-spin" size={14} /> : connection === "live" ? <Wifi size={14} /> : <Clock3 size={14} />}
             {connection === "offline" ? "Обновим при восстановлении связи" : "Статусы обновляются"}
           </span>
-          {preview ? <Link href="/profile/orders" className="text-sm font-bold text-karimoff-orange">Все заказы</Link> : null}
+          {preview ? <Link href="/profile/orders" className="text-sm font-bold text-karimoff-orange-contrast">Все заказы</Link> : null}
         </div>
       </div>
 
@@ -194,7 +194,7 @@ export function CustomerOrdersLive({
                     <p className="mt-2 text-sm leading-6 text-karimoff-muted">{state.description}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <p className="text-xl font-black text-karimoff-orange">{formatPrice(order.total)} ₽</p>
+                    <p className="font-heading text-xl font-black text-karimoff-orange-contrast">{formatPrice(order.total)} ₽</p>
                     {canRepeat && order.items.length ? <RepeatOrderButton items={order.items} orderId={order.id} /> : null}
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export function CustomerOrdersLive({
                         {item.product_name} × {item.quantity} — {formatPrice(item.line_total)} ₽
                       </p>
                       {item.modifiers.map((modifier) => (
-                        <p key={modifier.id} className="text-xs font-semibold text-karimoff-orange">
+                        <p key={modifier.id} className="text-xs font-semibold text-karimoff-orange-contrast">
                           {modifier.modifier_type === "remove" ? "Без" : modifier.modifier_type === "replace" ? "Замена" : "Добавить"}: {modifier.ingredient_name}
                         </p>
                       ))}

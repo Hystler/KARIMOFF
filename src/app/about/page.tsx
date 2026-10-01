@@ -32,7 +32,7 @@ export default async function AboutPage() {
       <section className="container-page py-10 sm:py-16">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-karimoff-orange">Почему возвращаются</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Почему возвращаются</p>
             <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Без лишних обещаний и красивых историй
             </h2>
@@ -58,7 +58,7 @@ export default async function AboutPage() {
 
       <section className="container-page pb-12 sm:pb-16">
         <div className="mb-7 max-w-3xl">
-          <p className="text-sm font-semibold text-karimoff-orange">Три принципа</p>
+          <p className="text-sm font-semibold text-karimoff-orange-contrast">Три принципа</p>
           <h2 className="mt-3 text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
             На этом построен KARIMOFF
           </h2>
@@ -80,7 +80,7 @@ export default async function AboutPage() {
       <section className="container-page pb-12 sm:pb-16">
         <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8">
           <div className="max-w-[760px]">
-            <p className="text-sm font-semibold text-karimoff-orange">Главный принцип</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Главный принцип</p>
             <h2 className="mt-3 text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Чтобы вам хотелось вернуться
             </h2>

@@ -4,12 +4,49 @@
 
 :root {
   color-scheme: light;
+  --karimoff-orange-rgb: 251 103 10;
+  --karimoff-orange-contrast-rgb: 183 71 0;
+  --karimoff-black-rgb: 18 18 20;
+  --karimoff-white-rgb: 255 255 255;
+  --karimoff-ink-rgb: 42 41 39;
+  --karimoff-muted-rgb: 109 107 102;
+  --karimoff-cream-rgb: 244 241 237;
+  --karimoff-soft-rgb: 243 238 231;
+  --karimoff-orange: #FB670A;
+  --karimoff-orange-contrast: #B74700;
+  --karimoff-black: #121214;
+  --karimoff-white: #FFFFFF;
+  --karimoff-ink: #2A2927;
+  --karimoff-line: rgba(18, 18, 20, 0.12);
+  --karimoff-muted: #6D6B66;
+  --karimoff-cream: #F4F1ED;
+  --karimoff-soft: #F3EEE7;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 64px;
+  --space-10: 80px;
+  --page-gutter-mobile: 20px;
+  --page-gutter-tablet: 32px;
+  --page-gutter-desktop: 40px;
+  --radius-control: 6px;
+  --radius-customer: 8px;
+  --radius-panel: 12px;
+  --shadow-surface-1: 0 8px 24px rgba(18, 18, 20, 0.06);
+  --shadow-overlay-2: 0 18px 48px rgba(18, 18, 20, 0.22);
   --background: #ffffff;
   --foreground: #121214;
+  --public-page-background: #F4F1ED;
+  --cookie-consent-offset: 0px;
   --public-control-bg: #ffffff;
   --public-control-border: rgba(18, 18, 20, 0.15);
   --public-control-color: #121214;
-  --public-control-shadow: 0 12px 28px rgba(18, 18, 20, 0.10);
+  --public-control-shadow: 0 4px 12px rgba(18, 18, 20, 0.06);
   --product-photo-bg: #f4f4f5;
   --admin-bg: #edf0f3;
   --admin-surface: #ffffff;
@@ -24,8 +61,11 @@
 
 html[data-theme="dark"] {
   color-scheme: dark;
+  --karimoff-orange-contrast-rgb: 251 103 10;
+  --karimoff-orange-contrast: #FB670A;
   --background: #121214;
   --foreground: #ffffff;
+  --public-page-background: #121214;
   --public-control-bg: #202024;
   --public-control-border: rgba(255, 255, 255, 0.16);
   --public-control-color: #ffffff;
@@ -44,6 +84,92 @@ html[data-theme="dark"] {
 
 .product-photo { background: var(--product-photo-bg); }
 .product-card .product-cta { margin-top: 0; }
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: env(safe-area-inset-top, 0px);
+  left: var(--page-gutter-mobile);
+  transform: translateY(calc(-100% - 1rem));
+  border-radius: var(--radius-control);
+  background: var(--karimoff-cream);
+  padding: 12px 16px;
+  color: var(--karimoff-black);
+  font-weight: 800;
+}
+
+.skip-link:focus-visible { transform: translateY(0); }
+
+.cookie-consent-position {
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+}
+
+.product-detail-purchase {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6rem);
+}
+
+.product-sticky-purchase {
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  bottom: var(--cookie-consent-offset, 0px);
+  left: 0;
+  border-top: 1px solid var(--public-control-border);
+  background: var(--public-control-bg);
+  padding-top: 12px;
+  padding-right: max(var(--page-gutter-mobile), env(safe-area-inset-right, 0px));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-left: max(var(--page-gutter-mobile), env(safe-area-inset-left, 0px));
+  box-shadow: 0 -4px 18px rgba(18, 18, 20, 0.08);
+}
+
+.category-rail { position: relative; }
+
+.category-rail-hint {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, var(--background) 88%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.category-rail-hint-visible { opacity: 1; }
+
+@media (min-width: 640px) {
+  .category-rail-hint { display: none; }
+}
+
+@media (min-width: 1280px) {
+  .product-detail-purchase { padding-bottom: 0; }
+  .product-sticky-purchase { display: none; }
+}
+
+@media (min-width: 640px) {
+  .cookie-consent-position {
+    padding-right: max(var(--page-gutter-tablet), env(safe-area-inset-right, 0px));
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+    padding-left: max(var(--page-gutter-tablet), env(safe-area-inset-left, 0px));
+  }
+
+  .product-sticky-purchase {
+    padding-right: max(var(--page-gutter-tablet), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--page-gutter-tablet), env(safe-area-inset-left, 0px));
+  }
+}
+
+@media (min-width: 1280px) {
+  .cookie-consent-position {
+    padding-right: max(var(--page-gutter-desktop), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--page-gutter-desktop), env(safe-area-inset-left, 0px));
+  }
+}
 
 * {
   box-sizing: border-box;
@@ -215,7 +341,7 @@ button:not(:disabled),
 }
 
 :focus-visible {
-  outline: 2px solid #fb670a;
+  outline: 2px solid var(--karimoff-orange-contrast);
   outline-offset: 3px;
 }
 
@@ -226,7 +352,7 @@ button:not(:disabled),
 
 @layer utilities {
   .container-page {
-    @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10;
+    @apply mx-auto w-full max-w-customer px-page-mobile sm:px-page-tablet lg:px-page-desktop;
   }
 
   .matte-card {
@@ -315,8 +441,10 @@ button:not(:disabled),
 @layer components {
   .public-button-primary,
   .public-button-secondary,
-  .public-button-on-dark {
-    @apply relative isolate inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-lg px-6 py-3 text-sm font-black transition duration-200;
+  .public-button-on-dark,
+  .public-button-ghost,
+  .public-button-danger {
+    @apply relative isolate inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-customer px-6 py-3 text-sm font-black transition duration-200;
     letter-spacing: 0;
     touch-action: manipulation;
   }
@@ -325,18 +453,17 @@ button:not(:disabled),
     border: 1px solid #c94e00;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 46%),
-      #f76308;
-    color: #ffffff;
+      #FB670A;
+    color: var(--karimoff-black);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.34),
-      inset 0 -1px 0 rgba(102, 34, 0, 0.24),
-      0 3px 0 #b94300,
-      0 14px 30px rgba(251, 103, 10, 0.24);
+      0 2px 0 #b94300;
   }
 
   .public-button-success {
     border-color: #065f46;
     background: #047857;
+    color: #ffffff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 3px 0 #065f46, 0 14px 30px rgba(4, 120, 87, 0.22);
   }
 
@@ -356,6 +483,45 @@ button:not(:disabled),
     background: rgba(255, 255, 255, 0.07);
     color: #ffffff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 12px 28px rgba(0, 0, 0, 0.20);
+  }
+
+  .public-button-ghost {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--public-control-color);
+    box-shadow: none;
+  }
+
+  .public-button-danger {
+    border: 1px solid #b42318;
+    background: #b42318;
+    color: #ffffff;
+    box-shadow: 0 2px 0 #7a271a;
+  }
+
+  .public-button-compact {
+    min-height: 40px;
+    padding: 8px 16px;
+  }
+
+  .public-field {
+    @apply min-h-12 w-full rounded-customer border px-4 py-2 text-base text-karimoff-black outline-none transition;
+    border-color: var(--public-control-border);
+    background-color: var(--public-control-bg);
+  }
+
+  .public-field:focus-visible {
+    border-color: var(--karimoff-orange-contrast);
+    box-shadow: 0 0 0 3px rgba(183, 71, 0, 0.14);
+  }
+
+  .public-field[aria-invalid="true"] {
+    border-color: #b42318;
+  }
+
+  .public-field:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
 
   .public-icon-button {
@@ -381,9 +547,9 @@ button:not(:disabled),
 
   .public-filter-chip-active {
     border-color: #c94e00;
-    background: #f76308;
-    color: #ffffff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 3px 0 #b94300, 0 12px 26px rgba(251, 103, 10, 0.20);
+    background: #FB670A;
+    color: var(--karimoff-black);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 2px 0 #b94300;
   }
 
   @media (hover: hover) {
@@ -398,7 +564,7 @@ button:not(:disabled),
     .public-button-primary:hover {
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 46%),
-        #ff6c10;
+        #ff741f;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.38),
         inset 0 -1px 0 rgba(102, 34, 0, 0.24),
@@ -424,19 +590,32 @@ button:not(:disabled),
       border-color: rgba(255, 255, 255, 0.42);
       background: rgba(255, 255, 255, 0.12);
     }
+
+    .public-button-ghost:hover {
+      background: var(--public-control-bg);
+      color: var(--karimoff-orange-contrast);
+    }
+
+    .public-button-danger:hover {
+      background: #9f1c14;
+    }
   }
 
   .public-button-primary:active,
   .public-button-secondary:active,
   .public-button-on-dark:active,
   .public-icon-button:active,
-  .public-filter-chip:active {
+  .public-filter-chip:active,
+  .public-button-danger:active,
+  .public-button-ghost:active {
     transform: translateY(1px);
   }
 
   .public-button-primary:disabled,
   .public-button-secondary:disabled,
   .public-button-on-dark:disabled,
+  .public-button-ghost:disabled,
+  .public-button-danger:disabled,
   .public-icon-button:disabled {
     cursor: not-allowed;
     opacity: 0.52;
@@ -519,7 +698,7 @@ button:not(:disabled),
   }
 
   .admin-nav-link-active {
-    @apply bg-karimoff-orange text-white hover:bg-karimoff-orange;
+    @apply bg-karimoff-orange text-karimoff-black hover:bg-karimoff-orange;
   }
 
   .admin-logout {
@@ -567,7 +746,7 @@ button:not(:disabled),
   }
 
   .admin-eyebrow {
-    @apply text-xs font-black uppercase text-karimoff-orange;
+    @apply text-xs font-black uppercase text-karimoff-orange-contrast;
   }
 
   .admin-card {
@@ -575,22 +754,22 @@ button:not(:disabled),
   }
 
   .admin-primary-button {
-    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-[#E85C06] bg-karimoff-orange px-3 py-2 text-sm font-bold text-white transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-karimoff-orange-contrast bg-karimoff-orange px-3 py-2 text-sm font-bold text-karimoff-black transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-55;
   }
 
   .admin-secondary-button {
-    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-karimoff-line bg-white px-3 py-2 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-karimoff-line bg-white px-3 py-2 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange-contrast hover:text-karimoff-orange-contrast;
   }
 
   .admin-danger-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50;
+    @apply inline-flex min-h-11 items-center justify-center rounded-control border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50;
   }
 
   .admin-control,
   .admin-field input,
   .admin-field select,
   .admin-field textarea {
-    @apply min-h-11 w-full rounded-lg border border-karimoff-line bg-white px-3.5 py-2 text-sm text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)];
+    @apply min-h-11 w-full rounded-control border border-karimoff-line bg-white px-3.5 py-2 text-sm text-karimoff-black outline-none transition focus:border-karimoff-orange-contrast focus:shadow-[0_0_0_4px_rgba(183,71,0,0.12)];
   }
 
   .admin-field {
@@ -598,7 +777,7 @@ button:not(:disabled),
   }
 
   .management-number-input {
-    @apply flex min-h-11 overflow-hidden rounded-lg border border-karimoff-line bg-white transition focus-within:border-karimoff-orange focus-within:shadow-[0_0_0_4px_rgba(251,103,10,0.10)];
+    @apply flex min-h-11 overflow-hidden rounded-control border border-karimoff-line bg-white transition focus-within:border-karimoff-orange-contrast focus-within:shadow-[0_0_0_4px_rgba(183,71,0,0.12)];
   }
 
   .management-number-input input {
@@ -623,7 +802,7 @@ button:not(:disabled),
   }
 
   .admin-status {
-    @apply inline-flex min-h-8 items-center rounded-full bg-karimoff-orange/10 px-3 text-xs font-black text-karimoff-orange;
+    @apply inline-flex min-h-8 items-center rounded-full bg-karimoff-orange/10 px-3 text-xs font-black text-karimoff-orange-contrast;
   }
 
   .admin-status-muted {
@@ -758,7 +937,7 @@ button:not(:disabled),
   }
 
   .kitchen-action {
-    @apply inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-5 text-base font-black text-white shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] active:scale-[0.99];
+    @apply inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border border-[#E85C06] bg-karimoff-orange px-5 text-base font-black text-karimoff-black shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] active:scale-[0.99];
   }
 
   .kitchen-count {
@@ -848,7 +1027,7 @@ button:not(:disabled),
   }
 
   .russian-date-range-trigger > svg {
-    @apply shrink-0 text-karimoff-orange;
+    @apply shrink-0 text-karimoff-orange-contrast;
   }
 
   .russian-date-range-trigger > span {
@@ -856,7 +1035,7 @@ button:not(:disabled),
   }
 
   .russian-date-range-trigger small {
-    @apply text-[9px] font-black uppercase text-karimoff-muted;
+    @apply text-[11px] font-black uppercase text-karimoff-muted;
   }
 
   .russian-date-range-trigger strong {
@@ -876,7 +1055,7 @@ button:not(:disabled),
   }
 
   .russian-date-range-popover > header span {
-    @apply text-[10px] font-black uppercase text-karimoff-orange;
+    @apply text-[11px] font-black uppercase text-karimoff-orange-contrast;
   }
 
   .russian-date-range-popover > header strong {
@@ -902,7 +1081,7 @@ button:not(:disabled),
   }
 
   .russian-date-range-weekdays span {
-    @apply py-1 text-center text-[9px] font-black uppercase text-karimoff-muted;
+    @apply py-1 text-center text-[10px] font-black uppercase text-karimoff-muted;
   }
 
   .russian-date-range-grid {
@@ -918,11 +1097,11 @@ button:not(:disabled),
   }
 
   .russian-date-range-grid button.is-in-range {
-    @apply rounded-none bg-orange-50 text-karimoff-orange;
+    @apply rounded-none bg-orange-50 text-karimoff-orange-contrast;
   }
 
   .russian-date-range-grid button.is-selected {
-    @apply z-10 bg-karimoff-orange font-black text-white shadow-[0_6px_15px_rgba(251,103,10,0.24)];
+    @apply z-10 bg-karimoff-orange font-black text-karimoff-black shadow-[0_6px_15px_rgba(251,103,10,0.24)];
   }
 
   .russian-date-range-popover > footer {
@@ -934,7 +1113,7 @@ button:not(:disabled),
   }
 
   .russian-date-range-popover > footer button {
-    @apply inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-karimoff-orange px-3 text-xs font-black text-white transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-35;
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-karimoff-orange px-3 text-xs font-black text-karimoff-black transition hover:bg-[#D95405] disabled:cursor-not-allowed disabled:opacity-35;
   }
 
   .analytics-more-filters {
@@ -974,7 +1153,7 @@ button:not(:disabled),
   }
 
   .analytics-reset-button {
-    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-karimoff-line px-3 text-xs font-black text-karimoff-muted transition hover:border-karimoff-orange hover:text-karimoff-orange;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-karimoff-line px-3 text-xs font-black text-karimoff-muted transition hover:border-karimoff-orange-contrast hover:text-karimoff-orange-contrast;
   }
 
   .analytics-search {
@@ -986,7 +1165,7 @@ button:not(:disabled),
   }
 
   .analytics-search button {
-    @apply border-l border-karimoff-line px-3 text-xs font-black text-karimoff-orange;
+    @apply border-l border-karimoff-line px-3 text-xs font-black text-karimoff-orange-contrast;
   }
 
   .analytics-filter-loading {
@@ -1018,7 +1197,7 @@ button:not(:disabled),
   }
 
   .analytics-kpi-hint {
-    @apply max-w-[24ch] text-[10px] font-semibold leading-4 text-karimoff-muted;
+    @apply max-w-[24ch] text-[11px] font-semibold leading-4 text-karimoff-muted;
   }
 
   .analytics-sparkline {
@@ -1120,7 +1299,7 @@ button:not(:disabled),
   .analytics-chart-previous { stroke: #aaa7a1; stroke-width: 2; stroke-dasharray: 7 7; }
 
   .analytics-chart-labels {
-    @apply flex items-center justify-between gap-2 px-5 text-[10px] font-bold text-karimoff-muted;
+    @apply flex items-center justify-between gap-2 px-5 text-[11px] font-bold text-karimoff-muted;
   }
 
   .analytics-chart-tooltip {
@@ -1218,7 +1397,7 @@ button:not(:disabled),
   }
 
   .analytics-table thead {
-    @apply border-b border-black/[0.08] bg-[#F7F5F1] text-[10px] uppercase text-karimoff-muted;
+    @apply border-b border-black/[0.08] bg-[#F7F5F1] text-[11px] uppercase text-karimoff-muted;
   }
 
   .analytics-table th,
@@ -1229,7 +1408,7 @@ button:not(:disabled),
   .analytics-table th a { @apply inline-flex items-center gap-1; }
   .analytics-table tbody tr { @apply border-b border-black/[0.07] transition last:border-0 hover:bg-[#FBF9F6]; }
   .analytics-table td { @apply tabular-nums; }
-  .analytics-table td > span { @apply mt-1 block text-[10px] text-karimoff-muted; }
+  .analytics-table td > span { @apply mt-1 block text-[11px] text-karimoff-muted; }
   .analytics-table td > em { @apply mt-1 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black not-italic text-amber-800; }
 
   .analytics-section-empty {
@@ -1244,7 +1423,7 @@ button:not(:disabled),
     @apply grid gap-1 rounded-lg border border-black/[0.08] bg-white px-4 py-3 shadow-[0_8px_26px_rgba(18,18,20,0.04)];
   }
 
-  .analytics-sales-summary span { @apply text-[10px] font-black uppercase text-karimoff-muted; }
+  .analytics-sales-summary span { @apply text-[11px] font-black uppercase text-karimoff-muted; }
   .analytics-sales-summary strong { @apply text-sm font-black tabular-nums; }
   .analytics-sales-panel { @apply mt-0 overflow-hidden; }
   .analytics-sales-desktop { @apply hidden lg:block; }
@@ -1257,10 +1436,10 @@ button:not(:disabled),
   .analytics-sale-mobile-card > div { @apply flex items-center justify-between gap-3 text-xs text-karimoff-muted; }
   .analytics-sale-mobile-card h2 { @apply text-base font-black; }
   .analytics-sale-mobile-card p { @apply text-xs text-karimoff-muted; }
-  .analytics-sale-mobile-card > div:last-child strong { @apply text-lg text-karimoff-orange; }
+  .analytics-sale-mobile-card > div:last-child strong { @apply text-lg text-karimoff-orange-contrast; }
 
   .analytics-source-badge {
-    @apply inline-flex min-h-6 items-center rounded-full bg-karimoff-orange/10 px-2 text-[10px] font-black text-karimoff-orange;
+    @apply inline-flex min-h-6 items-center rounded-full bg-karimoff-orange/10 px-2 text-[11px] font-black text-karimoff-orange-contrast;
   }
 
   .analytics-sale-status {
@@ -1289,7 +1468,7 @@ button:not(:disabled),
 
   .analytics-page-size > span { @apply mr-1; }
   .analytics-page-size a { @apply min-h-8 min-w-8 justify-center px-2; }
-  .analytics-page-size a.is-active { @apply border-karimoff-orange bg-karimoff-orange text-white; }
+  .analytics-page-size a.is-active { @apply border-karimoff-orange bg-karimoff-orange text-karimoff-black; }
 
   .analytics-drawer-layer { @apply fixed inset-0 z-[120]; }
   .analytics-drawer-backdrop { @apply absolute inset-0 bg-black/45 backdrop-blur-[2px]; }
@@ -1377,7 +1556,7 @@ button:not(:disabled),
 
   .analytics-check-grid button.is-active,
   .analytics-weekday-filter button.is-active {
-    @apply border-karimoff-orange bg-orange-50 text-karimoff-orange;
+    @apply border-karimoff-orange bg-orange-50 text-karimoff-orange-contrast;
   }
 
   .analytics-weekday-filter { @apply grid grid-cols-7 gap-1.5; }
@@ -1413,7 +1592,7 @@ button:not(:disabled),
   .analytics-insight-strip > div > a.is-negative { @apply border-l-2 border-red-500; }
   .analytics-insight-strip > div > a.is-neutral { @apply border-l-2 border-karimoff-orange; }
 
-  .analytics-context-badge { @apply inline-flex w-fit rounded-full bg-orange-50 px-3 py-1.5 text-[10px] font-black uppercase text-karimoff-orange; }
+  .analytics-context-badge { @apply inline-flex w-fit rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black uppercase text-karimoff-orange-contrast; }
 
   .analytics-category-grid {
     @apply grid gap-2 p-3 sm:grid-cols-2 sm:p-5 xl:grid-cols-4 2xl:grid-cols-5;
@@ -1428,26 +1607,26 @@ button:not(:disabled),
   .analytics-category-grid > a.is-active { @apply border-karimoff-orange bg-orange-50; }
   .analytics-category-grid > a > div:first-child { @apply flex items-start justify-between gap-3; }
   .analytics-category-grid > a > div:first-child strong { @apply line-clamp-2 text-sm font-black; }
-  .analytics-category-grid > a > div:first-child span { @apply shrink-0 text-[10px] font-black; }
+  .analytics-category-grid > a > div:first-child span { @apply shrink-0 text-[11px] font-black; }
   .analytics-category-grid > a > b { @apply relative z-10 mt-4 block text-xl font-black tabular-nums; }
   .analytics-category-grid > a > svg { @apply absolute inset-x-0 top-16 h-16 w-full opacity-50; }
   .analytics-category-grid > a > svg polyline { fill: none; stroke: var(--analytics-accent, #fb670a); stroke-width: 2; vector-effect: non-scaling-stroke; }
   .analytics-category-grid dl { @apply absolute inset-x-4 bottom-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-black/[0.07] pt-3; }
   .analytics-category-grid dl div { @apply flex items-center justify-between gap-2; }
-  .analytics-category-grid dt { @apply text-[9px] font-bold text-karimoff-muted; }
-  .analytics-category-grid dd { @apply text-[10px] font-black tabular-nums; }
+  .analytics-category-grid dt { @apply text-[11px] font-bold text-karimoff-muted; }
+  .analytics-category-grid dd { @apply text-xs font-black tabular-nums; }
 
   .analytics-product-profile {
     @apply mt-5 grid gap-5 border-y border-black/[0.08] bg-[#F4F0EA] px-5 py-6 sm:px-6 xl:grid-cols-[minmax(220px,0.7fr)_2fr] xl:items-center;
   }
   .analytics-product-profile > div { @apply relative pl-10; }
   .analytics-product-profile > div > svg { @apply absolute left-0 top-0 text-karimoff-orange; }
-  .analytics-product-profile > div > span { @apply text-[10px] font-black uppercase text-karimoff-muted; }
+  .analytics-product-profile > div > span { @apply text-[11px] font-black uppercase text-karimoff-muted; }
   .analytics-product-profile h2 { @apply mt-1 text-2xl font-black; }
   .analytics-product-profile p { @apply mt-1 text-xs text-karimoff-muted; }
   .analytics-product-profile dl { @apply grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-black/[0.08] md:grid-cols-3; }
   .analytics-product-profile dl div { @apply grid gap-1 bg-white px-4 py-3; }
-  .analytics-product-profile dt { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-product-profile dt { @apply text-[11px] font-bold text-karimoff-muted; }
   .analytics-product-profile dd { @apply text-sm font-black tabular-nums; }
 
   .analytics-intelligence-columns { @apply items-stretch; }
@@ -1492,11 +1671,11 @@ button:not(:disabled),
   .analytics-calendar-wrap { @apply p-4 sm:p-5; }
   .analytics-calendar-head,
   .analytics-calendar-grid { @apply grid grid-cols-7 gap-1.5; }
-  .analytics-calendar-head { @apply mb-2 text-center text-[9px] font-black uppercase text-karimoff-muted; }
+  .analytics-calendar-head { @apply mb-2 text-center text-[11px] font-black uppercase text-karimoff-muted; }
   .analytics-calendar-grid > a { @apply flex aspect-square min-w-0 flex-col justify-between rounded-md p-2 text-karimoff-black transition hover:outline hover:outline-2 hover:outline-karimoff-orange focus:outline focus:outline-2 focus:outline-karimoff-orange; }
   .analytics-calendar-grid > a strong { @apply text-xs font-black; }
-  .analytics-calendar-grid > a span { @apply truncate text-[8px] font-black tabular-nums; }
-  .analytics-calendar-scale { @apply mt-3 flex items-center justify-end gap-1.5 text-[9px] font-bold text-karimoff-muted; }
+  .analytics-calendar-grid > a span { @apply truncate text-[11px] font-black tabular-nums; }
+  .analytics-calendar-scale { @apply mt-3 flex items-center justify-end gap-1.5 text-[11px] font-bold text-karimoff-muted; }
   .analytics-calendar-scale i { @apply h-2.5 w-5 rounded-sm; }
   .analytics-calendar-scale i:nth-of-type(1) { background: rgba(251,103,10,.12); }
   .analytics-calendar-scale i:nth-of-type(2) { background: rgba(251,103,10,.34); }
@@ -1508,20 +1687,20 @@ button:not(:disabled),
   .analytics-dayparts > a > div { @apply flex items-baseline gap-2; }
   .analytics-dayparts > a > div strong { @apply text-sm font-black; }
   .analytics-dayparts > a > div span,
-  .analytics-dayparts > a > span { @apply text-[10px] font-bold text-karimoff-muted; }
+  .analytics-dayparts > a > span { @apply text-[11px] font-bold text-karimoff-muted; }
   .analytics-dayparts > a > strong { @apply font-black tabular-nums; }
 
   .analytics-treemap { @apply flex min-h-[360px] flex-wrap content-stretch gap-2 p-3 sm:p-5; }
   .analytics-treemap > a { @apply flex min-h-[116px] min-w-[150px] flex-grow flex-col justify-end overflow-hidden rounded-lg border border-black/[0.07] p-4 text-karimoff-black transition hover:-translate-y-0.5 hover:shadow-lg; background: var(--analytics-soft, #fbf9f6); border-top: 4px solid var(--analytics-accent, #fb670a); }
-  .analytics-treemap > a span { @apply mb-auto truncate text-[9px] font-black uppercase opacity-60; }
+  .analytics-treemap > a span { @apply mb-auto truncate text-[11px] font-black uppercase opacity-70; }
   .analytics-treemap > a strong { @apply line-clamp-2 text-sm font-black leading-tight; }
   .analytics-treemap > a b { @apply mt-2 text-lg font-black tabular-nums; }
-  .analytics-treemap > a small { @apply mt-1 text-[9px] font-bold opacity-65; }
+  .analytics-treemap > a small { @apply mt-1 text-[11px] font-bold opacity-75; }
 
   .analytics-pareto-summary { @apply grid grid-cols-3 gap-px overflow-hidden border-b border-black/[0.07] bg-black/[0.07]; }
   .analytics-pareto-summary > div { @apply grid justify-items-center gap-1 bg-[#FBF9F6] px-2 py-4 text-center; }
   .analytics-pareto-summary span,
-  .analytics-pareto-summary small { @apply text-[9px] font-bold text-karimoff-muted; }
+  .analytics-pareto-summary small { @apply text-[11px] font-bold text-karimoff-muted; }
   .analytics-pareto-summary strong { @apply text-xl font-black; }
   .analytics-pareto-list { @apply grid gap-2 px-5 py-4 sm:px-6; }
   .analytics-pareto-list > div { @apply grid grid-cols-[28px_minmax(90px,0.9fr)_minmax(80px,1fr)_45px] items-center gap-2 text-xs; }
@@ -1550,8 +1729,8 @@ button:not(:disabled),
   .analytics-pair-grid article > div span { @apply text-[10px] font-black text-karimoff-muted; }
   .analytics-pair-grid dl { @apply mt-auto grid grid-cols-3 gap-2 border-t border-black/[0.07] pt-3; }
   .analytics-pair-grid dl div { @apply grid gap-1; }
-  .analytics-pair-grid dt { @apply text-[8px] font-bold text-karimoff-muted; }
-  .analytics-pair-grid dd { @apply text-[10px] font-black tabular-nums; }
+  .analytics-pair-grid dt { @apply text-[11px] font-bold text-karimoff-muted; }
+  .analytics-pair-grid dd { @apply text-xs font-black tabular-nums; }
 
   .analytics-panel-note { @apply border-b border-black/[0.06] bg-amber-50 px-5 py-3 text-[10px] font-semibold leading-relaxed text-amber-900 sm:px-6; }
 
@@ -1672,8 +1851,11 @@ button:not(:disabled),
 .admin-workspace .admin-page > div > header :is(a, button) { border-radius: 6px; }
 .admin-workspace .admin-control,
 .admin-workspace .admin-field :is(input, select, textarea),
-.admin-workspace .management-number-input { min-height: 36px; }
+.admin-workspace .management-number-input { min-height: 40px; border-radius: 6px; }
 .admin-workspace .management-number-input input { font-size: 14px; }
+.admin-workspace :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus-visible { outline: 2px solid #B74700; outline-offset: 1px; }
+.admin-workspace .text-karimoff-orange { color: var(--karimoff-orange-contrast); }
+.admin-workspace :is(a, button).bg-karimoff-orange { color: var(--karimoff-black); }
 .admin-workspace .analytics-kpi-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-height: 132px; box-shadow: none; }
 .admin-workspace .analytics-kpi-value { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .admin-workspace .analytics-sparkline { position: static; width: 64px; height: 24px; flex-shrink: 0; }
@@ -2229,61 +2411,36 @@ html[data-theme="dark"] .admin-root :where(.bg-karimoff-cream, .bg-karimoff-soft
   }
 }
 
-.not-found-grid {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, black, transparent 84%);
-}
-
-.not-found-number {
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.16), 0 24px 52px rgba(0, 0, 0, 0.42);
-}
-
-.not-found-ticket::before,
-.not-found-ticket::after {
-  position: absolute;
-  top: 48px;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: #101011;
-  content: "";
-}
-
-.not-found-ticket::before { left: -11px; }
-.not-found-ticket::after { right: -11px; }
-
-.not-found-scan {
-  box-shadow: inset 0 0 0 10px rgba(251, 103, 10, 0.08), 0 0 24px rgba(251, 103, 10, 0.24);
-  animation: not-found-pulse 2.4s ease-in-out infinite;
-}
-
-.not-found-ticker-track {
-  animation: not-found-ticker 18s linear infinite;
-}
-
-@keyframes not-found-pulse {
-  0%, 100% { transform: scale(0.92); opacity: 0.6; }
-  50% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes not-found-ticker {
-  to { transform: translateX(-50%); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .public-button-primary:hover,
+  .public-button-primary:active,
+  .public-button-secondary:hover,
+  .public-button-secondary:active,
+  .public-button-on-dark:hover,
+  .public-button-on-dark:active,
+  .public-button-ghost:hover,
+  .public-button-ghost:active,
+  .public-button-danger:hover,
+  .public-button-danger:active,
+  .public-icon-button:hover,
+  .public-icon-button:active,
+  .public-filter-chip:hover,
+  .public-filter-chip:active,
+  .product-photo img,
+  [class*="active:scale"]:active {
+    transform: none !important;
   }
 
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
   }
 }

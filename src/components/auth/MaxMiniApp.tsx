@@ -3,6 +3,7 @@
 import { Check, CircleAlert, LoaderCircle, Phone, ShieldCheck } from "lucide-react";
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BrandWordmark } from "@/components/Logo";
 import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 
 type MaxContact = {
@@ -181,7 +182,7 @@ export function MaxMiniApp({ configured }: { configured: boolean }) {
       />
       <section className="w-full max-w-md rounded-lg border border-white/15 bg-white p-6 text-[#0D001A] shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:p-8" aria-live="polite">
         <div className="flex items-center justify-between gap-4">
-          <p className="font-heading text-xl font-black">KARIMOFF</p>
+          <BrandWordmark size="md" />
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#471AFF] text-white shadow-[0_10px_24px_rgba(71,26,255,0.28)]">
             <SocialProviderIcon provider="max" className="h-7 w-7" />
           </span>

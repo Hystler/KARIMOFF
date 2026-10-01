@@ -30,7 +30,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
     <footer className="border-t border-karimoff-line bg-white text-karimoff-black">
       <div className="container-page grid gap-8 py-10 sm:grid-cols-[1.1fr_0.9fr_1fr]">
         <div>
-          <Logo compact />
+          <Logo />
           <p className="mt-4 max-w-sm text-sm leading-6 text-karimoff-muted">
             Первый фастфуд, приготовленный для вас с любовью
           </p>
@@ -40,7 +40,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
         </div>
         <nav className="grid gap-3" aria-label="Навигация в подвале">
           {footerMenu.map((item) => (
-            <Link key={item.href} href={item.href} className="inline-flex min-h-10 items-center text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
+            <Link key={item.href} href={item.href} className="inline-flex min-h-10 items-center text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange-contrast">
               {item.label}
             </Link>
           ))}
@@ -50,7 +50,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
           {settings.phone && phoneHref ? (
             <p>
               Телефон:{" "}
-              <a href={phoneHref} className="font-semibold transition hover:text-karimoff-orange">
+              <a href={phoneHref} className="font-semibold transition hover:text-karimoff-orange-contrast">
                 {settings.phone}
               </a>
             </p>
@@ -66,7 +66,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
         <div className="container-page grid gap-5 py-6 text-xs text-karimoff-muted">
           <nav className="flex flex-wrap gap-x-5 gap-y-3" aria-label="Юридическая информация">
             {legalMenu.map((item) => (
-              <Link key={item.href} href={item.href} className="font-semibold transition hover:text-karimoff-orange">
+              <Link key={item.href} href={item.href} className="font-semibold transition hover:text-karimoff-orange-contrast">
                 {item.label}
               </Link>
             ))}

@@ -31,6 +31,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/login/actions";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { BrandWordmark } from "@/components/Logo";
 import type { CurrentStaff } from "@/lib/admin-auth";
 
 const navigation = [
@@ -77,8 +78,8 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
       {isOpen ? <button type="button" className="admin-sidebar-overlay" aria-label="Закрыть меню" onClick={() => setIsOpen(false)} /> : null}
       <aside className={`admin-sidebar ${isOpen ? "admin-sidebar-open" : ""}`}>
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-          <Link href={staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} className="text-xl font-black text-white">
-            KARIM<span className="text-karimoff-orange">O</span>FF
+          <Link href={staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} aria-label="KARIMOFF" className="inline-flex min-h-11 items-center">
+            <BrandWordmark inverse decorative size="sm" />
           </Link>
           <button type="button" onClick={() => setIsOpen(false)} className="admin-sidebar-close" aria-label="Закрыть">
             <X size={20} />

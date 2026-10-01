@@ -62,7 +62,7 @@ export function SocialLinks({ settings }: SocialLinksProps) {
           data-fallback-href={link.fallbackHref}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-karimoff-line bg-white text-karimoff-black shadow-[0_10px_24px_rgba(18,18,20,0.05)] transition hover:-translate-y-0.5 hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-karimoff-line bg-white text-karimoff-black shadow-[0_10px_24px_rgba(18,18,20,0.05)] transition hover:-translate-y-0.5 hover:border-karimoff-orange-contrast hover:text-karimoff-orange-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast"
           aria-label={link.label}
         >
           {link.icon}

@@ -5,7 +5,7 @@ export function CookieSettingsButton() {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event("karimoff-open-cookie-settings"))}
-      className="text-left text-xs font-semibold text-karimoff-muted transition hover:text-karimoff-orange"
+      className="text-left text-xs font-semibold text-karimoff-muted transition hover:text-karimoff-orange-contrast"
     >
       Настройки cookies
     </button>

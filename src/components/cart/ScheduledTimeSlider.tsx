@@ -30,7 +30,7 @@ export function ScheduledTimeSlider({ slots, value, onChange }: ScheduledTimeSli
           <p className="mt-1 text-xs leading-5 text-karimoff-muted">Шаг 15 минут</p>
         </div>
         <output className="inline-flex min-h-11 items-center gap-2 rounded-full bg-karimoff-black px-4 text-base font-black tabular-nums text-white shadow-[0_10px_24px_rgba(18,18,20,0.16)]">
-          <Clock3 size={17} className="text-karimoff-orange" />
+          <Clock3 size={17} className="text-karimoff-orange-contrast" />
           {selectedTime}
         </output>
       </div>

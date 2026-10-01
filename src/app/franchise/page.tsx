@@ -35,7 +35,7 @@ function TextBlock({
     <section className="container-page pb-12 sm:pb-16">
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-karimoff-orange">{eyebrow}</p>
+          <p className="text-sm font-semibold text-karimoff-orange-contrast">{eyebrow}</p>
           <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">{title}</h2>
         </div>
         <div className="grid min-w-0 max-w-[760px] grid-cols-1 gap-5 text-[17px] leading-8 text-karimoff-muted sm:text-lg">{children}</div>
@@ -122,7 +122,7 @@ export default async function FranchisePage() {
       <section className="container-page pb-12 sm:pb-16">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
-            <p className="text-sm font-semibold text-karimoff-orange">Что получает партнер</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Что получает партнер</p>
             <h2 className="mt-3 max-w-xl text-2xl font-black leading-[1.15] sm:text-3xl">
               Не просто имя бренда, а систему управления
             </h2>
@@ -148,7 +148,7 @@ export default async function FranchisePage() {
           </article>
 
           <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
-            <p className="text-sm font-semibold text-karimoff-orange">Кому подойдет KARIMOFF</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Кому подойдет KARIMOFF</p>
             <h2 className="mt-3 max-w-xl text-2xl font-black leading-[1.15] sm:text-3xl">
               Предпринимателям, которые готовы быть внутри дела
             </h2>

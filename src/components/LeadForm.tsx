@@ -59,7 +59,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
     <section id="lead" className="container-page scroll-mt-28 py-12 sm:py-16">
       <div className="grid grid-cols-1 gap-7 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7 lg:grid-cols-[0.72fr_1fr] lg:gap-10 lg:p-9">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-karimoff-orange">Заявка</p>
+          <p className="text-sm font-semibold text-karimoff-orange-contrast">Заявка</p>
           <h2 className="mt-3 text-balance text-3xl font-black leading-[1.12] text-karimoff-black sm:text-4xl">
             Связаться с KARIMOFF
           </h2>
@@ -80,7 +80,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               name="name"
               required
               placeholder="Ваше имя"
-              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="public-field"
             />
           </label>
           <label className="grid gap-2">
@@ -88,7 +88,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             <PhoneInput
               name="phone"
               required
-              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="public-field"
             />
           </label>
           <label className="grid gap-2">
@@ -96,7 +96,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             <select
               ref={interestRef}
               name="interest"
-              className="h-[50px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="public-field"
               defaultValue={defaultInterest}
               onChange={(event) => setSelectedInterest(event.target.value as LeadFormInput["interest"])}
             >
@@ -132,7 +132,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
                         : "/legal/personal-data-consent"
                   }
                   target="_blank"
-                  className="font-bold text-karimoff-orange"
+                  className="font-bold text-karimoff-orange-contrast"
                 >
                   Текст согласия
                 </Link>
@@ -145,7 +145,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               </summary>
               <label className="flex items-start gap-2.5 pb-1 pl-1">
                 <input type="checkbox" name="marketing_consent" className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange" />
-                <span className="leading-5 text-karimoff-muted">Согласен получать акции и предложения. <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange">Условия</Link></span>
+                <span className="leading-5 text-karimoff-muted">Согласен получать акции и предложения. <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange-contrast">Условия</Link></span>
               </label>
             </details>
           </div>
@@ -157,7 +157,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
               rows={4}
               defaultValue={defaultComment}
               placeholder="Расскажите, что нужно подготовить"
-              className="resize-none rounded-lg border border-karimoff-line bg-white px-4 py-3 text-karimoff-black outline-none transition placeholder:text-karimoff-muted/55 focus:border-karimoff-orange focus:shadow-[0_0_0_4px_rgba(251,103,10,0.10)]"
+              className="public-field min-h-[96px] resize-none py-3"
             />
           </label>
           <button
@@ -168,7 +168,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             {isPending ? "Отправляем" : "Отправить заявку"}
           </button>
           {state.status !== "idle" ? (
-            <p className={state.status === "success" ? "text-sm font-semibold text-karimoff-orange" : "text-sm font-semibold text-red-600"}>
+            <p className={state.status === "success" ? "text-sm font-semibold text-karimoff-orange-contrast" : "text-sm font-semibold text-red-600"}>
               {state.message}
             </p>
           ) : null}

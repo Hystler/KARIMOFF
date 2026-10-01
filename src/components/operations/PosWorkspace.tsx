@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
+import { BrandWordmark } from "@/components/Logo";
 import styles from "./PosWorkspace.module.css";
 import {
   CheckCircle2,
@@ -271,7 +272,7 @@ export function PosWorkspace({
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="truncate text-lg font-black leading-tight">KARIMOFF POS</p>
+                <p className="flex items-center gap-2 truncate text-lg font-black leading-tight"><BrandWordmark inverse size="sm" /><span>POS</span></p>
                 {testMode ? <span className="rounded-md bg-sky-400/15 px-2 py-1 text-[10px] font-black uppercase text-sky-300">Test</span> : null}
               </div>
               <p className="truncate text-xs text-white/55">{staffName} · касса</p>
@@ -322,7 +323,7 @@ export function PosWorkspace({
                     <button type="button" onClick={() => setCustomizer({ product, line: null })} className={`${styles.catalogMedia} relative aspect-[4/3] w-full overflow-hidden bg-[#F7F8F9] text-left active:scale-[0.99]`} aria-label={`Настроить ${product.name}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={productImage(product) ?? undefined} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
-                      {quantity ? <span className="absolute right-2 top-2 grid h-9 min-w-9 place-items-center rounded-full bg-[#FB670A] px-2 text-sm font-black text-white shadow-lg">{quantity}</span> : null}
+                      {quantity ? <span className="absolute right-2 top-2 grid h-9 min-w-9 place-items-center rounded-full bg-[#FB670A] px-2 text-sm font-black text-[#121214] shadow-lg">{quantity}</span> : null}
                     </button>
                     <div className={`${styles.catalogBody} flex flex-1 flex-col p-2.5`}>
                       <button type="button" onClick={() => setCustomizer({ product, line: null })} className="text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FB670A]/15">
@@ -330,7 +331,7 @@ export function PosWorkspace({
                         <p className="mt-1 text-base font-black tabular-nums text-[#D95405]">{formatRub(product.price)} ₽</p>
                       </button>
                       <div className={`mt-auto grid gap-2 pt-2 ${customizable ? "grid-cols-[minmax(0,1fr)_36px]" : "grid-cols-1"}`}>
-                        <button type="button" onClick={() => quickAdd(product)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-[#FB670A] px-2 text-xs font-bold text-white active:scale-[0.98]">
+                        <button type="button" onClick={() => quickAdd(product)} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-[#FB670A] px-2 text-xs font-bold text-[#121214] active:scale-[0.98]">
                           <CirclePlus size={19} /> Добавить
                         </button>
                         {customizable ? <button type="button" onClick={() => setCustomizer({ product, line: null })} className="grid min-h-9 place-items-center rounded-md border border-black/10" aria-label={`Настроить ${product.name}`} title="Настроить"><SlidersHorizontal size={17} /></button> : null}
@@ -399,7 +400,7 @@ export function PosWorkspace({
               {locations.length > 1 ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Точка</span><select name="location_id" defaultValue={initialLocationId} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold outline-none focus:border-[#FB670A]">{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label> : <input type="hidden" name="location_id" value={initialLocationId} />}
               <div className="flex items-center justify-between text-lg font-black"><span>Итого</span><span className="text-2xl tabular-nums text-[#D95405]">{formatRub(total)} ₽</span></div>
               {terminalMessage || state.status !== "idle" ? <div role="status" aria-live="polite" className={`rounded-lg px-4 py-3 text-sm font-bold ${state.status === "error" || terminalMessage.startsWith("Оплата не прошла") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>{state.status === "success" && !terminalMessage ? <CheckCircle2 className="mr-2 inline" size={18} /> : null}{terminalMessage || state.message}</div> : null}
-              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-white shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : "Перейти к оплате"}</button>
+              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : "Перейти к оплате"}</button>
             </div>
           </form>
         </aside>

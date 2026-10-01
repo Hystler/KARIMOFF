@@ -139,7 +139,7 @@ export function PaymentReturnStatus(props: {
 
   return (
     <div className="text-center" role="status" aria-live="polite">
-      <Clock3 className="mx-auto h-14 w-14 animate-pulse text-karimoff-orange" aria-hidden="true" />
+      <Clock3 className="mx-auto h-14 w-14 animate-pulse text-karimoff-orange-contrast" aria-hidden="true" />
       <h1 className="mt-5 text-3xl font-black">Проверяем оплату…</h1>
       <p className="mt-3 text-base leading-7 text-karimoff-muted">Платёж обрабатывается. Это может занять несколько секунд.</p>
     </div>

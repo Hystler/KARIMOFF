@@ -5,7 +5,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
     <main className="bg-karimoff-cream pb-16 pt-28 text-karimoff-black sm:pb-24 sm:pt-32">
       <header className="container-page">
         <div className="max-w-[820px] border-b border-karimoff-line pb-9">
-          <p className="text-sm font-bold text-karimoff-orange">KARIMOFF · юридическая информация</p>
+          <p className="text-sm font-bold text-karimoff-orange-contrast">KARIMOFF · юридическая информация</p>
           <h1 className="mt-4 text-balance text-3xl font-black leading-[1.1] sm:text-5xl sm:leading-[1.05]">
             {document.title}
           </h1>

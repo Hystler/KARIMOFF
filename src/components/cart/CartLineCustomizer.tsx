@@ -79,7 +79,7 @@ export function CartLineCustomizer({ line }: { line: CartLine }) {
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-karimoff-line bg-karimoff-cream px-4 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-karimoff-line bg-karimoff-cream px-4 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange-contrast hover:text-karimoff-orange-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast"
         aria-expanded={isOpen}
       >
         <SlidersHorizontal size={16} strokeWidth={2.4} />
@@ -136,7 +136,7 @@ export function CartLineCustomizer({ line }: { line: CartLine }) {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-karimoff-black">{option.name}</p>
-                        <p className="text-xs font-semibold text-karimoff-orange">
+                        <p className="text-xs font-semibold text-karimoff-orange-contrast">
                           +{formatPrice(option.extra_price)} ₽
                         </p>
                       </div>
@@ -184,7 +184,7 @@ export function CartLineCustomizer({ line }: { line: CartLine }) {
                 <legend className="flex items-center gap-2 text-xs font-black uppercase text-karimoff-black">
                   {group.name}
                   {group.min_selections > 0 ? (
-                    <span className="rounded-full bg-karimoff-orange/10 px-2 py-1 text-[10px] text-karimoff-orange">
+                    <span className="rounded-full bg-karimoff-orange/10 px-2 py-1 text-[10px] text-karimoff-orange-contrast">
                       Обязательно
                     </span>
                   ) : null}
@@ -206,10 +206,10 @@ export function CartLineCustomizer({ line }: { line: CartLine }) {
                         <span>
                           {option.label}
                           {option.price_delta > 0 ? (
-                            <span className="ml-1 font-bold text-karimoff-orange">+{formatPrice(option.price_delta)} ₽</span>
+                            <span className="ml-1 font-heading font-black text-karimoff-orange-contrast">+{formatPrice(option.price_delta)} ₽</span>
                           ) : null}
                         </span>
-                        {checked ? <Check size={16} className="shrink-0 text-karimoff-orange" /> : null}
+                        {checked ? <Check size={16} className="shrink-0 text-karimoff-orange-contrast" /> : null}
                       </button>
                     );
                   })}

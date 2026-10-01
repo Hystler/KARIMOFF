@@ -23,7 +23,7 @@ export function AuthForm({ mode, next, redirectTo, socialProviders = { telegram:
     currentUrl.searchParams.delete("socialError");
     window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
   }, [socialError]);
-  return <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-[0_24px_70px_rgba(18,18,20,0.10)] sm:p-8">
+  return <section className="rounded-panel border border-karimoff-line bg-white p-6 shadow-card sm:p-8">
     <h1 className="text-3xl font-black leading-tight text-karimoff-black">{mode === "register" ? "Создать профиль" : "Вход"}</h1>
     <p className="mt-4 text-sm leading-6 text-karimoff-muted">{available ? "Войдите через удобный мессенджер. Для нового гостя профиль создастся после подтверждения номера." : "Вход через мессенджеры временно недоступен. Попробуйте позже."}</p>
     <SocialAuthButtons enabled={socialProviders} onProviderStart={() => setVisibleSocialError(null)}

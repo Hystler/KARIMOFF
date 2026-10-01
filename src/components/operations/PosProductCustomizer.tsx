@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Check,
   Minus,
@@ -43,6 +43,7 @@ export function PosProductCustomizer({
   onClose: () => void;
   onSave: (value: { customization: PosCartCustomization; quantity: number }) => void;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
   const initial = line?.customization ?? (product ? defaultPosCustomization(product) : null);
   const [removed, setRemoved] = useState(() => new Set(initial?.removedIngredientIds ?? []));
   const [extras, setExtras] = useState<Record<string, number>>(() =>
@@ -118,10 +119,10 @@ export function PosProductCustomizer({
       {product ? (
         <motion.div
           className="fixed inset-0 z-[80] flex justify-end bg-black/45 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
+          initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          exit={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.18 }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="pos-customizer-title"
@@ -129,10 +130,10 @@ export function PosProductCustomizer({
           <button type="button" className="absolute inset-0 cursor-default" onClick={onClose} aria-label="Закрыть настройку блюда" />
           <motion.aside
             className="relative z-10 flex h-full w-full max-w-[620px] flex-col overflow-hidden bg-[#F5F3EF] shadow-2xl"
-            initial={{ x: "100%" }}
+            initial={reduceMotion ? false : { x: "100%" }}
             animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            exit={reduceMotion ? { x: 0 } : { x: "100%" }}
+            transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
           >
             <header className="flex items-start justify-between gap-4 border-b border-black/10 bg-white p-4 sm:p-6">
               <div className="min-w-0">
@@ -256,7 +257,7 @@ export function PosProductCustomizer({
                               <span className="block font-black">{option.label}</span>
                               {option.price_delta > 0 ? <span className="mt-1 block text-sm font-bold text-[#C94F05]">+{formatRub(option.price_delta)} ₽</span> : null}
                             </span>
-                            <span className={`grid h-6 w-6 shrink-0 place-items-center ${group.selection_type === "single" ? "rounded-full" : "rounded-md"} border ${checked ? "border-[#FB670A] bg-[#FB670A] text-white" : "border-black/20"}`}>{checked ? <Check size={16} /> : null}</span>
+                            <span className={`grid h-6 w-6 shrink-0 place-items-center ${group.selection_type === "single" ? "rounded-full" : "rounded-md"} border ${checked ? "border-[#FB670A] bg-[#FB670A] text-[#121214]" : "border-black/20"}`}>{checked ? <Check size={16} /> : null}</span>
                           </button>
                         );
                       })}
@@ -274,7 +275,7 @@ export function PosProductCustomizer({
 
             <footer className="border-t border-black/10 bg-white p-4 sm:p-6">
               {!groupsValid ? <p className="mb-3 text-sm font-bold text-red-700">Заполните обязательные группы.</p> : null}
-              <button type="button" onClick={save} disabled={!groupsValid} className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-lg bg-[#FB670A] px-5 text-base font-black text-white shadow-[0_14px_32px_rgba(251,103,10,0.25)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
+              <button type="button" onClick={save} disabled={!groupsValid} className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.25)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
                 <ShoppingBag size={21} />
                 <span>{line ? "Обновить позицию" : "Добавить в заказ"} · {formatRub(unitPrice * quantity)} ₽</span>
               </button>

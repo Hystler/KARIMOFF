@@ -1,6 +1,7 @@
 import { Download, QrCode, RotateCcw, ShieldCheck, WalletCards } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { BrandWordmark } from "@/components/Logo";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { ensureLoyaltyAccount } from "@/lib/loyalty";
@@ -28,7 +29,7 @@ export default async function LoyaltyCardPage() {
       <section className="container-page pb-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-karimoff-orange">KARIMOFF Bonus</p>
+            <p className="text-sm font-bold text-karimoff-orange-contrast">KARIMOFF Bonus</p>
             <h1 className="mt-2 text-3xl font-black sm:text-4xl">Карта гостя</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-karimoff-muted">Покажите QR кассиру до оплаты. Заказ появится в профиле, а начисления попадут на эту карту.</p>
           </div>
@@ -38,14 +39,14 @@ export default async function LoyaltyCardPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.75fr)]">
           <section className="overflow-hidden rounded-lg bg-[#111114] text-white shadow-[0_24px_70px_rgba(17,17,20,0.2)]">
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
-              <div><p className="text-xl font-black">KARIM<span className="text-karimoff-orange">O</span>FF</p><p className="mt-1 text-xs font-bold uppercase text-white/45">Карта гостя</p></div>
-              <WalletCards className="text-karimoff-orange" size={30} />
+              <div><BrandWordmark inverse size="sm" /><p className="mt-1 text-xs font-bold uppercase text-white/45">Карта гостя</p></div>
+              <WalletCards className="text-karimoff-orange-contrast" size={30} />
             </div>
             <div className="grid gap-6 p-6 sm:grid-cols-[1fr_230px] sm:items-center">
               <div>
                 <p className="text-sm font-bold text-white/55">Баланс</p>
-                <p className="mt-2 text-5xl font-black tabular-nums">{formatPoints(account?.points_balance ?? 0)}</p>
-                <p className="mt-2 text-sm font-bold text-karimoff-orange">баллов</p>
+                <p className="mt-2 font-heading text-5xl font-black tabular-nums">{formatPoints(account?.points_balance ?? 0)}</p>
+                <p className="mt-2 text-sm font-bold text-karimoff-orange-contrast">баллов</p>
                 <div className="mt-8">
                   <p className="text-xs font-bold uppercase text-white/40">Владелец</p>
                   <p className="mt-2 truncate text-lg font-black">{customer.name}</p>
@@ -61,7 +62,7 @@ export default async function LoyaltyCardPage() {
 
           <aside className="space-y-5">
             <section className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card">
-              <div className="flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-karimoff-soft text-karimoff-orange"><QrCode size={22} /></span><div><h2 className="text-xl font-black">Всегда под рукой</h2><p className="mt-2 text-sm leading-6 text-karimoff-muted">Откройте карту на телефоне или сохраните QR. На кассе достаточно показать код.</p></div></div>
+              <div className="flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-karimoff-soft text-karimoff-orange-contrast"><QrCode size={22} /></span><div><h2 className="text-xl font-black">Всегда под рукой</h2><p className="mt-2 text-sm leading-6 text-karimoff-muted">Откройте карту на телефоне или сохраните QR. На кассе достаточно показать код.</p></div></div>
               <a href="/api/loyalty/card/qr?download=1" download={`karimoff-${card.publicCode}.svg`} className="public-button-secondary mt-5 w-full px-5"><Download size={18} />Скачать QR</a>
             </section>
 

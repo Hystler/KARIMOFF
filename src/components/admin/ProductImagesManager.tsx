@@ -47,7 +47,7 @@ export function ProductImagesManager({ images, productId, productName }: Product
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   {image.is_primary ? (
-                    <span className="rounded-full bg-karimoff-orange px-3 py-1 text-xs font-black text-white">Главное фото</span>
+                    <span className="rounded-full bg-karimoff-orange px-3 py-1 text-xs font-black text-karimoff-black">Главное фото</span>
                   ) : (
                     <form action={setPrimaryProductImageAction}>
                       <input type="hidden" name="id" value={productId} />
