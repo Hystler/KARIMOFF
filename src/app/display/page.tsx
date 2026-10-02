@@ -1,6 +1,6 @@
 import { PickupDisplay } from "@/components/operations/PickupDisplay";
 import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
-import { isOrderVisibleToKitchen } from "@/lib/order-flow/permissions";
+import { isOrderVisibleToKitchen, isPickupDisplayOrder } from "@/lib/order-flow/permissions";
 import { getKitchenSla, getLatestOrderEventCursor, getOrderFlowQueue, getOrderLocations } from "@/lib/order-flow/queries";
 import type { PublicDisplayOrder } from "@/lib/order-flow/types";
 
@@ -36,6 +36,7 @@ export default async function DisplayPage({
   }
   const displayTestOrders = process.env.TEST_ORDER_MODE === "true";
   const publicOrders: PublicDisplayOrder[] = orders
+    .filter(isPickupDisplayOrder)
     .filter((order) => order.isTest === displayTestOrders)
     .filter((order) => isOrderVisibleToKitchen(order, sla))
     .map((order) => ({

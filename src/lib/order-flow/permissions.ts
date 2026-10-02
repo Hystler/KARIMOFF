@@ -43,10 +43,18 @@ export function canTransitionKitchen(
 export function isOrderVisibleToKitchen(order: OrderFlowOrder, sla: KitchenSla) {
   // Test orders exercise the full operational flow without depending on a real payment provider.
   if (order.isTest) return true;
-  // Evotor POS orders appear in the kitchen as soon as they are sent to the terminal.
-  if (order.source === "pos" && order.paymentProvider === "evotor") return true;
+  // A terminal command is not payment evidence; the bridge marks paid only with a receipt reference.
+  if (order.source === "pos" && order.paymentProvider === "evotor") {
+    return ["paid", "partially_refunded"].includes(order.paymentStatus)
+      && ["issued", "partially_refunded"].includes(order.fiscalStatus);
+  }
   const paid = order.paymentStatus === "paid" || order.paymentStatus === "partially_refunded";
   if ((order.source === "web" || order.source === "mobile") && sla.onlineRequiresPaid) return paid;
   if ((order.source === "pos" || order.source === "kiosk") && sla.posRequiresPaid) return paid;
   return true;
+}
+
+export function isPickupDisplayOrder(order: Pick<OrderFlowOrder, "fulfillmentType" | "kitchenStatus">) {
+  return order.fulfillmentType === "pickup"
+    && !["handed_to_courier", "handed_out", "cancelled"].includes(order.kitchenStatus);
 }

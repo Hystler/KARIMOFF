@@ -12,6 +12,7 @@ const legacyInventoryMigration = read("database/migrations/20260728083046_add_st
 const orderService = read("src/lib/order-flow/service.ts");
 const orderAction = read("src/app/actions/orders.ts");
 const posAction = read("src/app/pos/actions.ts");
+const evotorPosPayments = read("src/lib/integrations/evotor/pos-payments.ts");
 const kitchenAction = read("src/app/kitchen/actions.ts");
 const kitchen = read("src/components/operations/KitchenWorkspace.tsx");
 const displayPage = read("src/app/display/page.tsx");
@@ -78,9 +79,23 @@ test("KDS SLA and role transitions remain deterministic", () => {
         testOnlineVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "web", paymentStatus: "unpaid", isTest: true }, settings),
         posVisibleUnpaid: permissions.isOrderVisibleToKitchen({ source: "pos", paymentStatus: "unpaid" }, settings),
         evotorVisiblePending: permissions.isOrderVisibleToKitchen(
-          { source: "pos", paymentProvider: "evotor", paymentStatus: "pending" },
+          { source: "pos", paymentProvider: "evotor", paymentStatus: "pending", fiscalStatus: "pending" },
           { ...settings, posRequiresPaid: true }
-        )
+        ),
+        evotorPaidWithoutFiscal: permissions.isOrderVisibleToKitchen(
+          { source: "pos", paymentProvider: "evotor", paymentStatus: "paid", fiscalStatus: "pending" },
+          settings
+        ),
+        evotorPaidAndFiscalized: permissions.isOrderVisibleToKitchen(
+          { source: "pos", paymentProvider: "evotor", paymentStatus: "paid", fiscalStatus: "issued" },
+          settings
+        ),
+        pickupDisplay: [
+          permissions.isPickupDisplayOrder({ fulfillmentType: "pickup", kitchenStatus: "ready" }),
+          permissions.isPickupDisplayOrder({ fulfillmentType: "delivery", kitchenStatus: "ready" }),
+          permissions.isPickupDisplayOrder({ fulfillmentType: "delivery", kitchenStatus: "handed_to_courier" }),
+          permissions.isPickupDisplayOrder({ fulfillmentType: "delivery", kitchenStatus: "handed_out" })
+        ]
       }));
     `);
   } finally {
@@ -94,9 +109,14 @@ test("KDS SLA and role transitions remain deterministic", () => {
   assert.equal(result.onlineVisibleUnpaid, false);
   assert.equal(result.testOnlineVisibleUnpaid, true);
   assert.equal(result.posVisibleUnpaid, true);
-  assert.equal(result.evotorVisiblePending, true);
+  assert.equal(result.evotorVisiblePending, false);
+  assert.equal(result.evotorPaidWithoutFiscal, false);
+  assert.equal(result.evotorPaidAndFiscalized, true);
+  assert.deepEqual(result.pickupDisplay, [true, false, false, false]);
   assert.match(kitchenSettingsAction, /criticalMinutes > value\.warningMinutes/);
   assert.match(kitchenSettingsAction, /inventory_trigger[\s\S]+'ready'/);
+  assert.match(evotorPosPayments, /set payment_status = 'pending',[\s\S]+fiscal_status = 'pending',[\s\S]+is_operational = false/);
+  assert.match(evotorPosPayments, /set payment_status = 'paid', fiscal_status = 'issued', is_operational = true/);
 });
 
 test("daily A/B numbering is atomic, location-scoped, and date-scoped", () => {
@@ -153,6 +173,7 @@ test("status history, outbox, and realtime delivery do not expose customer PII",
 });
 
 test("pickup display receives only explicitly public order fields", () => {
+  assert.match(displayPage, /\.filter\(isPickupDisplayOrder\)/);
   for (const field of ["displayNumber", "kitchenStatus", "publicDisplayName", "publicAvatarSeed", "publicAvatar"]) {
     assert.match(displayPage, new RegExp(`${field}: order\\.${field}`));
   }

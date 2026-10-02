@@ -242,8 +242,7 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
       update public.orders
       set payment_status = 'pending',
           fiscal_status = 'pending',
-          is_operational = true,
-          operational_started_at = coalesce(operational_started_at, now()),
+          is_operational = false,
           source_metadata = coalesce(source_metadata, '{}'::jsonb)
             || jsonb_build_object(
               'payment_required', true,
