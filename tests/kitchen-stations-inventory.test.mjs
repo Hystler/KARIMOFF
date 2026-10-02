@@ -7,7 +7,7 @@ import ts from "typescript";
 
 const migration = readFileSync("database/migrations/20260911163830_kitchen_stations_and_pilot_inventory_policy.sql", "utf8");
 const dsn = process.env.KITCHEN_TEST_DATABASE_URL;
-const localOnly = { skip: !dsn && "Requires explicit disposable 55440 KITCHEN_TEST_DATABASE_URL" };
+const localOnly = { skip: !dsn && "Requires explicit disposable 55442 KITCHEN_TEST_DATABASE_URL" };
 const rollback = new Error("ROLLBACK_KITCHEN_FIXTURE");
 
 function load(path, imports = {}, env = {}) {
@@ -32,7 +32,7 @@ function service(sql, isTest = false) {
 }
 
 async function withFixture(run, options = {}) {
-  assert.equal(dsn, "postgres://postgres@127.0.0.1:55440/karimoff_audit", "Never use shared or old audit databases");
+  assert.equal(dsn, "postgres://postgres@127.0.0.1:55442/karimoff_audit", "Never use shared or old audit databases");
   const sql = postgres(dsn, { max: 1, connect_timeout: 5, onnotice() {} });
   try {
     const [identity] = await sql`select current_database() as name,
@@ -112,7 +112,7 @@ test("forward SQL retains existing loyalty accounting and protected commercial l
   assert.match(migration, /default 'allow_negative'/);
 });
 
-test("55440: migration supports Timeweb without legacy browser roles", localOnly, async () => {
+test("55442: migration supports Timeweb without legacy browser roles", localOnly, async () => {
   await withFixture(async (sql, f) => {
     const [roles] = await sql`select count(*)::int as count from pg_roles
       where rolname in ('audit_missing_anon_role', 'audit_missing_authenticated_role')`;
@@ -127,7 +127,7 @@ test("55440: migration supports Timeweb without legacy browser roles", localOnly
   });
 });
 
-test("55440: real mixed order, zero stock, repeated station ready and handout deduct exactly once", localOnly, async () => {
+test("55442: real mixed order, zero stock, repeated station ready and handout deduct exactly once", localOnly, async () => {
   await withFixture(async (sql, f) => {
     await sql`set local role karimoff_app`;
     await f.advance("main", "cooking");
@@ -168,7 +168,7 @@ test("55440: real mixed order, zero stock, repeated station ready and handout de
   });
 });
 
-test("55440: block mode rolls back final station and accounting; reversible pilot setting succeeds", localOnly, async () => {
+test("55442: block mode rolls back final station and accounting; reversible pilot setting succeeds", localOnly, async () => {
   await withFixture(async (sql, f) => {
     await f.advance("main", "cooking");
     await f.advance("snacks", "cooking");
@@ -188,7 +188,7 @@ test("55440: block mode rolls back final station and accounting; reversible pilo
   }, { stock: 0, policy: "block" });
 });
 
-test("55440: strict mode succeeds at exact stock and negative stock is not clamped", localOnly, async () => {
+test("55442: strict mode succeeds at exact stock and negative stock is not clamped", localOnly, async () => {
   for (const [policy, stock, expected] of [["block", 40, 0], ["allow_negative", 7, -33], ["allow_negative", -10, -50]]) {
     await withFixture(async (_sql, f) => {
       for (const station of ["main", "snacks"]) { await f.advance(station, "cooking"); await f.advance(station, "ready"); }
@@ -198,7 +198,7 @@ test("55440: strict mode succeeds at exact stock and negative stock is not clamp
   }
 });
 
-test("55440: missing stock row is materialized and full immutable snapshot is consumed", localOnly, async () => {
+test("55442: missing stock row is materialized and full immutable snapshot is consumed", localOnly, async () => {
   await withFixture(async (sql, f) => {
     await sql`update public.product_ingredients set quantity = 99 where ingredient_id = ${f.ingredientId}`;
     for (const station of ["main", "snacks"]) { await f.advance(station, "cooking"); await f.advance(station, "ready"); }
@@ -207,7 +207,7 @@ test("55440: missing stock row is materialized and full immutable snapshot is co
   }, { missingStock: true });
 });
 
-test("55440: drinks, sauces and unknown categories need only the snacks employee; rolls belong to mains", localOnly, async () => {
+test("55442: drinks, sauces and unknown categories need only the snacks employee; rolls belong to mains", localOnly, async () => {
   await withFixture(async (sql, f) => {
     const mapped = await sql`select public.kitchen_station_for_category(category) as station
       from unnest(array['Бургеры','Шаурма','shawarma','Роллы','rolls','Снэки','Напитки','Соусы','unknown']) category`;
@@ -221,7 +221,7 @@ test("55440: drinks, sauces and unknown categories need only the snacks employee
   }, { categories: ["Роллы", "Снэки", "Напитки", "Соусы"] });
 });
 
-test("55440: unauthorized roles, invalid stations, premature ready and test/prod mismatch stay blocked", localOnly, async () => {
+test("55442: unauthorized roles, invalid stations, premature ready and test/prod mismatch stay blocked", localOnly, async () => {
   await withFixture(async (sql, f) => {
     await assert.rejects(f.advance("main", "ready"), /Сначала начните/);
     await assert.rejects(f.advance("main", "cooking", "cashier"), /Недостаточно прав/);
@@ -235,7 +235,7 @@ test("55440: unauthorized roles, invalid stations, premature ready and test/prod
   });
 });
 
-test("55440: hotdogs use mains in SQL and the legacy queue fallback without finishing snacks", localOnly, async () => {
+test("55442: hotdogs use mains in SQL and the legacy queue fallback without finishing snacks", localOnly, async () => {
   await withFixture(async (sql, f) => {
     const aliases = ['Хот-Доги', 'хот дог', 'хотдог', 'Hot Dogs', 'hot-dogs'];
     const stations = load("src/lib/order-flow/kitchen-stations.ts");
@@ -269,7 +269,7 @@ test("55440: hotdogs use mains in SQL and the legacy queue fallback without fini
   }, { categories: ['Хот-Доги', 'Снэки'] });
 });
 
-test("55440: test orders still complete without stock, payment or fiscal mutations", localOnly, async () => {
+test("55442: test orders still complete without stock, payment or fiscal mutations", localOnly, async () => {
   await withFixture(async (_sql, f) => {
     for (const station of ["main", "snacks"]) { await f.advance(station, "cooking"); await f.advance(station, "ready"); }
     const row = await f.snapshot();
@@ -281,7 +281,7 @@ test("55440: test orders still complete without stock, payment or fiscal mutatio
   }, { isTest: true, policy: "block" });
 });
 
-test("55440: online payment guard and immutable paid lines survive station readiness; settlement remains exactly once", localOnly, async () => {
+test("55442: online payment guard and immutable paid lines survive station readiness; settlement remains exactly once", localOnly, async () => {
   await withFixture(async (sql, f) => {
     const [customer] = await sql`insert into public.customers (name, phone, phone_verified_at)
       values ('Kitchen payment fixture', ${`+7${randomInt(1_000_000_000, 9_999_999_999)}`}, now()) returning id`;
@@ -313,7 +313,7 @@ test("55440: online payment guard and immutable paid lines survive station readi
   });
 });
 
-test("55440: legacy single-station complete also honors pilot policy and repeated ready", localOnly, async () => {
+test("55442: legacy single-station complete also honors pilot policy and repeated ready", localOnly, async () => {
   await withFixture(async (sql, f) => {
     const advance = (status) => service(sql).transitionOrder({ orderId: f.orderId, status, actorId: null, actorRole: 'cook', deviceSource: 'legacy-kds' });
     await advance('cooking');
@@ -326,8 +326,8 @@ test("55440: legacy single-station complete also honors pilot policy and repeate
   }, { categories: ['Бургеры'] });
 });
 
-test("55440: simultaneous employees and duplicate ready requests serialize into one deduction", localOnly, async () => {
-  assert.equal(dsn, "postgres://postgres@127.0.0.1:55440/karimoff_audit");
+test("55442: simultaneous employees and duplicate ready requests serialize into one deduction", localOnly, async () => {
+  assert.equal(dsn, "postgres://postgres@127.0.0.1:55442/karimoff_audit");
   const sql = postgres(dsn, { max: 4, connect_timeout: 5, onnotice() {} });
   let f;
   try {

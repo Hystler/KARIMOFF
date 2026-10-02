@@ -96,7 +96,7 @@ test("disposable PG17: POS to cooking, ready and handout with zero stock and no 
   skip: process.env.YOOKASSA_AUDIT_LOCAL_DSN ? false : "Requires explicit disposable local DSN"
 }, async () => {
   const dsn = process.env.YOOKASSA_AUDIT_LOCAL_DSN;
-  assert.equal(dsn, "postgres://postgres@127.0.0.1:55439/karimoff_audit");
+  assert.equal(dsn, "postgres://postgres@127.0.0.1:55441/karimoff_audit");
   const sql = postgres(dsn, { max: 1, connect_timeout: 5, onnotice() {} });
   const rollback = new Error("fixture rollback");
   try {

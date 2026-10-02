@@ -6,13 +6,19 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
-if (process.argv[2] !== "--disposable-audit" || process.argv.slice(3).some(value => value !== "--ui-audit")) {
-  throw new Error("Use --disposable-audit. No custom target or environment configuration is accepted.");
+const profileArg = process.argv[3] ?? "";
+if (process.argv[2] !== "--disposable-audit" || process.argv.length > 4 || !["", "--ui-audit", "--release-candidate", "--release-candidate-ui"].includes(profileArg)) {
+  throw new Error("Use --disposable-audit with an optional fixed profile. No custom target or environment configuration is accepted.");
 }
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const auditId = process.argv.includes("--ui-audit") ? "20260911" : "20260908";
-const port = auditId === "20260911" ? 55440 : 55439;
+const profile = {
+  "": { id: "20260908", port: 55439 },
+  "--ui-audit": { id: "20260911", port: 55440 },
+  "--release-candidate": { id: "20261002", port: 55441 },
+  "--release-candidate-ui": { id: "20261002-ui", port: 55442 }
+}[profileArg];
+const { id: auditId, port } = profile;
 const container = `karimoff-audit-${auditId}`;
 const volume = `${container}-data`;
 const network = `${container}-network`;

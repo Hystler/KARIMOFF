@@ -14,7 +14,7 @@ const localDatabase = { skip: enabled ? false : "Set YOOKASSA_AUDIT_LOCAL_DSN to
 const rollback = new Error("ROLLBACK_AUDIT_FIXTURE");
 
 async function withDatabase(callback) {
-  if (databaseUrl !== "postgres://postgres@127.0.0.1:55439/karimoff_audit") {
+  if (databaseUrl !== "postgres://postgres@127.0.0.1:55441/karimoff_audit") {
     throw new Error("Only the explicitly authorized disposable PG17 endpoint is allowed");
   }
   const sql = postgres(databaseUrl, { max: 1, connect_timeout: 5, idle_timeout: 1, onnotice() {} });

@@ -5,7 +5,7 @@ import postgres from "postgres";
 import ts from "typescript";
 import { loadTypeScript } from "./helpers/load-typescript.mjs";
 
-const { SALE_FOOD_COST_JOIN } = loadTypeScript("src/lib/analytics/sale-food-cost.ts");
+const { PRODUCT_FOOD_COST_CTE, SALE_FOOD_COST_JOIN } = loadTypeScript("src/lib/analytics/sale-food-cost.ts");
 
 async function dashboardQueries() {
   const captured = [];
@@ -20,7 +20,7 @@ async function dashboardQueries() {
       captured.push(text);
       return [];
     } }) },
-    "./sale-food-cost": { SALE_FOOD_COST_JOIN },
+    "./sale-food-cost": { PRODUCT_FOOD_COST_CTE, SALE_FOOD_COST_JOIN },
     "./categories": { analyticsCategorySql: () => "i.category" },
     "./query": {
       buildSalesWhere: () => ({ text: "true", values: [] }),
@@ -64,16 +64,16 @@ test("confirmed Evotor portions require an explicit size in the source product n
 
 const fixtures = {
   ingredients: [
-    { id: "portion-piece", cost_per_unit: 14.4, waste_percent: 0, unit: "pcs" },
-    { id: "piece", cost_per_unit: 10, waste_percent: 20, unit: "pcs" },
-    { id: "extra", cost_per_unit: 4, waste_percent: 0, unit: "pcs" },
-    { id: "zero-price", cost_per_unit: 0, waste_percent: 0, unit: "pcs" },
-    { id: "null-price", cost_per_unit: null, waste_percent: 0, unit: "pcs" },
-    { id: "chicken", cost_per_unit: 1, waste_percent: 0, unit: "g" },
-    { id: "beef", cost_per_unit: 2, waste_percent: 0, unit: "g" },
-    { id: "pork-sausage", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
-    { id: "chicken-sausage", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
-    { id: "beef-sausage", cost_per_unit: 76, waste_percent: 0, unit: "pcs" }
+    { id: "portion-piece", name: "Порция", cost_per_unit: 14.4, waste_percent: 0, unit: "pcs" },
+    { id: "piece", name: "Ингредиент", cost_per_unit: 10, waste_percent: 20, unit: "pcs" },
+    { id: "extra", name: "Добавка", cost_per_unit: 4, waste_percent: 0, unit: "pcs" },
+    { id: "zero-price", name: "Нулевая цена", cost_per_unit: 0, waste_percent: 0, unit: "pcs" },
+    { id: "null-price", name: "Нет цены", cost_per_unit: null, waste_percent: 0, unit: "pcs" },
+    { id: "chicken", name: "Курица", cost_per_unit: 1, waste_percent: 0, unit: "g" },
+    { id: "beef", name: "Говядина", cost_per_unit: 2, waste_percent: 0, unit: "g" },
+    { id: "pork-sausage", name: "Колбаска свиная", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
+    { id: "chicken-sausage", name: "Колбаска куриная", cost_per_unit: 50, waste_percent: 0, unit: "pcs" },
+    { id: "beef-sausage", name: "Колбаска говяжья", cost_per_unit: 76, waste_percent: 0, unit: "pcs" }
   ],
   recipes: [
     { product_id: "actual-portion", ingredient_id: "portion-piece", quantity: 6, unit: "pcs" },
@@ -170,7 +170,7 @@ const expectedCosts = {
 const fixtureCtes = `
   fixture_ingredients as (
     select * from jsonb_to_recordset($1::text::jsonb)
-      as x(id text, cost_per_unit numeric, waste_percent numeric, unit text)
+      as x(id text, name text, cost_per_unit numeric, waste_percent numeric, unit text)
   ), fixture_recipes as (
     select * from jsonb_to_recordset($2::text::jsonb)
       as x(product_id text, ingredient_id text, quantity numeric, unit text)
