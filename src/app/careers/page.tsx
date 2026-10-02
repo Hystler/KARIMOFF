@@ -33,7 +33,7 @@ export default async function CareersPage() {
       <section className="container-page py-12 sm:py-16">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-karimoff-orange">Команда</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Команда</p>
             <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Хорошая бургерная начинается с людей
             </h2>
@@ -66,7 +66,7 @@ export default async function CareersPage() {
       <section className="container-page pb-12 sm:pb-16">
         <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold text-karimoff-orange">Что мы предлагаем</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Что мы предлагаем</p>
             <h2 className="mt-3 text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Понятные условия и поддержка команды
             </h2>
@@ -86,7 +86,7 @@ export default async function CareersPage() {
         <div className="rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.72fr_1fr]">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-karimoff-orange">Открытые вакансии</p>
+              <p className="text-sm font-semibold text-karimoff-orange-contrast">Открытые вакансии</p>
               <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
                 Роли, в которых сейчас нужна команда
               </h2>
@@ -124,7 +124,7 @@ export default async function CareersPage() {
                     <div className="mt-4 grid gap-2 text-sm leading-6 text-karimoff-muted">
                       {vacancy.schedule ? <p>График: {vacancy.schedule}</p> : null}
                       {vacancy.location ? <p>Локация: {vacancy.location}</p> : null}
-                      {salary ? <p className="font-black text-karimoff-orange">{salary}</p> : null}
+                      {salary ? <p className="font-heading font-black text-karimoff-orange-contrast">{salary}</p> : null}
                     </div>
                     <p className="mt-4 line-clamp-3 text-sm leading-6 text-karimoff-muted">
                       {vacancy.description ?? "Роль в команде KARIMOFF с обучением стандартам и поддержкой на старте."}
@@ -141,7 +141,7 @@ export default async function CareersPage() {
       <section className="container-page pb-12 sm:pb-16">
         <div className="grid grid-cols-1 gap-7 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-8 lg:grid-cols-[0.72fr_1fr]">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-karimoff-orange">Рост внутри компании</p>
+            <p className="text-sm font-semibold text-karimoff-orange-contrast">Рост внутри компании</p>
             <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">
               Развитие через ответственность и стандарты
             </h2>

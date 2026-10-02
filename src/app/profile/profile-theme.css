@@ -1,17 +1,17 @@
 .profile-theme {
-  --profile-background: #f8f4ee;
+  --profile-background: var(--public-page-background, #F4F1ED);
   --profile-surface: #ffffff;
-  --profile-panel: #f7f4ef;
-  --profile-hover: #eeeae4;
+  --profile-panel: var(--karimoff-soft, #F3EEE7);
+  --profile-hover: #F4F1ED;
   --profile-text: #121214;
   --profile-muted: #625f59;
   --profile-border: #d8d3cc;
   --profile-control-border: #89857f;
-  --profile-accent: #ad4100;
+  --profile-accent: var(--karimoff-orange-contrast, #B74700);
   --profile-accent-soft: #fff0e5;
-  --profile-action: #ad4100;
-  --profile-action-hover: #913600;
-  --profile-on-action: #ffffff;
+  --profile-action: var(--karimoff-orange, #FB670A);
+  --profile-action-hover: #D95405;
+  --profile-on-action: var(--karimoff-black, #121214);
   --profile-selected: #121214;
   --profile-on-selected: #ffffff;
   --profile-success: #047857;
@@ -28,15 +28,15 @@ html[data-theme="dark"] .profile-theme {
   --profile-background: #121214;
   --profile-surface: #1b1b1f;
   --profile-panel: #202024;
-  --profile-hover: #303036;
+  --profile-hover: #202024;
   --profile-text: #f5f5f6;
   --profile-muted: #b9b9c1;
   --profile-border: #42424b;
   --profile-control-border: #85858f;
-  --profile-accent: #ff9b66;
+  --profile-accent: #FB670A;
   --profile-accent-soft: #39271d;
-  --profile-action: #ff8c45;
-  --profile-action-hover: #ffa46b;
+  --profile-action: #FB670A;
+  --profile-action-hover: #FF741F;
   --profile-on-action: #121214;
   --profile-selected: #f5f5f6;
   --profile-on-selected: #121214;
@@ -74,7 +74,7 @@ html[data-theme="dark"] .profile-theme {
 }
 
 .profile-theme .profile-inverse {
-  --profile-accent: #ff9b66;
+  --profile-accent: #FB670A;
   background: #111114;
   color: #ffffff;
 }

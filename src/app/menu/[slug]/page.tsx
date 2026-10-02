@@ -124,22 +124,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="container-page">
         <Link
           href="/menu"
-          className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-karimoff-muted transition hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-karimoff-muted transition hover:text-karimoff-orange-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast"
         >
           <ArrowLeft size={18} aria-hidden />
           Вернуться в меню
         </Link>
 
-        <section className="mt-4 overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-[0_24px_70px_rgba(18,18,20,0.09)] lg:grid lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.98fr)]">
+        <section className="mt-4 overflow-hidden rounded-panel border border-karimoff-line bg-white shadow-card lg:grid lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.98fr)]">
           <div className="product-photo relative aspect-[4/3] self-start border-b border-karimoff-line lg:sticky lg:top-24 lg:border-b-0">
             <ProductImage product={product} />
           </div>
           <div className="p-5 sm:p-8 lg:p-10">
-            <p className="text-sm font-black uppercase text-karimoff-orange">{product.category}</p>
+            <p className="text-sm font-black uppercase text-karimoff-orange-contrast">{product.category}</p>
             <h1 className="mt-3 text-3xl font-black leading-tight text-karimoff-black sm:text-4xl lg:text-5xl">
               {product.name}
             </h1>
-            <p className="admin-number mt-5 text-3xl font-black text-karimoff-orange">
+            <p className="admin-number mt-5 font-heading text-3xl font-black text-karimoff-orange-contrast">
               {getPortionGroup(product) ? "от " : ""}{formatPrice(product.price)} ₽
             </p>
             {servingLabel ? (
@@ -151,10 +151,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <ProductDetailPurchase product={product} composition={composition} nutritionIngredients={nutritionIngredients} />
           </div>
         </section>
-
-        <section className="mt-10 grid gap-8 border-t border-karimoff-line pt-10 lg:grid-cols-2 lg:gap-16">
+        <section className="mt-8 grid gap-8 border-t border-karimoff-line pt-8 lg:grid-cols-2 lg:gap-16">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black uppercase text-karimoff-orange">
+            <p className="flex items-center gap-2 text-sm font-black uppercase text-karimoff-orange-contrast">
               <Utensils size={18} aria-hidden />
               Состав
             </p>
@@ -174,8 +173,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </section>
 
         {product.allergens?.length ? (
-          <section className="mt-10 border-t border-karimoff-line pt-8">
-            <p className="text-sm font-black uppercase text-karimoff-orange">Аллергены</p>
+          <section className="mt-8 border-t border-karimoff-line pt-8">
+            <p className="text-sm font-black uppercase text-karimoff-orange-contrast">Аллергены</p>
             <p className="mt-3 max-w-3xl text-base leading-7 text-karimoff-muted">
               {product.allergens.join(", ")}.
             </p>

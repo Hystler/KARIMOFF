@@ -74,8 +74,8 @@ export function Header() {
               href={item.href}
               aria-current={isActiveRoute(item.href) ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-11 items-center rounded-md px-1.5 py-2 text-[15px] font-semibold text-karimoff-black transition hover:text-karimoff-orange",
-                isActiveRoute(item.href) && "text-karimoff-orange"
+                "inline-flex min-h-11 items-center rounded-md px-1.5 py-2 text-[15px] font-semibold text-karimoff-black transition hover:text-karimoff-orange-contrast",
+                isActiveRoute(item.href) && "text-karimoff-orange-contrast"
               )}
             >
               {item.label}
@@ -89,7 +89,7 @@ export function Header() {
           {customerName ? (
             <Link
               href="/profile/orders"
-              className="inline-flex min-h-11 items-center px-2 text-sm font-bold text-karimoff-black transition hover:text-karimoff-orange"
+              className="inline-flex min-h-11 items-center px-2 text-sm font-bold text-karimoff-black transition hover:text-karimoff-orange-contrast"
             >
               Мои заказы
             </Link>
@@ -129,8 +129,8 @@ export function Header() {
                 onClick={() => setIsOpen(false)}
                 aria-current={isActiveRoute(item.href) ? "page" : undefined}
                 className={cn(
-                  "rounded-lg px-3 py-3 text-base font-semibold text-karimoff-black transition hover:bg-karimoff-soft hover:text-karimoff-orange",
-                  isActiveRoute(item.href) && "bg-karimoff-soft text-karimoff-orange"
+                  "rounded-lg px-3 py-3 text-base font-semibold text-karimoff-black transition hover:bg-karimoff-soft hover:text-karimoff-orange-contrast",
+                  isActiveRoute(item.href) && "bg-karimoff-soft text-karimoff-orange-contrast"
                 )}
               >
                 {item.label}
@@ -141,7 +141,7 @@ export function Header() {
                 <Link
                   href="/profile/orders"
                   onClick={() => setIsOpen(false)}
-                  className="mb-2 flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-karimoff-black transition hover:bg-karimoff-soft hover:text-karimoff-orange"
+                  className="mb-2 flex min-h-12 items-center rounded-lg px-3 text-base font-semibold text-karimoff-black transition hover:bg-karimoff-soft hover:text-karimoff-orange-contrast"
                 >
                   Мои заказы
                 </Link>

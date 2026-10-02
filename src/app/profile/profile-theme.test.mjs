@@ -4,6 +4,7 @@ import test from "node:test";
 import postcss from "postcss";
 
 const stylesheet = postcss.parse(readFileSync(new URL("./profile-theme.css", import.meta.url), "utf8"));
+const globalStyles = postcss.parse(readFileSync(new URL("../globals.css", import.meta.url), "utf8"));
 
 function declarations(selector) {
   const values = {};
@@ -11,6 +12,32 @@ function declarations(selector) {
     rule.walkDecls((declaration) => { values[declaration.prop] = declaration.value; });
   });
   return values;
+}
+
+function brandTokens(theme) {
+  const values = {};
+  globalStyles.walkRules(":root", (rule) => {
+    rule.walkDecls((declaration) => { values[declaration.prop] = declaration.value; });
+  });
+  if (theme === "dark") {
+    globalStyles.walkRules('html[data-theme="dark"]', (rule) => {
+      rule.walkDecls((declaration) => { values[declaration.prop] = declaration.value; });
+    });
+  }
+  return values;
+}
+
+function resolvedProfileTokens(theme) {
+  const tokens = {
+    ...declarations(".profile-theme"),
+    ...(theme === "dark" ? declarations('html[data-theme="dark"] .profile-theme') : {})
+  };
+  const global = brandTokens(theme);
+  for (const [name, value] of Object.entries(tokens)) {
+    const match = value.match(/^var\((--[\w-]+),\s*(#[\da-f]{6})\)$/i);
+    if (match) tokens[name] = global[match[1]] || match[2];
+  }
+  return tokens;
 }
 
 function contrast(first, second) {
@@ -27,10 +54,7 @@ function contrast(first, second) {
 }
 
 for (const theme of ["light", "dark"]) {
-  const tokens = {
-    ...declarations(".profile-theme"),
-    ...(theme === "dark" ? declarations('html[data-theme="dark"] .profile-theme') : {})
-  };
+  const tokens = resolvedProfileTokens(theme);
   const color = (name) => tokens[`--profile-${name}`];
 
   test(`${theme}: profile text and editor states meet normal-text contrast`, () => {

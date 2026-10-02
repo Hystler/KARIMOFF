@@ -54,7 +54,7 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
   }, [returnTo, status]);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-[0_28px_80px_rgba(18,18,20,0.12)]">
+    <section className="overflow-hidden rounded-panel border border-karimoff-line bg-white shadow-card">
       <div className={`h-1.5 w-full ${status === "success" ? "bg-emerald-500" : "bg-red-500"}`} />
       <div className="p-6 sm:p-8">
         <div className="flex items-center justify-between gap-4">
@@ -79,10 +79,10 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
               {isCheckout ? "Возвращаем вас к оформлению заказа…" : "Возвращаем вас в KARIMOFF…"}
             </p>
             <div className="mt-6 flex items-center gap-3 rounded-lg bg-karimoff-soft px-4 py-3 text-sm font-semibold text-karimoff-muted" role="status" aria-live="polite">
-              <LoaderCircle className="shrink-0 animate-spin text-karimoff-orange" size={19} />
+              <LoaderCircle className="shrink-0 animate-spin text-karimoff-orange-contrast" size={19} />
               Переходим {seconds > 0 ? `через ${seconds} сек.` : "сейчас"}
             </div>
-            <a href={returnTo} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-karimoff-orange px-5 py-3 text-sm font-black text-white shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange">
+            <a href={returnTo} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-karimoff-orange px-5 py-3 text-sm font-black text-karimoff-black shadow-[0_14px_30px_rgba(251,103,10,0.22)] transition hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast">
               Вернуться в KARIMOFF
             </a>
           </>
@@ -92,15 +92,15 @@ export function SocialAuthResult({ status, provider, returnTo, reason, linked = 
             <h1 className="mt-3 text-3xl font-black leading-tight text-karimoff-black">Давайте попробуем ещё раз</h1>
             <p className="mt-4 text-sm leading-6 text-karimoff-muted">{getErrorMessage(provider, reason)}</p>
             <div className="mt-6 flex items-start gap-3 rounded-lg border border-karimoff-line bg-karimoff-soft/70 p-4 text-sm leading-6 text-karimoff-muted">
-              <ShieldCheck className="mt-0.5 shrink-0 text-karimoff-orange" size={19} />
+              <ShieldCheck className="mt-0.5 shrink-0 text-karimoff-orange-contrast" size={19} />
               Ваш профиль не изменился. KARIMOFF не получил доступ к переписке и ничего не публикует от вашего имени.
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <a href={retryHref} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-karimoff-orange px-5 py-3 text-sm font-black text-white transition hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange">
+              <a href={retryHref} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-karimoff-orange px-5 py-3 text-sm font-black text-karimoff-black transition hover:bg-[#D95405] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast">
                 <RotateCcw size={18} />
                 Попробовать снова
               </a>
-              <AuthDocumentLink href={loginHref} className="inline-flex min-h-12 items-center justify-center rounded-lg border border-karimoff-line bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange">
+              <AuthDocumentLink href={loginHref} className="inline-flex min-h-12 items-center justify-center rounded-lg border border-karimoff-line bg-white px-5 py-3 text-sm font-bold text-karimoff-black transition hover:border-karimoff-orange-contrast hover:text-karimoff-orange-contrast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange-contrast">
                 Вернуться ко входу
               </AuthDocumentLink>
             </div>

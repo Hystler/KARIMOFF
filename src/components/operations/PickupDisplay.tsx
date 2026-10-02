@@ -4,6 +4,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-m
 import { BellRing, Clock3, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BrandWordmark } from "@/components/Logo";
 import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
 import type { AvatarConfig } from "@/lib/avatar-schema";
@@ -93,7 +94,7 @@ export function PickupDisplay({
   initialCursor: number;
 }) {
   const router = useRouter();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotion() ?? false;
   const realtime = useOrderRealtime(location.id, () => router.refresh(), initialCursor);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundUnlocked, setSoundUnlocked] = useState(false);
@@ -146,7 +147,7 @@ export function PickupDisplay({
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <span className="h-3 w-3 rounded-full bg-[#FB670A]" aria-hidden="true" />
-            <p className="truncate text-xs font-black uppercase text-white/55">KARIMOFF · {location.name}</p>
+            <p className="flex items-center gap-1.5 truncate text-xs font-black uppercase text-white/55"><BrandWordmark inverse size="sm" /><span>{location.name.toLocaleUpperCase("ru-RU") === "KARIMOFF" ? "Табло" : `· ${location.name}`}</span></p>
           </div>
           <h1 className="mt-1 truncate text-2xl font-black sm:text-3xl">Ваш заказ</h1>
         </div>
@@ -180,11 +181,11 @@ export function PickupDisplay({
             <span className="grid h-11 min-w-11 place-items-center rounded-full border border-white/10 bg-white/[0.06] px-3 text-lg font-black">{cooking.length}</span>
           </div>
           {cooking.length ? (
-            <motion.div layout className={`mt-7 grid gap-3 ${cookingGrid(cooking.length)}`}>
+            <motion.div layout={!reduceMotion} className={`mt-7 grid gap-3 ${cookingGrid(cooking.length)}`}>
               <AnimatePresence mode="popLayout" initial={false}>
                 {cooking.map((order) => (
                   <motion.article
-                    layout
+                    layout={!reduceMotion}
                     layoutId={`pickup-order-${order.id}`}
                     key={order.id}
                     initial={reduceMotion ? false : { opacity: 0, y: 14 }}
@@ -219,14 +220,14 @@ export function PickupDisplay({
                 <BellRing className="text-[#FB670A]" /> Готово
               </h2>
             </div>
-            <span className="grid h-12 min-w-12 place-items-center rounded-full bg-[#FB670A] px-3 text-xl font-black text-white">{ready.length}</span>
+            <span className="grid h-12 min-w-12 place-items-center rounded-full bg-[#FB670A] px-3 text-xl font-black text-[#121214]">{ready.length}</span>
           </div>
           {ready.length ? (
-            <motion.div layout className={`mt-7 grid gap-4 ${readyGrid(ready.length)}`}>
+            <motion.div layout={!reduceMotion} className={`mt-7 grid gap-4 ${readyGrid(ready.length)}`}>
               <AnimatePresence mode="popLayout" initial={false}>
                 {ready.map((order) => (
                   <motion.article
-                    layout
+                    layout={!reduceMotion}
                     layoutId={`pickup-order-${order.id}`}
                     key={order.id}
                     initial={reduceMotion ? false : { opacity: 0, scale: 0.9, y: 18 }}

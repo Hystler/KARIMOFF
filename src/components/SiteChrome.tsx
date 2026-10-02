@@ -37,8 +37,11 @@ export function SiteChrome({
   return (
     <ThemeProvider defaultTheme={defaultTheme}>
       <CartProvider>
+        <a href="#main-content" className="skip-link">Перейти к содержимому</a>
         <Header />
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <Footer settings={settings} />
         <CartDrawer />
         <CookieConsentBanner />

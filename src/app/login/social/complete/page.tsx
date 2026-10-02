@@ -14,8 +14,8 @@ export default async function SocialCompletePage() {
     <main className="min-h-screen bg-karimoff-cream px-5 pb-10 pt-24 text-karimoff-black sm:pt-28">
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-5 flex items-center justify-between gap-4">
-          <Logo compact />
-          <AuthDocumentLink href="/login" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">Вернуться ко входу</AuthDocumentLink>
+          <Logo />
+          <AuthDocumentLink href="/login" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange-contrast">Вернуться ко входу</AuthDocumentLink>
         </div>
         <SocialCompleteForm
           provider={pending.provider}

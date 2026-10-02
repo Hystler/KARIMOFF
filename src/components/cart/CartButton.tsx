@@ -20,7 +20,7 @@ export function CartButton() {
         <path d="M9.35 16.45H14.65" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
       {totalItems > 0 ? (
-        <span key={`count-${addAnimationKey}`} className={`absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-karimoff-orange px-1 text-[11px] font-black text-white ${addAnimationKey ? "cart-count-added" : ""}`}>
+        <span key={`count-${addAnimationKey}`} className={`absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-karimoff-orange px-1 text-[11px] font-black text-karimoff-black ${addAnimationKey ? "cart-count-added" : ""}`}>
           {totalItems}
         </span>
       ) : null}

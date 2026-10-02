@@ -131,7 +131,7 @@ export function ProductImageUploadForm({ productId }: ProductImageUploadFormProp
           accept="image/*"
           multiple
           onChange={handleFileChange}
-          className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
+          className="rounded-lg border border-karimoff-line bg-white px-4 py-3 text-sm file:mr-4 file:rounded-full file:border-0 file:bg-karimoff-orange file:px-4 file:py-2 file:text-sm file:font-bold file:text-karimoff-black"
         />
       </label>
       {warnings.length ? (

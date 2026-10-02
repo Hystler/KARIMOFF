@@ -104,10 +104,10 @@ export function ProductCard({ product }: ProductCardProps) {
           href={href}
           className="flex min-w-0 flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
         >
-          <h3 className="min-h-[48px] overflow-wrap-anywhere text-lg font-bold leading-6 text-karimoff-black transition group-hover:text-karimoff-orange">
+          <h3 className="min-h-[48px] overflow-wrap-anywhere text-lg font-bold leading-6 text-karimoff-black transition group-hover:text-karimoff-orange-contrast">
             {product.name}
           </h3>
-          <p className="admin-number mt-2 text-lg font-black leading-none text-karimoff-orange sm:text-xl">
+          <p className="admin-number mt-2 font-heading text-lg font-black leading-none text-karimoff-orange-contrast sm:text-xl">
             {getPortionGroup(product) ? "от " : ""}{formatPrice(product.price)} ₽
           </p>
           <p className="mt-3 overflow-wrap-anywhere text-sm leading-[1.5] text-karimoff-muted">

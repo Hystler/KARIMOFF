@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CustomerOrdersLive } from "@/components/profile/CustomerOrdersLive";
+import { BrandWordmark } from "@/components/Logo";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getCustomerOrdersForCustomer } from "@/lib/customer-orders";
 
@@ -22,7 +23,7 @@ export default async function CustomerOrdersPage() {
       <section className="container-page pb-16">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-karimoff-orange">KARIMOFF</p>
+            <BrandWordmark size="sm" />
             <h1 className="mt-2 text-3xl font-black sm:text-4xl">Мои заказы</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-karimoff-muted">Оплата, приготовление и готовность к выдаче обновляются здесь автоматически.</p>
           </div>

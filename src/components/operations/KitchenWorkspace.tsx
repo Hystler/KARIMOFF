@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import { BrandWordmark } from "@/components/Logo";
 import styles from "./KitchenWorkspace.module.css";
 import {
   AlertTriangle,
@@ -431,7 +432,7 @@ export function KitchenWorkspace({
         <div className={embedded ? "" : "mx-auto max-w-[2200px] px-3 py-3 sm:px-4"}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className={`text-xs font-black uppercase ${embedded ? "text-[#C94F05]" : "text-[#FF9A5C]"}`}>KARIMOFF KDS · {location.name}</p>
+              <p className={`flex items-center gap-1.5 text-xs font-black uppercase ${embedded ? "text-[#C94F05]" : "text-[#FF9A5C]"}`}><BrandWordmark inverse={!embedded} size="sm" /><span>KDS · {location.name}</span></p>
               <h1 className={`mt-1 text-xl font-black leading-tight ${embedded ? "" : "text-white"}`}>Кухня <span className="text-sm font-normal opacity-65">· {staffName}</span></h1>
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -452,7 +453,7 @@ export function KitchenWorkspace({
               <button type="button" onClick={() => router.refresh()} className={`grid h-11 w-11 place-items-center rounded-lg ${embedded ? "border border-black/10 bg-white" : "bg-white/10"}`} aria-label="Обновить очередь" title="Обновить очередь">
                 <RefreshCw size={19} />
               </button>
-              {!embedded && role !== "cook" ? <a href="/pos" className="inline-flex min-h-11 items-center rounded-lg bg-[#FB670A] px-4 text-sm font-black text-white">POS</a> : null}
+              {!embedded && role !== "cook" ? <a href="/pos" className="inline-flex min-h-11 items-center rounded-lg bg-[#FB670A] px-4 text-sm font-black text-[#121214]">POS</a> : null}
             </div>
           </div>
           <div className={styles.stats}>
