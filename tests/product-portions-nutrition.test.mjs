@@ -93,7 +93,7 @@ test('temporary prepared-food references use the confirmed production piece weig
 test('disposable PG: portion setup idempotency, server price and recipe/food-cost snapshot',{
   skip:process.env.YOOKASSA_AUDIT_LOCAL_DSN?false:'Requires disposable local database'
 },async()=>{
-  assert.equal(process.env.YOOKASSA_AUDIT_LOCAL_DSN,'postgres://postgres@127.0.0.1:55441/karimoff_audit');
+  assert.equal(process.env.YOOKASSA_AUDIT_LOCAL_DSN,'postgres://postgres@127.0.0.1:55445/karimoff_audit');
   const sql=postgres(process.env.YOOKASSA_AUDIT_LOCAL_DSN,{max:1,onnotice(){}});
   const rollback=new Error('fixture rollback');
   try {

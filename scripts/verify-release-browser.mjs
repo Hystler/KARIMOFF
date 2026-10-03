@@ -1,19 +1,21 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import postgres from 'postgres';
 
-assert.deepEqual(process.argv.slice(2),['--local-only']);
+const native = process.argv.includes('--native');
+assert.deepEqual(process.argv.slice(2),native?['--local-only','--native']:['--local-only']);
 const evidence=JSON.parse(readFileSync('outputs/release-20261003/database/ready.json','utf8'));
-assert.equal(evidence.port,55443); assert.match(evidence.databases.restore,/^karimoff_rc_restore_\d+$/);
-const sql=postgres(`postgres://karimoff_app@127.0.0.1:55443/${evidence.databases.restore}`,{max:1,onnotice(){}});
+assert.equal(evidence.port,55445); assert.match(evidence.databases.restore,/^karimoff_rc_restore_\d+$/);
+const sql=postgres(`postgres://karimoff_app@127.0.0.1:55445/${evidence.databases.restore}`,{max:1,onnotice(){}});
 const origin='http://127.0.0.1:3110'; const container=`karimoff-final-rc-browser-20261003-${Date.now()}`;
 const output=resolve('outputs/release-20261003/browser'); mkdirSync(output,{recursive:true});
 const {chromium}=await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE_PATH)).href);
-const secret=randomBytes(32).toString('hex'); let browser; let started=false;
+const secret=randomBytes(32).toString('hex'); let browser; let started=false; let child; let runtimeLog='';
+const image='karimoff-delivery-rc:20261004';
 const docker=(args)=>execFileSync('docker',args,{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const results=[];
 try {
@@ -23,8 +25,10 @@ try {
     values('Synthetic RC owner',${`+7${String(Date.now()).slice(-10)}`},'mock-only','owner',true) returning id`;
   const [product]=await sql`insert into products(name,slug,category,price,image_url,description,is_active)
     select name,${`rc-browser-${randomUUID()}`},category,price,image_url,description,true
-    from products where is_active and image_url is not null and slug not like 'rc-browser-%' order by id limit 1
+    from products where is_active and category='Бургеры' and image_url is not null and slug not like 'rc-browser-%' order by id limit 1
     returning id,name,slug,price,image_url`;
+  assert.ok(product,'A public burger fixture must exist');
+  product.price=Number(product.price);
   const [ingredient]=await sql`insert into ingredients(name,unit,cost_per_unit)
     values('Synthetic browser ingredient','g',1) returning id`;
   const [group]=await sql`insert into product_modifier_groups(product_id,name,selection_type,min_selections,max_selections)
@@ -38,21 +42,34 @@ try {
       values(${subject},${id},${createHmac('sha256',secret).update(tokens[subject]).digest('hex')},now()+interval '2 hours')`;
   }
   await sql`update site_settings set delivery_enabled=true,delivery_coverage_enabled=true,pickup_enabled=true where id='main'`;
-  await sql`update delivery_location_settings set enabled=true`;
+  await sql`update delivery_location_settings set enabled=true,acceptance_start='00:00',acceptance_end='23:59'`;
+  const [location]=await sql`select id from order_locations where is_default and is_active limit 1`;
+  const [address]=await sql`insert into delivery_addresses(location_id,street,street_normalized,house,house_normalized,
+    latitude,longitude,distance_meters,is_available,source)
+    values(${location.id},'Бахчиванджи','бахчиванджи','5Б','5Б',55.909221,38.055708,0,true,'synthetic')
+    on conflict (location_id,street_normalized,house_normalized,building_normalized)
+    do update set is_available=true returning id`;
   const databaseIp=docker(['inspect',evidence.container,'--format','{{.NetworkSettings.Networks.bridge.IPAddress}}']);
   assert.match(databaseIp,/^172\.\d+\.\d+\.\d+$/);
-  const environment={ DATABASE_URL:`postgres://karimoff_app@${databaseIp}:5432/${evidence.databases.restore}`,
+  const environment={ DATABASE_URL:native?`postgres://karimoff_app@127.0.0.1:55445/${evidence.databases.restore}`:
+      `postgres://karimoff_app@${databaseIp}:5432/${evidence.databases.restore}`,
     RUNTIME_MIGRATIONS_READ_ONLY:'true',SESSION_SECRET:secret,APP_ORIGIN:'https://127.0.0.1:3110',
     EVOTOR_ENABLED:'false',EVOTOR_BACKGROUND_SYNC:'false',EVOTOR_TERMINAL_BRIDGE_ENABLED:'false',EVOTOR_POS_PAYMENTS_ENABLED:'false',
     APPLE_WALLET_ENABLED:'false',ORDER_STATUS_NOTIFICATIONS_ENABLED:'false',TEST_ORDER_MODE:'false',PAYMENTS_ENABLED:'true',
     YOOKASSA_SHOP_ID:'synthetic-only',YOOKASSA_SECRET_KEY:'synthetic-only',
     YOOKASSA_RETURN_URL:'https://127.0.0.1:3110/checkout/payment/return',YOOKASSA_WEBHOOK_URL:'https://127.0.0.1:3110/api/webhooks/yookassa',
-    DELIVERY_ENABLED:'true',YANDEX_GEOCODER_API_KEY:'synthetic-only',YANDEX_SUGGEST_API_KEY:'synthetic-only',
-    NODE_OPTIONS:'--import /app/rc-mock-network.mjs' };
+    DELIVERY_ENABLED:'true',
+    NODE_OPTIONS:`--import ${native?resolve('scripts/rc-mock-network.mjs'):'/app/rc-mock-network.mjs'}` };
   const args=['run','-d','--name',container,'--label','karimoff.rc-browser=20261003','-p','127.0.0.1:3110:3000',
     '-v',`${resolve('scripts/rc-mock-network.mjs')}:/app/rc-mock-network.mjs:ro`];
   for(const [key,value] of Object.entries(environment)) args.push('-e',`${key}=${value}`);
-  args.push('karimoff-rc:20261003'); docker(args); started=true;
+  args.push(image);
+  if(native) {
+    child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','3110'],{
+      env:{PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',...environment},stdio:['ignore','pipe','pipe']});
+    child.stdout.on('data',data=>runtimeLog+=data); child.stderr.on('data',data=>runtimeLog+=data);
+  } else docker(args);
+  started=true;
   for(let i=0;i<80;i++) {
     if(await fetch(`${origin}/api/health`).then(r=>r.ok).catch(()=>false)) break;
     assert.ok(i<79,'Docker app did not become healthy'); await new Promise(r=>setTimeout(r,500));
@@ -121,16 +138,15 @@ try {
     await page.waitForTimeout(500);
     assert.ok(await page.locator('input[name="receipt_email"]').count(),'Authenticated checkout must load');
     await page.locator('input[name="delivery_type"][value="delivery"]').check();
-    await page.locator('input[name="delivery_street"]').fill('Бахчиванджи');
-    await page.locator('input[name="delivery_house"]').fill('5Б');
-    await page.locator('input[name="delivery_house"]').blur();
-    await page.getByRole('button',{name:'Проверить адрес',exact:true}).click();
+    await page.getByRole('textbox',{name:'Улица доставки',exact:true}).fill('Бахчиванджи');
+    await page.getByRole('button',{name:'Бахчиванджи',exact:true}).click();
+    await page.getByRole('combobox',{name:'Дом доставки',exact:true}).selectOption(address.id);
     await page.waitForTimeout(1200);
     await page.locator('input[name="receipt_email"]').fill('mock@example.test');
     const dialog=page.locator('[role="dialog"]');
     const dialogOverflow=await dialog.evaluate(el=>el.scrollWidth>el.clientWidth+1);
     results.push({viewport,path:'checkout-delivery',status:200,overflow:dialogOverflow,
-      mockGeocoder:true,addressMessage:(await dialog.innerText()).includes('Доставим по этому адресу')});
+      postgresWhitelist:true,addressMessage:(await dialog.innerText()).includes('Доставим по этому адресу')});
     await page.screenshot({path:`${output}/${viewport.width}-checkout-delivery.png`});
     await page.keyboard.press('Tab');
     assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),'Cart traps keyboard focus');
@@ -142,25 +158,31 @@ try {
     ])),product);
     await page.reload({waitUntil:'domcontentloaded'}); await page.waitForTimeout(800);
     await page.locator('input[name="delivery_type"][value="delivery"]').check();
-    await page.locator('input[name="delivery_street"]').fill('Бахчиванджи');
-    await page.locator('input[name="delivery_house"]').fill('5Б');
-    await page.getByRole('button',{name:'Проверить адрес',exact:true}).click(); await page.waitForTimeout(700);
+    await page.getByRole('textbox',{name:'Улица доставки',exact:true}).fill('Бахчиванджи');
+    await page.getByRole('button',{name:'Бахчиванджи',exact:true}).click();
+    await page.getByRole('combobox',{name:'Дом доставки',exact:true}).selectOption(address.id);
+    await page.waitForTimeout(700);
     assert.match(await page.locator('[role="dialog"]').innerText(),/бесплатно/);
-    results.push({viewport,path:'checkout-free-delivery',status:200,overflow:false,mockGeocoder:true});
+    results.push({viewport,path:'checkout-free-delivery',status:200,overflow:false,postgresWhitelist:true});
     await page.screenshot({path:`${output}/${viewport.width}-checkout-free-delivery.png`});
     await context.addCookies([{name:'karimoff_admin_session',value:tokens.staff,url:origin}]);
-    for(const path of ['/admin','/admin/orders','/admin/analytics','/admin/analytics/sales','/admin/economics','/pos','/kitchen']) {
+    for(const path of ['/admin','/admin/orders','/admin/analytics','/admin/analytics/sales','/admin/economics','/admin/delivery-addresses','/pos','/kitchen']) {
       await check(path); assert.equal(new URL(page.url()).pathname,path,'Staff session must not redirect to login');
     }
     await context.close();
   }
   writeFileSync(`${output}/results.json`,JSON.stringify({checkedAt:new Date().toISOString(),
-    image:docker(['image','inspect','karimoff-rc:20261003','--format','{{.Id}}']),
+    image:native?'native combined Next production build':docker(['image','inspect',image,'--format','{{.Id}}']),
     isolation:'restored synthetic PG17; runtime role; no real secrets; external fetch blocked; no order/payment submission',results},null,2)+'\n');
   const failures=results.filter(r=>r.overflow||r.errors?.length||r.path==='checkout-delivery'&&!r.addressMessage);
   console.log(JSON.stringify({screens:results.length,failures},null,2));
   assert.equal(failures.length,0,'See isolated browser evidence');
 } finally {
   await browser?.close(); await sql.end();
-  if(started) { writeFileSync(`${output}/runtime.log`,docker(['logs',container])); docker(['stop',container]); }
+  if(started && native && child) {
+    child.kill('SIGTERM');
+    await Promise.race([new Promise(done=>child.once('exit',done)),new Promise(done=>setTimeout(done,5000))]);
+    if(child.exitCode===null) child.kill('SIGKILL');
+    writeFileSync(`${output}/runtime.log`,runtimeLog);
+  } else if(started) { writeFileSync(`${output}/runtime.log`,docker(['logs',container])); docker(['stop',container]); }
 }

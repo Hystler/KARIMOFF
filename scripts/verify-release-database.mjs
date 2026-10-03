@@ -12,9 +12,9 @@ if (process.argv.length !== 3 || process.argv[2] !== "--local-only") {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = join(root, "outputs/release-20261003/database");
 mkdirSync(output, { recursive: true });
-const container = "karimoff-rc-roles-20261003";
-const port = 55443;
-const label = "karimoff.rc-verification=20261003";
+const container = "karimoff-delivery-integration-pg-20261004";
+const port = 55445;
+const label = "karimoff.rc-verification=20261004";
 const image = "postgres:17-alpine";
 const runId = Date.now().toString();
 const names = Object.fromEntries(["fresh", "upgrade", "restore"].map(kind => [kind, `karimoff_rc_${kind}_${runId}`]));
@@ -41,12 +41,13 @@ if (!known.split("\n").includes(container)) {
   if (!docker(["network", "ls", "--format", "{{.Name}}"] ).split("\n").includes(network)) {
     docker(["network", "create", "--internal", "--label", label, network]);
   }
-  assert.equal(JSON.parse(docker(["network", "inspect", network]))[0].Labels["karimoff.rc-verification"], "20261003");
+  assert.equal(JSON.parse(docker(["network", "inspect", network]))[0].Labels["karimoff.rc-verification"], "20261004");
   docker(["run", "-d", "--name", container, "--label", label, "--network", network,
+    "--log-driver", "none", "--tmpfs", "/var/lib/postgresql/data:rw,size=1024m",
     "-p", `127.0.0.1:${port}:5432`, "-e", "POSTGRES_HOST_AUTH_METHOD=trust", image]);
 }
 const own = JSON.parse(docker(["inspect", container]))[0];
-assert.equal(own.Config.Labels["karimoff.rc-verification"], "20261003");
+assert.equal(own.Config.Labels["karimoff.rc-verification"], "20261004");
 assert.equal(own.Config.Image, image);
 assert.deepEqual(own.HostConfig.PortBindings["5432/tcp"], [{ HostIp: "127.0.0.1", HostPort: String(port) }]);
 if (!own.State.Running) docker(["start", container]);

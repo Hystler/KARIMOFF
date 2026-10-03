@@ -746,9 +746,9 @@ for (const [name, table] of [
 migrations.push({
   name: "20261004133000_whitelist_pickup_rpc_initialization",
   applied: async (sql) => {
-    const [column] = await sql`select exists (select 1 from information_schema.columns
-      where table_schema='public' and table_name='delivery_whitelist_release_version'
-        and column_name='pickup_rpc_initialized') as installed`;
+    const [column] = await sql`select exists (select 1 from pg_attribute
+      where attrelid=to_regclass('public.delivery_whitelist_release_version')
+        and attname='pickup_rpc_initialized' and not attisdropped) as installed`;
     if (!column?.installed) return false;
     const [state] = await sql`select pickup_rpc_initialized as installed
       from public.delivery_whitelist_release_version where version=1`;

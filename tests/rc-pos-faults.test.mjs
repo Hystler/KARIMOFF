@@ -21,7 +21,7 @@ function service(sql, enabled = true) {
 
 test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery are fail-safe', async () => {
   const dsn = process.env.KARIMOFF_RC_LOCAL_DSN;
-  assert.match(dsn ?? '', /^postgres:\/\/karimoff_app@127\.0\.0\.1:55443\/karimoff_rc_fresh_\d+$/,
+  assert.match(dsn ?? '', /^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/,
     'Run verify-release-database --local-only first and provide its runtimeDsn');
   const sql = postgres(dsn, { max: 8, onnotice() {} });
   try {

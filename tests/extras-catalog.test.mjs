@@ -40,7 +40,7 @@ test('disposable PostgreSQL: logical extras install idempotently with quantity c
   skip:process.env.YOOKASSA_AUDIT_LOCAL_DSN?false:'Requires disposable local database'
 },async()=>{
   const dsn=process.env.YOOKASSA_AUDIT_LOCAL_DSN;
-  assert.equal(dsn,'postgres://postgres@127.0.0.1:55441/karimoff_audit');
+  assert.equal(dsn,'postgres://postgres@127.0.0.1:55445/karimoff_audit');
   const sql=postgres(dsn,{max:1,onnotice(){}});
   const rollback=new Error('fixture rollback');
   try {

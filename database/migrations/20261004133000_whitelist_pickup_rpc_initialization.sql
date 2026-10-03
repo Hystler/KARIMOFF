@@ -223,4 +223,3 @@ $$;
 alter table public.delivery_whitelist_release_version
   add column if not exists pickup_rpc_initialized boolean not null default false;
 update public.delivery_whitelist_release_version set pickup_rpc_initialized = true where version = 1;
-

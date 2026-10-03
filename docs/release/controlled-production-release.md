@@ -14,8 +14,6 @@ No permanent stage, paid resource or extra database is required for the local pr
 | DELIVERY_ENABLED=false | Master delivery activation gate | YES explicit OFF | NO |
 | EVOTOR_POS_PAYMENTS_ENABLED=false | No new physical payment creation/dispatch; in-flight callback recovery stays allowed | YES explicit OFF | NO |
 | APPLE_WALLET_ENABLED=false | Mitigate unresolved forge dependency by disabling pass generation | YES explicit OFF | NO |
-| YANDEX_GEOCODER_API_KEY | Server HTTP Geocoder key; absent with delivery OFF is safe | Later delivery | YES |
-| YANDEX_SUGGEST_API_KEY | Separate server GeoSuggest key | Later suggestions | YES |
 | PAYMENTS_ENABLED / TEST_ORDER_MODE | Check existing intended live/test behavior, never infer mode from masked values | CHECK, no automatic change | NO |
 | YOOKASSA_SHOP_ID / YOOKASSA_SECRET_KEY | Existing shop mode/credentials; no test credential copied to production | CHECK | shop ID internal; key YES |
 | YOOKASSA_WEBHOOK_URL / YOOKASSA_RETURN_URL | Existing HTTPS public callbacks and matching shop config | CHECK | NO |
@@ -58,7 +56,10 @@ NODE_ENV=production RUNTIME_MIGRATIONS_READ_ONLY=false npm run db:runtime:migrat
 
 Never run data migrations/menu-image scripts incidentally in this release: real prices/recipes
 are not part of stabilization. Set runtime read-only true after schema migration succeeds.
-New additive migrations beyond main: delivery checkout/status, delivery hardening, runtime role grants.
+New additive migrations beyond main: delivery checkout/status, delivery hardening, runtime role grants,
+delivery address whitelist, combined release whitelist RPC/identity protection. They run in chronological
+order from `database/migrations`; the image includes that directory. Do not run only the historical
+whitelist SQL: the newer combined migration restores current payment/fiscal snapshot behavior.
 Historical main files are byte-identical. Live production may have additional pending main migrations;
 operator must inspect actual postconditions before execution.
 
@@ -99,18 +100,21 @@ unauthorized access, duplicate monetary dispatch, or inconsistent payment/fiscal
 On suspected monetary inconsistency, stop new affected operations and reconcile existing state;
 do not force re-charge or erase operations to make the UI green.
 
-## Yandex activation preparation
+## Whitelist activation preparation
 
-1. In developer cabinet request HTTP Geocoder product/key; confirm license permits storing
-   coordinates/address snapshots. Do not buy a tariff without owner approval.
-2. Request separate GeoSuggest API key when suggestions are wanted.
-3. Restrict server keys to fixed Timeweb egress IP(s); verify actual outbound IP before setting restriction.
-4. Later place keys only in YANDEX_GEOCODER_API_KEY / YANDEX_SUGGEST_API_KEY server env.
-5. Read-only geocode Бахчиванджи 5Б, verify center [38.0557080,55.9092210] rather than assume it.
-6. Overlay store center, 3-km circle and existing OSM aerodrome polygon on actual Yandex map;
-   accept conservative boundary and record disputed sections/screenshots. Never replace by a rough circle.
-7. Test real address inside/outside/boundary/aerodrome with no real order creation.
-8. Only separate owner approval enables store setting AND DELIVERY_ENABLED.
+Runtime uses PostgreSQL only, not Yandex Geocoder, GeoSuggest or DaData. No API keys or paid
+geocoding product is required. Old audit reports describe the superseded design, not this candidate.
+
+1. Owner confirms store point [38.0557080,55.9092210] and disputed A1-A8 / H1-H12 sections using
+   the prepared geometry review and current Yandex Maps for human comparison. Do not change the polygon
+   by eye. This review blocks activation, not software integration.
+2. Verify the frozen snapshot and pinned 1,233-address approval manifest using the procedure in
+   `docs/release/delivery-whitelist-integration-20261004.md`.
+3. Only after separate approval: upsert those approved rows; all 216 manual-review rows remain
+   disabled and 1,011 outside rows are not seeded. Never delete existing rows as part of import.
+4. Verify read-only production address search/validation and public address-only ODbL export.
+5. Only separate owner approval enables location settings, coverage/site setting AND DELIVERY_ENABLED.
+   Initial launch need not wait for approving all 216 manual-review rows.
 
 ## Acceptance requiring later separate permissions
 
@@ -144,7 +148,7 @@ are not independently proven. Keep physical POS payments OFF until this contract
 | --- | --- | --- | --- |
 | Coordinator / infrastructure | Fresh backup + DDL ownership/credential/runtime-readonly setup | Explicit production permission | Fresh completed backup, correct owner, DML-only runtime, pending migrations identified |
 | Coordinator | Approved merge/manual exact-SHA rollout | Previous row; owner permission | Health/catalog/staff smoke, all new paid features OFF |
-| Delivery/backend + owner | Yandex keys/center/polygon read-only acceptance | Keys/license and map access | Confirmed coordinates/overlay and fail-closed address checks |
+| Delivery/backend + owner | Whitelist manifest and center/polygon visual acceptance | Owner review and approved import | Correct enabled subset, disabled review rows and fail-closed address checks |
 | POS/backend | Exact fiscal receipt-reference/import mapping and real acquirer metadata | Device return contract | One canonical sale after exact-ID import, no heuristic suppression |
 | Owner + POS coordinator | Real hardware acceptance | Separate permission, previous POS row | Paid/fiscal/KDS/inventory/accounting exactly once, UNKNOWN-safe recovery |
 | Owner + payments coordinator | Real YooKassa two-receipt acceptance | Separate permission, correct shop config | Registered receipt chain, no duplicate payment/sale |
