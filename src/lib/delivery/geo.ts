@@ -23,6 +23,9 @@ export function distanceMeters(from: Coordinate, to: Coordinate) {
 }
 
 function liesOnSegment(point: Coordinate, start: Coordinate, end: Coordinate) {
+  if (start[0] === end[0] && start[1] === end[1]) {
+    return Math.abs(point[0] - start[0]) < 1e-12 && Math.abs(point[1] - start[1]) < 1e-12;
+  }
   const cross = (point[1] - start[1]) * (end[0] - start[0])
     - (point[0] - start[0]) * (end[1] - start[1]);
   if (Math.abs(cross) > 1e-10) return false;

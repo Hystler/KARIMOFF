@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Coordinate } from "./geo";
+import { isValidCoordinate } from "./geo";
 
 type AddressComponent = { kind: string; name: string };
 
@@ -103,20 +104,26 @@ export async function geocodeDeliveryAddress(query: string) {
   const payload = await readJson(url);
   const response = payload.response as { GeoObjectCollection?: { featureMember?: GeocoderFeature[] } } | undefined;
   const features = response?.GeoObjectCollection?.featureMember ?? [];
-  const candidate = features[0]?.GeoObject;
+  const exact = features.filter(feature => {
+    const meta = feature.GeoObject?.metaDataProperty?.GeocoderMetaData;
+    return meta?.kind === "house" && meta.precision === "exact";
+  });
+  if (exact.length !== 1) throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
+  const candidate = exact[0]?.GeoObject;
   const metadata = candidate?.metaDataProperty?.GeocoderMetaData;
   const address = metadata?.Address;
   const components = address?.Components ?? [];
   const country = normalize(components.find((component) => component.kind === "country")?.name ?? "");
-  const region = normalize(components.find((component) => component.kind === "province" || component.kind === "area")?.name ?? "");
+  const correctRegion = components.some(component =>
+    ["province", "area"].includes(component.kind) && normalize(component.name) === "московская область");
   const house = components.find((component) => component.kind === "house")?.name ?? "";
   const street = components.find((component) => component.kind === "street")?.name ?? "";
   const position = candidate?.Point?.pos?.split(/\s+/).map(Number);
 
-  if (country !== "россия" || region !== "московская область"
+  if (country !== "россия" || !correctRegion
     || metadata?.kind !== "house" || metadata.precision !== "exact"
     || !house || !street || !position || position.length !== 2
-    || !position.every(Number.isFinite)) {
+    || !isValidCoordinate([position[0], position[1]])) {
     throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
   }
 

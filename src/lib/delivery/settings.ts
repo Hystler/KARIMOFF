@@ -60,7 +60,7 @@ export async function getDeliveryLocationSettings(locationKey = "karimoff-main")
       locationId: row.location_id,
       locationKey: row.location_key,
       locationName: row.location_name,
-      enabled: row.enabled,
+      enabled: process.env.DELIVERY_ENABLED === "true" && row.enabled,
       center,
       radiusMeters: Number(row.radius_meters),
       excludedAreas,

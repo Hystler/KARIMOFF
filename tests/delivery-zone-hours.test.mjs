@@ -16,12 +16,12 @@ function pointAtMeters(distance) {
 }
 
 test("zone uses straight-line distance with an inclusive 3km boundary", () => {
-  for (const distance of [1_000, 2_990, 3_000]) {
+  for (const distance of [1_000, 2_990, 2_999, 3_000]) {
     const result = assessDeliveryZone({ address: pointAtMeters(distance), center, radiusMeters: 3_000, excludedAreas: [] });
     assert.equal(result.available, true, `${distance}m should be within the zone`);
     assert.ok(Math.abs(result.distanceMeters - distance) <= 1);
   }
-  for (const distance of [3_010, 20_000]) {
+  for (const distance of [3_001, 3_010, 20_000]) {
     const result = assessDeliveryZone({ address: pointAtMeters(distance), center, radiusMeters: 3_000, excludedAreas: [] });
     assert.equal(result.available, false);
     assert.equal(result.withinRadius, false);
@@ -34,6 +34,8 @@ test("excluded polygon blocks points inside and on its border even within radius
   assert.equal(distanceMeters(center, inside) < 3_000, true);
   assert.equal(isInsidePolygon(inside, excludedArea), true);
   assert.equal(isInsidePolygon(boundary, excludedArea), true);
+  assert.equal(isInsidePolygon([38.07, 55.91], excludedArea), false);
+  assert.equal(isInsidePolygon([38.05, 55.93], excludedArea), false);
   assert.equal(assessDeliveryZone({ address: inside, center, radiusMeters: 3_000, excludedAreas: [{ geometry: excludedArea }] }).available, false);
   assert.equal(assessDeliveryZone({ address: boundary, center, radiusMeters: 3_000, excludedAreas: [{ geometry: excludedArea }] }).excluded, true);
 });
