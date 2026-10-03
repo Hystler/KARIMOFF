@@ -1,6 +1,5 @@
 import "server-only";
 
-import { PKPass } from "passkit-generator";
 import sharp from "sharp";
 import type { LoyaltyCard } from "@/lib/loyalty-card";
 import { createLoyaltyCardToken } from "@/lib/loyalty-card";
@@ -26,6 +25,7 @@ export async function createAppleWalletPass(params: {
   pointsBalance: number;
 }) {
   if (!getWalletConfiguration().apple) throw new Error("Apple Wallet is not configured.");
+  const { PKPass } = await import("passkit-generator");
   const [icon1x, icon2x, logo1x, logo2x] = await Promise.all([
     icon(29), icon(58), icon(80), icon(160)
   ]);

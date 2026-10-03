@@ -5,7 +5,7 @@ function present(name: string) {
 }
 
 export function getWalletConfiguration() {
-  const apple = [
+  const apple = process.env.APPLE_WALLET_ENABLED === "true" && [
     "APPLE_WALLET_PASS_TYPE_ID",
     "APPLE_WALLET_TEAM_ID",
     "APPLE_WALLET_WWDR_CERT_BASE64",
