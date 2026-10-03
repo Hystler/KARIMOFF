@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { Product, ProductModifierGroup, ProductModifierOption } from "@/lib/product-types";
 import { CART_STORAGE_KEY } from "@/lib/cart-checkout-storage";
+import { useRouter } from "next/navigation";
 
 export type CartRemovedIngredient = {
   ingredient_id: string;
@@ -171,6 +172,7 @@ function normalizeStoredLine(line: Partial<CartLine>): CartLine | null {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -321,13 +323,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     if (window.location.pathname !== "/checkout") {
-      window.location.assign("/checkout");
+      router.push("/checkout");
       return;
     }
 
     setIsOpen(true);
     window.dispatchEvent(new Event("karimoff-cart-checkout-request"));
-  }, [lines]);
+  }, [lines, router]);
 
   const value = useMemo<CartContextValue>(
     () => ({
