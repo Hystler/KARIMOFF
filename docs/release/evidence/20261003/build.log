@@ -1,0 +1,131 @@
+
+> karimoff@0.1.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.mjs took 9ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.6s
+  Running TypeScript ...
+  Finished TypeScript in 3.2s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/16) ...
+  Generating static pages using 7 workers (4/16) 
+  Generating static pages using 7 workers (8/16) 
+  Generating static pages using 7 workers (12/16) 
+✓ Generating static pages using 7 workers (16/16) in 75ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /about
+├ ƒ /admin
+├ ƒ /admin/analytics
+├ ƒ /admin/analytics/audience
+├ ƒ /admin/analytics/planning
+├ ƒ /admin/analytics/sales
+├ ƒ /admin/cookies
+├ ƒ /admin/customers
+├ ƒ /admin/customers/[id]
+├ ƒ /admin/delivery-zone
+├ ƒ /admin/economics
+├ ƒ /admin/erp
+├ ƒ /admin/ingredients
+├ ƒ /admin/ingredients/[id]/edit
+├ ƒ /admin/ingredients/extras
+├ ƒ /admin/ingredients/new
+├ ƒ /admin/ingredients/prices
+├ ƒ /admin/integrations/evotor
+├ ƒ /admin/integrations/evotor/reconciliation
+├ ƒ /admin/inventory
+├ ƒ /admin/inventory/movements
+├ ƒ /admin/kitchen
+├ ƒ /admin/leads
+├ ƒ /admin/login
+├ ƒ /admin/loyalty
+├ ƒ /admin/notifications
+├ ƒ /admin/orders
+├ ƒ /admin/production
+├ ƒ /admin/production/[id]/edit
+├ ƒ /admin/production/new
+├ ƒ /admin/products
+├ ƒ /admin/products/[id]/edit
+├ ƒ /admin/products/new
+├ ƒ /admin/settings
+├ ƒ /admin/staff
+├ ƒ /admin/vacancies
+├ ƒ /admin/vacancies/[id]/edit
+├ ƒ /admin/vacancies/new
+├ ƒ /api/admin/analytics/performance
+├ ƒ /api/admin/analytics/report/export
+├ ƒ /api/admin/analytics/sales/export
+├ ƒ /api/admin/loyalty/card/resolve
+├ ƒ /api/admin/products/[id]/images
+├ ƒ /api/auth/avatar
+├ ƒ /api/auth/social/max/client-complete
+├ ƒ /api/auth/social/max/complete
+├ ƒ /api/auth/social/max/consume
+├ ƒ /api/auth/social/max/event
+├ ƒ /api/auth/social/max/resume
+├ ƒ /api/auth/social/max/start
+├ ƒ /api/auth/social/max/status
+├ ƒ /api/auth/social/telegram/client-complete
+├ ƒ /api/auth/social/telegram/consume
+├ ƒ /api/auth/social/telegram/library/complete
+├ ƒ /api/auth/social/telegram/library/start
+├ ƒ /api/auth/social/telegram/resume
+├ ƒ /api/auth/social/telegram/status
+├ ƒ /api/cookie-consent
+├ ƒ /api/customer/orders
+├ ƒ /api/health
+├ ƒ /api/integrations/evotor/installation
+├ ƒ /api/integrations/evotor/token
+├ ƒ /api/internal/evotor/sync
+├ ƒ /api/loyalty/card/qr
+├ ƒ /api/loyalty/wallet/apple
+├ ƒ /api/loyalty/wallet/google
+├ ƒ /api/order-events
+├ ƒ /api/payments/[id]/status
+├ ƒ /api/pos/payments/[id]/resolve
+├ ƒ /api/pos/payments/[id]/status
+├ ƒ /api/terminal/health
+├ ƒ /api/terminal/orders/[id]/ack
+├ ƒ /api/terminal/orders/next
+├ ƒ /api/terminal/pair
+├ ƒ /api/terminal/payments/[id]/result
+├ ƒ /api/terminal/payments/next
+├ ƒ /api/webhooks/yookassa
+├ ƒ /business
+├ ƒ /careers
+├ ƒ /checkout
+├ ƒ /checkout/payment/return
+├ ƒ /display
+├ ƒ /franchise
+├ ○ /icon.svg
+├ ƒ /integrations/max/app
+├ ƒ /kitchen
+├ ƒ /legal/[slug]
+├ ƒ /login
+├ ƒ /login/social/complete
+├ ƒ /login/social/result
+├ ƒ /menu
+├ ƒ /menu/[slug]
+├ ƒ /pos
+├ ƒ /profile
+├ ƒ /profile/avatar
+├ ƒ /profile/loyalty
+├ ƒ /profile/orders
+├ ƒ /register
+├ ○ /robots.txt
+└ ○ /sitemap.xml
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

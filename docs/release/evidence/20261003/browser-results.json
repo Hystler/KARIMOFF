@@ -1,0 +1,1387 @@
+{
+  "checkedAt": "2026-10-03T07:34:52.100Z",
+  "image": "sha256:b213f320c4c73e224c3ad57d3aa0f7a89f9115ee0be92a384b17c049e4494448",
+  "isolation": "restored synthetic PG17; runtime role; no real secrets; external fetch blocked; no order/payment submission",
+  "results": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/",
+      "status": 200,
+      "overflow": false,
+      "url": "/",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/menu",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "status": 200,
+      "overflow": false,
+      "url": "/menu/shaurma-s-zapechennoy-govyadinoy",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/login?redirectTo=%2Fcheckout",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/register",
+      "status": 200,
+      "overflow": false,
+      "url": "/register",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/checkout/payment/return",
+      "status": 200,
+      "overflow": false,
+      "url": "/login",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/rc-nonexistent",
+      "status": 404,
+      "overflow": false,
+      "url": "/rc-nonexistent",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/display",
+      "status": 200,
+      "overflow": false,
+      "url": "/display",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/profile",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/profile/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/profile/loyalty",
+      "status": 200,
+      "overflow": false,
+      "url": "/profile/loyalty",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "checkout-pickup",
+      "status": 200,
+      "overflow": false,
+      "url": "/checkout",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "checkout-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true,
+      "addressMessage": true
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "checkout-free-delivery",
+      "status": 200,
+      "overflow": false,
+      "mockGeocoder": true
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/admin",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/admin/orders",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/orders",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/admin/analytics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/admin/analytics/sales",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/analytics/sales",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/admin/economics",
+      "status": 200,
+      "overflow": false,
+      "url": "/admin/economics",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/pos",
+      "status": 200,
+      "overflow": false,
+      "url": "/pos",
+      "errors": []
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "path": "/kitchen",
+      "status": 200,
+      "overflow": false,
+      "url": "/kitchen",
+      "errors": []
+    }
+  ]
+}

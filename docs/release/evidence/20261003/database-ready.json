@@ -1,0 +1,92 @@
+{
+  "checkedAt": "2026-10-03T07:16:41.783Z",
+  "main": "3a366cab71f6ffe39796567e83fd8eaca3bbe591",
+  "container": "karimoff-rc-roles-20261003",
+  "image": "postgres:17-alpine",
+  "port": 55443,
+  "databases": {
+    "fresh": "karimoff_rc_fresh_1791011801783",
+    "upgrade": "karimoff_rc_upgrade_1791011801783",
+    "restore": "karimoff_rc_restore_1791011801783"
+  },
+  "migrations": {
+    "fresh": 28,
+    "main": 25,
+    "added": [
+      "20260929150000_add_delivery_checkout_and_courier_status.sql",
+      "20260930120000_delivery_release_hardening.sql",
+      "20261003070000_runtime_role_permissions.sql"
+    ],
+    "unchangedHistory": true,
+    "upgradeViaActualRunner": true,
+    "runtimeUrlIgnoredForDdl": true
+  },
+  "checks": {
+    "fresh": {
+      "permissions": {
+        "role": "karimoff_app",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "schema_create": false,
+        "database_create": false
+      },
+      "owners": 0,
+      "objects": {
+        "tables": 76,
+        "indexes": 284,
+        "constraints": 365,
+        "sequences": 1
+      },
+      "runtimeOrderCreated": true,
+      "createAlterDropDenied": true,
+      "runtimeSchemaVerification": true
+    },
+    "upgrade": {
+      "permissions": {
+        "role": "karimoff_app",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "schema_create": false,
+        "database_create": false
+      },
+      "owners": 0,
+      "objects": {
+        "tables": 76,
+        "indexes": 284,
+        "constraints": 365,
+        "sequences": 1
+      },
+      "runtimeOrderCreated": true,
+      "createAlterDropDenied": true,
+      "runtimeSchemaVerification": true
+    }
+  },
+  "restore": {
+    "method": "local synthetic pg_dump -Fc / pg_restore",
+    "bytes": 633957,
+    "milliseconds": 1193,
+    "matched": {
+      "products": 40,
+      "orders": 1,
+      "payments": 1,
+      "receipts": 1,
+      "users": 1,
+      "inventory": 1,
+      "migrations": 28
+    },
+    "contentHashes": {
+      "products": "7b18060d4550b53ae13f543971cde302",
+      "orders": "1fa4d9a854421e1ff36eb3da9aa65c58",
+      "payments": "3ea03693a31eada9a3fa35fb9574bcad",
+      "fiscal_receipts": "2f4bfbd42910073cb87e1b7c16c5960e",
+      "customers": "02ea0f005cb18b21ffcaffb6c669f159",
+      "inventory_items": "626e8337cb17f8254e95935a7dc0528f"
+    },
+    "productionBackupRestored": false
+  },
+  "runtimeDsn": "postgres://karimoff_app@127.0.0.1:55443/karimoff_rc_fresh_1791011801783"
+}

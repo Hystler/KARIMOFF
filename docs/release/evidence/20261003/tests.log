@@ -1,0 +1,2450 @@
+
+> karimoff@0.1.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: admin menu list shows product calories and macros
+ok 1 - admin menu list shows product calories and macros
+  ---
+  duration_ms: 29.94475
+  type: 'test'
+  ...
+# Subtest: dark admin analytics cards use dark theme surfaces instead of light cards
+ok 2 - dark admin analytics cards use dark theme surfaces instead of light cards
+  ---
+  duration_ms: 0.852875
+  type: 'test'
+  ...
+# Subtest: daily averages use selected Moscow calendar days, including weekday filters
+ok 3 - daily averages use selected Moscow calendar days, including weekday filters
+  ---
+  duration_ms: 298.246625
+  type: 'test'
+  ...
+# Subtest: receipt average is explicitly POS-only while completed sales remain channel-neutral
+ok 4 - receipt average is explicitly POS-only while completed sales remain channel-neutral
+  ---
+  duration_ms: 7.216792
+  type: 'test'
+  ...
+# Subtest: economics number editing accepts empty drafts, grouped paste, zero, and decimals
+ok 5 - economics number editing accepts empty drafts, grouped paste, zero, and decimals
+  ---
+  duration_ms: 106.95125
+  type: 'test'
+  ...
+# Subtest: economics server schema rejects empty, invalid, excessive, and fractional day values
+ok 6 - economics server schema rejects empty, invalid, excessive, and fractional day values
+  ---
+  duration_ms: 217.140333
+  type: 'test'
+  ...
+# Subtest: economics action exports only an async server action and returns controlled states
+ok 7 - economics action exports only an async server action and returns controlled states
+  ---
+  duration_ms: 0.947459
+  type: 'test'
+  ...
+# Subtest: actual management result separates POS and web acquiring and treats CAPEX below operations
+ok 8 - actual management result separates POS and web acquiring and treats CAPEX below operations
+  ---
+  duration_ms: 90.723292
+  type: 'test'
+  ...
+# Subtest: actual economics UI uses canonical covered sales and labels incomplete food cost honestly
+ok 9 - actual economics UI uses canonical covered sales and labels incomplete food cost honestly
+  ---
+  duration_ms: 1.091666
+  type: 'test'
+  ...
+# Subtest: analytics EXPLAIN diagnostics are fixed-query, admin-only, test-only, and read-only
+ok 10 - analytics EXPLAIN diagnostics are fixed-query, admin-only, test-only, and read-only
+  ---
+  duration_ms: 0.456
+  type: 'test'
+  ...
+# Subtest: ingredient nutrition is complete, non-negative, and uses a unit-aware basis
+ok 11 - ingredient nutrition is complete, non-negative, and uses a unit-aware basis
+  ---
+  duration_ms: 19.252
+  type: 'test'
+  ...
+# Subtest: recipe nutrition scales grams and pieces without applying kitchen waste twice
+ok 12 - recipe nutrition scales grams and pieces without applying kitchen waste twice
+  ---
+  duration_ms: 92.287542
+  type: 'test'
+  ...
+# Subtest: new product and recipe are created atomically and manual product nutrition is retired
+ok 13 - new product and recipe are created atomically and manual product nutrition is retired
+  ---
+  duration_ms: 1.078916
+  type: 'test'
+  ...
+# Subtest: empty station is persisted as null and never violates the station check
+ok 14 - empty station is persisted as null and never violates the station check
+  ---
+  duration_ms: 0.237292
+  type: 'test'
+  ...
+# Subtest: analytics exposes covered gross profit and does not invent food cost for unmapped items
+ok 15 - analytics exposes covered gross profit and does not invent food cost for unmapped items
+  ---
+  duration_ms: 2.9285
+  type: 'test'
+  ...
+# Subtest: heatmap uses restaurant intervals from 11:00 through 21:00
+ok 16 - heatmap uses restaurant intervals from 11:00 through 21:00
+  ---
+  duration_ms: 1.498791
+  type: 'test'
+  ...
+# Subtest: dayparts are restricted to the restaurant operating window
+ok 17 - dayparts are restricted to the restaurant operating window
+  ---
+  duration_ms: 0.200708
+  type: 'test'
+  ...
+# Subtest: explicit Evotor aliases confirm only recipe-equivalent products
+ok 18 - explicit Evotor aliases confirm only recipe-equivalent products
+  ---
+  duration_ms: 4.807042
+  type: 'test'
+  ...
+# Subtest: Evotor food cost resolves sausage variants by the meat in the receipt name
+ok 19 - Evotor food cost resolves sausage variants by the meat in the receipt name
+  ---
+  duration_ms: 0.29825
+  type: 'test'
+  ...
+# Subtest: unmapped Evotor products still receive useful analytics categories without false recipe mappings
+ok 20 - unmapped Evotor products still receive useful analytics categories without false recipe mappings
+  ---
+  duration_ms: 2.449458
+  type: 'test'
+  ...
+# Subtest: ingredient removal archives records and preserves historical order usage
+ok 21 - ingredient removal archives records and preserves historical order usage
+  ---
+  duration_ms: 0.938542
+  type: 'test'
+  ...
+# Subtest: both dashboard cost aggregates resolve each canonical item before multiplying net quantity
+ok 22 - both dashboard cost aggregates resolve each canonical item before multiplying net quantity
+  ---
+  duration_ms: 88.613875
+  type: 'test'
+  ...
+# Subtest: native snapshots use canonical item provenance and do not apply current waste twice
+ok 23 - native snapshots use canonical item provenance and do not apply current waste twice
+  ---
+  duration_ms: 0.444875
+  type: 'test'
+  ...
+# Subtest: confirmed Evotor portions require an explicit size in the source product name
+ok 24 - confirmed Evotor portions require an explicit size in the source product name
+  ---
+  duration_ms: 0.142292
+  type: 'test'
+  ...
+# Subtest: synthetic SQL replaces every application table and contains no writes
+ok 25 - synthetic SQL replaces every application table and contains no writes
+  ---
+  duration_ms: 41.080417
+  type: 'test'
+  ...
+# Subtest: PostgreSQL: portions, extras, removals, unknown coverage and canonical source isolation
+ok 26 - PostgreSQL: portions, extras, removals, unknown coverage and canonical source isolation
+  ---
+  duration_ms: 491.496
+  type: 'test'
+  ...
+# Subtest: all four pages show only real page links and exactly one current page
+ok 27 - all four pages show only real page links and exactly one current page
+  ---
+  duration_ms: 18.750666
+  type: 'test'
+  ...
+# Subtest: report navigation retains repeated filters but drops journal and display state
+ok 28 - report navigation retains repeated filters but drops journal and display state
+  ---
+  duration_ms: 2.033417
+  type: 'test'
+  ...
+# Subtest: planning options stay on planning and do not become report filters
+ok 29 - planning options stay on planning and do not become report filters
+  ---
+  duration_ms: 2.453417
+  type: 'test'
+  ...
+# Subtest: overview contents use existing fragment targets without losing the current query
+ok 30 - overview contents use existing fragment targets without losing the current query
+  ---
+  duration_ms: 7.265125
+  type: 'test'
+  ...
+# Subtest: avatar studio starts front-facing and cannot rotate into a broken profile
+ok 31 - avatar studio starts front-facing and cannot rotate into a broken profile
+  ---
+  duration_ms: 4.782167
+  type: 'test'
+  ...
+# Subtest: avatar editor uses a stable responsive control grid without scene copy overlays
+ok 32 - avatar editor uses a stable responsive control grid without scene copy overlays
+  ---
+  duration_ms: 0.096708
+  type: 'test'
+  ...
+# Subtest: unresolved checkout survives more than fifteen minutes, including a lost create response
+ok 33 - unresolved checkout survives more than fifteen minutes, including a lost create response
+  ---
+  duration_ms: 2.672083
+  type: 'test'
+  ...
+# Subtest: a cart modified while payment creation is in flight is not erased by the old payment
+ok 34 - a cart modified while payment creation is in flight is not erased by the old payment
+  ---
+  duration_ms: 0.353583
+  type: 'test'
+  ...
+# Subtest: lost attempt storage cannot authorize cart deletion
+ok 35 - lost attempt storage cannot authorize cart deletion
+  ---
+  duration_ms: 0.299416
+  type: 'test'
+  ...
+# Subtest: verified cancellation releases an attempt, but another payment cannot clear it
+ok 36 - verified cancellation releases an attempt, but another payment cannot clear it
+  ---
+  duration_ms: 0.163958
+  type: 'test'
+  ...
+# Subtest: verified payment clears only the submitted cart and reuses a checkout idempotency key
+ok 37 - verified payment clears only the submitted cart and reuses a checkout idempotency key
+  ---
+  duration_ms: 111.24025
+  type: 'test'
+  ...
+# Subtest: payment return clears the cart only after a server-confirmed paid state
+ok 38 - payment return clears the cart only after a server-confirmed paid state
+  ---
+  duration_ms: 1.192334
+  type: 'test'
+  ...
+# Subtest: My Orders is authenticated, live, provider-aware, and uses Moscow business time
+ok 39 - My Orders is authenticated, live, provider-aware, and uses Moscow business time
+  ---
+  duration_ms: 2.116166
+  type: 'test'
+  ...
+# Subtest: active orders from a previous Moscow day move out of live queues
+ok 40 - active orders from a previous Moscow day move out of live queues
+  ---
+  duration_ms: 80.785375
+  type: 'test'
+  ...
+# (node:51814) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/src/lib/delivery-pricing.ts is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: delivery costs 200 rubles below the free-delivery threshold
+ok 41 - delivery costs 200 rubles below the free-delivery threshold
+  ---
+  duration_ms: 2.683625
+  type: 'test'
+  ...
+# Subtest: delivery is free at and above 2,500 rubles
+ok 42 - delivery is free at and above 2,500 rubles
+  ---
+  duration_ms: 0.066875
+  type: 'test'
+  ...
+# Subtest: the fee decision is based on the supplied post-discount merchandise subtotal
+ok 43 - the fee decision is based on the supplied post-discount merchandise subtotal
+  ---
+  duration_ms: 0.050958
+  type: 'test'
+  ...
+# Subtest: delivery is guarded by server configuration and charges only below the free threshold
+ok 44 - delivery is guarded by server configuration and charges only below the free threshold
+  ---
+  duration_ms: 1.4775
+  type: 'test'
+  ...
+# Subtest: delivery fee is fiscalized as a service but stays out of kitchen and product metrics
+ok 45 - delivery fee is fiscalized as a service but stays out of kitchen and product metrics
+  ---
+  duration_ms: 0.275083
+  type: 'test'
+  ...
+# Subtest: courier handoff is a separate paid delivery status before delivered
+ok 46 - courier handoff is a separate paid delivery status before delivered
+  ---
+  duration_ms: 0.162625
+  type: 'test'
+  ...
+# (node:51818) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/src/lib/delivery/geo.ts is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: zone uses straight-line distance with an inclusive 3km boundary
+ok 47 - zone uses straight-line distance with an inclusive 3km boundary
+  ---
+  duration_ms: 1.280084
+  type: 'test'
+  ...
+# Subtest: excluded polygon blocks points inside and on its border even within radius
+ok 48 - excluded polygon blocks points inside and on its border even within radius
+  ---
+  duration_ms: 0.311917
+  type: 'test'
+  ...
+# Subtest: invalid coordinates fail closed
+ok 49 - invalid coordinates fail closed
+  ---
+  duration_ms: 0.197416
+  type: 'test'
+  ...
+# Subtest: delivery acceptance uses inclusive Moscow-local opening and closing times
+ok 50 - delivery acceptance uses inclusive Moscow-local opening and closing times
+  ---
+  duration_ms: 16.221208
+  type: 'test'
+  ...
+# Subtest: delivery acceptance identifies time before opening and after closing
+ok 51 - delivery acceptance identifies time before opening and after closing
+  ---
+  duration_ms: 0.306083
+  type: 'test'
+  ...
+# Subtest: token callback is POST-only, authenticated, rate-limited, deferred, and token-safe
+ok 52 - token callback is POST-only, authenticated, rate-limited, deferred, and token-safe
+  ---
+  duration_ms: 0.690041
+  type: 'test'
+  ...
+# Subtest: application tokens are encrypted and authenticated before storage
+ok 53 - application tokens are encrypted and authenticated before storage
+  ---
+  duration_ms: 84.591667
+  type: 'test'
+  ...
+# Subtest: Evotor token envelope is strict, versioned AES-256-GCM
+ok 54 - Evotor token envelope is strict, versioned AES-256-GCM
+  ---
+  duration_ms: 234.98675
+  type: 'test'
+  ...
+# Subtest: previous Evotor encryption key decrypts and re-encrypts idempotently with the primary key
+ok 55 - previous Evotor encryption key decrypts and re-encrypts idempotently with the primary key
+  ---
+  duration_ms: 155.825
+  type: 'test'
+  ...
+# Subtest: an invalid optional previous key cannot break a token encrypted by the primary key
+ok 56 - an invalid optional previous key cannot break a token encrypted by the primary key
+  ---
+  duration_ms: 74.725208
+  type: 'test'
+  ...
+# Subtest: wrong keys, malformed envelopes, and bad auth tags return safe classifications
+ok 57 - wrong keys, malformed envelopes, and bad auth tags return safe classifications
+  ---
+  duration_ms: 77.64475
+  type: 'test'
+  ...
+# Subtest: Evotor client does not retry 401 and retries 429/500 only as safe GET
+ok 58 - Evotor client does not retry 401 and retries 429/500 only as safe GET
+  ---
+  duration_ms: 165.6235
+  type: 'test'
+  ...
+# Subtest: Evotor client distinguishes revoked tokens from missing REST permissions
+ok 59 - Evotor client distinguishes revoked tokens from missing REST permissions
+  ---
+  duration_ms: 137.350375
+  type: 'test'
+  ...
+# Subtest: receipt parsing keeps fiscal analytics but strips customer and device identifiers
+ok 60 - receipt parsing keeps fiscal analytics but strips customer and device identifiers
+  ---
+  duration_ms: 79.818834
+  type: 'test'
+  ...
+# Subtest: database constraints and upserts make token, store, product, and receipt imports idempotent
+ok 61 - database constraints and upserts make token, store, product, and receipt imports idempotent
+  ---
+  duration_ms: 0.40675
+  type: 'test'
+  ...
+# Subtest: Evotor tables are private and imported receipts never mutate inventory
+ok 62 - Evotor tables are private and imported receipts never mutate inventory
+  ---
+  duration_ms: 0.404292
+  type: 'test'
+  ...
+# Subtest: connection check reads stores and devices but skips sales data
+ok 63 - connection check reads stores and devices but skips sales data
+  ---
+  duration_ms: 0.169125
+  type: 'test'
+  ...
+# Subtest: admin actions require staff permissions and never expose a token
+ok 64 - admin actions require staff permissions and never expose a token
+  ---
+  duration_ms: 0.121667
+  type: 'test'
+  ...
+# Subtest: transient 500, 429, timeout, and unknown infrastructure errors remain retryable
+ok 65 - transient 500, 429, timeout, and unknown infrastructure errors remain retryable
+  ---
+  duration_ms: 92.338458
+  type: 'test'
+  ...
+# Subtest: 401 is permanent auth failure while worker-local crypto errors do not poison a connection
+ok 66 - 401 is permanent auth failure while worker-local crypto errors do not poison a connection
+  ---
+  duration_ms: 190.442417
+  type: 'test'
+  ...
+# Subtest: retry delay grows exponentially with jitter and a fifteen-minute ceiling
+ok 67 - retry delay grows exponentially with jitter and a fifteen-minute ceiling
+  ---
+  duration_ms: 128.233917
+  type: 'test'
+  ...
+# Subtest: scheduler retries degraded connections but ignores auth and disabled states
+ok 68 - scheduler retries degraded connections but ignores auth and disabled states
+  ---
+  duration_ms: 1.035958
+  type: 'test'
+  ...
+# Subtest: transient failure keeps one event pending and success restores the connection
+ok 69 - transient failure keeps one event pending and success restores the connection
+  ---
+  duration_ms: 0.36525
+  type: 'test'
+  ...
+# Subtest: failed attempts do not rewind cursors and receipt deduplication remains intact
+ok 70 - failed attempts do not rewind cursors and receipt deduplication remains intact
+  ---
+  duration_ms: 0.214042
+  type: 'test'
+  ...
+# Subtest: legacy-key re-encryption is compare-and-swap and explicitly opt-in
+ok 71 - legacy-key re-encryption is compare-and-swap and explicitly opt-in
+  ---
+  duration_ms: 0.322583
+  type: 'test'
+  ...
+# Subtest: admin UI distinguishes connected, retrying, auth error, and disabled states
+ok 72 - admin UI distinguishes connected, retrying, auth error, and disabled states
+  ---
+  duration_ms: 0.153833
+  type: 'test'
+  ...
+# Subtest: terminal bridge storage is private, scoped, and included in runtime startup
+ok 73 - terminal bridge storage is private, scoped, and included in runtime startup
+  ---
+  duration_ms: 0.868791
+  type: 'test'
+  ...
+# Subtest: pairing is one-time, rate-limited, and stores only token digests
+ok 74 - pairing is one-time, rate-limited, and stores only token digests
+  ---
+  duration_ms: 0.239042
+  type: 'test'
+  ...
+# Subtest: terminal health check is read-only and uses an Evotor-supported method
+ok 75 - terminal health check is read-only and uses an Evotor-supported method
+  ---
+  duration_ms: 0.08875
+  type: 'test'
+  ...
+# Subtest: terminal jobs are device-scoped and live order previews require an explicit switch
+ok 76 - terminal jobs are device-scoped and live order previews require an explicit switch
+  ---
+  duration_ms: 0.11025
+  type: 'test'
+  ...
+# Subtest: Evotor APK keeps hosted pairing separate from terminal payment requests
+ok 77 - Evotor APK keeps hosted pairing separate from terminal payment requests
+  ---
+  duration_ms: 0.12375
+  type: 'test'
+  ...
+# Subtest: extras cover all requested portions and product-specific proteins
+ok 78 - extras cover all requested portions and product-specific proteins
+  ---
+  duration_ms: 1.055958
+  type: 'test'
+  ...
+# Subtest: every food type exposes three logical extras and shrimp never receives jalapeno
+ok 79 - every food type exposes three logical extras and shrimp never receives jalapeno
+  ---
+  duration_ms: 0.810333
+  type: 'test'
+  ...
+# Subtest: extras are limited to food categories, not drinks
+ok 80 - extras are limited to food categories, not drinks
+  ---
+  duration_ms: 0.120083
+  type: 'test'
+  ...
+# Subtest: disposable PostgreSQL: logical extras install idempotently with quantity capped at three
+ok 81 - disposable PostgreSQL: logical extras install idempotently with quantity capped at three
+  ---
+  duration_ms: 230.131
+  type: 'test'
+  ...
+# Subtest: browser order payload cannot supply a trusted price
+ok 82 - browser order payload cannot supply a trusted price
+  ---
+  duration_ms: 0.618625
+  type: 'test'
+  ...
+# Subtest: completed orders are serialized and cannot deduct inventory twice
+ok 83 - completed orders are serialized and cannot deduct inventory twice
+  ---
+  duration_ms: 0.240875
+  type: 'test'
+  ...
+# Subtest: inventory rows are locked and negative balances are rejected
+ok 84 - inventory rows are locked and negative balances are rejected
+  ---
+  duration_ms: 0.126125
+  type: 'test'
+  ...
+# Subtest: personal-data consent is mandatory and marketing remains optional
+ok 85 - personal-data consent is mandatory and marketing remains optional
+  ---
+  duration_ms: 0.082625
+  type: 'test'
+  ...
+# Subtest: cookie categories are disabled until consent and revocation is journaled
+ok 86 - cookie categories are disabled until consent and revocation is journaled
+  ---
+  duration_ms: 0.128084
+  type: 'test'
+  ...
+# Subtest: marketing withdrawal is stored without disabling the account
+ok 87 - marketing withdrawal is stored without disabling the account
+  ---
+  duration_ms: 0.078291
+  type: 'test'
+  ...
+# Subtest: anon and authenticated roles are denied internal data access
+ok 88 - anon and authenticated roles are denied internal data access
+  ---
+  duration_ms: 0.124167
+  type: 'test'
+  ...
+# Subtest: production mock SMS fails closed
+ok 89 - production mock SMS fails closed
+  ---
+  duration_ms: 0.119667
+  type: 'test'
+  ...
+# Subtest: real payments remain disabled by default
+ok 90 - real payments remain disabled by default
+  ---
+  duration_ms: 0.279583
+  type: 'test'
+  ...
+# Subtest: LCP heroes are eager, high priority, and do not load the old placeholder
+ok 91 - LCP heroes are eager, high priority, and do not load the old placeholder
+  ---
+  duration_ms: 0.584125
+  type: 'test'
+  ...
+# Subtest: product images remain lazy and use bounded responsive sizes
+ok 92 - product images remain lazy and use bounded responsive sizes
+  ---
+  duration_ms: 0.650166
+  type: 'test'
+  ...
+# Subtest: S3 origin URLs map to an optional CDN without a provider fallback
+ok 93 - S3 origin URLs map to an optional CDN without a provider fallback
+  ---
+  duration_ms: 0.058
+  type: 'test'
+  ...
+# Subtest: new uploads are content-versioned before receiving immutable caching
+ok 94 - new uploads are content-versioned before receiving immutable caching
+  ---
+  duration_ms: 0.057166
+  type: 'test'
+  ...
+# Subtest: home logo does not prefetch an unrelated hero on internal pages
+ok 95 - home logo does not prefetch an unrelated hero on internal pages
+  ---
+  duration_ms: 0.050542
+  type: 'test'
+  ...
+# Subtest: nutrition display respects the stored basis for one unit, an extra and 100 g
+ok 96 - nutrition display respects the stored basis for one unit, an extra and 100 g
+  ---
+  duration_ms: 2.7115
+  type: 'test'
+  ...
+# Subtest: exact reference fallback shares the recipe calculation and retains source quality
+ok 97 - exact reference fallback shares the recipe calculation and retains source quality
+  ---
+  duration_ms: 0.71625
+  type: 'test'
+  ...
+# Subtest: known missing chicken patty, partial and invalid records are visibly incomplete
+ok 98 - known missing chicken patty, partial and invalid records are visibly incomplete
+  ---
+  duration_ms: 0.558208
+  type: 'test'
+  ...
+# Subtest: entered zeros remain known zeros and do not fall back to reference nutrition
+ok 99 - entered zeros remain known zeros and do not fall back to reference nutrition
+  ---
+  duration_ms: 0.304084
+  type: 'test'
+  ...
+# Subtest: pieces and millilitres never acquire an invented gram weight from a name or package
+ok 100 - pieces and millilitres never acquire an invented gram weight from a name or package
+  ---
+  duration_ms: 0.411333
+  type: 'test'
+  ...
+# Subtest: structured known piece masses convert buns from a unit to 100 g
+ok 101 - structured known piece masses convert buns from a unit to 100 g
+  ---
+  duration_ms: 0.404791
+  type: 'test'
+  ...
+# Subtest: mass lookup remains exact and cannot mask partially entered piece nutrition
+ok 102 - mass lookup remains exact and cannot mask partially entered piece nutrition
+  ---
+  duration_ms: 0.386083
+  type: 'test'
+  ...
+# Subtest: estimated piece masses retain their estimate tag even with entered nutrition
+ok 103 - estimated piece masses retain their estimate tag even with entered nutrition
+  ---
+  duration_ms: 0.209459
+  type: 'test'
+  ...
+# Subtest: mismatched extra units and invalid portions cannot produce a valid portion total
+ok 104 - mismatched extra units and invalid portions cannot produce a valid portion total
+  ---
+  duration_ms: 0.624584
+  type: 'test'
+  ...
+# Subtest: small per-gram nutrition stays distinguishable from zero and missing values
+ok 105 - small per-gram nutrition stays distinguishable from zero and missing values
+  ---
+  duration_ms: 16.574166
+  type: 'test'
+  ...
+# Subtest: ingredient table renders missing nutrition and preserves inventory, archive and restore controls
+ok 106 - ingredient table renders missing nutrition and preserves inventory, archive and restore controls
+  ---
+  duration_ms: 42.324583
+  type: 'test'
+  ...
+# Subtest: extras table renders per-unit, portion and 100 g values with intact price actions and finite food cost
+ok 107 - extras table renders per-unit, portion and 100 g values with intact price actions and finite food cost
+  ---
+  duration_ms: 45.77675
+  type: 'test'
+  ...
+# Subtest: POS customization previews real modifiers but serializes no trusted price
+ok 108 - POS customization previews real modifiers but serializes no trusted price
+  ---
+  duration_ms: 202.074541
+  type: 'test'
+  ...
+# Subtest: operational SLA rejects legacy, corrupt, and future timestamps
+ok 109 - operational SLA rejects legacy, corrupt, and future timestamps
+  ---
+  duration_ms: 90.414833
+  type: 'test'
+  ...
+# Subtest: operational cutover excludes legacy orders without mutating history
+ok 110 - operational cutover excludes legacy orders without mutating history
+  ---
+  duration_ms: 0.632417
+  type: 'test'
+  ...
+# Subtest: test orders run through KDS but skip stock and business analytics
+ok 111 - test orders run through KDS but skip stock and business analytics
+  ---
+  duration_ms: 0.609084
+  type: 'test'
+  ...
+# Subtest: structured modifiers are server-validated and snapshot effective ingredients
+ok 112 - structured modifiers are server-validated and snapshot effective ingredients
+  ---
+  duration_ms: 0.275375
+  type: 'test'
+  ...
+# Subtest: POS edit path preserves a cart line and KDS makes modifiers unmissable
+ok 113 - POS edit path preserves a cart line and KDS makes modifiers unmissable
+  ---
+  duration_ms: 0.179792
+  type: 'test'
+  ...
+# Subtest: POS server action exports functions only
+ok 114 - POS server action exports functions only
+  ---
+  duration_ms: 0.255083
+  type: 'test'
+  ...
+# Subtest: pickup display uses spatial transitions, persistent optional sound, and restrained brand color
+ok 115 - pickup display uses spatial transitions, persistent optional sound, and restrained brand color
+  ---
+  duration_ms: 0.230125
+  type: 'test'
+  ...
+# Subtest: order screens use PostgreSQL notifications with a bounded recovery poll
+ok 116 - order screens use PostgreSQL notifications with a bounded recovery poll
+  ---
+  duration_ms: 0.580167
+  type: 'test'
+  ...
+# Subtest: standalone startup applies the POS/KDS refinement migration
+ok 117 - standalone startup applies the POS/KDS refinement migration
+  ---
+  duration_ms: 0.71725
+  type: 'test'
+  ...
+# Subtest: one start action commits acceptance and cooking in the same transaction
+ok 118 - one start action commits acceptance and cooking in the same transaction
+  ---
+  duration_ms: 87.164459
+  type: 'test'
+  ...
+# Subtest: failed cooking rolls back the intermediate acceptance
+ok 119 - failed cooking rolls back the intermediate acceptance
+  ---
+  duration_ms: 49.018
+  type: 'test'
+  ...
+# Subtest: legacy accepted orders continue directly to cooking
+ok 120 - legacy accepted orders continue directly to cooking
+  ---
+  duration_ms: 47.80775
+  type: 'test'
+  ...
+# Subtest: test server cannot mutate a real order, including when it is paid
+ok 121 - test server cannot mutate a real order, including when it is paid
+  ---
+  duration_ms: 28.477292
+  type: 'test'
+  ...
+# Subtest: production cannot mutate a test order
+ok 122 - production cannot mutate a test order
+  ---
+  duration_ms: 39.863541
+  type: 'test'
+  ...
+# Subtest: unpaid real POS order cannot be handed out
+ok 123 - unpaid real POS order cannot be handed out
+  ---
+  duration_ms: 29.512833
+  type: 'test'
+  ...
+# Subtest: paid POS and unpaid training orders can be handed out
+ok 124 - paid POS and unpaid training orders can be handed out
+  ---
+  duration_ms: 28.2955
+  type: 'test'
+  ...
+# Subtest: disposable PG17: POS to cooking, ready and handout with zero stock and no business side effects
+ok 125 - disposable PG17: POS to cooking, ready and handout with zero stock and no business side effects
+  ---
+  duration_ms: 266.146458
+  type: 'test'
+  ...
+# Subtest: two station views partition lines and never report a mixed order fully ready early
+ok 126 - two station views partition lines and never report a mixed order fully ready early
+  ---
+  duration_ms: 111.297916
+  type: 'test'
+  ...
+# Subtest: forward SQL retains existing loyalty accounting and protected commercial lines
+ok 127 - forward SQL retains existing loyalty accounting and protected commercial lines
+  ---
+  duration_ms: 0.732208
+  type: 'test'
+  ...
+# Subtest: 55442: migration supports Timeweb without legacy browser roles
+ok 128 - 55442: migration supports Timeweb without legacy browser roles
+  ---
+  duration_ms: 604.077625
+  type: 'test'
+  ...
+# Subtest: 55442: real mixed order, zero stock, repeated station ready and handout deduct exactly once
+ok 129 - 55442: real mixed order, zero stock, repeated station ready and handout deduct exactly once
+  ---
+  duration_ms: 500.554834
+  type: 'test'
+  ...
+# Subtest: 55442: block mode rolls back final station and accounting; reversible pilot setting succeeds
+ok 130 - 55442: block mode rolls back final station and accounting; reversible pilot setting succeeds
+  ---
+  duration_ms: 308.939167
+  type: 'test'
+  ...
+# Subtest: 55442: strict mode succeeds at exact stock and negative stock is not clamped
+ok 131 - 55442: strict mode succeeds at exact stock and negative stock is not clamped
+  ---
+  duration_ms: 983.251375
+  type: 'test'
+  ...
+# Subtest: 55442: missing stock row is materialized and full immutable snapshot is consumed
+ok 132 - 55442: missing stock row is materialized and full immutable snapshot is consumed
+  ---
+  duration_ms: 229.838209
+  type: 'test'
+  ...
+# Subtest: 55442: drinks, sauces and unknown categories need only the snacks employee; rolls belong to mains
+ok 133 - 55442: drinks, sauces and unknown categories need only the snacks employee; rolls belong to mains
+  ---
+  duration_ms: 192.025041
+  type: 'test'
+  ...
+# Subtest: 55442: unauthorized roles, invalid stations, premature ready and test/prod mismatch stay blocked
+ok 134 - 55442: unauthorized roles, invalid stations, premature ready and test/prod mismatch stay blocked
+  ---
+  duration_ms: 253.272583
+  type: 'test'
+  ...
+# Subtest: 55442: hotdogs use mains in SQL and the legacy queue fallback without finishing snacks
+ok 135 - 55442: hotdogs use mains in SQL and the legacy queue fallback without finishing snacks
+  ---
+  duration_ms: 445.486042
+  type: 'test'
+  ...
+# Subtest: 55442: test orders still complete without stock, payment or fiscal mutations
+ok 136 - 55442: test orders still complete without stock, payment or fiscal mutations
+  ---
+  duration_ms: 208.029292
+  type: 'test'
+  ...
+# Subtest: 55442: online payment guard and immutable paid lines survive station readiness; settlement remains exactly once
+ok 137 - 55442: online payment guard and immutable paid lines survive station readiness; settlement remains exactly once
+  ---
+  duration_ms: 280.449667
+  type: 'test'
+  ...
+# Subtest: 55442: legacy single-station complete also honors pilot policy and repeated ready
+ok 138 - 55442: legacy single-station complete also honors pilot policy and repeated ready
+  ---
+  duration_ms: 133.780833
+  type: 'test'
+  ...
+# Subtest: 55442: simultaneous employees and duplicate ready requests serialize into one deduction
+ok 139 - 55442: simultaneous employees and duplicate ready requests serialize into one deduction
+  ---
+  duration_ms: 324.806292
+  type: 'test'
+  ...
+# Subtest: cart auth navigation closes the drawer and checkout loading always recovers
+ok 140 - cart auth navigation closes the drawer and checkout loading always recovers
+  ---
+  duration_ms: 1.679375
+  type: 'test'
+  ...
+# Subtest: public theme follows the device until the guest makes a manual choice
+ok 141 - public theme follows the device until the guest makes a manual choice
+  ---
+  duration_ms: 0.806042
+  type: 'test'
+  ...
+# Subtest: every imported menu item has concise guest copy separated from composition
+ok 142 - every imported menu item has concise guest copy separated from composition
+  ---
+  duration_ms: 1.263458
+  type: 'test'
+  ...
+# Subtest: inactive drinks stay out of public menu and product detail fallbacks
+ok 143 - inactive drinks stay out of public menu and product detail fallbacks
+  ---
+  duration_ms: 2.513167
+  type: 'test'
+  ...
+# Subtest: catalog copy migration is one-time, slug-based, and leaves business values intact
+ok 144 - catalog copy migration is one-time, slug-based, and leaves business values intact
+  ---
+  duration_ms: 0.882709
+  type: 'test'
+  ...
+# Subtest: menu cards show complete guest copy and use a readable mobile layout
+ok 145 - menu cards show complete guest copy and use a readable mobile layout
+  ---
+  duration_ms: 0.453875
+  type: 'test'
+  ...
+# Subtest: public actions share premium accessible states without touching provider branding
+ok 146 - public actions share premium accessible states without touching provider branding
+  ---
+  duration_ms: 1.310458
+  type: 'test'
+  ...
+# Subtest: the public hero keeps its orange boundary in both themes
+ok 147 - the public hero keeps its orange boundary in both themes
+  ---
+  duration_ms: 0.120458
+  type: 'test'
+  ...
+# Subtest: loyalty card QR is signed, private, rotatable, and cannot authorize redemption
+ok 148 - loyalty card QR is signed, private, rotatable, and cannot authorize redemption
+  ---
+  duration_ms: 2.332875
+  type: 'test'
+  ...
+# Subtest: loyalty migration is additive, RLS-protected, and preserves the old POS RPC
+ok 149 - loyalty migration is additive, RLS-protected, and preserves the old POS RPC
+  ---
+  duration_ms: 2.389084
+  type: 'test'
+  ...
+# Subtest: POS resolves cards server-side and attaches a customer to the canonical order
+ok 150 - POS resolves cards server-side and attaches a customer to the canonical order
+  ---
+  duration_ms: 0.852666
+  type: 'test'
+  ...
+# Subtest: Wallet integrations are official-format, server-only, and hidden until configured
+ok 151 - Wallet integrations are official-format, server-only, and hidden until configured
+  ---
+  duration_ms: 0.691042
+  type: 'test'
+  ...
+# Subtest: audience analytics uses identified canonical sales and suppresses invented demographics
+ok 152 - audience analytics uses identified canonical sales and suppresses invented demographics
+  ---
+  duration_ms: 1.523959
+  type: 'test'
+  ...
+# Subtest: maintenance mode keeps reads available and blocks every write method centrally
+ok 153 - maintenance mode keeps reads available and blocks every write method centrally
+  ---
+  duration_ms: 0.438459
+  type: 'test'
+  ...
+# Subtest: maintenance mode is visible and disabled unless explicitly enabled
+ok 154 - maintenance mode is visible and disabled unless explicitly enabled
+  ---
+  duration_ms: 0.072208
+  type: 'test'
+  ...
+# Subtest: MAX validates official WebAppData HMAC, freshness and signed start_param
+ok 155 - MAX validates official WebAppData HMAC, freshness and signed start_param
+  ---
+  duration_ms: 78.229625
+  type: 'test'
+  ...
+# Subtest: MAX contact validation binds a fresh signed phone to the validated user
+ok 156 - MAX contact validation binds a fresh signed phone to the validated user
+  ---
+  duration_ms: 85.984458
+  type: 'test'
+  ...
+# Subtest: MAX challenge is random, hashed, browser-bound, expiring and one-time
+ok 157 - MAX challenge is random, hashed, browser-bound, expiring and one-time
+  ---
+  duration_ms: 3.136875
+  type: 'test'
+  ...
+# Subtest: MAX linking does not merge by profile data or an unverified local phone
+ok 158 - MAX linking does not merge by profile data or an unverified local phone
+  ---
+  duration_ms: 0.774625
+  type: 'test'
+  ...
+# Subtest: MAX browser coordinator completes without depending on app-to-browser switching
+ok 159 - MAX browser coordinator completes without depending on app-to-browser switching
+  ---
+  duration_ms: 2.29375
+  type: 'test'
+  ...
+# Subtest: MAX completed challenge stays retryable until the browser proves its session cookie
+ok 160 - MAX completed challenge stays retryable until the browser proves its session cookie
+  ---
+  duration_ms: 0.956334
+  type: 'test'
+  ...
+# Subtest: MAX treats a validated identity separately from optional phone completion
+ok 161 - MAX treats a validated identity separately from optional phone completion
+  ---
+  duration_ms: 0.29825
+  type: 'test'
+  ...
+# Subtest: MAX correlation stages are safe and cover Mini App through browser session
+ok 162 - MAX correlation stages are safe and cover Mini App through browser session
+  ---
+  duration_ms: 0.764375
+  type: 'test'
+  ...
+# Subtest: Telegram and MAX transient UI state is provider-scoped
+ok 163 - Telegram and MAX transient UI state is provider-scoped
+  ---
+  duration_ms: 0.739417
+  type: 'test'
+  ...
+# Subtest: MAX UI, profile and admin expose only safe identity details
+ok 164 - MAX UI, profile and admin expose only safe identity details
+  ---
+  duration_ms: 1.850792
+  type: 'test'
+  ...
+# Subtest: MAX runtime configuration reports exact safe reasons without exposing the bot token
+ok 165 - MAX runtime configuration reports exact safe reasons without exposing the bot token
+  ---
+  duration_ms: 91.638458
+  type: 'test'
+  ...
+# Subtest: MAX Bot API foundation uses the current read-only endpoint and never exposes the bot token
+ok 166 - MAX Bot API foundation uses the current read-only endpoint and never exposes the bot token
+  ---
+  duration_ms: 0.742042
+  type: 'test'
+  ...
+# Subtest: VK runtime is absent and public login exposes only Telegram and MAX
+ok 167 - VK runtime is absent and public login exposes only Telegram and MAX
+  ---
+  duration_ms: 0.623917
+  type: 'test'
+  ...
+# Subtest: printed menu pricing updates only the agreed catalog entries
+ok 168 - printed menu pricing updates only the agreed catalog entries
+  ---
+  duration_ms: 0.74625
+  type: 'test'
+  ...
+# Subtest: printed menu portions, box proteins, extras and mixes are represented exactly
+ok 169 - printed menu portions, box proteins, extras and mixes are represented exactly
+  ---
+  duration_ms: 0.32475
+  type: 'test'
+  ...
+# Subtest: owner-approved hotdog variants share recipes and expose the correct required choices
+ok 170 - owner-approved hotdog variants share recipes and expose the correct required choices
+  ---
+  duration_ms: 0.096667
+  type: 'test'
+  ...
+# Subtest: admin overview is operational and no longer advertises cashier shortcuts
+ok 171 - admin overview is operational and no longer advertises cashier shortcuts
+  ---
+  duration_ms: 0.188833
+  type: 'test'
+  ...
+# Subtest: product removal archives the catalog row and preserves sales history
+ok 172 - product removal archives the catalog row and preserves sales history
+  ---
+  duration_ms: 0.065083
+  type: 'test'
+  ...
+# Subtest: configuration exposes only booleans and validates HTTPS links without credentials
+ok 173 - configuration exposes only booleans and validates HTTPS links without credentials
+  ---
+  duration_ms: 71.8815
+  type: 'test'
+  ...
+# Subtest: official request and success envelopes retain message IDs and only the generic account link
+ok 174 - official request and success envelopes retain message IDs and only the generic account link
+  ---
+  duration_ms: 117.29925
+  type: 'test'
+  ...
+# Subtest: preflight gates prevent every HTTP request when disabled, in maintenance or misconfigured
+ok 175 - preflight gates prevent every HTTP request when disabled, in maintenance or misconfigured
+  ---
+  duration_ms: 449.287583
+  type: 'test'
+  ...
+# Subtest: ambiguous POST outcomes never become success or automatic retry
+ok 176 - ambiguous POST outcomes never become success or automatic retry
+  ---
+  duration_ms: 438.781042
+  type: 'test'
+  ...
+# Subtest: provider rejections distinguish rate limits, temporary errors and permanent refusal
+ok 177 - provider rejections distinguish rate limits, temporary errors and permanent refusal
+  ---
+  duration_ms: 246.9275
+  type: 'test'
+  ...
+# Subtest: disabled workers and invalid origin do not connect to the database
+ok 178 - disabled workers and invalid origin do not connect to the database
+  ---
+  duration_ms: 343.225541
+  type: 'test'
+  ...
+# Subtest: expired and legacy ambiguous deliveries are quarantined; claims exclude exhausted and accepted records
+ok 179 - expired and legacy ambiguous deliveries are quarantined; claims exclude exhausted and accepted records
+  ---
+  duration_ms: 152.197334
+  type: 'test'
+  ...
+# Subtest: an accepted POST followed by a DB failure is never requeued by the catch block
+ok 180 - an accepted POST followed by a DB failure is never requeued by the catch block
+  ---
+  duration_ms: 29.638208
+  type: 'test'
+  ...
+# Subtest: obsolete, test, unlinked or reassigned orders cannot reach the provider
+ok 181 - obsolete, test, unlinked or reassigned orders cannot reach the provider
+  ---
+  duration_ms: 128.398917
+  type: 'test'
+  ...
+# Subtest: Telegram recipient fails closed without a positive safe signed profile ID; no sub fallback
+ok 182 - Telegram recipient fails closed without a positive safe signed profile ID; no sub fallback
+  ---
+  duration_ms: 545.24975
+  type: 'test'
+  ...
+# Subtest: Telegram uses signed metadata.telegramBotUserId after normal login, never OIDC sub
+ok 183 - Telegram uses signed metadata.telegramBotUserId after normal login, never OIDC sub
+  ---
+  duration_ms: 113.387375
+  type: 'test'
+  ...
+# Subtest: retry backoff honors provider delay and stops at eight attempts
+ok 184 - retry backoff honors provider delay and stops at eight attempts
+  ---
+  duration_ms: 104.451708
+  type: 'test'
+  ...
+# Subtest: scheduler catches failures, releases its running flag and never logs raw exceptions
+ok 185 - scheduler catches failures, releases its running flag and never logs raw exceptions
+  ---
+  duration_ms: 75.74925
+  type: 'test'
+  ...
+# Subtest: read, retry and server action reject unauthenticated and non-global staff before DB access
+ok 186 - read, retry and server action reject unauthenticated and non-global staff before DB access
+  ---
+  duration_ms: 118.38275
+  type: 'test'
+  ...
+# Subtest: health reads are bounded, read-only, secret-free and distinguish unavailable from empty
+ok 187 - health reads are bounded, read-only, secret-free and distinguish unavailable from empty
+  ---
+  duration_ms: 110.711792
+  type: 'test'
+  ...
+# Subtest: manual retry is confirmed, single-row, conditional, audited and never directly sends
+ok 188 - manual retry is confirmed, single-row, conditional, audited and never directly sends
+  ---
+  duration_ms: 67.247208
+  type: 'test'
+  ...
+# Subtest: manual retry cannot bypass kill switches, invalid input or confirmation
+ok 189 - manual retry cannot bypass kill switches, invalid input or confirmation
+  ---
+  duration_ms: 51.657625
+  type: 'test'
+  ...
+# Subtest: admin page renders empty, missing-schema and disabled states without campaigns or fake health
+ok 190 - admin page renders empty, missing-schema and disabled states without campaigns or fake health
+  ---
+  duration_ms: 295.615959
+  type: 'test'
+  ...
+# Subtest: modifier price is authoritative and effective ingredients are snapshotted
+ok 191 - modifier price is authoritative and effective ingredients are snapshotted
+  ---
+  duration_ms: 0.616416
+  type: 'test'
+  ...
+# Subtest: cart keeps separately configured products as separate lines
+ok 192 - cart keeps separately configured products as separate lines
+  ---
+  duration_ms: 0.130666
+  type: 'test'
+  ...
+# Subtest: scheduled orders are limited to the current Moscow day
+ok 193 - scheduled orders are limited to the current Moscow day
+  ---
+  duration_ms: 0.067125
+  type: 'test'
+  ...
+# Subtest: ingredient waste adjusts food cost and order usage
+ok 194 - ingredient waste adjusts food cost and order usage
+  ---
+  duration_ms: 0.062708
+  type: 'test'
+  ...
+# Subtest: kitchen displays modifiers and uses atomic status RPC
+ok 195 - kitchen displays modifiers and uses atomic status RPC
+  ---
+  duration_ms: 0.15225
+  type: 'test'
+  ...
+# Subtest: staff and register tables are private and cash register is fail closed
+ok 196 - staff and register tables are private and cash register is fail closed
+  ---
+  duration_ms: 0.116667
+  type: 'test'
+  ...
+# Subtest: production SMS remains fail closed
+ok 197 - production SMS remains fail closed
+  ---
+  duration_ms: 0.04125
+  type: 'test'
+  ...
+# Subtest: KDS SLA and role transitions remain deterministic
+ok 198 - KDS SLA and role transitions remain deterministic
+  ---
+  duration_ms: 107.0255
+  type: 'test'
+  ...
+# Subtest: daily A/B numbering is atomic, location-scoped, and date-scoped
+ok 199 - daily A/B numbering is atomic, location-scoped, and date-scoped
+  ---
+  duration_ms: 0.467541
+  type: 'test'
+  ...
+# Subtest: web and POS use one server-priced order-item writer
+ok 200 - web and POS use one server-priced order-item writer
+  ---
+  duration_ms: 0.37375
+  type: 'test'
+  ...
+# Subtest: scheduled web and POS orders are restricted to the current Moscow day
+ok 201 - scheduled web and POS orders are restricted to the current Moscow day
+  ---
+  duration_ms: 0.201792
+  type: 'test'
+  ...
+# Subtest: inventory deduction remains transactional and exactly once
+ok 202 - inventory deduction remains transactional and exactly once
+  ---
+  duration_ms: 0.685666
+  type: 'test'
+  ...
+# Subtest: status history, outbox, and realtime delivery do not expose customer PII
+ok 203 - status history, outbox, and realtime delivery do not expose customer PII
+  ---
+  duration_ms: 0.945208
+  type: 'test'
+  ...
+# Subtest: pickup display receives only explicitly public order fields
+ok 204 - pickup display receives only explicitly public order fields
+  ---
+  duration_ms: 0.166459
+  type: 'test'
+  ...
+# Subtest: Evotor sync has cursor overlap, retries, and rolling reconciliation
+ok 205 - Evotor sync has cursor overlap, retries, and rolling reconciliation
+  ---
+  duration_ms: 0.114458
+  type: 'test'
+  ...
+# Subtest: canonical analytics suppresses only confirmed reconciliations
+ok 206 - canonical analytics suppresses only confirmed reconciliations
+  ---
+  duration_ms: 2.56625
+  type: 'test'
+  ...
+# Subtest: manual receipt reconciliation is explicit, scoped, audited, and inventory-neutral
+ok 207 - manual receipt reconciliation is explicit, scoped, audited, and inventory-neutral
+  ---
+  duration_ms: 0.474541
+  type: 'test'
+  ...
+# Subtest: staff location scope fails closed and write flows honor maintenance mode
+ok 208 - staff location scope fails closed and write flows honor maintenance mode
+  ---
+  duration_ms: 0.151292
+  type: 'test'
+  ...
+# Subtest: KDS presents modifiers and the shared recipe without duplicating inventory recipes
+ok 209 - KDS presents modifiers and the shared recipe without duplicating inventory recipes
+  ---
+  duration_ms: 0.086375
+  type: 'test'
+  ...
+# Subtest: the standalone container verifies the Order Flow migration before startup
+ok 210 - the standalone container verifies the Order Flow migration before startup
+  ---
+  duration_ms: 0.14875
+  type: 'test'
+  ...
+# Subtest: transactional Telegram and MAX notifications are queued exactly once and disabled by default
+ok 211 - transactional Telegram and MAX notifications are queued exactly once and disabled by default
+  ---
+  duration_ms: 1.731792
+  type: 'test'
+  ...
+# Subtest: payment status recovers after an offline request without a false failure or rejected promise
+ok 212 - payment status recovers after an offline request without a false failure or rejected promise
+  ---
+  duration_ms: 155.430292
+  type: 'test'
+  ...
+# Subtest: a hung payment poll is aborted and does not leave the coordinator locked
+ok 213 - a hung payment poll is aborted and does not leave the coordinator locked
+  ---
+  duration_ms: 57.164458
+  type: 'test'
+  ...
+# Subtest: hidden pages do not initiate payment checks
+ok 214 - hidden pages do not initiate payment checks
+  ---
+  duration_ms: 77.629042
+  type: 'test'
+  ...
+# Subtest: Russian phone formats converge to one stored and displayed value
+ok 215 - Russian phone formats converge to one stored and displayed value
+  ---
+  duration_ms: 106.866834
+  type: 'test'
+  ...
+# Subtest: premium filters combine categories, product, weekdays, and Moscow intraday range
+ok 216 - premium filters combine categories, product, weekdays, and Moscow intraday range
+  ---
+  duration_ms: 107.444792
+  type: 'test'
+  ...
+# Subtest: last quarter uses complete Moscow calendar-quarter boundaries
+ok 217 - last quarter uses complete Moscow calendar-quarter boundaries
+  ---
+  duration_ms: 178.281875
+  type: 'test'
+  ...
+# Subtest: Pareto and ABC use cumulative revenue without reclassifying the catalog
+ok 218 - Pareto and ABC use cumulative revenue without reclassifying the catalog
+  ---
+  duration_ms: 73.862291
+  type: 'test'
+  ...
+# Subtest: sales map re-ranks values and shares for revenue, quantity, and food-cost profit
+ok 219 - sales map re-ranks values and shares for revenue, quantity, and food-cost profit
+  ---
+  duration_ms: 80.767125
+  type: 'test'
+  ...
+# Subtest: average-ticket and revenue decomposition handle empty comparison bases
+ok 220 - average-ticket and revenue decomposition handle empty comparison bases
+  ---
+  duration_ms: 82.799167
+  type: 'test'
+  ...
+# Subtest: transparent anomaly requires history and a two-deviation signal
+ok 221 - transparent anomaly requires history and a two-deviation signal
+  ---
+  duration_ms: 77.81775
+  type: 'test'
+  ...
+# Subtest: premium analytics aggregates on the server and preserves stable product identity
+ok 222 - premium analytics aggregates on the server and preserves stable product identity
+  ---
+  duration_ms: 0.412833
+  type: 'test'
+  ...
+# Subtest: location analytics configuration is optional, server-only, and schema-validated
+ok 223 - location analytics configuration is optional, server-only, and schema-validated
+  ---
+  duration_ms: 0.375542
+  type: 'test'
+  ...
+# Subtest: product momentum ignores tiny comparison samples and the time filter stays open
+ok 224 - product momentum ignores tiny comparison samples and the time filter stays open
+  ---
+  duration_ms: 0.761625
+  type: 'test'
+  ...
+# Subtest: analytics controls are URL-backed, keyboard reachable, and support drill-through
+ok 225 - analytics controls are URL-backed, keyboard reachable, and support drill-through
+  ---
+  duration_ms: 0.766958
+  type: 'test'
+  ...
+# Subtest: analytics category colors are stable and carry the same meaning across charts
+ok 226 - analytics category colors are stable and carry the same meaning across charts
+  ---
+  duration_ms: 98.865333
+  type: 'test'
+  ...
+# Subtest: product and category CSV reports are scoped, aggregated, and spreadsheet-safe
+ok 227 - product and category CSV reports are scoped, aggregated, and spreadsheet-safe
+  ---
+  duration_ms: 0.258375
+  type: 'test'
+  ...
+# Subtest: TEST orders bypass stock only inside the explicit test branch
+ok 228 - TEST orders bypass stock only inside the explicit test branch
+  ---
+  duration_ms: 0.437875
+  type: 'test'
+  ...
+# Subtest: servings use one unit notation and never advertise unsupported text ranges
+ok 229 - servings use one unit notation and never advertise unsupported text ranges
+  ---
+  duration_ms: 44.834167
+  type: 'test'
+  ...
+# Subtest: historical portion prices come from menu export, unknown products are not guessed
+ok 230 - historical portion prices come from menu export, unknown products are not guessed
+  ---
+  duration_ms: 1.323583
+  type: 'test'
+  ...
+# Subtest: public menu rejects every recognized drinks category
+ok 231 - public menu rejects every recognized drinks category
+  ---
+  duration_ms: 0.798041
+  type: 'test'
+  ...
+# Subtest: selected portion replaces the base quantity, removal and extra quantities are respected
+ok 232 - selected portion replaces the base quantity, removal and extra quantities are respected
+  ---
+  duration_ms: 4.042083
+  type: 'test'
+  ...
+# Subtest: missing modifier nutrition and mismatched units never produce a false complete value
+ok 233 - missing modifier nutrition and mismatched units never produce a false complete value
+  ---
+  duration_ms: 4.550209
+  type: 'test'
+  ...
+# Subtest: zero-quantity extra catalog rows do not invalidate the base recipe
+ok 234 - zero-quantity extra catalog rows do not invalidate the base recipe
+  ---
+  duration_ms: 0.369542
+  type: 'test'
+  ...
+# Subtest: reference nutrition is exact-name, unit-aware and never overrides partial or entered data
+ok 235 - reference nutrition is exact-name, unit-aware and never overrides partial or entered data
+  ---
+  duration_ms: 1.292625
+  type: 'test'
+  ...
+# Subtest: temporary prepared-food references use the confirmed production piece weights
+ok 236 - temporary prepared-food references use the confirmed production piece weights
+  ---
+  duration_ms: 0.275666
+  type: 'test'
+  ...
+# Subtest: disposable PG: portion setup idempotency, server price and recipe/food-cost snapshot
+ok 237 - disposable PG: portion setup idempotency, server price and recipe/food-cost snapshot
+  ---
+  duration_ms: 542.226625
+  type: 'test'
+  ...
+# Subtest: production card calculates yield, full cost, price per 100g, and margin
+ok 238 - production card calculates yield, full cost, price per 100g, and margin
+  ---
+  duration_ms: 186.017042
+  type: 'test'
+  ...
+# Subtest: production run is atomic and cannot make raw inventory negative
+ok 239 - production run is atomic and cannot make raw inventory negative
+  ---
+  duration_ms: 0.540291
+  type: 'test'
+  ...
+# Subtest: production tables are private and available to the server-only app role
+ok 240 - production tables are private and available to the server-only app role
+  ---
+  duration_ms: 0.294542
+  type: 'test'
+  ...
+# Subtest: production is a first-class admin section with OPEX and actual runs
+ok 241 - production is a first-class admin section with OPEX and actual runs
+  ---
+  duration_ms: 0.161833
+  type: 'test'
+  ...
+# Subtest: light: profile text and editor states meet normal-text contrast
+ok 242 - light: profile text and editor states meet normal-text contrast
+  ---
+  duration_ms: 1.768125
+  type: 'test'
+  ...
+# Subtest: light: swatch boundaries and focus accents remain distinguishable
+ok 243 - light: swatch boundaries and focus accents remain distinguishable
+  ---
+  duration_ms: 0.402583
+  type: 'test'
+  ...
+# Subtest: light: compact provider controls preserve readable branded colors
+ok 244 - light: compact provider controls preserve readable branded colors
+  ---
+  duration_ms: 0.158416
+  type: 'test'
+  ...
+# Subtest: dark: profile text and editor states meet normal-text contrast
+ok 245 - dark: profile text and editor states meet normal-text contrast
+  ---
+  duration_ms: 0.118292
+  type: 'test'
+  ...
+# Subtest: dark: swatch boundaries and focus accents remain distinguishable
+ok 246 - dark: swatch boundaries and focus accents remain distinguishable
+  ---
+  duration_ms: 0.231458
+  type: 'test'
+  ...
+# Subtest: dark: compact provider controls preserve readable branded colors
+ok 247 - dark: compact provider controls preserve readable branded colors
+  ---
+  duration_ms: 0.180583
+  type: 'test'
+  ...
+# Subtest: profile styles stay scoped without overriding palette fills or using important
+ok 248 - profile styles stay scoped without overriding palette fills or using important
+  ---
+  duration_ms: 0.685042
+  type: 'test'
+  ...
+# Subtest: product details use stable active slugs and expose complete SEO metadata
+ok 249 - product details use stable active slugs and expose complete SEO metadata
+  ---
+  duration_ms: 2.343167
+  type: 'test'
+  ...
+# Subtest: nutrition distinguishes missing data from real zero values
+ok 250 - nutrition distinguishes missing data from real zero values
+  ---
+  duration_ms: 285.057458
+  type: 'test'
+  ...
+# Subtest: listing and detail keep quick add, quantity, and server-authoritative modifiers
+ok 251 - listing and detail keep quick add, quantity, and server-authoritative modifiers
+  ---
+  duration_ms: 3.640791
+  type: 'test'
+  ...
+# Subtest: retired social network and protected admin contact do not enter public runtime
+ok 252 - retired social network and protected admin contact do not enter public runtime
+  ---
+  duration_ms: 241.714333
+  type: 'test'
+  ...
+# Subtest: admin remains available on the primary host and excluded from indexing
+ok 253 - admin remains available on the primary host and excluded from indexing
+  ---
+  duration_ms: 0.696291
+  type: 'test'
+  ...
+# Subtest: Telegram, MAX, password, and safe return paths remain wired without public SMS UI
+ok 254 - Telegram, MAX, password, and safe return paths remain wired without public SMS UI
+  ---
+  duration_ms: 1.329625
+  type: 'test'
+  ...
+# Subtest: recipe decomposition applies waste once, subtracts reservations and rounds packages up
+ok 255 - recipe decomposition applies waste once, subtracts reservations and rounds packages up
+  ---
+  duration_ms: 26.888292
+  type: 'test'
+  ...
+# Subtest: weekday rates include zero-sale days and use the exact future weekday sequence
+ok 256 - weekday rates include zero-sale days and use the exact future weekday sequence
+  ---
+  duration_ms: 0.612209
+  type: 'test'
+  ...
+# Subtest: 1, 2, 3, 7 and 14 day horizons and safety stock share one calculation
+ok 257 - 1, 2, 3, 7 and 14 day horizons and safety stock share one calculation
+  ---
+  duration_ms: 1.21125
+  type: 'test'
+  ...
+# Subtest: unknown stock or price never silently becomes zero cost or a confident purchase recommendation
+ok 258 - unknown stock or price never silently becomes zero cost or a confident purchase recommendation
+  ---
+  duration_ms: 17.914875
+  type: 'test'
+  ...
+# Subtest: unmapped, inactive and incomplete products are surfaced and not partially decomposed
+ok 259 - unmapped, inactive and incomplete products are surfaced and not partially decomposed
+  ---
+  duration_ms: 2.177791
+  type: 'test'
+  ...
+# Subtest: shared ingredients aggregate across dishes and reads leave inventory input unchanged
+ok 260 - shared ingredients aggregate across dishes and reads leave inventory input unchanged
+  ---
+  duration_ms: 0.152792
+  type: 'test'
+  ...
+# Subtest: whole-piece purchases round up but preserve fractional average usage
+ok 261 - whole-piece purchases round up but preserve fractional average usage
+  ---
+  duration_ms: 2.232167
+  type: 'test'
+  ...
+# Subtest: empty history, excessive reservations and exact package boundaries are safe
+ok 262 - empty history, excessive reservations and exact package boundaries are safe
+  ---
+  duration_ms: 0.771458
+  type: 'test'
+  ...
+# Subtest: social-only account cannot disconnect its last enabled messenger
+ok 263 - social-only account cannot disconnect its last enabled messenger
+  ---
+  duration_ms: 0.790292
+  type: 'test'
+  ...
+# Subtest: RC PG17 runtime: legacy unknown fulfillment never becomes pickup; totals retain all three groups
+ok 264 - RC PG17 runtime: legacy unknown fulfillment never becomes pickup; totals retain all three groups
+  ---
+  duration_ms: 389.816917
+  type: 'test'
+  ...
+# Subtest: RC PG17 runtime: delivery pricing, payment gating, immutable address and two receipts
+ok 265 - RC PG17 runtime: delivery pricing, payment gating, immutable address and two receipts
+  ---
+  duration_ms: 749.412625
+  type: 'test'
+  ...
+# Subtest: delivery cutoff is checked before creation, never re-applied by payment confirmation
+ok 266 - delivery cutoff is checked before creation, never re-applied by payment confirmation
+  ---
+  duration_ms: 1.019167
+  type: 'test'
+  ...
+# (node:51943) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/src/lib/delivery/geo.ts is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /Users/akimkovalenko/.codex/worktrees/karimoff-rc/KARIMOFF/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Yandex server geocoder validates region hierarchy, uniqueness, coordinates and failure states
+ok 267 - Yandex server geocoder validates region hierarchy, uniqueness, coordinates and failure states
+  ---
+  duration_ms: 157.861459
+  type: 'test'
+  ...
+# Subtest: RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery are fail-safe
+ok 268 - RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery are fail-safe
+  ---
+  duration_ms: 1503.506417
+  type: 'test'
+  ...
+# Subtest: Apple Wallet stays disabled even with certificate configuration until explicitly enabled
+ok 269 - Apple Wallet stays disabled even with certificate configuration until explicitly enabled
+  ---
+  duration_ms: 85.561666
+  type: 'test'
+  ...
+# Subtest: production DDL fails before connecting when migration credentials are absent
+ok 270 - production DDL fails before connecting when migration credentials are absent
+  ---
+  duration_ms: 68.541917
+  type: 'test'
+  ...
+# Subtest: read-only startup skips data migrations before connecting to a database
+ok 271 - read-only startup skips data migrations before connecting to a database
+  ---
+  duration_ms: 67.973125
+  type: 'test'
+  ...
+# Subtest: read-only schema startup refuses missing migrations without any write
+ok 272 - read-only schema startup refuses missing migrations without any write
+  ---
+  duration_ms: 1.951833
+  type: 'test'
+  ...
+# Subtest: Telegram RS256 ID token validates signature, issuer, audience, expiry and nonce
+ok 273 - Telegram RS256 ID token validates signature, issuer, audience, expiry and nonce
+  ---
+  duration_ms: 286.194417
+  type: 'test'
+  ...
+# Subtest: linking rules never use names and require a verified provider phone for automatic merge
+ok 274 - linking rules never use names and require a verified provider phone for automatic merge
+  ---
+  duration_ms: 99.61225
+  type: 'test'
+  ...
+# Subtest: the last authentication method cannot be unlinked
+ok 275 - the last authentication method cannot be unlinked
+  ---
+  duration_ms: 80.302417
+  type: 'test'
+  ...
+# Subtest: OAuth state is server-authoritative, one-time and expires
+ok 276 - OAuth state is server-authoritative, one-time and expires
+  ---
+  duration_ms: 0.724
+  type: 'test'
+  ...
+# Subtest: social redirects preserve the external reverse-proxy origin
+ok 277 - social redirects preserve the external reverse-proxy origin
+  ---
+  duration_ms: 115.094625
+  type: 'test'
+  ...
+# Subtest: configured app origin wins when a reverse proxy hides the public host
+ok 278 - configured app origin wins when a reverse proxy hides the public host
+  ---
+  duration_ms: 91.309334
+  type: 'test'
+  ...
+# Subtest: VK runtime is retired without destructively removing historical identities
+ok 279 - VK runtime is retired without destructively removing historical identities
+  ---
+  duration_ms: 0.515542
+  type: 'test'
+  ...
+# Subtest: identity schema prevents duplicate provider identities and denies public access
+ok 280 - identity schema prevents duplicate provider identities and denies public access
+  ---
+  duration_ms: 1.860125
+  type: 'test'
+  ...
+# Subtest: admin credentials are bcrypt-only and no default plaintext password remains
+ok 281 - admin credentials are bcrypt-only and no default plaintext password remains
+  ---
+  duration_ms: 1586.175083
+  type: 'test'
+  ...
+# Subtest: admin rate limiting has exponential temporary lockout and session rotation
+ok 282 - admin rate limiting has exponential temporary lockout and session rotation
+  ---
+  duration_ms: 1.835625
+  type: 'test'
+  ...
+# Subtest: owner TOTP validates RFC 6238 codes but remains disabled pending recovery support
+ok 283 - owner TOTP validates RFC 6238 codes but remains disabled pending recovery support
+  ---
+  duration_ms: 77.303709
+  type: 'test'
+  ...
+# Subtest: 404 is brand-safe, responsive and respects reduced motion
+ok 284 - 404 is brand-safe, responsive and respects reduced motion
+  ---
+  duration_ms: 0.365167
+  type: 'test'
+  ...
+# Subtest: staff accounts can be deleted without allowing self-deletion
+ok 285 - staff accounts can be deleted without allowing self-deletion
+  ---
+  duration_ms: 1.243833
+  type: 'test'
+  ...
+# Subtest: staff page confirms deletion and explains that the phone is reusable
+ok 286 - staff page confirms deletion and explains that the phone is reusable
+  ---
+  duration_ms: 0.273792
+  type: 'test'
+  ...
+# Subtest: technical card data has stable unique references
+ok 287 - technical card data has stable unique references
+  ---
+  duration_ms: 0.591125
+  type: 'test'
+  ...
+# Subtest: every recipe line references a supported ingredient and positive quantity
+ok 288 - every recipe line references a supported ingredient and positive quantity
+  ---
+  duration_ms: 0.389542
+  type: 'test'
+  ...
+# Subtest: only confirmed product mappings are imported
+ok 289 - only confirmed product mappings are imported
+  ---
+  duration_ms: 0.114875
+  type: 'test'
+  ...
+# Subtest: every current catalog product has exactly one base recipe
+ok 290 - every current catalog product has exactly one base recipe
+  ---
+  duration_ms: 12.788042
+  type: 'test'
+  ...
+# Subtest: owner pricing and kitchen waste assumptions are explicit
+ok 291 - owner pricing and kitchen waste assumptions are explicit
+  ---
+  duration_ms: 0.670791
+  type: 'test'
+  ...
+# Subtest: every beef burger uses whole confirmed 110 gram patties
+ok 292 - every beef burger uses whole confirmed 110 gram patties
+  ---
+  duration_ms: 0.124167
+  type: 'test'
+  ...
+# Subtest: all active menu products have complete food cost inputs and drinks are hidden
+ok 293 - all active menu products have complete food cost inputs and drinks are hidden
+  ---
+  duration_ms: 1.743417
+  type: 'test'
+  ...
+# Subtest: all ingredients used by active menu products have complete nutrition references
+ok 294 - all ingredients used by active menu products have complete nutrition references
+  ---
+  duration_ms: 0.399542
+  type: 'test'
+  ...
+# Subtest: new owner products are active and priced at 30 percent food cost rounded to tens
+ok 295 - new owner products are active and priced at 30 percent food cost rounded to tens
+  ---
+  duration_ms: 0.387875
+  type: 'test'
+  ...
+# Subtest: technical card does not invent paid extras
+ok 296 - technical card does not invent paid extras
+  ---
+  duration_ms: 0.355625
+  type: 'test'
+  ...
+# Subtest: standalone snack recipes match the active production portions
+ok 297 - standalone snack recipes match the active production portions
+  ---
+  duration_ms: 0.123791
+  type: 'test'
+  ...
+# Subtest: runtime migration applies source pricing atomically and keeps an audit snapshot
+ok 298 - runtime migration applies source pricing atomically and keeps an audit snapshot
+  ---
+  duration_ms: 0.23025
+  type: 'test'
+  ...
+# Subtest: runtime migration resolves the current production aliases and creates only missing canonical products
+ok 299 - runtime migration resolves the current production aliases and creates only missing canonical products
+  ---
+  duration_ms: 0.934334
+  type: 'test'
+  ...
+# Subtest: admin economics distinguishes gross profit from net profit and ranks complete active products
+ok 300 - admin economics distinguishes gross profit from net profit and ranks complete active products
+  ---
+  duration_ms: 0.055792
+  type: 'test'
+  ...
+# Subtest: social redirects preserve safe checkout returns and reject external redirects
+ok 301 - social redirects preserve safe checkout returns and reject external redirects
+  ---
+  duration_ms: 81.147917
+  type: 'test'
+  ...
+# Subtest: Telegram is the primary human-readable login option and remains on the KARIMOFF page
+ok 302 - Telegram is the primary human-readable login option and remains on the KARIMOFF page
+  ---
+  duration_ms: 0.553833
+  type: 'test'
+  ...
+# Subtest: official Telegram Login Library is configured in Russian with profile, phone and write scopes
+ok 303 - official Telegram Login Library is configured in Russian with profile, phone and write scopes
+  ---
+  duration_ms: 0.263042
+  type: 'test'
+  ...
+# Subtest: missing provider configuration hides social controls without a client error
+ok 304 - missing provider configuration hides social controls without a client error
+  ---
+  duration_ms: 0.148125
+  type: 'test'
+  ...
+# Subtest: Telegram cancellation, expiry and identity conflict are human-readable
+ok 305 - Telegram cancellation, expiry and identity conflict are human-readable
+  ---
+  duration_ms: 0.382042
+  type: 'test'
+  ...
+# Subtest: missing Telegram phone offers retry and support without a false SMS fallback
+ok 306 - missing Telegram phone offers retry and support without a false SMS fallback
+  ---
+  duration_ms: 0.257667
+  type: 'test'
+  ...
+# Subtest: Telegram profile names and identity status are available to admins without exposing tokens
+ok 307 - Telegram profile names and identity status are available to admins without exposing tokens
+  ---
+  duration_ms: 0.260291
+  type: 'test'
+  ...
+# Subtest: Telegram notifications use only a signed numeric profile id, never substitute OIDC sub
+ok 308 - Telegram notifications use only a signed numeric profile id, never substitute OIDC sub
+  ---
+  duration_ms: 70.990458
+  type: 'test'
+  ...
+# Subtest: Telegram attempt separates provider verification from active-browser consumption
+ok 309 - Telegram attempt separates provider verification from active-browser consumption
+  ---
+  duration_ms: 83.527708
+  type: 'test'
+  ...
+# Subtest: Telegram phone normalization accepts Russian E.164 with and without plus
+ok 310 - Telegram phone normalization accepts Russian E.164 with and without plus
+  ---
+  duration_ms: 64.011833
+  type: 'test'
+  ...
+# Subtest: Telegram library ID token accepts valid claims and rejects signature, issuer, audience, expiry and nonce failures
+ok 311 - Telegram library ID token accepts valid claims and rejects signature, issuer, audience, expiry and nonce failures
+  ---
+  duration_ms: 649.179167
+  type: 'test'
+  ...
+# Subtest: Telegram login validates against a bundled official RS256 key without blocking on live JWKS
+ok 312 - Telegram login validates against a bundled official RS256 key without blocking on live JWKS
+  ---
+  duration_ms: 0.887333
+  type: 'test'
+  ...
+# Subtest: identity decisions create or link only from a verified provider identity
+ok 313 - identity decisions create or link only from a verified provider identity
+  ---
+  duration_ms: 64.986875
+  type: 'test'
+  ...
+# Subtest: library completion validates first while active-browser consume creates and reads back the session
+ok 314 - library completion validates first while active-browser consume creates and reads back the session
+  ---
+  duration_ms: 1.290833
+  type: 'test'
+  ...
+# Subtest: Telegram browser coordinator pauses while hidden and resumes on pageshow, focus and visibility
+ok 315 - Telegram browser coordinator pauses while hidden and resumes on pageshow, focus and visibility
+  ---
+  duration_ms: 0.75975
+  type: 'test'
+  ...
+# Subtest: Telegram consume is browser-bound, leased and idempotent until cookie acknowledgement
+ok 316 - Telegram consume is browser-bound, leased and idempotent until cookie acknowledgement
+  ---
+  duration_ms: 0.54775
+  type: 'test'
+  ...
+# Subtest: existing Telegram identity signs in without phone while new missing-phone identity stays pending
+ok 317 - existing Telegram identity signs in without phone while new missing-phone identity stays pending
+  ---
+  duration_ms: 1.05075
+  type: 'test'
+  ...
+# Subtest: Telegram lifecycle migration is applied by the standalone runtime without touching MAX
+ok 318 - Telegram lifecycle migration is applied by the standalone runtime without touching MAX
+  ---
+  duration_ms: 1.2145
+  type: 'test'
+  ...
+# Subtest: production CSP allows only the official Telegram Login origin on auth documents
+ok 319 - production CSP allows only the official Telegram Login origin on auth documents
+  ---
+  duration_ms: 49.869167
+  type: 'test'
+  ...
+# Subtest: public auth links reload the document so route CSP and COOP take effect
+ok 320 - public auth links reload the document so route CSP and COOP take effect
+  ---
+  duration_ms: 1.02975
+  type: 'test'
+  ...
+# Subtest: manual Telegram and VK callback runtimes stay removed while Telegram library remains intact
+ok 321 - manual Telegram and VK callback runtimes stay removed while Telegram library remains intact
+  ---
+  duration_ms: 0.474375
+  type: 'test'
+  ...
+# Subtest: Telegram telemetry has library stages and cannot log tokens or phone claims
+ok 322 - Telegram telemetry has library stages and cannot log tokens or phone claims
+  ---
+  duration_ms: 0.86725
+  type: 'test'
+  ...
+# Subtest: PostgreSQL driver is a production dependency
+ok 323 - PostgreSQL driver is a production dependency
+  ---
+  duration_ms: 0.543375
+  type: 'test'
+  ...
+# Subtest: database and object storage are server-only Timeweb adapters
+ok 324 - database and object storage are server-only Timeweb adapters
+  ---
+  duration_ms: 0.213583
+  type: 'test'
+  ...
+# Subtest: Timeweb keeps standalone output while Vercel uses its native build adapter
+ok 325 - Timeweb keeps standalone output while Vercel uses its native build adapter
+  ---
+  duration_ms: 0.138166
+  type: 'test'
+  ...
+# Subtest: every startup migration is included in the Timeweb runtime image
+ok 326 - every startup migration is included in the Timeweb runtime image
+  ---
+  duration_ms: 6.911208
+  type: 'test'
+  ...
+# Subtest: analytics periods honor Moscow day boundaries, custom ranges, and DST zones
+ok 327 - analytics periods honor Moscow day boundaries, custom ranges, and DST zones
+  ---
+  duration_ms: 104.837875
+  type: 'test'
+  ...
+# Subtest: comparison ranges keep exact previous duration and calendar shifts
+ok 328 - comparison ranges keep exact previous duration and calendar shifts
+  ---
+  duration_ms: 164.259
+  type: 'test'
+  ...
+# Subtest: metric comparisons avoid meaningless percentages and normalize payments
+ok 329 - metric comparisons avoid meaningless percentages and normalize payments
+  ---
+  duration_ms: 135.959625
+  type: 'test'
+  ...
+# Subtest: URL filters are validated, shareable, and preserve channel and custom period
+ok 330 - URL filters are validated, shareable, and preserve channel and custom period
+  ---
+  duration_ms: 130.193
+  type: 'test'
+  ...
+# Subtest: database views normalize POS and web without inventing mobile or aggregator rows
+ok 331 - database views normalize POS and web without inventing mobile or aggregator rows
+  ---
+  duration_ms: 0.590334
+  type: 'test'
+  ...
+# Subtest: revenue, discounts, refunds, and average ticket are calculated in PostgreSQL
+ok 332 - revenue, discounts, refunds, and average ticket are calculated in PostgreSQL
+  ---
+  duration_ms: 0.229792
+  type: 'test'
+  ...
+# Subtest: product mapping is stable, confirmed-only, and unmapped POS lines remain visible
+ok 333 - product mapping is stable, confirmed-only, and unmapped POS lines remain visible
+  ---
+  duration_ms: 0.387416
+  type: 'test'
+  ...
+# Subtest: reconciliation only accepts reliable references and never guesses by amount or time
+ok 334 - reconciliation only accepts reliable references and never guesses by amount or time
+  ---
+  duration_ms: 0.205541
+  type: 'test'
+  ...
+# Subtest: journal pagination, sorting, filtering, and CSV export stay server-side
+ok 335 - journal pagination, sorting, filtering, and CSV export stay server-side
+  ---
+  duration_ms: 0.725583
+  type: 'test'
+  ...
+# Subtest: analytics UI handles negative revenue and remains keyboard accessible
+ok 336 - analytics UI handles negative revenue and remains keyboard accessible
+  ---
+  duration_ms: 0.710584
+  type: 'test'
+  ...
+# Subtest: analytics permissions deny cooks and fail closed for unscoped managers
+ok 337 - analytics permissions deny cooks and fail closed for unscoped managers
+  ---
+  duration_ms: 0.293208
+  type: 'test'
+  ...
+# Subtest: indexes support time, terminal, employee, product, and reconciliation queries
+ok 338 - indexes support time, terminal, employee, product, and reconciliation queries
+  ---
+  duration_ms: 0.1545
+  type: 'test'
+  ...
+# Subtest: the standalone container applies the analytics migration idempotently
+ok 339 - the standalone container applies the analytics migration idempotently
+  ---
+  duration_ms: 0.122792
+  type: 'test'
+  ...
+# Subtest: settlement uses the persisted colon-delimited key and never POSTs again once issued
+ok 340 - settlement uses the persisted colon-delimited key and never POSTs again once issued
+  ---
+  duration_ms: 445.187833
+  type: 'test'
+  ...
+# Subtest: payment: no provider ID after 24h requires review, not a new POST
+ok 341 - payment: no provider ID after 24h requires review, not a new POST
+  ---
+  duration_ms: 104.129667
+  type: 'test'
+  ...
+# Subtest: refund: no provider ID after 24h requires review, not a new POST
+ok 342 - refund: no provider ID after 24h requires review, not a new POST
+  ---
+  duration_ms: 73.187209
+  type: 'test'
+  ...
+# Subtest: fiscal: no provider ID after 24h requires review, not a new POST
+ok 343 - fiscal: no provider ID after 24h requires review, not a new POST
+  ---
+  duration_ms: 33.6985
+  type: 'test'
+  ...
+# Subtest: mocked checkout recovers by GET and duplicate verified webhook is not applied twice
+ok 344 - mocked checkout recovers by GET and duplicate verified webhook is not applied twice
+  ---
+  duration_ms: 71.10325
+  type: 'test'
+  ...
+# Subtest: provider binding mismatch never reaches payment state application
+ok 345 - provider binding mismatch never reaches payment state application
+  ---
+  duration_ms: 143.850792
+  type: 'test'
+  ...
+# Subtest: payment success does not POST any additional receipt
+ok 346 - payment success does not POST any additional receipt
+  ---
+  duration_ms: 26.866375
+  type: 'test'
+  ...
+# Subtest: fiscal settlement waits for the prepayment receipt
+ok 347 - fiscal settlement waits for the prepayment receipt
+  ---
+  duration_ms: 33.387042
+  type: 'test'
+  ...
+# Subtest: refund retry preserves amount, items, key and payload; full refund omits a duplicate receipt
+ok 348 - refund retry preserves amount, items, key and payload; full refund omits a duplicate receipt
+  ---
+  duration_ms: 69.3185
+  type: 'test'
+  ...
+# Subtest: cart clears only the verified payment snapshot and never deletes a changed cart
+ok 349 - cart clears only the verified payment snapshot and never deletes a changed cart
+  ---
+  duration_ms: 7.054125
+  type: 'test'
+  ...
+# Subtest: status read requires ownership and performs no provider calls
+ok 350 - status read requires ownership and performs no provider calls
+  ---
+  duration_ms: 2.464375
+  type: 'test'
+  ...
+# Subtest: payment: known provider ID remains GET-only after 24h
+ok 351 - payment: known provider ID remains GET-only after 24h
+  ---
+  duration_ms: 29.114541
+  type: 'test'
+  ...
+# Subtest: payment: an ambiguous POST is not retried across the deadline
+ok 352 - payment: an ambiguous POST is not retried across the deadline
+  ---
+  duration_ms: 46.838917
+  type: 'test'
+  ...
+# Subtest: payment: missing or invalid persisted creation time fails closed
+ok 353 - payment: missing or invalid persisted creation time fails closed
+  ---
+  duration_ms: 76.4585
+  type: 'test'
+  ...
+# Subtest: refund: known provider ID remains GET-only after 24h
+ok 354 - refund: known provider ID remains GET-only after 24h
+  ---
+  duration_ms: 43.082208
+  type: 'test'
+  ...
+# Subtest: refund: an ambiguous POST is not retried across the deadline
+ok 355 - refund: an ambiguous POST is not retried across the deadline
+  ---
+  duration_ms: 28.985709
+  type: 'test'
+  ...
+# Subtest: refund: missing or invalid persisted creation time fails closed
+ok 356 - refund: missing or invalid persisted creation time fails closed
+  ---
+  duration_ms: 38.947792
+  type: 'test'
+  ...
+# Subtest: fiscal: known provider ID remains GET-only after 24h
+ok 357 - fiscal: known provider ID remains GET-only after 24h
+  ---
+  duration_ms: 29.589375
+  type: 'test'
+  ...
+# Subtest: fiscal: an ambiguous POST is not retried across the deadline
+ok 358 - fiscal: an ambiguous POST is not retried across the deadline
+  ---
+  duration_ms: 29.076667
+  type: 'test'
+  ...
+# Subtest: fiscal: missing or invalid persisted creation time fails closed
+ok 359 - fiscal: missing or invalid persisted creation time fails closed
+  ---
+  duration_ms: 45.137417
+  type: 'test'
+  ...
+# Subtest: all POST endpoints reuse the exact serialized body and key after lost responses
+ok 360 - all POST endpoints reuse the exact serialized body and key after lost responses
+  ---
+  duration_ms: 78.646041
+  type: 'test'
+  ...
+# Subtest: key validation accepts 64 characters and rejects overlength and header injection
+ok 361 - key validation accepts 64 characters and rejects overlength and header injection
+  ---
+  duration_ms: 29.915125
+  type: 'test'
+  ...
+# Subtest: terminal payment attempts and terminal fiscal receipts do not restart
+ok 362 - terminal payment attempts and terminal fiscal receipts do not restart
+  ---
+  duration_ms: 112.281375
+  type: 'test'
+  ...
+# Subtest: receipt binding rejects missing/wrong payment, wrong type and wrong provider ID
+ok 363 - receipt binding rejects missing/wrong payment, wrong type and wrong provider ID
+  ---
+  duration_ms: 83.893583
+  type: 'test'
+  ...
+# Subtest: changed payment body cannot reuse the persisted operation fingerprint
+ok 364 - changed payment body cannot reuse the persisted operation fingerprint
+  ---
+  duration_ms: 22.158875
+  type: 'test'
+  ...
+# Subtest: repository carries persisted fiscal/refund creation time to the POST deadline
+ok 365 - repository carries persisted fiscal/refund creation time to the POST deadline
+  ---
+  duration_ms: 25.427292
+  type: 'test'
+  ...
+# Subtest: refund allocation guards execute before any insert, including reserved money and units
+ok 366 - refund allocation guards execute before any insert, including reserved money and units
+  ---
+  duration_ms: 139.810209
+  type: 'test'
+  ...
+# Subtest: Evotor manual reconciliation refuses cross-location and unauthorized links
+ok 367 - Evotor manual reconciliation refuses cross-location and unauthorized links
+  ---
+  duration_ms: 6.603167
+  type: 'test'
+  ...
+# Subtest: disposable PG17: existing YooKassa SQL transaction suite
+ok 368 - disposable PG17: existing YooKassa SQL transaction suite
+  ---
+  duration_ms: 113.047167
+  type: 'test'
+  ...
+# Subtest: disposable PG17: actual fiscal recorder preserves issued state against stale responses
+ok 369 - disposable PG17: actual fiscal recorder preserves issued state against stale responses
+  ---
+  duration_ms: 248.560792
+  type: 'test'
+  ...
+# Subtest: disposable PG17: confirmed Evotor link counts one sale and one payment
+ok 370 - disposable PG17: confirmed Evotor link counts one sale and one payment
+  ---
+  duration_ms: 162.620375
+  type: 'test'
+  ...
+# Subtest: disposable PG17: completed refund must not regress on stale pending
+ok 371 - disposable PG17: completed refund must not regress on stale pending
+  ---
+  duration_ms: 208.603958
+  type: 'test'
+  ...
+# Subtest: disposable PG17: stale payment must not restore already refunded money
+ok 372 - disposable PG17: stale payment must not restore already refunded money
+  ---
+  duration_ms: 136.49
+  type: 'test'
+  ...
+# Subtest: disposable PG17: stale financial responses preserve paid provider state and prepayment receipt
+ok 373 - disposable PG17: stale financial responses preserve paid provider state and prepayment receipt
+  ---
+  duration_ms: 426.717666
+  type: 'test'
+  ...
+# Subtest: disposable PG17: terminal payment receipt registration survives older or contradictory receipts
+ok 374 - disposable PG17: terminal payment receipt registration survives older or contradictory receipts
+  ---
+  duration_ms: 106.519875
+  type: 'test'
+  ...
+# Subtest: disposable PG17: paid payment still allows its pending prepayment receipt to finish
+ok 375 - disposable PG17: paid payment still allows its pending prepayment receipt to finish
+  ---
+  duration_ms: 119.439125
+  type: 'test'
+  ...
+# Subtest: disposable PG17: terminal prepayment rows are protected even if payment receipt flag is inconsistent
+ok 376 - disposable PG17: terminal prepayment rows are protected even if payment receipt flag is inconsistent
+  ---
+  duration_ms: 110.282375
+  type: 'test'
+  ...
+# Subtest: disposable PG17: paid-state guard cannot bypass payment binding and consistency checks
+ok 377 - disposable PG17: paid-state guard cannot bypass payment binding and consistency checks
+  ---
+  duration_ms: 53.625708
+  type: 'test'
+  ...
+# Subtest: disposable PG17: terminal refund and receipt survive pending, canceled and duplicate succeeded
+ok 378 - disposable PG17: terminal refund and receipt survive pending, canceled and duplicate succeeded
+  ---
+  duration_ms: 72.333375
+  type: 'test'
+  ...
+# Subtest: disposable PG17: completed refund still permits pending receipt to finish
+ok 379 - disposable PG17: completed refund still permits pending receipt to finish
+  ---
+  duration_ms: 88.73225
+  type: 'test'
+  ...
+# Subtest: disposable PG17: canceled refund cannot be revived or counted as completed
+ok 380 - disposable PG17: canceled refund cannot be revived or counted as completed
+  ---
+  duration_ms: 125.853083
+  type: 'test'
+  ...
+# Subtest: disposable PG17: provider ceilings, zero and full-refund cap survive refund replay
+ok 381 - disposable PG17: provider ceilings, zero and full-refund cap survive refund replay
+  ---
+  duration_ms: 80.387416
+  type: 'test'
+  ...
+# Subtest: disposable PG17: remaining money can be reserved once after stale payment replay
+ok 382 - disposable PG17: remaining money can be reserved once after stale payment replay
+  ---
+  duration_ms: 97.7695
+  type: 'test'
+  ...
+# Subtest: disposable PG17: terminal-state handling cannot bypass refund binding checks
+ok 383 - disposable PG17: terminal-state handling cannot bypass refund binding checks
+  ---
+  duration_ms: 56.332042
+  type: 'test'
+  ...
+# Subtest: disposable PG17: replacement functions remain invoker-only and executable by app role
+ok 384 - disposable PG17: replacement functions remain invoker-only and executable by app role
+  ---
+  duration_ms: 52.538167
+  type: 'test'
+  ...
+# Subtest: money and receipts use exact minor units and official YooKassa fiscal values
+ok 385 - money and receipts use exact minor units and official YooKassa fiscal values
+  ---
+  duration_ms: 67.038375
+  type: 'test'
+  ...
+# Subtest: receipt validation rejects missing contact, invalid item count, malformed totals, and money
+ok 386 - receipt validation rejects missing contact, invalid item count, malformed totals, and money
+  ---
+  duration_ms: 69.057125
+  type: 'test'
+  ...
+# Subtest: YooKassa POST retries preserve the exact body and Idempotence-Key
+ok 387 - YooKassa POST retries preserve the exact body and Idempotence-Key
+  ---
+  duration_ms: 115.810917
+  type: 'test'
+  ...
+# Subtest: YooKassa client classifies 400, 401, 429, 5xx, and timeouts safely
+ok 388 - YooKassa client classifies 400, 401, 429, 5xx, and timeouts safely
+  ---
+  duration_ms: 101.0815
+  type: 'test'
+  ...
+# Subtest: reconciliation backoff follows the bounded schedule and stops after 24 hours
+ok 389 - reconciliation backoff follows the bounded schedule and stops after 24 hours
+  ---
+  duration_ms: 84.837708
+  type: 'test'
+  ...
+# Subtest: checkout is server-priced, atomic, disabled by default, and double-click safe
+ok 390 - checkout is server-priced, atomic, disabled by default, and double-click safe
+  ---
+  duration_ms: 0.483917
+  type: 'test'
+  ...
+# Subtest: webhook accepts only official events and verifies the provider object by GET
+ok 391 - webhook accepts only official events and verifies the provider object by GET
+  ---
+  duration_ms: 0.3405
+  type: 'test'
+  ...
+# Subtest: payment success opens KDS once while pending and duplicate events remain non-operational
+ok 392 - payment success opens KDS once while pending and duplicate events remain non-operational
+  ---
+  duration_ms: 0.224083
+  type: 'test'
+  ...
+# Subtest: return page never trusts the provider redirect and does not auto-create another payment
+ok 393 - return page never trusts the provider redirect and does not auto-create another payment
+  ---
+  duration_ms: 0.314
+  type: 'test'
+  ...
+# Subtest: reconciliation claims rows with leases and never rewinds order or payment cursors
+ok 394 - reconciliation claims rows with leases and never rewinds order or payment cursors
+  ---
+  duration_ms: 0.425541
+  type: 'test'
+  ...
+# Subtest: refund architecture supports exact full and partial idempotent refunds without public UI
+ok 395 - refund architecture supports exact full and partial idempotent refunds without public UI
+  ---
+  duration_ms: 1.163125
+  type: 'test'
+  ...
+# Subtest: fiscal state is independent and prepayment settlement is queued only on handout
+ok 396 - fiscal state is independent and prepayment settlement is queued only on handout
+  ---
+  duration_ms: 0.383833
+  type: 'test'
+  ...
+# Subtest: paid YooKassa item composition and fiscal request bodies are immutable snapshots
+ok 397 - paid YooKassa item composition and fiscal request bodies are immutable snapshots
+  ---
+  duration_ms: 0.194
+  type: 'test'
+  ...
+# Subtest: receipt email is required for YooKassa and remembered only after successful payment
+ok 398 - receipt email is required for YooKassa and remembered only after successful payment
+  ---
+  duration_ms: 0.138708
+  type: 'test'
+  ...
+# Subtest: YooKassa operational analytics stays canonical and provider-filtered
+ok 399 - YooKassa operational analytics stays canonical and provider-filtered
+  ---
+  duration_ms: 0.313417
+  type: 'test'
+  ...
+# Subtest: YooKassa sale and an explicitly reconciled late Evotor receipt count once
+ok 400 - YooKassa sale and an explicitly reconciled late Evotor receipt count once
+  ---
+  duration_ms: 0.8515
+  type: 'test'
+  ...
+# Subtest: configuration is server-only, same-origin, and never exposes YooKassa credentials
+ok 401 - configuration is server-only, same-origin, and never exposes YooKassa credentials
+  ---
+  duration_ms: 0.28175
+  type: 'test'
+  ...
+# Subtest: checkout remains disabled until every server-side setting is valid
+ok 402 - checkout remains disabled until every server-side setting is valid
+  ---
+  duration_ms: 74.085833
+  type: 'test'
+  ...
+# Subtest: admin exposes a read-only verified status action and normalized payment data
+ok 403 - admin exposes a read-only verified status action and normalized payment data
+  ---
+  duration_ms: 0.423083
+  type: 'test'
+  ...
+# Subtest: runtime migration is wired into image startup with postconditions
+ok 404 - runtime migration is wired into image startup with postconditions
+  ---
+  duration_ms: 0.45375
+  type: 'test'
+  ...
+1..404
+# tests 404
+# suites 0
+# pass 404
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8142.862167

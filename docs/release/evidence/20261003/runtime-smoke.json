@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-03T07:31:40.895Z",
+  "results": [
+    {
+      "kind": "fresh",
+      "health": 200,
+      "catalog": 200,
+      "runtimeOnly": true,
+      "featuresOff": true
+    },
+    {
+      "kind": "upgrade",
+      "health": 200,
+      "catalog": 200,
+      "runtimeOnly": true,
+      "featuresOff": true
+    }
+  ]
+}

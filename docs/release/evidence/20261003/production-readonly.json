@@ -1,0 +1,12 @@
+{
+  "observedDate": "2026-10-03",
+  "app": "karimoff-production",
+  "autoDeploy": false,
+  "platformLastCommit": "e478731",
+  "remoteMain": "3a366cab71f6ffe39796567e83fd8eaca3bbe591",
+  "backupPolicy": { "enabled": true, "interval": "day", "retentionCopies": 1 },
+  "latestVisibleCompletedBackupUtc": "2026-09-29T19:30:41.000Z",
+  "productionWritesPerformed": false,
+  "productionBackupRestored": false,
+  "paidResourcesCreated": false
+}
