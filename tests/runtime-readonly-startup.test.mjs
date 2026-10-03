@@ -3,6 +3,18 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+test("production DDL fails before connecting when migration credentials are absent", () => {
+  assert.throws(() => execFileSync(process.execPath, ["scripts/apply-runtime-schema-migrations.mjs"], {
+    env: { PATH: process.env.PATH, NODE_ENV: "production", DATABASE_URL: "postgres://unreachable.invalid/runtime" },
+    encoding: "utf8", timeout: 5000, stdio: "pipe"
+  }), (error) => {
+    assert.equal(error.status, 1);
+    assert.match(error.stderr, /require MIGRATION_DATABASE_URL/);
+    assert.doesNotMatch(error.stderr, /unreachable|postgres:\/\//);
+    return true;
+  });
+});
+
 test("read-only startup skips data migrations before connecting to a database", () => {
   const output = execFileSync(process.execPath, ["scripts/apply-runtime-data-migrations.mjs"], {
     env: { PATH: process.env.PATH, RUNTIME_MIGRATIONS_READ_ONLY: "true", DATABASE_URL: "postgres://unreachable.invalid/test" },

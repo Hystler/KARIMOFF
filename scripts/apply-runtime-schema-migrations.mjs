@@ -722,11 +722,26 @@ migrations.push({
     );
   }
 });
-const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+migrations.push({
+  name: "20261003070000_runtime_role_permissions",
+  applied: async (sql) => {
+    const [state] = await sql`
+      select to_regclass('public.runtime_role_grants_version') is not null as installed
+    `;
+    return Boolean(state?.installed);
+  }
+});
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
+const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 
 if (!databaseUrl) {
-  console.log("Runtime schema migrations skipped: database is not configured.");
+  if (process.env.NODE_ENV === "production" || process.env.DATABASE_URL || readOnly) {
+    console.error(readOnly
+      ? "Schema verification requires the runtime DATABASE_URL."
+      : "Schema migrations require MIGRATION_DATABASE_URL. Runtime DATABASE_URL is never used for DDL. Set RUNTIME_MIGRATIONS_READ_ONLY=true only after migrations have been applied.");
+    process.exit(1);
+  }
+  console.log("Schema migrations skipped: database is not configured.");
   process.exit(0);
 }
 

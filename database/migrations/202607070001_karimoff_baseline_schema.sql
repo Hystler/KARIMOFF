@@ -1,7 +1,10 @@
--- KARIMOFF baseline schema migration generated from existing database/schema/*.sql files.
+-- KARIMOFF baseline schema migration generated from existing supabase/*.sql files.
+
+-- Apply with: npm run db:push:all
+
 
 -- ============================================================
--- Source: database/schema/schema.sql
+-- Source: supabase/schema.sql
 -- ============================================================
 
 create table if not exists public.leads (
@@ -61,7 +64,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/products.sql
+-- Source: supabase/products.sql
 -- ============================================================
 
 create table if not exists public.products (
@@ -117,7 +120,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/customers.sql
+-- Source: supabase/customers.sql
 -- ============================================================
 
 create table if not exists public.customers (
@@ -171,7 +174,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/orders.sql
+-- Source: supabase/orders.sql
 -- ============================================================
 
 create table if not exists public.orders (
@@ -235,7 +238,7 @@ create index if not exists order_items_order_id_idx on public.order_items (order
 
 
 -- ============================================================
--- Source: database/schema/settings.sql
+-- Source: supabase/settings.sql
 -- ============================================================
 
 create table if not exists public.site_settings (
@@ -307,7 +310,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/social-settings.sql
+-- Source: supabase/social-settings.sql
 -- ============================================================
 
 create table if not exists public.site_settings (
@@ -331,7 +334,7 @@ where id = 'main';
 
 
 -- ============================================================
--- Source: database/schema/product-images.sql
+-- Source: supabase/product-images.sql
 -- ============================================================
 
 create table if not exists public.product_images (
@@ -358,7 +361,7 @@ create index if not exists product_images_is_primary_idx on public.product_image
 
 
 -- ============================================================
--- Source: database/schema/ingredients.sql
+-- Source: supabase/ingredients.sql
 -- ============================================================
 
 create table if not exists public.ingredients (
@@ -426,7 +429,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/loyalty.sql
+-- Source: supabase/loyalty.sql
 -- ============================================================
 
 create table if not exists public.loyalty_accounts (
@@ -487,7 +490,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/avatar.sql
+-- Source: supabase/avatar.sql
 -- ============================================================
 
 create table if not exists public.customer_avatars (
@@ -533,7 +536,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/avatar-assets.sql
+-- Source: supabase/avatar-assets.sql
 -- ============================================================
 
 create table if not exists public.avatar_assets (
@@ -563,7 +566,7 @@ create index if not exists avatar_assets_sort_order_idx on public.avatar_assets(
 
 
 -- ============================================================
--- Source: database/schema/vacancies.sql
+-- Source: supabase/vacancies.sql
 -- ============================================================
 
 create table if not exists public.vacancies (
@@ -624,7 +627,7 @@ for each row execute function public.set_vacancies_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/cookie-consents.sql
+-- Source: supabase/cookie-consents.sql
 -- ============================================================
 
 create table if not exists public.cookie_consents (
@@ -654,7 +657,7 @@ create index if not exists cookie_consents_accepted_idx on public.cookie_consent
 
 
 -- ============================================================
--- Source: database/schema/economics-settings.sql
+-- Source: supabase/economics-settings.sql
 -- ============================================================
 
 create table if not exists public.economics_settings (
@@ -762,7 +765,7 @@ execute function public.set_updated_at();
 
 
 -- ============================================================
--- Source: database/schema/inventory.sql
+-- Source: supabase/inventory.sql
 -- ============================================================
 
 create table if not exists public.inventory_items (

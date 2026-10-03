@@ -16,6 +16,9 @@ pnpm-debug.log*
 *.tsbuildinfo
 tmp/
 
+# Local screenshots, test fixtures, reports and disposable database evidence
+outputs/
+
 # Local Android tooling and generated builds
 android/**/local.properties
 android/**/.gradle/
