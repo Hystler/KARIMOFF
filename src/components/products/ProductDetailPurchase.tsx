@@ -92,7 +92,6 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
 
   useEffect(() => {
     if (inlinePurchaseVisible) {
-      setFooterVisible(false);
       return undefined;
     }
 

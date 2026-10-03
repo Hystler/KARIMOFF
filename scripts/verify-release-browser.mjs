@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,7 +21,10 @@ try {
   const [customer]=await sql`select id from customers order by created_at limit 1`;
   const [staff]=await sql`insert into staff_users(name,phone,password_hash,role,is_active)
     values('Synthetic RC owner',${`+7${String(Date.now()).slice(-10)}`},'mock-only','owner',true) returning id`;
-  const [product]=await sql`select id,name,slug,price,image_url from products where is_active and image_url is not null order by id limit 1`;
+  const [product]=await sql`insert into products(name,slug,category,price,image_url,description,is_active)
+    select name,${`rc-browser-${randomUUID()}`},category,price,image_url,description,true
+    from products where is_active and image_url is not null and slug not like 'rc-browser-%' order by id limit 1
+    returning id,name,slug,price,image_url`;
   const [ingredient]=await sql`insert into ingredients(name,unit,cost_per_unit)
     values('Synthetic browser ingredient','g',1) returning id`;
   const [group]=await sql`insert into product_modifier_groups(product_id,name,selection_type,min_selections,max_selections)
@@ -96,8 +99,18 @@ try {
     assert.ok(await page.evaluate(id=>JSON.parse(localStorage.getItem('karimoff_cart')??'[]')
       .some(line=>line.customization.modifierOptionIds.includes(id)),option.id),'Chosen modifier survives into cart');
     if(viewport.width<1280) {
+      await page.evaluate(()=>scrollTo(0,0));
+      await page.locator('.product-sticky-purchase').waitFor({state:'visible'});
+      await page.screenshot({path:`${output}/${viewport.width}-product-sticky.png`});
       await page.evaluate(()=>scrollTo(0,document.body.scrollHeight));
-      assert.ok(await page.locator('.product-sticky-purchase').isVisible());
+      await page.locator('.product-sticky-purchase').waitFor({state:'hidden'});
+      assert.ok(await page.locator('footer').evaluate(el=>el.getBoundingClientRect().top<innerHeight),
+        'Footer is reachable without sticky purchase overlay');
+      await page.screenshot({path:`${output}/${viewport.width}-product-footer.png`});
+      await page.evaluate(()=>scrollTo(0,0));
+      await page.locator('.product-sticky-purchase').waitFor({state:'visible'});
+      results.push({viewport,path:'product-sticky-and-footer',status:200,overflow:false,
+        stickyVisibleAbove:true,stickyHiddenAtFooter:true,stickyRestoredAfterFooter:true});
     }
     await context.addCookies([{name:'karimoff_customer_session',value:tokens.customer,url:origin}]);
     for(const path of ['/profile','/profile/orders','/profile/loyalty']) await check(path);
