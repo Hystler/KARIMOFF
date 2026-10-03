@@ -3,6 +3,64 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import postgres from 'postgres';
+import ts from 'typescript';
+
+function loadWithEnvironment(file, imports, environment) {
+  const code=ts.transpileModule(readFileSync(file,'utf8'),{
+    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}
+  }).outputText;
+  const exports={};
+  new Function('require','exports','process',code)(id=>{
+    assert.ok(id in imports,`Unexpected test import ${id}`);
+    return imports[id];
+  },exports,{env:environment});
+  return exports;
+}
+
+test('combined order service uses the real named PostgreSQL adapter for pickup and whitelist delivery',async()=>{
+  const dsn=process.env.KARIMOFF_RC_LOCAL_DSN;
+  assert.match(dsn??'',/^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
+  const sql=postgres(dsn,{max:1,onnotice(){}});
+  const rollback=new Error('ROLLBACK_NAMED_RPC_FIXTURE');
+  try {
+    await sql.begin(async tx=>{
+      const adapter=loadWithEnvironment('src/lib/postgres/server.ts',{
+        'server-only':{},postgres:url=>{assert.equal(url,dsn);return tx;}
+      },{DATABASE_URL:dsn});
+      const database=loadWithEnvironment('src/lib/database/server.ts',{
+        'server-only':{},'@/lib/postgres/server':adapter
+      },{DATABASE_URL:dsn});
+      const service=loadWithEnvironment('src/lib/order-flow/service.ts',{
+        'server-only':{},'@/lib/database/server':database,'@/lib/postgres/server':adapter,
+        '@/lib/observability':{logOperationalEvent(){}}
+      },{TEST_ORDER_MODE:'false'});
+      await tx`update site_settings set delivery_enabled=true,delivery_coverage_enabled=true where id='main'`;
+      await tx`update delivery_location_settings set enabled=true,acceptance_start='00:00',acceptance_end='23:59'`;
+      const [customer]=await tx`insert into customers(name,phone) values('Synthetic adapter guest',${`+7${String(Date.now()).slice(-10)}`}) returning id`;
+      const [product]=await tx`insert into products(name,slug,category,price,is_active)
+        values('Synthetic adapter meal',${randomUUID()},'Бургеры',2499,true) returning id`;
+      const [location]=await tx`select id from order_locations where is_default and is_active`;
+      const [address]=await tx`insert into delivery_addresses(location_id,street,street_normalized,house,house_normalized,
+        latitude,longitude,distance_meters,is_available,source)
+        values(${location.id},'Adapter street','adapterstreet','1','1',55.909221,38.055708,0,true,'synthetic') returning id`;
+      for(const deliveryType of ['pickup','delivery']) {
+        const input={source:'web',customerId:customer.id,deliveryType,
+          deliveryAddressId:deliveryType==='delivery'?address.id:null,
+          deliveryDetails:deliveryType==='delivery'?{apartment:'',entrance:'',floor:'',intercom:'',courierComment:''}:null,
+          comment:null,items:[{product_id:product.id,quantity:1}],idempotencyKey:randomUUID(),
+          personalDataGranted:true,offerAccepted:true,marketingGranted:false,documentVersion:'rc',
+          sourcePath:'/rc',userAgentShort:'rc',fulfillmentMode:'asap',requestedAt:null,
+          receiptEmail:'mock@example.test',requiresPayment:true};
+        const first=await service.createOrder(input);
+        const retry=await service.createOrder(input);
+        assert.equal(first.orderId,retry.orderId);assert.equal(first.paymentId,retry.paymentId);
+        assert.equal(first.total,deliveryType==='delivery'?2699:2499);
+      }
+      throw rollback;
+    });
+  } catch(error) {if(error!==rollback)throw error;}
+  finally {await sql.end();}
+});
 
 test('RC PG17 runtime: delivery pricing, payment gating, immutable address and two receipts', async () => {
   const dsn=process.env.KARIMOFF_RC_LOCAL_DSN;

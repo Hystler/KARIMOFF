@@ -743,6 +743,18 @@ for (const [name, table] of [
     }
   });
 }
+migrations.push({
+  name: "20261004133000_whitelist_pickup_rpc_initialization",
+  applied: async (sql) => {
+    const [column] = await sql`select exists (select 1 from information_schema.columns
+      where table_schema='public' and table_name='delivery_whitelist_release_version'
+        and column_name='pickup_rpc_initialized') as installed`;
+    if (!column?.installed) return false;
+    const [state] = await sql`select pickup_rpc_initialized as installed
+      from public.delivery_whitelist_release_version where version=1`;
+    return Boolean(state?.installed);
+  }
+});
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 
