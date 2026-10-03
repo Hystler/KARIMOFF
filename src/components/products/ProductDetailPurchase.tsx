@@ -26,6 +26,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
   const { addItem } = useCart();
   const inlinePurchaseRef = useRef<HTMLButtonElement>(null);
   const [inlinePurchaseVisible, setInlinePurchaseVisible] = useState(true);
+  const [footerVisible, setFooterVisible] = useState(false);
   const [cookieConsentOffset, setCookieConsentOffset] = useState(0);
   const defaults = useMemo(() => getDefaultCartCustomization(product), [product]);
   const [removed, setRemoved] = useState(new Set(defaults.removed.map((item) => item.ingredient_id)));
@@ -88,6 +89,38 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
     observer.observe(purchaseButton);
     return () => observer.disconnect();
   }, [cookieConsentOffset]);
+
+  useEffect(() => {
+    if (inlinePurchaseVisible) {
+      setFooterVisible(false);
+      return undefined;
+    }
+
+    const footer = document.querySelector("footer");
+    const stickyPurchase = document.querySelector(".product-sticky-purchase");
+    if (!footer || !stickyPurchase || !("IntersectionObserver" in window)) return undefined;
+
+    let observer: IntersectionObserver | undefined;
+    const observeFooter = () => {
+      const coveredHeight = stickyPurchase.getBoundingClientRect().height + cookieConsentOffset;
+      observer?.disconnect();
+      observer = new IntersectionObserver(([entry]) => {
+        setFooterVisible(Boolean(entry?.isIntersecting));
+      }, { rootMargin: `0px 0px -${Math.ceil(coveredHeight)}px 0px`, threshold: 0 });
+      observer.observe(footer);
+    };
+
+    observeFooter();
+    const resizeObserver = new ResizeObserver(observeFooter);
+    resizeObserver.observe(stickyPurchase);
+    window.addEventListener("resize", observeFooter);
+
+    return () => {
+      observer?.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", observeFooter);
+    };
+  }, [cookieConsentOffset, inlinePurchaseVisible]);
 
   function toggleGroupOption(group: ProductModifierGroup, optionId: string) {
     setSelectedOptions((current) => {
@@ -313,7 +346,12 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
       </section>
     </div>
     {!inlinePurchaseVisible && typeof document !== "undefined" ? createPortal(
-      <div className="product-sticky-purchase xl:hidden" role="region" aria-label={`Добавить ${product.name} в корзину`}>
+      <div
+        className={`product-sticky-purchase xl:hidden ${inlinePurchaseVisible || footerVisible ? "invisible pointer-events-none" : ""}`}
+        role="region"
+        aria-label={`Добавить ${product.name} в корзину`}
+        aria-hidden={inlinePurchaseVisible || footerVisible}
+      >
         <div className="mx-auto flex w-full max-w-customer items-center gap-2 sm:gap-3">
           <div className="grid shrink-0 grid-cols-[44px_36px_44px] items-center rounded-control border border-karimoff-line bg-white">
             <button type="button" onClick={() => changeQuantity(-1)} className="grid h-11 place-items-center rounded-md" aria-label="Уменьшить количество"><Minus size={17} aria-hidden="true" /></button>

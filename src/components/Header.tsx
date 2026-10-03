@@ -67,7 +67,7 @@ export function Header() {
       <div className="container-page flex h-[68px] items-center justify-between gap-3 sm:h-[74px] sm:gap-4">
         <Logo />
 
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Основная навигация">
+        <nav className="hidden items-center gap-7 xl:flex" aria-label="Основная навигация">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -83,7 +83,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-3 xl:flex">
           <ThemeToggle />
           <CartButton />
           {customerName ? (
@@ -102,7 +102,7 @@ export function Header() {
           </AuthDocumentLink>
         </div>
 
-        <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex items-center gap-2 xl:hidden">
           <ThemeToggle />
           <CartButton />
           <button
@@ -120,7 +120,7 @@ export function Header() {
       </div>
 
       {isOpen ? (
-        <div className="border-t border-karimoff-line bg-white lg:hidden">
+        <div className="border-t border-karimoff-line bg-white xl:hidden">
           <nav className="container-page flex flex-col gap-1 py-4" aria-label="Мобильная навигация">
             {navItems.map((item) => (
               <Link
