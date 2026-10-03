@@ -25,13 +25,10 @@ test("delivery is guarded by server configuration and charges only below the fre
   assert.match(migration, /item\.item_type = 'delivery_fee'[\s\S]+item\.item_type = 'food'/);
   assert.match(runtimeMigrations, /name: "20260929150000_add_delivery_checkout_and_courier_status"/);
   assert.match(runtimeMigrations, /name: "20260930120000_delivery_release_hardening"/);
-  assert.match(checkout, /const resolved = await resolveDeliveryAddress\(parsed\.data\.delivery_street/);
-  assert.match(checkout, /address: geocoded\.coordinates/);
-  assert.match(checkout, /latitude: resolved\.geocoded\.coordinates\[1\]/);
-  assert.match(checkout, /longitude: resolved\.geocoded\.coordinates\[0\]/);
+  assert.match(checkout, /findDeliveryAddressById/);
+  assert.match(checkout, /address: \[Number\(address.longitude\), Number\(address.latitude\)\]/);
   assert.doesNotMatch(checkout, /formData\.get\("(?:latitude|longitude|coordinates)"\)/);
-  assert.match(orderService, /zone_validation: snapshot\.zoneValidation/);
-  assert.match(orderService, /validated_at: snapshot\.validatedAt/);
+  assert.match(orderService, /create_site_order_with_payment_from_whitelist/);
   assert.match(hardening, /v_snapshot->>'zone_validation' <> 'available'/);
   assert.match(hardening, /delivery_address_snapshot is not null[\s\S]+не может быть изменён/);
   assert.match(hardening, /v_checked_at < now\(\) - interval '10 minutes'/);

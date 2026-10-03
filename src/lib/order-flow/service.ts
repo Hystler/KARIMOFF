@@ -32,33 +32,18 @@ export type DeliveryAddressSnapshot = {
   validatedAt: string;
 };
 
-function toDeliverySnapshotRpc(snapshot: DeliveryAddressSnapshot | null | undefined) {
-  if (!snapshot) return null;
-  return {
-    address_text: snapshot.addressText,
-    street: snapshot.street,
-    house: snapshot.house,
-    apartment: snapshot.apartment,
-    entrance: snapshot.entrance,
-    floor: snapshot.floor,
-    intercom: snapshot.intercom,
-    courier_comment: snapshot.courierComment,
-    latitude: snapshot.latitude,
-    longitude: snapshot.longitude,
-    distance_meters: snapshot.distanceMeters,
-    delivery_fee: snapshot.deliveryFee,
-    eta_minutes: snapshot.etaMinutes,
-    zone_validation: snapshot.zoneValidation,
-    validated_at: snapshot.validatedAt
-  };
-}
-
 type WebOrderInput = {
   source: "web";
   customerId: string;
   deliveryType: "pickup" | "delivery";
-  address: string | null;
-  deliverySnapshot?: DeliveryAddressSnapshot | null;
+  deliveryAddressId: string | null;
+  deliveryDetails: {
+    apartment: string;
+    entrance: string;
+    floor: string;
+    intercom: string;
+    courierComment: string;
+  } | null;
   comment: string | null;
   items: CartItemInput[];
   idempotencyKey: string;
@@ -108,11 +93,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   if (input.source === "web") {
     const { data, error } = await database.rpc(
-      input.requiresPayment ? "create_site_order_with_payment" : "create_site_order",
+      input.requiresPayment
+        ? "create_site_order_with_payment_from_whitelist"
+        : "create_site_order_from_whitelist",
       {
-        p_address: input.deliveryType === "delivery"
-          ? input.deliverySnapshot?.addressText ?? input.address
-          : null,
+        p_delivery_address_id: input.deliveryType === "delivery" ? input.deliveryAddressId : null,
+        p_delivery_details: input.deliveryType === "delivery" ? input.deliveryDetails : null,
         p_comment: input.comment,
         p_customer_id: input.customerId,
         p_delivery_type: input.deliveryType,
@@ -129,8 +115,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
         ...(input.requiresPayment
           ? {
               p_receipt_email: input.receiptEmail,
-              p_payment_idempotency_key: input.idempotencyKey,
-              p_delivery_snapshot: toDeliverySnapshotRpc(input.deliverySnapshot)
+              p_payment_idempotency_key: input.idempotencyKey
             }
           : { p_is_test: isTest })
       }

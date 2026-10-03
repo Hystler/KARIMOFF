@@ -15,6 +15,7 @@ yarn-error.log*
 pnpm-debug.log*
 *.tsbuildinfo
 tmp/
+outputs/delivery-whitelist-review-*/
 
 # Local screenshots, test fixtures, reports and disposable database evidence
 outputs/

@@ -6,51 +6,24 @@ import { createDatabaseServerClient } from "@/lib/database/server";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
-import { createOrder, type DeliveryAddressSnapshot } from "@/lib/order-flow/service";
+import { createOrder } from "@/lib/order-flow/service";
 import { isYooKassaCheckoutEnabled } from "@/lib/payments/yookassa/config";
 import { safeYooKassaErrorCode } from "@/lib/payments/yookassa/errors";
 import { createYooKassaPaymentForOrder } from "@/lib/payments/yookassa/service";
 import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
 import { assessDeliveryZone } from "@/lib/delivery/geo";
+import {
+  findDeliveryAddressById,
+  getDefaultDeliveryLocationId,
+  hasAvailableDeliveryAddresses,
+  isAvailableDeliveryAddress,
+  listDeliveryHouses,
+  searchDeliveryStreets,
+  unavailableDeliveryAddressMessage
+} from "@/lib/delivery/address-whitelist";
 import { isDeliveryAcceptingAt } from "@/lib/delivery/hours";
 import { getDeliveryLocationSettings } from "@/lib/delivery/settings";
-import { geocodeDeliveryAddress, suggestDeliveryAddresses } from "@/lib/delivery/yandex";
-
-const unavailableAddressMessage = "Не удалось проверить адрес. Попробуйте ещё раз.";
-
-function cleanAddressPart(value: unknown, maxLength: number) {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
-}
-
-function addressSearchText(street: string, house: string) {
-  return `${street} ${house}, Щёлково, Московская область, Россия`;
-}
-
-function normalizeAddressPart(value: string) {
-  return value.toLocaleLowerCase("ru-RU").replace(/ё/g, "е").replace(/[^\p{L}\p{N}]/gu, "");
-}
-
-async function resolveDeliveryAddress(street: string, house: string) {
-  const config = await getDeliveryLocationSettings();
-  if (!config || !config.enabled) throw new Error("DELIVERY_DISABLED");
-  const geocoded = await geocodeDeliveryAddress(addressSearchText(street, house));
-  const requestedStreet = normalizeAddressPart(street);
-  const resolvedStreet = normalizeAddressPart(geocoded.street);
-  if (!resolvedStreet.includes(requestedStreet) && !requestedStreet.includes(resolvedStreet)) {
-    throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
-  }
-  if (normalizeAddressPart(geocoded.house) !== normalizeAddressPart(house)) {
-    throw new Error("DELIVERY_ADDRESS_AMBIGUOUS");
-  }
-  const assessment = assessDeliveryZone({
-    address: geocoded.coordinates,
-    center: config.center,
-    radiusMeters: config.radiusMeters,
-    excludedAreas: config.excludedAreas
-  });
-  return { config, geocoded, assessment };
-}
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -60,6 +33,13 @@ export async function getCheckoutContextAction() {
   const [customer, settings, deliveryConfig] = await Promise.all([
     getCurrentCustomer(), getSiteSettings(), getDeliveryLocationSettings()
   ]);
+  let whitelistReady = false;
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    whitelistReady = Boolean(locationId && await hasAvailableDeliveryAddresses(locationId));
+  } catch {
+    whitelistReady = false;
+  }
   let receiptEmail = "";
   if (customer) {
     const database = createDatabaseServerClient();
@@ -95,7 +75,7 @@ export async function getCheckoutContextAction() {
       receiptEmail
     },
     settings: {
-      delivery_enabled: settings.delivery_enabled && settings.delivery_coverage_enabled && Boolean(deliveryConfig?.enabled),
+      delivery_enabled: settings.delivery_enabled && settings.delivery_coverage_enabled && Boolean(deliveryConfig?.enabled) && whitelistReady,
       pickup_enabled: settings.pickup_enabled,
       delivery_fee: deliveryConfig?.deliveryFee ?? 200,
       free_delivery_threshold: deliveryConfig?.freeThreshold ?? 2500,
@@ -107,43 +87,51 @@ export async function getCheckoutContextAction() {
   };
 }
 
-export async function suggestDeliveryAddressesAction(query: string) {
+export async function suggestDeliveryStreetsAction(query: string) {
   const customer = await getCurrentCustomer();
-  if (!customer) return { suggestions: [], error: "Войдите, чтобы оформить заказ." };
+  if (!customer) return { streets: [], error: "Войдите, чтобы оформить заказ." };
   try {
-    const config = await getDeliveryLocationSettings();
-    if (!config || !config.enabled) return { suggestions: [], error: "Доставка временно недоступна." };
-    const suggestions = await suggestDeliveryAddresses(cleanAddressPart(query, 160), config.center);
-    return { suggestions, error: null };
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { streets: [], error: unavailableDeliveryAddressMessage() };
+    const streets = await searchDeliveryStreets(locationId, query);
+    return { streets: streets.map((street) => street.street), error: null };
   } catch {
-    return { suggestions: [], error: unavailableAddressMessage };
+    return { streets: [], error: unavailableDeliveryAddressMessage() };
   }
 }
 
-export async function validateDeliveryAddressAction(input: { street?: string; house?: string }) {
+export async function listDeliveryHousesAction(street: string) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { houses: [], error: "Войдите, чтобы оформить заказ." };
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { houses: [], error: unavailableDeliveryAddressMessage() };
+    const houses = await listDeliveryHouses(locationId, street);
+    return { houses, error: null };
+  } catch {
+    return { houses: [], error: unavailableDeliveryAddressMessage() };
+  }
+}
+
+export async function validateDeliveryAddressAction(input: { deliveryAddressId?: string }) {
   const customer = await getCurrentCustomer();
   if (!customer) return { available: false, message: "Войдите, чтобы оформить заказ." };
-  const street = cleanAddressPart(input.street, 160);
-  const house = cleanAddressPart(input.house, 40);
-  if (!street || !house) return { available: false, message: "Укажите улицу и дом." };
-
+  const addressId = typeof input?.deliveryAddressId === "string" ? input.deliveryAddressId : "";
   try {
-    const { assessment, config } = await resolveDeliveryAddress(street, house);
-    if (!assessment.available) {
-      return {
-        available: false,
-        distanceMeters: assessment.distanceMeters,
-        message: "По этому адресу доставка пока недоступна. Вы можете выбрать самовывоз или указать другой адрес."
-      };
-    }
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { available: false, message: unavailableDeliveryAddressMessage() };
+    const address = await findDeliveryAddressById(addressId, locationId);
+    const config = await getDeliveryLocationSettings();
+    const available = Boolean(config?.enabled && address
+      && isAvailableDeliveryAddress(address, addressId, locationId)
+      && assessDeliveryZone({ address: [Number(address.longitude), Number(address.latitude)],
+        center: config.center, radiusMeters: config.radiusMeters, excludedAreas: config.excludedAreas }).available);
     return {
-      available: true,
-      distanceMeters: assessment.distanceMeters,
-      etaMinutes: config.etaMinutes,
-      message: "Доставим по этому адресу. Стоимость доставки зависит от суммы товаров в корзине."
+      available,
+      message: available ? "Доставим по этому адресу." : unavailableDeliveryAddressMessage()
     };
   } catch {
-    return { available: false, message: unavailableAddressMessage };
+    return { available: false, message: unavailableDeliveryAddressMessage() };
   }
 }
 
@@ -191,9 +179,7 @@ export async function createOrderAction(
     delivery_type: formData.get("delivery_type"),
     fulfillment_mode: formData.get("fulfillment_mode"),
     requested_at: String(formData.get("requested_at") || ""),
-    address: String(formData.get("address") || ""),
-    delivery_street: String(formData.get("delivery_street") || ""),
-    delivery_house: String(formData.get("delivery_house") || ""),
+    delivery_address_id: String(formData.get("delivery_address_id") || ""),
     delivery_apartment: String(formData.get("delivery_apartment") || ""),
     delivery_entrance: String(formData.get("delivery_entrance") || ""),
     delivery_floor: String(formData.get("delivery_floor") || ""),
@@ -242,54 +228,49 @@ export async function createOrderAction(
   if (parsed.data.delivery_type === "delivery" && !settings.delivery_coverage_enabled) {
     return {
       status: "error",
-      message: "Доставка пока не подключена: нужно настроить проверку адреса по границе зоны. Самовывоз доступен."
+      message: "Доставка пока недоступна. Вы можете оформить самовывоз."
     };
-  }
-
-  let deliverySnapshot: DeliveryAddressSnapshot | null = null;
-  let canonicalDeliveryAddress: string | null = null;
-  if (parsed.data.delivery_type === "delivery") {
-    try {
-      const resolved = await resolveDeliveryAddress(parsed.data.delivery_street || "", parsed.data.delivery_house || "");
-      if (!isDeliveryAcceptingAt(new Date(), resolved.config)) {
-        return {
-          status: "error",
-          message: "Сегодня доставка уже закончилась. Вы можете выбрать самовывоз."
-        };
-      }
-      if (!resolved.assessment.available) {
-        return {
-          status: "error",
-          message: "По этому адресу доставка пока недоступна. Вы можете выбрать самовывоз или указать другой адрес."
-        };
-      }
-      canonicalDeliveryAddress = resolved.geocoded.addressText;
-      deliverySnapshot = {
-        addressText: resolved.geocoded.addressText,
-        street: resolved.geocoded.street,
-        house: resolved.geocoded.house,
-        apartment: parsed.data.delivery_apartment || null,
-        entrance: parsed.data.delivery_entrance || null,
-        floor: parsed.data.delivery_floor || null,
-        intercom: parsed.data.delivery_intercom || null,
-        courierComment: parsed.data.delivery_courier_comment || null,
-        latitude: resolved.geocoded.coordinates[1],
-        longitude: resolved.geocoded.coordinates[0],
-        distanceMeters: resolved.assessment.distanceMeters,
-        deliveryFee: resolved.config.deliveryFee,
-        etaMinutes: resolved.config.etaMinutes,
-        zoneValidation: "available",
-        validatedAt: new Date().toISOString()
-      };
-    } catch {
-      return { status: "error", message: unavailableAddressMessage };
-    }
   }
 
   if (parsed.data.delivery_type === "pickup" && !settings.pickup_enabled) {
     return {
       status: "error",
       message: "Самовывоз временно недоступен."
+    };
+  }
+
+  let deliveryAddressId: string | null = null;
+  let deliveryDetails: {
+    apartment: string;
+    entrance: string;
+    floor: string;
+    intercom: string;
+    courierComment: string;
+  } | null = null;
+
+  if (parsed.data.delivery_type === "delivery") {
+    const config = await getDeliveryLocationSettings();
+    if (!config?.enabled) return { status: "error", message: "Доставка временно недоступна." };
+    if (!isDeliveryAcceptingAt(new Date(), config)) {
+      return { status: "error", message: "Сегодня доставка уже закончилась. Вы можете выбрать самовывоз." };
+    }
+    const locationId = await getDefaultDeliveryLocationId().catch(() => null);
+    const address = locationId
+      ? await findDeliveryAddressById(parsed.data.delivery_address_id, locationId).catch(() => null)
+      : null;
+    if (!locationId || !address
+      || !isAvailableDeliveryAddress(address, parsed.data.delivery_address_id, locationId)
+      || !assessDeliveryZone({ address: [Number(address.longitude), Number(address.latitude)],
+        center: config.center, radiusMeters: config.radiusMeters, excludedAreas: config.excludedAreas }).available) {
+      return { status: "error", message: unavailableDeliveryAddressMessage() };
+    }
+    deliveryAddressId = address.id;
+    deliveryDetails = {
+      apartment: parsed.data.delivery_apartment,
+      entrance: parsed.data.delivery_entrance,
+      floor: parsed.data.delivery_floor,
+      intercom: parsed.data.delivery_intercom,
+      courierComment: parsed.data.delivery_courier_comment
     };
   }
 
@@ -300,8 +281,8 @@ export async function createOrderAction(
   try {
     const order = await createOrder({
       source: "web",
-      address: canonicalDeliveryAddress,
-      deliverySnapshot,
+      deliveryAddressId,
+      deliveryDetails,
       comment: parsed.data.comment || null,
       customerId: customer.id,
       deliveryType: parsed.data.delivery_type,

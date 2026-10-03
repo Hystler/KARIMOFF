@@ -731,6 +731,18 @@ migrations.push({
     return Boolean(state?.installed);
   }
 });
+for (const [name, table] of [
+  ["20261003180000_delivery_address_whitelist", "delivery_addresses"],
+  ["20261004120000_delivery_whitelist_release_integration", "delivery_whitelist_release_version"]
+]) {
+  migrations.push({
+    name,
+    applied: async (sql) => {
+      const [state] = await sql`select to_regclass(${`public.${table}`}) is not null as installed`;
+      return Boolean(state?.installed);
+    }
+  });
+}
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 

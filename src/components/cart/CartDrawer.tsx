@@ -6,7 +6,8 @@ import { useActionState, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   createOrderAction,
   getCheckoutContextAction,
-  suggestDeliveryAddressesAction,
+  listDeliveryHousesAction,
+  suggestDeliveryStreetsAction,
   validateDeliveryAddressAction
 } from "@/app/actions/orders";
 import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
@@ -91,16 +92,19 @@ export function CartDrawer() {
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
-  const [deliveryStreet, setDeliveryStreet] = useState("");
-  const [deliveryHouse, setDeliveryHouse] = useState("");
-  const [deliverySuggestions, setDeliverySuggestions] = useState<{
-    addressKey: string;
-    suggestions: Array<{ label: string; street: string; house: string; uri: string }>;
-  } | null>(null);
+  const [deliveryStreetQuery, setDeliveryStreetQuery] = useState("");
+  const [selectedDeliveryStreet, setSelectedDeliveryStreet] = useState("");
+  const [deliveryStreetSuggestions, setDeliveryStreetSuggestions] = useState<string[]>([]);
+  const [deliveryHouseOptions, setDeliveryHouseOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [deliveryAddressId, setDeliveryAddressId] = useState("");
   const [deliveryCheck, setDeliveryCheck] = useState<{
-    addressKey: string; available: boolean; message: string; distanceMeters?: number;
+    addressId: string;
+    available: boolean;
+    message: string;
   } | null>(null);
-  const [isCheckingAddress, setIsCheckingAddress] = useState(false);
+  const [isSearchingDeliveryStreets, setIsSearchingDeliveryStreets] = useState(false);
+  const [isLoadingDeliveryHouses, setIsLoadingDeliveryHouses] = useState(false);
+  const [isCheckingDeliveryAddress, setIsCheckingDeliveryAddress] = useState(false);
   const [fulfillmentMode, setFulfillmentMode] = useState<"asap" | "scheduled">("asap");
   const [clientNow, setClientNow] = useState(() => new Date());
   const [requestedSlotIndex, setRequestedSlotIndex] = useState(0);
@@ -143,12 +147,10 @@ export function CartDrawer() {
     ? (totalPrice >= checkoutSettings.free_delivery_threshold ? 0 : checkoutSettings.delivery_fee)
     : 0;
   const checkoutTotal = totalPrice + deliveryFee;
-  const addressKey = `${deliveryStreet.trim()}|${deliveryHouse.trim()}`;
-  const suggestionsForAddress = deliveryType === "delivery" && deliveryStreet.trim() && deliveryHouse.trim()
-    && deliverySuggestions?.addressKey === addressKey
-    ? deliverySuggestions.suggestions
-    : [];
-  const addressIsValidated = deliveryCheck?.available === true && deliveryCheck.addressKey === addressKey;
+  const addressIsValidated = Boolean(deliveryAddressId)
+    && !isCheckingDeliveryAddress
+    && deliveryCheck?.available === true
+    && deliveryCheck.addressId === deliveryAddressId;
   const deliveryAcceptanceState = clientNow
     ? getDeliveryAcceptanceState(clientNow, {
       timezone: checkoutSettings.delivery_timezone,
@@ -166,35 +168,58 @@ export function CartDrawer() {
     return moscowOrderSlotToIso(getMoscowDateKey(clientNow), slot);
   }, [clientNow, fulfillmentMode, requestedSlotIndex, scheduledSlots]);
 
+  const clearDeliveryAddressSelection = useCallback(() => {
+    setDeliveryStreetQuery("");
+    setSelectedDeliveryStreet("");
+    setDeliveryStreetSuggestions([]);
+    setDeliveryHouseOptions([]);
+    setDeliveryAddressId("");
+    setDeliveryCheck(null);
+    setIsSearchingDeliveryStreets(false);
+    setIsLoadingDeliveryHouses(false);
+    setIsCheckingDeliveryAddress(false);
+  }, []);
+
   useEffect(() => {
-    if (deliveryType !== "delivery" || !deliveryStreet.trim() || !deliveryHouse.trim()) {
+    if (deliveryType !== "delivery" || !deliveryStreetQuery.trim() || selectedDeliveryStreet) {
       return undefined;
     }
-    const requestedAddressKey = `${deliveryStreet.trim()}|${deliveryHouse.trim()}`;
     let active = true;
     const timer = window.setTimeout(() => {
-      void suggestDeliveryAddressesAction(`${deliveryStreet} ${deliveryHouse}`).then((result) => {
-        if (active) setDeliverySuggestions({ addressKey: requestedAddressKey, suggestions: result.suggestions });
+      setIsSearchingDeliveryStreets(true);
+      void suggestDeliveryStreetsAction(deliveryStreetQuery).then((result) => {
+        if (active) setDeliveryStreetSuggestions(result.streets);
+      }).catch(() => {
+        if (active) setDeliveryStreetSuggestions([]);
+      }).finally(() => {
+        if (active) setIsSearchingDeliveryStreets(false);
       });
-    }, 350);
+    }, 250);
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [deliveryHouse, deliveryStreet, deliveryType]);
+  }, [deliveryStreetQuery, deliveryType, selectedDeliveryStreet]);
 
-  const checkDeliveryAddress = useCallback(async () => {
-    setIsCheckingAddress(true);
-    setDeliverySuggestions(null);
-    const result = await validateDeliveryAddressAction({ street: deliveryStreet, house: deliveryHouse });
-    setDeliveryCheck({
-      addressKey,
-      available: result.available,
-      message: result.message,
-      distanceMeters: result.distanceMeters
+  useEffect(() => {
+    if (!selectedDeliveryStreet || deliveryType !== "delivery") {
+      return undefined;
+    }
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return null;
+      setIsLoadingDeliveryHouses(true);
+      return listDeliveryHousesAction(selectedDeliveryStreet);
+    }).then((result) => {
+      if (!result) return;
+      if (active) setDeliveryHouseOptions(result.houses);
+    }).catch(() => {
+      if (active) setDeliveryHouseOptions([]);
+    }).finally(() => {
+      if (active) setIsLoadingDeliveryHouses(false);
     });
-    setIsCheckingAddress(false);
-  }, [addressKey, deliveryHouse, deliveryStreet]);
+    return () => { active = false; };
+  }, [deliveryType, selectedDeliveryStreet]);
 
   const startCheckout = useCallback(async () => {
     if (!lines.length || checkoutContextPending.current) {
@@ -479,7 +504,10 @@ export function CartDrawer() {
                       value="pickup"
                       checked={deliveryType === "pickup"}
                       disabled={!checkoutSettings.pickup_enabled}
-                      onChange={() => setDeliveryType("pickup")}
+                      onChange={() => {
+                        clearDeliveryAddressSelection();
+                        setDeliveryType("pickup");
+                      }}
                       className="accent-karimoff-orange"
                     />
                     {checkoutSettings.pickup_enabled ? "Самовывоз" : "Самовывоз недоступен"}
@@ -492,6 +520,7 @@ export function CartDrawer() {
                       checked={deliveryType === "delivery"}
                       disabled={!checkoutSettings.delivery_enabled}
                       onChange={() => {
+                        clearDeliveryAddressSelection();
                         setDeliveryType("delivery");
                         setFulfillmentMode("asap");
                       }}
@@ -502,7 +531,7 @@ export function CartDrawer() {
                 </div>
                 {!checkoutSettings.delivery_enabled ? (
                   <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
-                    Проверка адреса в зоне доставки ещё настраивается. Пока доступен самовывоз.
+                    Доставка пока недоступна. Вы можете оформить самовывоз.
                   </p>
                 ) : null}
                 {isCheckoutDisabled ? (
@@ -512,56 +541,91 @@ export function CartDrawer() {
                 ) : null}
                 {deliveryType === "delivery" ? (
                   <div className="mt-4 grid gap-3">
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
-                      <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
-                        Улица
-                        <input
-                          name="delivery_street"
-                          value={deliveryStreet}
-                          onChange={(event) => {
-                            setDeliveryStreet(event.target.value);
-                            setDeliveryCheck(null);
-                          }}
-                          required
-                          autoComplete="street-address"
-                          className="public-field min-w-0"
-                          placeholder="Например, Бахчиванджи"
-                        />
-                      </label>
-                      <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
-                        Дом
-                        <input
-                          name="delivery_house"
-                          value={deliveryHouse}
-                          onChange={(event) => {
-                            setDeliveryHouse(event.target.value);
-                            setDeliveryCheck(null);
-                          }}
-                          required
-                          className="public-field min-w-0"
-                          placeholder="5Б"
-                        />
-                      </label>
-                    </div>
-                    {suggestionsForAddress.length ? (
-                      <ul className="overflow-hidden rounded-md border border-karimoff-line bg-white" aria-label="Подсказки адреса">
-                        {suggestionsForAddress.map((suggestion) => (
-                          <li key={suggestion.uri}>
+                    <input type="hidden" name="delivery_address_id" value={deliveryAddressId} />
+                    <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Улица
+                      <input
+                        value={deliveryStreetQuery}
+                        onChange={(event) => {
+                          setDeliveryStreetQuery(event.target.value);
+                          setSelectedDeliveryStreet("");
+                          setDeliveryStreetSuggestions([]);
+                          setIsSearchingDeliveryStreets(false);
+                          setDeliveryHouseOptions([]);
+                          setIsLoadingDeliveryHouses(false);
+                          setDeliveryAddressId("");
+                          setDeliveryCheck(null);
+                        }}
+                        autoComplete="off"
+                        aria-label="Улица доставки"
+                        className="public-field min-w-0"
+                        placeholder="Начните вводить название улицы"
+                      />
+                    </label>
+                    {deliveryStreetSuggestions.length ? (
+                      <ul className="-mt-2 overflow-hidden rounded-md border border-karimoff-line bg-white" aria-label="Улицы из списка доставки">
+                        {deliveryStreetSuggestions.map((street) => (
+                          <li key={street}>
                             <button
                               type="button"
                               className="w-full px-3 py-3 text-left text-sm leading-5 text-karimoff-black hover:bg-karimoff-cream"
                               onClick={() => {
-                                setDeliveryStreet(suggestion.street);
-                                setDeliveryHouse(suggestion.house);
+                                setSelectedDeliveryStreet(street);
+                                setDeliveryStreetQuery(street);
+                                setDeliveryStreetSuggestions([]);
+                                setIsSearchingDeliveryStreets(false);
+                                setDeliveryHouseOptions([]);
+                                setIsLoadingDeliveryHouses(false);
+                                setDeliveryAddressId("");
                                 setDeliveryCheck(null);
-                                setDeliverySuggestions(null);
                               }}
                             >
-                              {suggestion.label}
+                              {street}
                             </button>
                           </li>
                         ))}
                       </ul>
+                    ) : null}
+                    {isSearchingDeliveryStreets ? <p className="-mt-2 text-xs text-karimoff-muted">Ищем улицу…</p> : null}
+                    {deliveryStreetQuery.trim() && !selectedDeliveryStreet && !isSearchingDeliveryStreets && !deliveryStreetSuggestions.length ? (
+                      <p role="status" className="-mt-2 text-sm text-karimoff-muted">
+                        По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз.
+                      </p>
+                    ) : null}
+                    <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Дом
+                      <select
+                        value={deliveryAddressId}
+                        disabled={!selectedDeliveryStreet || isLoadingDeliveryHouses || !deliveryHouseOptions.length}
+                        aria-label="Дом доставки"
+                        className="public-field min-w-0"
+                        onChange={(event) => {
+                          const addressId = event.target.value;
+                          setDeliveryAddressId(addressId);
+                          setDeliveryCheck(null);
+                          if (!addressId) return;
+                          setIsCheckingDeliveryAddress(true);
+                          void validateDeliveryAddressAction({ deliveryAddressId: addressId }).then((result) => {
+                            setDeliveryCheck({ addressId, available: result.available, message: result.message });
+                          }).catch(() => {
+                            setDeliveryCheck({
+                              addressId,
+                              available: false,
+                              message: "По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз."
+                            });
+                          }).finally(() => setIsCheckingDeliveryAddress(false));
+                        }}
+                      >
+                        <option value="">{isLoadingDeliveryHouses ? "Загружаем дома…" : "Выберите дом"}</option>
+                        {deliveryHouseOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {selectedDeliveryStreet && !isLoadingDeliveryHouses && !deliveryHouseOptions.length ? (
+                      <p role="status" className="-mt-2 text-sm text-karimoff-muted">
+                        По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз.
+                      </p>
                     ) : null}
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       {[
@@ -591,15 +655,8 @@ export function CartDrawer() {
                         placeholder="Как найти вход или квартиру"
                       />
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => void checkDeliveryAddress()}
-                      disabled={isCheckingAddress || !deliveryStreet.trim() || !deliveryHouse.trim()}
-                      className="min-h-11 justify-self-start rounded-md border border-karimoff-line px-4 text-sm font-bold text-karimoff-orange-contrast hover:border-karimoff-orange-contrast disabled:opacity-50"
-                    >
-                      {isCheckingAddress ? "Проверяем адрес…" : "Проверить адрес"}
-                    </button>
-                    {deliveryCheck?.addressKey === addressKey ? (
+                    {isCheckingDeliveryAddress ? <p role="status" className="text-sm text-karimoff-muted">Проверяем адрес…</p> : null}
+                    {deliveryCheck?.addressId === deliveryAddressId ? (
                       <p role={deliveryCheck.available ? "status" : "alert"} className={`text-sm font-semibold ${deliveryCheck.available ? "text-emerald-700" : "text-red-700"}`}>
                         {deliveryCheck.message}
                         {deliveryCheck.available ? ` Доставка ${deliveryFee ? `${formatPrice(deliveryFee)} ₽` : "бесплатно"}.` : ""}
