@@ -16,6 +16,8 @@ OSM data is under ODbL 1.0. Public use requires suitable attribution, and the li
 - Attribution guidance: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright)
 - License: [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/)
 
+The public open-data endpoint returns only enabled OSM-sourced whitelist rows. It includes the OSM attribution, snapshot version, and an explicit notice that the exported OSM-derived address database extract is made available under ODbL 1.0. It omits delivery-distance calculations, customer delivery details, contacts, order history, and admin review fields. The endpoint returns a machine-readable JSON copy of the enabled address extract.
+
 ## Import and review
 
 Running the importer without `--apply` only writes local preview files:

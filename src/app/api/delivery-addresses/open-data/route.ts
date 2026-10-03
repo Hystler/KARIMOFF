@@ -16,14 +16,15 @@ export async function GET() {
       building: string;
       latitude: number;
       longitude: number;
-      distance_meters: number;
       source_id: string | null;
       source_snapshot_version: string | null;
     }[]>`
-      select city, street, house, building, latitude, longitude, distance_meters,
+      select city, street, house, building, latitude, longitude,
         source_id, source_snapshot_version
       from public.delivery_addresses
-      where location_id = ${locationId}::uuid and source = 'openstreetmap'
+      where location_id = ${locationId}::uuid
+        and source = 'openstreetmap'
+        and is_available = true
       order by street_normalized, house_normalized, building_normalized
     `;
     const version = addresses.map((address) => address.source_snapshot_version).find(Boolean) ?? null;
@@ -32,6 +33,7 @@ export async function GET() {
       source: "OpenStreetMap",
       snapshot_version: version,
       license: "Open Database License 1.0 (ODbL)",
+      dataset_license_notice: "This OpenStreetMap-derived address database extract is made available under the Open Database License 1.0 (ODbL).",
       license_url: "https://opendatacommons.org/licenses/odbl/1-0/",
       addresses
     }, {
