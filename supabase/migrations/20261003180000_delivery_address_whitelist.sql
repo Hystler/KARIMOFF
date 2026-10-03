@@ -219,7 +219,8 @@ declare
 begin
   if p_delivery_type = 'delivery' then
     select id into v_location_id from public.order_locations
-    where is_default and is_active order by created_at limit 1;
+    where location_key = 'karimoff-main' and is_default and is_active
+    order by created_at limit 1;
     if v_location_id is null then
       raise exception using errcode = 'P0001', message = 'Не настроена точка доставки.';
     end if;
@@ -252,6 +253,7 @@ begin
 
   if p_delivery_type = 'delivery' then
     update public.orders set
+      location_id = v_location_id,
       delivery_address_id = p_delivery_address_id,
       delivery_address_snapshot = v_delivery.address_snapshot,
       address = v_delivery.address_text,
@@ -300,7 +302,8 @@ declare
 begin
   if p_delivery_type = 'delivery' then
     select id into v_location_id from public.order_locations
-    where is_default and is_active order by created_at limit 1;
+    where location_key = 'karimoff-main' and is_default and is_active
+    order by created_at limit 1;
     if v_location_id is null then
       raise exception using errcode = 'P0001', message = 'Не настроена точка доставки.';
     end if;
@@ -333,6 +336,7 @@ begin
 
   if p_delivery_type = 'delivery' then
     update public.orders set
+      location_id = v_location_id,
       delivery_address_id = p_delivery_address_id,
       delivery_address_snapshot = v_delivery.address_snapshot,
       address = v_delivery.address_text,

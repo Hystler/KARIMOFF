@@ -138,9 +138,10 @@ test("isolated PostgreSQL checkout accepts only an available address ID and snap
 
       const created = await createOrder(input);
       const [snapshot] = await transaction`
-        select delivery_address_id, address, delivery_address_snapshot, is_test
+        select location_id, delivery_address_id, address, delivery_address_snapshot, is_test
         from public.orders where id = ${created.orderId}::uuid
       `;
+      assert.equal(snapshot.location_id, defaultLocationId);
       assert.equal(snapshot.delivery_address_id, available.id);
       assert.equal(snapshot.delivery_address_snapshot.street, available.street);
       assert.equal(snapshot.delivery_address_snapshot.house, available.house);
@@ -165,9 +166,10 @@ test("isolated PostgreSQL checkout accepts only an available address ID and snap
         idempotencyKey: randomUUID()
       });
       const [pickupSnapshot] = await transaction`
-        select delivery_address_id, delivery_address_snapshot, address
+        select location_id, delivery_address_id, delivery_address_snapshot, address
         from public.orders where id = ${pickup.orderId}::uuid
       `;
+      assert.equal(pickupSnapshot.location_id, defaultLocationId);
       assert.equal(pickupSnapshot.delivery_address_id, null);
       assert.equal(pickupSnapshot.delivery_address_snapshot, null);
       assert.equal(pickupSnapshot.address, null);
