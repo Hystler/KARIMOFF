@@ -9,7 +9,7 @@ const payments = read('src/lib/integrations/evotor/pos-payments.ts');
 const migration = read('database/migrations/20261003120000_pos_fiscal_identity.sql');
 const sync = read('src/lib/integrations/evotor/sync.ts');
 
-function reconciliationWith({ receipt = {}, intents = [{}], copies = [{}], insert = true } = {}) {
+function reconciliationWith({ receipt = {}, groups = [], intents = [{}], copies = [{}], insert = true } = {}) {
   const source = ts.transpileModule(read('src/lib/integrations/evotor/fiscal-reconciliation.ts'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -27,9 +27,13 @@ function reconciliationWith({ receipt = {}, intents = [{}], copies = [{}], inser
       fiscal_document_number: 'fd-1', fiscal_sign: 'fp-1', total: 100,
       location_id: 'location-1', evotor_device_id: 'device-1', evotor_store_id: 'store-1', ...receipt
     }];
-    if (query.includes('select intent.id, intent.order_id')) return intents.map((item, index) => ({
+    if (query.includes('select group_index, fiscal_storage_number')) return groups;
+    if (query.includes('select intent.id, intent.order_id')) {
+      const selected = typeof intents === 'function' ? intents(values) : intents;
+      return selected.map((item, index) => ({
       id: `intent-${index}`, order_id: `order-${index}`, payment_id: `payment-${index}`, ...item
-    }));
+      }));
+    }
     if (query.includes('select other.id')) return copies.map((item, index) => ({ id: `receipt-${index}`, ...item }));
     if (query.includes('insert into public.analytics_sale_reconciliations')) return insert ? [{ id: 'link-1' }] : [];
     return [];
@@ -97,6 +101,21 @@ test('matching fiscal identity links the existing order and stores cloud documen
   assert.ok(harness.queries.some(entry => entry.query.includes('intent.evotor_cloud_device_id =')));
   assert.ok(harness.queries.some(entry => entry.query.includes('intent.evotor_cloud_store_id =')));
   assert.match(sync, /await reconcileEvotorReceipt\(transaction, receiptRows\[0\]\.id\)/);
+});
+
+test('a later print group can uniquely link; two valid groups require manual review', async () => {
+  const groups = [
+    { group_index: 0, fiscal_storage_number: 'fn-1', fiscal_document_number: 'fd-1', fiscal_sign: 'fp-1' },
+    { group_index: 1, fiscal_storage_number: 'fn-2', fiscal_document_number: 'fd-2', fiscal_sign: 'fp-2' }
+  ];
+  const unique = reconciliationWith({ receipt: { fiscal_drive_number: null, fiscal_document_number: null,
+    fiscal_sign: null }, groups, intents: values => values.includes('fn-2') ? [{}] : [] });
+  assert.equal(await unique.reconcile('receipt-1'), true);
+  assert.ok(unique.queries.some(entry => entry.query.includes('insert into public.analytics_sale_reconciliations')));
+  const ambiguous = reconciliationWith({ groups, intents: [{}] });
+  assert.equal(await ambiguous.reconcile('receipt-1'), false);
+  assert.ok(!ambiguous.queries.some(entry => entry.query.includes('insert into public.analytics_sale_reconciliations')));
+  assert.ok(ambiguous.queries.some(entry => entry.values.includes('ambiguous')));
 });
 
 test('same amount/time with a different fiscal identity remains unlinked', async () => {

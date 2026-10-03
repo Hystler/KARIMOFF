@@ -731,6 +731,24 @@ migrations.push({
     return Boolean(state?.installed);
   }
 });
+migrations.push({
+  name: "20261003120000_pos_fiscal_identity",
+  applied: async (sql) => {
+    const [state] = await sql`
+      select
+        to_regclass('public.evotor_receipt_fiscal_groups') is not null as fiscal_groups,
+        to_regclass('public.evotor_receipt_fiscal_groups_identity_idx') is not null as fiscal_groups_index,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.evotor_terminal_payment_intents')
+          and attname = 'local_receipt_uuid' and not attisdropped) as local_uuid,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.evotor_terminal_payment_intents')
+          and attname = 'evotor_cloud_document_id' and not attisdropped) as cloud_document,
+        exists (select 1 from pg_attribute where attrelid = to_regclass('public.evotor_receipts')
+          and attname = 'pos_reconciliation_status' and not attisdropped) as reconciliation_status
+    `;
+    return Boolean(state?.fiscal_groups && state?.fiscal_groups_index && state?.local_uuid
+      && state?.cloud_document && state?.reconciliation_status);
+  }
+});
 for (const [name, table] of [
   ["20261003180000_delivery_address_whitelist", "delivery_addresses"],
   ["20261004120000_delivery_whitelist_release_integration", "delivery_whitelist_release_version"]

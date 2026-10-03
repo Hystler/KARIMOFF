@@ -64,6 +64,7 @@ function receiptSourceHash(receipt: EvotorReceipt) {
     discount: receipt.discount,
     total: receipt.total,
     payments,
+    fiscalGroups: receipt.fiscalGroups,
     items
   })).digest("hex");
 }
@@ -291,6 +292,9 @@ async function persistSnapshot(params: {
       const storeId = storeIds.get(externalStoreId);
       if (!storeId) continue;
       for (const document of documents) {
+        if (document.store_id && document.store_id !== externalStoreId) {
+          throw new Error("Evotor document store does not match the requested store.");
+        }
         const deviceId = document.device_id ? deviceIds.get(document.device_id) ?? null : null;
         const documentRows = await transaction<{ id: string }[]>`
           insert into public.evotor_documents (
@@ -350,6 +354,33 @@ async function persistSnapshot(params: {
         `;
         if (!previousReceipt[0]) importedCount += 1;
         else if (previousReceipt[0].source_hash !== sourceHash) updatedCount += 1;
+        for (const group of receipt.fiscalGroups) {
+          await transaction`
+            insert into public.evotor_receipt_fiscal_groups (
+              receipt_id, group_index, print_group_id, fiscal_storage_number,
+              fiscal_document_number, fiscal_sign, receipt_number, document_number,
+              check_sum
+            ) values (
+              ${receiptRows[0].id}::uuid, ${group.groupIndex}, ${group.printGroupId},
+              ${group.fiscalStorageNumber}, ${group.fiscalDocumentNumber}, ${group.fiscalSign},
+              ${group.receiptNumber}, ${group.documentNumber}, ${group.checkSum}
+            )
+            on conflict (receipt_id, group_index) do update
+            set print_group_id = excluded.print_group_id,
+                fiscal_storage_number = excluded.fiscal_storage_number,
+                fiscal_document_number = excluded.fiscal_document_number,
+                fiscal_sign = excluded.fiscal_sign,
+                receipt_number = excluded.receipt_number,
+                document_number = excluded.document_number,
+                check_sum = excluded.check_sum
+          `;
+        }
+        const fiscalGroupIndexes = receipt.fiscalGroups.map((group) => group.groupIndex);
+        await transaction`
+          delete from public.evotor_receipt_fiscal_groups
+          where receipt_id = ${receiptRows[0].id}::uuid
+            and not (group_index = any(${fiscalGroupIndexes}::integer[]))
+        `;
         for (const item of receipt.items) {
           await transaction`
             insert into public.evotor_receipt_items (

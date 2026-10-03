@@ -594,14 +594,23 @@ async function reconcileKnownEvotorFiscalIdentity(intentId: string) {
       join public.evotor_terminal_payment_intents intent on intent.order_id = order_row.id
       where intent.id = ${intentId}::uuid and intent.status = 'paid'
         and receipt.receipt_type = 'sale'
-        and receipt.fiscal_drive_number = intent.fiscal_storage_number
-        and receipt.fiscal_document_number = intent.fiscal_document_number
-        and receipt.fiscal_sign = intent.fiscal_sign
+        and (exists (
+          select 1 from public.evotor_receipt_fiscal_groups fiscal_group
+          where fiscal_group.receipt_id = receipt.id
+            and fiscal_group.fiscal_storage_number = intent.fiscal_storage_number
+            and fiscal_group.fiscal_document_number = intent.fiscal_document_number
+            and fiscal_group.fiscal_sign = intent.fiscal_sign
+        ) or (not exists (
+          select 1 from public.evotor_receipt_fiscal_groups fiscal_group
+          where fiscal_group.receipt_id = receipt.id
+        ) and receipt.fiscal_drive_number = intent.fiscal_storage_number
+          and receipt.fiscal_document_number = intent.fiscal_document_number
+          and receipt.fiscal_sign = intent.fiscal_sign))
         and cloud.evotor_device_id = intent.evotor_cloud_device_id
         and store.evotor_store_id = intent.evotor_cloud_store_id
       limit 2
     `;
-    if (receipts.length === 1) await reconcileEvotorReceipt(sql, receipts[0].id);
+    for (const receipt of receipts) await reconcileEvotorReceipt(sql, receipt.id);
   });
 }
 
@@ -635,7 +644,7 @@ export async function getEvotorPosPaymentStatus(intentId: string): Promise<PosPa
       const details = row.status === "queued"
         ? "Терминал не получил заказ за 5 минут. Проверьте кассу перед отменой или повтором."
         : "Терминал не прислал результат за 5 минут. Проверьте оплату и чек на кассе.";
-      const result = { ...row.result, details };
+      const result = { ...row.result, details, unknownFrom: row.status };
       await sql`
         update public.evotor_terminal_payment_intents
         set status = 'unknown', result = ${sql.json(result)}::jsonb, updated_at = now()
@@ -686,10 +695,11 @@ export async function resolveUnknownEvotorPosPayment(params: {
       delivered_at: string | null;
       local_receipt_uuid: string | null; fiscal_storage_number: string | null;
       fiscal_document_number: string | null; fiscal_sign: string | null;
-      evotor_cloud_device_id: string | null; evotor_cloud_store_id: string | null }[]>`
+      evotor_cloud_device_id: string | null; evotor_cloud_store_id: string | null;
+      result: Record<string, unknown> }[]>`
       select id, order_id, payment_id, status, delivered_at, local_receipt_uuid,
         fiscal_storage_number, fiscal_document_number, fiscal_sign,
-        evotor_cloud_device_id, evotor_cloud_store_id
+        evotor_cloud_device_id, evotor_cloud_store_id, result
       from public.evotor_terminal_payment_intents
       where id = ${params.intentId}::uuid
       for update
@@ -699,6 +709,10 @@ export async function resolveUnknownEvotorPosPayment(params: {
     // authenticated device result can establish a safe post-dispatch cancellation.
     if (params.resolution === "cancelled" && intent.delivered_at !== null) return false;
     if (intent.status === "fiscal_pending" && params.resolution !== "paid") return false;
+    // A dispatched UNKNOWN may already have charged the card. Only a terminal
+    // result explicitly marked safe, or a command never dispatched, can unlock it.
+    if (params.resolution === "cancelled" && (intent.local_receipt_uuid
+      || (intent.result?.safeBeforePayment !== true && intent.result?.unknownFrom !== "queued"))) return false;
     if (params.resolution === "paid" && (!params.receiptReference?.trim() || !intent.local_receipt_uuid
       || !params.fiscalStorageNumber?.trim() || !params.fiscalDocumentNumber?.trim()
       || !params.fiscalSign?.trim())) return false;
@@ -715,19 +729,27 @@ export async function resolveUnknownEvotorPosPayment(params: {
       fiscal_sign: string;
       closed_at: string;
     }[]>`
-      select receipt.id, receipt.fiscal_drive_number, receipt.fiscal_document_number,
-        receipt.fiscal_sign, receipt.closed_at
+      select receipt.id,
+        coalesce(fiscal_group.fiscal_storage_number, receipt.fiscal_drive_number) as fiscal_drive_number,
+        coalesce(fiscal_group.fiscal_document_number, receipt.fiscal_document_number) as fiscal_document_number,
+        coalesce(fiscal_group.fiscal_sign, receipt.fiscal_sign) as fiscal_sign,
+        receipt.closed_at
       from public.evotor_receipts receipt
       join public.evotor_stores store on store.id = receipt.store_id
       join public.evotor_devices cloud on cloud.id = receipt.device_id
       join public.orders order_row on order_row.location_id = store.location_id
+      left join public.evotor_receipt_fiscal_groups fiscal_group on fiscal_group.receipt_id = receipt.id
       where order_row.id = ${intent.order_id}::uuid
         and receipt.external_receipt_id = ${receiptReference}
         and receipt.receipt_type = 'sale'
         and receipt.total = order_row.total
-        and receipt.fiscal_drive_number = ${params.fiscalStorageNumber ?? null}
-        and receipt.fiscal_document_number = ${params.fiscalDocumentNumber ?? null}
-        and receipt.fiscal_sign = ${params.fiscalSign ?? null}
+        and ((fiscal_group.fiscal_storage_number = ${params.fiscalStorageNumber ?? null}
+          and fiscal_group.fiscal_document_number = ${params.fiscalDocumentNumber ?? null}
+          and fiscal_group.fiscal_sign = ${params.fiscalSign ?? null})
+          or (fiscal_group.receipt_id is null
+            and receipt.fiscal_drive_number = ${params.fiscalStorageNumber ?? null}
+            and receipt.fiscal_document_number = ${params.fiscalDocumentNumber ?? null}
+            and receipt.fiscal_sign = ${params.fiscalSign ?? null}))
         and cloud.evotor_device_id = ${intent.evotor_cloud_device_id}
         and store.evotor_store_id = ${intent.evotor_cloud_store_id}
         and not exists (select 1 from public.analytics_sale_reconciliations link

@@ -62,13 +62,21 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
           join public.evotor_receipts imported on imported.id = ${receiptId}::uuid
           join public.evotor_devices cloud on cloud.id = imported.device_id
           join public.evotor_stores store on store.id = imported.store_id
+          left join public.evotor_receipt_fiscal_groups fiscal_group
+            on fiscal_group.receipt_id = imported.id
           where intent.id = ${posIntent.id}::uuid and intent.status = 'paid'
-            and intent.fiscal_storage_number = imported.fiscal_drive_number
-            and intent.fiscal_document_number = imported.fiscal_document_number
-            and intent.fiscal_sign = imported.fiscal_sign
+            and ((intent.fiscal_storage_number = fiscal_group.fiscal_storage_number
+              and intent.fiscal_document_number = fiscal_group.fiscal_document_number
+              and intent.fiscal_sign = fiscal_group.fiscal_sign)
+              or (fiscal_group.receipt_id is null
+                and intent.fiscal_storage_number = imported.fiscal_drive_number
+                and intent.fiscal_document_number = imported.fiscal_document_number
+                and intent.fiscal_sign = imported.fiscal_sign))
             and intent.evotor_cloud_device_id = cloud.evotor_device_id
             and intent.evotor_cloud_store_id = store.evotor_store_id
             and intent.amount = imported.total
+          group by intent.id
+          having count(*) = 1
         `;
         if (!proof) throw new Error("POS_PROOF_REQUIRED");
       }

@@ -421,7 +421,8 @@ test("Evotor manual reconciliation refuses cross-location and unauthorized links
       queries.push(text);
       if (queries.length === 1) return [{ id: orderId, location_id: "location-a", source: "web" }];
       if (queries.length === 2) return [{ id: receiptId, location_id: wrongLocation ? "location-b" : "location-a" }];
-      if (queries.length === 3) return [{ allowed: false }];
+      if (queries.length === 3) return [];
+      if (queries.length === 4) return [{ allowed: false }];
       throw new Error("unexpected database adapter call");
     };
     sql.begin = async (callback) => callback(sql);

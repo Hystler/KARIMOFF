@@ -1,0 +1,41 @@
+{
+  "type": "SELL",
+  "id": "10000000-0000-4000-8000-000000000001",
+  "device_id": "20000000-0000-4000-8000-000000000002",
+  "store_id": "30000000-0000-4000-8000-000000000003",
+  "number": 42,
+  "close_date": "2026-10-03T10:00:00.000+0000",
+  "body": {
+    "sum": 100,
+    "result_sum": 100,
+    "positions": [
+      {
+        "id": "40000000-0000-4000-8000-000000000004",
+        "name": "Synthetic meal",
+        "quantity": 1,
+        "result_price": 100,
+        "result_sum": 100
+      }
+    ],
+    "pos_print_results": [
+      {
+        "print_group_id": "50000000-0000-4000-8000-000000000005",
+        "fn_serial_number": "SYNTHETIC_FN_A",
+        "fiscal_document_number": 101,
+        "fiscal_sign_doc_number": "SYNTHETIC_FP_A",
+        "receipt_number": 7,
+        "document_number": 8,
+        "check_sum": 40
+      },
+      {
+        "print_group_id": "60000000-0000-4000-8000-000000000006",
+        "fn_serial_number": "SYNTHETIC_FN_B",
+        "fiscal_document_number": 102,
+        "fiscal_sign_doc_number": "SYNTHETIC_FP_B",
+        "receipt_number": 9,
+        "document_number": 10,
+        "check_sum": 60
+      }
+    ]
+  }
+}

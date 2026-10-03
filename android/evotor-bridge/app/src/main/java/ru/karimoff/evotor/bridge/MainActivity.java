@@ -31,10 +31,13 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.io.ByteArrayOutputStream;
@@ -65,6 +68,12 @@ import ru.evotor.framework.receipt.formation.api.move_receipt_to_payment_stage.M
 import ru.evotor.framework.receipt.formation.api.move_receipt_to_payment_stage.MoveCurrentReceiptDraftToPaymentStageException;
 
 public final class MainActivity extends Activity {
+    private static String utcIso(long timestamp) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return format.format(new Date(timestamp));
+    }
+
     private static final String PAY_SYSTEM_ACTION = "ru.evotor.devices.drivers.PaySystemService";
     private static final String EVOTOR_PAY_SYSTEM_PACKAGE = "ru.evotor.drivers.kozenpaysystem";
     private static final String ORDER_PREVIEW_EXTRA = "order_preview";
@@ -540,7 +549,7 @@ public final class MainActivity extends Activity {
             identity.put("paymentId", payload.getString("paymentId"));
             identity.put("localReceiptUuid", uuid);
             identity.put("deviceKey", deviceKey());
-            identity.put("openedAt", java.time.Instant.now().toString());
+            identity.put("openedAt", utcIso(System.currentTimeMillis()));
             identity.put("paymentConfirmed", false);
             if (!getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
                 .putString(ACTIVE_RECEIPT_KEY, identity.toString()).commit()) {
@@ -649,8 +658,7 @@ public final class MainActivity extends Activity {
                 fiscalJson.put("storageNumber", fiscal.getFiscalStorageNumber());
                 fiscalJson.put("documentNumber", String.valueOf(fiscal.getDocumentNumber()));
                 fiscalJson.put("sign", fiscal.getFiscalIdentifier());
-                fiscalJson.put("fiscalizedAt", java.time.Instant.ofEpochMilli(
-                    fiscal.getCreationDate().getTime()).toString());
+                fiscalJson.put("fiscalizedAt", utcIso(fiscal.getCreationDate().getTime()));
                 fiscalJson.put("documentType", "SELL");
                 if (closed.getHeader().getNumber() != null)
                     fiscalJson.put("receiptNumber", closed.getHeader().getNumber());

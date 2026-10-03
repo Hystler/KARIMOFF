@@ -5,6 +5,18 @@ import { test } from 'node:test';
 import postgres from 'postgres';
 import ts from 'typescript';
 
+function parseCloudReceipt(document) {
+  const code = ts.transpileModule(readFileSync('src/lib/integrations/evotor/receipts.ts', 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const exports = {};
+  new Function('require', 'exports', code)(id => {
+    if (id === 'server-only') return {};
+    throw new Error(`Unexpected parser import ${id}`);
+  }, exports);
+  return exports.parseEvotorReceipt(document);
+}
+
 function service(sql, enabled = true) {
   const reconciliationCode = ts.transpileModule(readFileSync('src/lib/integrations/evotor/fiscal-reconciliation.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -175,9 +187,9 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const [wrongReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
       external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
       values(${connection.id},${wrongDocument.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${randomUUID()},'sale',now(),100,
-        'different-fn','113','379262308') returning id`;
+        ${fiscalIdentity.storageNumber},'999','different-fiscal-sign') returning id`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,wrongReceipt.id)),false,
-      'same amount and time cannot link a different fiscal identity');
+      'same amount and time cannot link a different fiscal document/sign');
     const [wrongLink] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where evotor_receipt_id=${wrongReceipt.id}`;
     assert.equal(wrongLink.count,0);
@@ -195,6 +207,19 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
         ${fiscalIdentity.sign}) returning id`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,wrongDeviceReceipt.id)),false,
       'same fiscal tuple on another cloud device cannot link');
+    const [wrongStore] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
+      select ${connection.id},${randomUUID()},'Synthetic wrong store',location_id
+      from evotor_stores where id=${delayed.cloudStoreId} returning id`;
+    const [wrongStoreDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
+      evotor_document_id,document_type,close_date)
+      values(${connection.id},${wrongStore.id},${delayed.cloudDeviceId},${randomUUID()},'SELL',now()) returning id`;
+    const [wrongStoreReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
+      external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
+      values(${connection.id},${wrongStoreDocument.id},${wrongStore.id},${delayed.cloudDeviceId},
+        ${randomUUID()},'sale',now(),100,${fiscalIdentity.storageNumber},
+        ${fiscalIdentity.documentNumber},${fiscalIdentity.sign}) returning id`;
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,wrongStoreReceipt.id)),false,
+      'same fiscal tuple on another cloud store cannot link');
 
     const selected = await fixture();
     const [otherTerminal] = await sql`insert into evotor_terminal_devices(location_id,device_key,token_hash,last_seen_at,paired_at)
@@ -311,6 +336,71 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const [cloudFirstLink] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where web_order_id=${cloudFirstJob.orderId} and evotor_receipt_id=${cloudFirstReceipt.id}`;
     assert.equal(cloudFirstLink.count,1,'delayed local fiscal identity reconciles earlier import');
+
+    const split = await fixture();
+    const splitJob = await api.createEvotorPosPayment(split.input);
+    await api.nextEvotorTerminalPayment(split.deviceId);
+    const [splitPayment] = await sql`select payment_id from evotor_terminal_payment_intents
+      where id=${splitJob.intentId}`;
+    const splitUuid = randomUUID();
+    await api.saveEvotorLocalReceipt({deviceId:split.deviceId,intentId:splitJob.intentId,
+      orderId:splitJob.orderId,paymentId:splitPayment.payment_id,localReceiptUuid:splitUuid,
+      openedAt:new Date().toISOString()});
+    const [splitStore] = await sql`select evotor_store_id from evotor_stores where id=${split.cloudStoreId}`;
+    const [splitDevice] = await sql`select evotor_device_id from evotor_devices where id=${split.cloudDeviceId}`;
+    const splitDocument = JSON.parse(readFileSync('tests/fixtures/evotor-sell-multi-group.synthetic.json','utf8'));
+    splitDocument.id = randomUUID();
+    splitDocument.store_id = splitStore.evotor_store_id;
+    splitDocument.device_id = splitDevice.evotor_device_id;
+    for (const group of splitDocument.body.pos_print_results) {
+      group.fn_serial_number = `${fiscalStorageNumber}_${group.fn_serial_number}`;
+    }
+    const parsedSplit = parseCloudReceipt(splitDocument);
+    assert.equal(parsedSplit.fiscalGroups.length,2);
+    assert.equal(parsedSplit.fiscalDocumentNumber,null,'no arbitrary first group in scalar field');
+    await api.recordEvotorTerminalPaymentResult({deviceId:split.deviceId,intentId:splitJob.intentId,
+      status:'paid',receiptReference:splitUuid,fiscal:{storageNumber:parsedSplit.fiscalGroups[1].fiscalStorageNumber,
+        documentNumber:parsedSplit.fiscalGroups[1].fiscalDocumentNumber,
+        sign:parsedSplit.fiscalGroups[1].fiscalSign,fiscalizedAt:new Date().toISOString(),total:100}});
+    const [splitDocRow] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
+      evotor_document_id,document_type,close_date,raw_metadata)
+      values(${connection.id},${split.cloudStoreId},${split.cloudDeviceId},${splitDocument.id},'SELL',now(),
+        ${sql.json(splitDocument)}) returning id`;
+    const [splitReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
+      external_receipt_id,receipt_type,closed_at,total,raw_metadata)
+      values(${connection.id},${splitDocRow.id},${split.cloudStoreId},${split.cloudDeviceId},
+        ${splitDocument.id},'sale',now(),100,${sql.json(parsedSplit.raw)}) returning id`;
+    for (const group of parsedSplit.fiscalGroups) {
+      await sql`insert into evotor_receipt_fiscal_groups(receipt_id,group_index,print_group_id,
+        fiscal_storage_number,fiscal_document_number,fiscal_sign,receipt_number,document_number,check_sum)
+        values(${splitReceipt.id},${group.groupIndex},${group.printGroupId},${group.fiscalStorageNumber},
+          ${group.fiscalDocumentNumber},${group.fiscalSign},${group.receiptNumber},
+          ${group.documentNumber},${group.checkSum})`;
+    }
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,splitReceipt.id)),true,
+      'second fiscal print group must be selected by exact identity');
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,splitReceipt.id)),true,
+      'reimport cannot duplicate a sale');
+    assert.deepEqual(await state(splitJob),{payment_status:'paid',fiscal_status:'issued',is_operational:true,
+      payments:1,intents:1,kds:1,sales:1,inventory:0});
+    const [splitGroups] = await sql`select count(*)::int as count from evotor_receipt_fiscal_groups
+      where receipt_id=${splitReceipt.id}`;
+    assert.equal(splitGroups.count,2,'all fiscal print groups remain stored');
+
+    const pendingUnknown = await fixture();
+    const unknownJob = await api.createEvotorPosPayment(pendingUnknown.input);
+    await api.nextEvotorTerminalPayment(pendingUnknown.deviceId);
+    const [unknownPayment] = await sql`select payment_id from evotor_terminal_payment_intents
+      where id=${unknownJob.intentId}`;
+    await api.saveEvotorLocalReceipt({deviceId:pendingUnknown.deviceId,intentId:unknownJob.intentId,
+      orderId:unknownJob.orderId,paymentId:unknownPayment.payment_id,localReceiptUuid:randomUUID(),
+      openedAt:new Date().toISOString()});
+    await api.recordEvotorTerminalPaymentResult({deviceId:pendingUnknown.deviceId,
+      intentId:unknownJob.intentId,status:'unknown'});
+    assert.equal(await api.resolveUnknownEvotorPosPayment({intentId:unknownJob.intentId,
+      staffId:null,resolution:'cancelled'}),false,'dispatched UNKNOWN cannot unlock another charge');
+    await assert.rejects(api.createEvotorPosPayment({...pendingUnknown.input,idempotencyKey:randomUUID()}),
+      /Касса занята/);
 
     const race = await fixture();
     const attempts = await Promise.allSettled([api.createEvotorPosPayment(race.input),

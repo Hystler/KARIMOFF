@@ -44,7 +44,7 @@ function testModule(path, { removeTypeImport = false } = {}) {
     writeFileSync(join(directory, "errors.ts"), read("src/lib/integrations/evotor/errors.ts"));
   }
   if (removeTypeImport) {
-    source = source.replace(/import type \{ EvotorDocument, EvotorReceipt \} from "\.\/types";\n/, "");
+    source = source.replace(/import type \{[^}]+\} from "\.\/types";\n/, "");
   }
   writeFileSync(join(directory, "package.json"), '{"type":"module"}');
   writeFileSync(file, source);
@@ -342,6 +342,34 @@ test("receipt parsing keeps fiscal analytics but strips customer and device iden
   assert.equal(result.total, 500);
   assert.equal(result.items.length, 1);
   assert.doesNotMatch(JSON.stringify(result.raw), /79990000000|hidden/);
+});
+
+test("SELL parser retains every print group and never promotes the first one", () => {
+  const fixture = testModule("src/lib/integrations/evotor/receipts.ts", { removeTypeImport: true });
+  let result;
+  try {
+    result = runTypeScript(`
+      import { readFileSync } from "node:fs";
+      const { parseEvotorReceipt } = await import(${JSON.stringify(fixture.url)});
+      const document = JSON.parse(readFileSync("tests/fixtures/evotor-sell-multi-group.synthetic.json", "utf8"));
+      const flat = parseEvotorReceipt(document);
+      document.body.pos_print_results = document.body.pos_print_results
+        .map(pos_print_result => ({ pos_print_result }));
+      const wrapped = parseEvotorReceipt(document);
+      console.log(JSON.stringify({ flat, wrapped }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.equal(result.flat.externalId, "10000000-0000-4000-8000-000000000001");
+  for (const receipt of [result.flat, result.wrapped]) {
+    assert.equal(receipt.fiscalGroups.length, 2);
+    assert.deepEqual(receipt.fiscalGroups.map(group => group.fiscalDocumentNumber), ["101", "102"]);
+    assert.deepEqual(receipt.fiscalGroups.map(group => group.checkSum), [40, 60]);
+    assert.equal(receipt.fiscalDocumentNumber, null);
+    assert.equal(receipt.fiscalDriveNumber, null);
+    assert.equal(receipt.fiscalSign, null);
+  }
 });
 
 test("database constraints and upserts make token, store, product, and receipt imports idempotent", () => {

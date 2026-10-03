@@ -94,6 +94,17 @@ export type EvotorReceiptItem = {
   raw: Record<string, unknown>;
 };
 
+export type EvotorFiscalGroup = {
+  groupIndex: number;
+  printGroupId: string | null;
+  fiscalStorageNumber: string | null;
+  fiscalDocumentNumber: string | null;
+  fiscalSign: string | null;
+  receiptNumber: string | null;
+  documentNumber: string | null;
+  checkSum: number | null;
+};
+
 export type EvotorReceipt = {
   externalId: string;
   type: "sale" | "return" | "correction";
@@ -107,6 +118,7 @@ export type EvotorReceipt = {
   fiscalDocumentNumber: string | null;
   fiscalDriveNumber: string | null;
   fiscalSign: string | null;
+  fiscalGroups: EvotorFiscalGroup[];
   items: EvotorReceiptItem[];
   raw: Record<string, unknown>;
 };

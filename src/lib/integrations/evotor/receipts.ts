@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { EvotorDocument, EvotorReceipt } from "./types";
+import type { EvotorDocument, EvotorFiscalGroup, EvotorReceipt } from "./types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -48,10 +48,26 @@ export function sanitizeEvotorPayload(value: unknown): unknown {
   );
 }
 
-function fiscalRecord(body: UnknownRecord) {
+function fiscalRecords(body: UnknownRecord): EvotorFiscalGroup[] {
   const candidate = body.pos_print_results ?? body.fiscal_data ?? body.fiscalData ?? body.fiscal;
-  if (Array.isArray(candidate)) return asRecord(candidate[0]);
-  return asRecord(candidate);
+  const records = Array.isArray(candidate) ? candidate : candidate ? [candidate] : [];
+  return records.map((value, groupIndex) => {
+    const wrapper = asRecord(value);
+    // Evotor's document schema also illustrates a pos_print_result wrapper.
+    const fiscal = asRecord(wrapper.pos_print_result ?? value);
+    const checkSum = fiscal.check_sum === null || fiscal.check_sum === undefined
+      ? null : Number(fiscal.check_sum);
+    return {
+      groupIndex,
+      printGroupId: asText(fiscal.print_group_id),
+      fiscalStorageNumber: asText(fiscal.fn_serial_number ?? fiscal.fiscal_drive_number ?? fiscal.fn_number),
+      fiscalDocumentNumber: asText(fiscal.fiscal_document_number),
+      fiscalSign: asText(fiscal.fiscal_sign_doc_number ?? fiscal.fiscal_sign ?? fiscal.fiscal_document_sign),
+      receiptNumber: asText(fiscal.receipt_number),
+      documentNumber: asText(fiscal.document_number),
+      checkSum: checkSum !== null && Number.isFinite(checkSum) ? checkSum : null
+    };
+  });
 }
 
 export function parseEvotorReceipt(document: EvotorDocument): EvotorReceipt | null {
@@ -98,7 +114,10 @@ export function parseEvotorReceipt(document: EvotorDocument): EvotorReceipt | nu
       sum: Math.abs(asNumber(payment.sum ?? payment.value))
     };
   });
-  const fiscal = fiscalRecord(body);
+  const fiscalGroups = fiscalRecords(body);
+  // One receipt row has only one scalar fiscal tuple. Keep it empty for split
+  // receipts; every print group is persisted separately by the importer.
+  const singleFiscal = fiscalGroups.length === 1 ? fiscalGroups[0] : null;
 
   return {
     externalId: document.id,
@@ -110,9 +129,10 @@ export function parseEvotorReceipt(document: EvotorDocument): EvotorReceipt | nu
     discount: Math.max(0, subtotal - total),
     total,
     payments,
-    fiscalDocumentNumber: asText(fiscal.fiscal_document_number ?? fiscal.document_number),
-    fiscalDriveNumber: asText(fiscal.fiscal_drive_number ?? fiscal.fn_number ?? fiscal.fn_serial_number),
-    fiscalSign: asText(fiscal.fiscal_sign ?? fiscal.fiscal_document_sign ?? fiscal.fiscal_sign_doc_number),
+    fiscalDocumentNumber: singleFiscal?.fiscalDocumentNumber ?? null,
+    fiscalDriveNumber: singleFiscal?.fiscalStorageNumber ?? null,
+    fiscalSign: singleFiscal?.fiscalSign ?? null,
+    fiscalGroups,
     items,
     raw: sanitizeEvotorPayload({
       type: document.type,

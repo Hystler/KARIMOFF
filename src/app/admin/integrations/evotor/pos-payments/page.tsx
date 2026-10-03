@@ -27,6 +27,15 @@ type Row = {
   evotor_cloud_document_id: string | null;
   evotor_cloud_device_id: string | null;
   evotor_cloud_store_id: string | null;
+  cloud_fiscal_groups: Array<{
+    group_index: number;
+    fiscal_storage_number: string | null;
+    fiscal_document_number: string | null;
+    fiscal_sign: string | null;
+    receipt_number: string | null;
+    document_number: string | null;
+    check_sum: string | number | null;
+  }>;
 };
 
 function Value({ label, value }: { label: string; value: string | number | null }) {
@@ -46,7 +55,21 @@ export default async function EvotorPosPaymentsPage() {
       intent.local_receipt_uuid, intent.receipt_opened_at, intent.payment_confirmed_at,
       intent.fiscal_storage_number, intent.fiscal_document_number, intent.fiscal_sign,
       intent.fiscalized_at, intent.receipt_number, intent.acquiring_reference,
-      intent.evotor_cloud_document_id, intent.evotor_cloud_device_id, intent.evotor_cloud_store_id
+      intent.evotor_cloud_document_id, intent.evotor_cloud_device_id, intent.evotor_cloud_store_id,
+      coalesce((select jsonb_agg(jsonb_build_object(
+        'group_index', fiscal_group.group_index,
+        'fiscal_storage_number', fiscal_group.fiscal_storage_number,
+        'fiscal_document_number', fiscal_group.fiscal_document_number,
+        'fiscal_sign', fiscal_group.fiscal_sign,
+        'receipt_number', fiscal_group.receipt_number,
+        'document_number', fiscal_group.document_number,
+        'check_sum', fiscal_group.check_sum
+      ) order by fiscal_group.group_index)
+      from public.analytics_sale_reconciliations link
+      join public.evotor_receipt_fiscal_groups fiscal_group
+        on fiscal_group.receipt_id = link.evotor_receipt_id
+      where link.web_order_id = intent.order_id and link.status = 'confirmed'), '[]'::jsonb)
+        as cloud_fiscal_groups
     from public.evotor_terminal_payment_intents intent
     join public.orders order_row on order_row.id = intent.order_id
     join public.evotor_terminal_devices device on device.id = intent.device_id
@@ -81,6 +104,18 @@ export default async function EvotorPosPaymentsPage() {
         <Value label="Cloud device ID" value={row.evotor_cloud_device_id} />
         <Value label="Cloud store ID" value={row.evotor_cloud_store_id} />
       </dl>
+      {row.cloud_fiscal_groups.length > 0 && <div className="mt-5 border-t border-black/10 pt-4">
+        <h3 className="text-sm font-bold">Печатные группы облачного чека</h3>
+        <div className="mt-3 space-y-3">{row.cloud_fiscal_groups.map((group) =>
+          <dl key={group.group_index} className="grid gap-3 rounded-lg bg-black/[0.03] p-3 sm:grid-cols-3">
+            <Value label={`Группа ${group.group_index + 1} · ФН`} value={group.fiscal_storage_number} />
+            <Value label="ФД" value={group.fiscal_document_number} />
+            <Value label="ФП" value={group.fiscal_sign} />
+            <Value label="Номер чека" value={group.receipt_number} />
+            <Value label="Номер документа" value={group.document_number} />
+            <Value label="Сумма печатной группы" value={group.check_sum} />
+          </dl>)}</div>
+      </div>}
     </section>) : <p className="admin-card p-5">Операций POS пока нет.</p>}</div>
   </main>;
 }
