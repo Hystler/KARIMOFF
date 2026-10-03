@@ -40,6 +40,8 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.ok(identity.version >= 170000 && identity.version < 180000);
     const api = service(sql);
     const fiscalStorageNumber = `${Date.now()}${Math.floor(Math.random() * 100000)}`;
+    const [connection] = await sql`insert into evotor_connections(evotor_user_id,encrypted_token,token_fingerprint)
+      values(${randomUUID()},'synthetic',${randomUUID()}) returning id`;
     const [product] = await sql`insert into products(name,slug,category,price,is_active)
       values('Synthetic POS meal', ${`rc-${randomUUID()}`}, 'Бургеры', 100, true) returning id`;
     const [ingredient] = await sql`insert into ingredients(name,unit,cost_per_unit)
@@ -52,10 +54,15 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
         values(${`rc-${randomUUID()}`},'Synthetic RC point') returning id`;
       const [device] = await sql`insert into evotor_terminal_devices(location_id,device_key,token_hash,last_seen_at,paired_at)
         values(${location.id},${randomUUID()},${randomUUID().replaceAll('-','').repeat(2)},now(),now()) returning id`;
+      const [cloudStore] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
+        values(${connection.id},${randomUUID()},'Synthetic cloud store',${location.id}) returning id`;
+      const [cloudDevice] = await sql`insert into evotor_devices(connection_id,store_id,evotor_device_id)
+        values(${connection.id},${cloudStore.id},${randomUUID()}) returning id`;
+      await sql`update evotor_terminal_devices set cloud_device_id=${cloudDevice.id} where id=${device.id}`;
       const input = { locationId: location.id, customerId: null, customerName: 'Synthetic RC guest', comment: null,
         items: [{ product_id: product.id, quantity: 1, removed_ingredient_ids: [], extras: [], modifier_option_ids: [], note: '' }],
         idempotencyKey: randomUUID(), actorId: null, actorRole: 'owner', terminalDeviceId: device.id };
-      return { input, deviceId: device.id };
+      return { input, deviceId: device.id, cloudStoreId:cloudStore.id, cloudDeviceId:cloudDevice.id };
     }
     async function state(job) {
       const [row] = await sql`select o.payment_status,o.fiscal_status,o.is_operational,
@@ -138,19 +145,13 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.equal(savedFiscal.fiscal_sign,fiscalIdentity.sign);
     assert.equal(savedFiscal.evotor_cloud_document_id,null);
 
-    const [connection] = await sql`insert into evotor_connections(evotor_user_id,encrypted_token,token_fingerprint)
-      values(${randomUUID()},'synthetic',${randomUUID()}) returning id`;
-    const [store] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
-      values(${connection.id},${randomUUID()},'Synthetic cloud store',${delayed.input.locationId}) returning id`;
-    const [cloudDevice] = await sql`insert into evotor_devices(connection_id,store_id,evotor_device_id)
-      values(${connection.id},${store.id},${randomUUID()}) returning id`;
     const cloudDocumentId = randomUUID();
     const [document] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
-      values(${connection.id},${store.id},${cloudDevice.id},${cloudDocumentId},'SELL',now()) returning id`;
+      values(${connection.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${cloudDocumentId},'SELL',now()) returning id`;
     const [receipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
       external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${document.id},${store.id},${cloudDevice.id},${cloudDocumentId},'sale',now(),100,
+      values(${connection.id},${document.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${cloudDocumentId},'sale',now(),100,
         ${fiscalIdentity.storageNumber},${fiscalIdentity.documentNumber},${fiscalIdentity.sign}) returning id`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,receipt.id)),true);
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,receipt.id)),true,'duplicate import is idempotent');
@@ -165,26 +166,51 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const [link] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where web_order_id=${pending.orderId} and evotor_receipt_id=${receipt.id} and status='confirmed'`;
     assert.equal(link.count,1);
+    const [matchedReceipt] = await sql`select pos_reconciliation_status from evotor_receipts where id=${receipt.id}`;
+    assert.equal(matchedReceipt.pos_reconciliation_status,'matched');
 
     const [wrongDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
-      values(${connection.id},${store.id},${cloudDevice.id},${randomUUID()},'SELL',now()) returning id`;
+      values(${connection.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${randomUUID()},'SELL',now()) returning id`;
     const [wrongReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
       external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${wrongDocument.id},${store.id},${cloudDevice.id},${randomUUID()},'sale',now(),100,
+      values(${connection.id},${wrongDocument.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${randomUUID()},'sale',now(),100,
         'different-fn','113','379262308') returning id`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,wrongReceipt.id)),false,
       'same amount and time cannot link a different fiscal identity');
     const [wrongLink] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where evotor_receipt_id=${wrongReceipt.id}`;
     assert.equal(wrongLink.count,0);
+    const [unreconciledReceipt] = await sql`select pos_reconciliation_status from evotor_receipts where id=${wrongReceipt.id}`;
+    assert.equal(unreconciledReceipt.pos_reconciliation_status,'unreconciled');
+    const [wrongCloudDevice] = await sql`insert into evotor_devices(connection_id,store_id,evotor_device_id)
+      values(${connection.id},${delayed.cloudStoreId},${randomUUID()}) returning id`;
+    const [wrongDeviceDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
+      evotor_document_id,document_type,close_date)
+      values(${connection.id},${delayed.cloudStoreId},${wrongCloudDevice.id},${randomUUID()},'SELL',now()) returning id`;
+    const [wrongDeviceReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
+      external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
+      values(${connection.id},${wrongDeviceDocument.id},${delayed.cloudStoreId},${wrongCloudDevice.id},
+        ${randomUUID()},'sale',now(),100,${fiscalIdentity.storageNumber},${fiscalIdentity.documentNumber},
+        ${fiscalIdentity.sign}) returning id`;
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,wrongDeviceReceipt.id)),false,
+      'same fiscal tuple on another cloud device cannot link');
 
     const selected = await fixture();
     const [otherTerminal] = await sql`insert into evotor_terminal_devices(location_id,device_key,token_hash,last_seen_at,paired_at)
       values(${selected.input.locationId},${randomUUID()},${randomUUID().replaceAll('-','').repeat(2)},now(),now()) returning id`;
+    const [otherCloudDevice] = await sql`insert into evotor_devices(connection_id,store_id,evotor_device_id)
+      values(${connection.id},${selected.cloudStoreId},${randomUUID()}) returning id`;
+    await sql`update evotor_terminal_devices set cloud_device_id=${otherCloudDevice.id} where id=${otherTerminal.id}`;
     const selectedJob = await api.createEvotorPosPayment({...selected.input,terminalDeviceId:otherTerminal.id});
-    const [selectedIntent] = await sql`select device_id from evotor_terminal_payment_intents where id=${selectedJob.intentId}`;
+    const [selectedIntent] = await sql`select device_id,evotor_cloud_device_id,evotor_cloud_store_id
+      from evotor_terminal_payment_intents where id=${selectedJob.intentId}`;
     assert.equal(selectedIntent.device_id,otherTerminal.id);
+    const [selectedCloud] = await sql`select cloud.evotor_device_id,store.evotor_store_id
+      from evotor_devices cloud join evotor_stores store on store.id=cloud.store_id
+      where cloud.id=${otherCloudDevice.id}`;
+    assert.equal(selectedIntent.evotor_cloud_device_id,selectedCloud.evotor_device_id);
+    assert.equal(selectedIntent.evotor_cloud_store_id,selectedCloud.evotor_store_id);
     assert.equal(await api.nextEvotorTerminalPayment(selected.deviceId),null,'unselected terminal must receive no task');
     assert.equal((await api.nextEvotorTerminalPayment(otherTerminal.id)).id,selectedJob.intentId);
     const offline = await fixture();
@@ -194,6 +220,12 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const [offlineOrders] = await sql`select count(*)::int as count from orders
       where idempotency_key=${offline.input.idempotencyKey}`;
     assert.equal(offlineOrders.count,0);
+    const unmapped = await fixture();
+    await sql`update evotor_terminal_devices set cloud_device_id=null where id=${unmapped.deviceId}`;
+    await assert.rejects(api.createEvotorPosPayment(unmapped.input),/не сопоставлена/);
+    const [unmappedOrders] = await sql`select count(*)::int as count from orders
+      where idempotency_key=${unmapped.input.idempotencyKey}`;
+    assert.equal(unmappedOrders.count,0,'unmapped terminal cannot start money or create order');
 
     const ambiguous = await fixture();
     const ambiguousJob = await api.createEvotorPosPayment(ambiguous.input);
@@ -207,17 +239,15 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       fiscalizedAt:new Date().toISOString(),total:100};
     await api.recordEvotorTerminalPaymentResult({deviceId:ambiguous.deviceId,intentId:ambiguousJob.intentId,
       status:'paid',receiptReference:ambiguousUuid,fiscal:ambiguousFiscal});
-    const [ambiguousStore] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
-      values(${connection.id},${randomUUID()},'Ambiguous point',${ambiguous.input.locationId}) returning id`;
     const ambiguousReceipts = [];
     for (let i=0;i<2;i++) {
       const externalId = randomUUID();
       const [cloudDoc] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
         evotor_document_id,document_type,close_date)
-        values(${connection.id},${ambiguousStore.id},${cloudDevice.id},${externalId},'SELL',now()) returning id`;
+        values(${connection.id},${ambiguous.cloudStoreId},${ambiguous.cloudDeviceId},${externalId},'SELL',now()) returning id`;
       const [cloudReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
         external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-        values(${connection.id},${cloudDoc.id},${ambiguousStore.id},${cloudDevice.id},${externalId},'sale',now(),100,
+        values(${connection.id},${cloudDoc.id},${ambiguous.cloudStoreId},${ambiguous.cloudDeviceId},${externalId},'sale',now(),100,
           ${ambiguousFiscal.storageNumber},${ambiguousFiscal.documentNumber},${ambiguousFiscal.sign}) returning id`;
       ambiguousReceipts.push(cloudReceipt.id);
     }
@@ -225,6 +255,9 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const [ambiguousLinks] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where web_order_id=${ambiguousJob.orderId}`;
     assert.equal(ambiguousLinks.count,0,'ambiguous fiscal receipts require manual review');
+    const [ambiguousState] = await sql`select pos_reconciliation_status from evotor_receipts
+      where id=${ambiguousReceipts[0]}`;
+    assert.equal(ambiguousState.pos_reconciliation_status,'ambiguous');
 
     const manual = await fixture();
     const manualJob = await api.createEvotorPosPayment(manual.input);
@@ -236,15 +269,13 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       localReceiptUuid:manualUuid,openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:manual.deviceId,intentId:manualJob.intentId,
       status:'paid',receiptReference:manualUuid});
-    const [manualStore] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
-      values(${connection.id},${randomUUID()},'Manual point',${manual.input.locationId}) returning id`;
     const manualCloudId = randomUUID();
     const [manualDoc] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
-      values(${connection.id},${manualStore.id},${cloudDevice.id},${manualCloudId},'SELL',now()) returning id`;
+      values(${connection.id},${manual.cloudStoreId},${manual.cloudDeviceId},${manualCloudId},'SELL',now()) returning id`;
     await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
       external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${manualDoc.id},${manualStore.id},${cloudDevice.id},${manualCloudId},'sale',now(),100,
+      values(${connection.id},${manualDoc.id},${manual.cloudStoreId},${manual.cloudDeviceId},${manualCloudId},'sale',now(),100,
         ${fiscalStorageNumber},'115','379262310')`;
     const manualBase = {intentId:manualJob.intentId,staffId:null,resolution:'paid',receiptReference:manualCloudId,
       fiscalStorageNumber,fiscalDocumentNumber:'115'};
@@ -264,15 +295,13 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       localReceiptUuid:cloudFirstUuid,openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
       status:'paid',receiptReference:cloudFirstUuid});
-    const [cloudFirstStore] = await sql`insert into evotor_stores(connection_id,evotor_store_id,name,location_id)
-      values(${connection.id},${randomUUID()},'Cloud-first point',${cloudFirst.input.locationId}) returning id`;
     const cloudFirstDocumentId = randomUUID();
     const [cloudFirstDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
-      values(${connection.id},${cloudFirstStore.id},${cloudDevice.id},${cloudFirstDocumentId},'SELL',now()) returning id`;
+      values(${connection.id},${cloudFirst.cloudStoreId},${cloudFirst.cloudDeviceId},${cloudFirstDocumentId},'SELL',now()) returning id`;
     const [cloudFirstReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
       external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${cloudFirstDocument.id},${cloudFirstStore.id},${cloudDevice.id},
+      values(${connection.id},${cloudFirstDocument.id},${cloudFirst.cloudStoreId},${cloudFirst.cloudDeviceId},
         ${cloudFirstDocumentId},'sale',now(),100,${fiscalStorageNumber},'116','379262311') returning id`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,cloudFirstReceipt.id)),false,
       'cloud import waits for fiscal identity from local bridge');

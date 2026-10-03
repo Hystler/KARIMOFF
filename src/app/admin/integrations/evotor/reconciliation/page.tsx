@@ -83,7 +83,7 @@ export default async function EvotorReconciliationPage({
                 <option value="" disabled>Выберите чек</option>
                 {workspace.receipts.map((receipt) => (
                   <option key={receipt.id} value={receipt.id}>
-                    № {receipt.number} · {dateTime.format(new Date(receipt.closedAt))} · {money.format(receipt.total)} ₽ · {receipt.locationName}
+                    № {receipt.number} · {dateTime.format(new Date(receipt.closedAt))} · {money.format(receipt.total)} ₽ · {receipt.locationName}{receipt.posReconciliationStatus === "ambiguous" ? " · ambiguous: ручная проверка" : " · unreconciled: нет автоматической связи"}
                   </option>
                 ))}
               </select>

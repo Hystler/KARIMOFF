@@ -36,12 +36,18 @@ export async function reconcileEvotorReceipt(sql: TransactionSql, receiptId: str
       and intent.fiscal_storage_number = ${receipt.fiscal_drive_number}
       and intent.fiscal_document_number = ${receipt.fiscal_document_number}
       and intent.fiscal_sign = ${receipt.fiscal_sign}
-      and (intent.evotor_cloud_device_id is null
-        or intent.evotor_cloud_device_id = ${receipt.evotor_device_id})
+      and intent.evotor_cloud_device_id = ${receipt.evotor_device_id}
+      and intent.evotor_cloud_store_id = ${receipt.evotor_store_id}
       and intent.amount = ${receipt.total}::numeric
     for update of intent
   `;
-  if (intents.length !== 1) return false;
+  if (intents.length !== 1) {
+    await sql`update public.evotor_receipts
+      set pos_reconciliation_status = ${intents.length > 1 ? "ambiguous" : "unreconciled"},
+        updated_at = now() where id = ${receipt.id}::uuid
+        and pos_reconciliation_status <> 'matched'`;
+    return false;
+  }
   const [intent] = intents;
   const copies = await sql<{ id: string }[]>`
     select other.id from public.evotor_receipts other
@@ -53,7 +59,12 @@ export async function reconcileEvotorReceipt(sql: TransactionSql, receiptId: str
       and other.fiscal_sign = ${receipt.fiscal_sign}
     limit 2
   `;
-  if (copies.length !== 1) return false;
+  if (copies.length !== 1) {
+    await sql`update public.evotor_receipts
+      set pos_reconciliation_status = 'ambiguous', updated_at = now()
+      where id = ${receipt.id}::uuid and pos_reconciliation_status <> 'matched'`;
+    return false;
+  }
   const linked = await sql<{ id: string }[]>`
     insert into public.analytics_sale_reconciliations (
       web_order_id, evotor_receipt_id, status, match_method, confidence,
@@ -72,7 +83,12 @@ export async function reconcileEvotorReceipt(sql: TransactionSql, receiptId: str
         and evotor_receipt_id = ${receipt.id}::uuid
         and status = 'confirmed'
     `;
-    if (!existing) return false;
+    if (!existing) {
+      await sql`update public.evotor_receipts
+        set pos_reconciliation_status = 'ambiguous', updated_at = now()
+        where id = ${receipt.id}::uuid and pos_reconciliation_status <> 'matched'`;
+      return false;
+    }
   }
   await sql`
     update public.evotor_terminal_payment_intents
@@ -88,5 +104,7 @@ export async function reconcileEvotorReceipt(sql: TransactionSql, receiptId: str
       updated_at = now()
     where payment_id = ${intent.payment_id}::uuid and provider = 'evotor'
   `;
+  await sql`update public.evotor_receipts set pos_reconciliation_status = 'matched', updated_at = now()
+    where id = ${receipt.id}::uuid`;
   return true;
 }

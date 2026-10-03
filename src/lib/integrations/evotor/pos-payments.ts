@@ -109,18 +109,26 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
       throw paymentError("Заказ с этим ключом уже создан. Обновите страницу кассы перед повтором.");
     }
 
-    const [device] = await sql<{ id: string }[]>`
-      select id
-      from public.evotor_terminal_devices
-      where id = ${input.terminalDeviceId}::uuid
-        and location_id = ${input.locationId}::uuid
-        and revoked_at is null
-        and token_hash is not null
-        and last_seen_at >= now() - interval '90 seconds'
+    const [device] = await sql<{ id: string; evotor_cloud_device_id: string | null;
+      evotor_cloud_store_id: string | null }[]>`
+      select bridge.id, cloud.evotor_device_id as evotor_cloud_device_id,
+        store.evotor_store_id as evotor_cloud_store_id
+      from public.evotor_terminal_devices bridge
+      left join public.evotor_devices cloud on cloud.id = bridge.cloud_device_id
+      left join public.evotor_stores store on store.id = cloud.store_id
+        and store.location_id = bridge.location_id
+      where bridge.id = ${input.terminalDeviceId}::uuid
+        and bridge.location_id = ${input.locationId}::uuid
+        and bridge.revoked_at is null
+        and bridge.token_hash is not null
+        and bridge.last_seen_at >= now() - interval '90 seconds'
       limit 1
-      for update
+      for update of bridge
     `;
     if (!device) throw paymentError("Выбранная касса не на связи. Выберите доступную кассу заново.");
+    if (!device.evotor_cloud_device_id || !device.evotor_cloud_store_id) {
+      throw paymentError("Касса не сопоставлена с облачным устройством Эвотор. Настройте её в админке.");
+    }
 
     const [busy] = await sql<{ id: string }[]>`
       select id from public.evotor_terminal_payment_intents
@@ -235,7 +243,7 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
     const [intent] = await sql<{ id: string; status: string }[]>`
       insert into public.evotor_terminal_payment_intents (
         device_id, order_id, payment_id, idempotency_key, amount, status,
-        payload, created_by_staff_id
+        payload, created_by_staff_id, evotor_cloud_device_id, evotor_cloud_store_id
       ) values (
         ${device.id}::uuid,
         ${createdOrder.order_id}::uuid,
@@ -244,7 +252,9 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
         ${amount},
         'queued',
         ${sql.json(payload)}::jsonb,
-        ${input.actorId}::uuid
+        ${input.actorId}::uuid,
+        ${device.evotor_cloud_device_id},
+        ${device.evotor_cloud_store_id}
       )
       returning id, status
     `;
@@ -579,6 +589,7 @@ async function reconcileKnownEvotorFiscalIdentity(intentId: string) {
     const receipts = await sql<{ id: string }[]>`
       select receipt.id from public.evotor_receipts receipt
       join public.evotor_stores store on store.id = receipt.store_id
+      join public.evotor_devices cloud on cloud.id = receipt.device_id
       join public.orders order_row on order_row.location_id = store.location_id
       join public.evotor_terminal_payment_intents intent on intent.order_id = order_row.id
       where intent.id = ${intentId}::uuid and intent.status = 'paid'
@@ -586,6 +597,8 @@ async function reconcileKnownEvotorFiscalIdentity(intentId: string) {
         and receipt.fiscal_drive_number = intent.fiscal_storage_number
         and receipt.fiscal_document_number = intent.fiscal_document_number
         and receipt.fiscal_sign = intent.fiscal_sign
+        and cloud.evotor_device_id = intent.evotor_cloud_device_id
+        and store.evotor_store_id = intent.evotor_cloud_store_id
       limit 2
     `;
     if (receipts.length === 1) await reconcileEvotorReceipt(sql, receipts[0].id);
@@ -672,9 +685,11 @@ export async function resolveUnknownEvotorPosPayment(params: {
     const [intent] = await sql<{ id: string; order_id: string; payment_id: string; status: string;
       delivered_at: string | null;
       local_receipt_uuid: string | null; fiscal_storage_number: string | null;
-      fiscal_document_number: string | null; fiscal_sign: string | null }[]>`
+      fiscal_document_number: string | null; fiscal_sign: string | null;
+      evotor_cloud_device_id: string | null; evotor_cloud_store_id: string | null }[]>`
       select id, order_id, payment_id, status, delivered_at, local_receipt_uuid,
-        fiscal_storage_number, fiscal_document_number, fiscal_sign
+        fiscal_storage_number, fiscal_document_number, fiscal_sign,
+        evotor_cloud_device_id, evotor_cloud_store_id
       from public.evotor_terminal_payment_intents
       where id = ${params.intentId}::uuid
       for update
@@ -704,6 +719,7 @@ export async function resolveUnknownEvotorPosPayment(params: {
         receipt.fiscal_sign, receipt.closed_at
       from public.evotor_receipts receipt
       join public.evotor_stores store on store.id = receipt.store_id
+      join public.evotor_devices cloud on cloud.id = receipt.device_id
       join public.orders order_row on order_row.location_id = store.location_id
       where order_row.id = ${intent.order_id}::uuid
         and receipt.external_receipt_id = ${receiptReference}
@@ -712,6 +728,8 @@ export async function resolveUnknownEvotorPosPayment(params: {
         and receipt.fiscal_drive_number = ${params.fiscalStorageNumber ?? null}
         and receipt.fiscal_document_number = ${params.fiscalDocumentNumber ?? null}
         and receipt.fiscal_sign = ${params.fiscalSign ?? null}
+        and cloud.evotor_device_id = ${intent.evotor_cloud_device_id}
+        and store.evotor_store_id = ${intent.evotor_cloud_store_id}
         and not exists (select 1 from public.analytics_sale_reconciliations link
           where link.evotor_receipt_id = receipt.id and link.web_order_id <> order_row.id)
       limit 2

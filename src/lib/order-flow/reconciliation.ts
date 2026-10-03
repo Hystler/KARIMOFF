@@ -17,6 +17,7 @@ export type ReconciliationReceipt = {
   number: string;
   closedAt: string;
   total: number;
+  posReconciliationStatus: string;
   locationId: string | null;
   locationName: string;
 };
@@ -76,10 +77,11 @@ export async function getOrderReconciliationWorkspace(locationIds: string[] | nu
       receipt_number: string;
       closed_at: string;
       total: string | number;
+      pos_reconciliation_status: string;
       location_id: string | null;
       location_name: string;
     }[]>(`
-      select receipt.id,
+      select receipt.id, receipt.pos_reconciliation_status,
         coalesce(receipt.receipt_number, receipt.fiscal_document_number, receipt.external_receipt_id) as receipt_number,
         receipt.closed_at, receipt.total, store.location_id, store.name as location_name
       from public.evotor_receipts receipt
@@ -137,6 +139,7 @@ export async function getOrderReconciliationWorkspace(locationIds: string[] | nu
       number: row.receipt_number,
       closedAt: row.closed_at,
       total: Number(row.total),
+      posReconciliationStatus: row.pos_reconciliation_status,
       locationId: row.location_id,
       locationName: row.location_name
     })),

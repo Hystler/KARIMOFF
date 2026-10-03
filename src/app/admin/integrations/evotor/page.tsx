@@ -13,17 +13,18 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { evotorRecoveryState } from "@/lib/integrations/evotor/recovery";
 import { getEvotorAdminData } from "@/lib/integrations/evotor/repository";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import { getPostgresSql } from "@/lib/postgres/server";
 import {
   getTerminalBridgeDevices,
   terminalBridgeReady
 } from "@/lib/integrations/evotor/terminal-bridge";
-import { checkEvotorAction, incrementalEvotorAction, syncEvotorAction } from "./actions";
+import { bindTerminalCloudDeviceAction, checkEvotorAction, incrementalEvotorAction, syncEvotorAction } from "./actions";
 import { TerminalBridgePanel } from "./TerminalBridgePanel";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams?: Promise<{ error?: string; queued?: string }>;
+  searchParams?: Promise<{ error?: string; queued?: string; mapped?: string }>;
 };
 
 const dateTime = new Intl.DateTimeFormat("ru-RU", {
@@ -66,6 +67,19 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
     getAccessibleOrderLocations(staff)
   ]);
   const terminalDevices = await getTerminalBridgeDevices(terminalLocations.map((location) => location.id));
+  const locationIds = terminalLocations.map((location) => location.id);
+  const cloudOptions = locationIds.length ? await getPostgresSql()<{
+    id: string; location_id: string; evotor_device_id: string; device_name: string | null;
+    store_name: string;
+  }[]>`
+    select cloud.id, store.location_id, cloud.evotor_device_id,
+      coalesce(cloud.name, cloud.device_model) as device_name, store.name as store_name
+    from public.evotor_devices cloud
+    join public.evotor_stores store on store.id = cloud.store_id
+    join public.evotor_connections connection on connection.id = cloud.connection_id
+    where store.location_id = any(${locationIds}::uuid[]) and connection.status = 'connected'
+    order by store.name, cloud.name nulls last, cloud.evotor_device_id
+  ` : [];
   const enabled = process.env.EVOTOR_ENABLED === "true";
   const callbackReady = Boolean(
     process.env.EVOTOR_WEBHOOK_AUTH_TOKEN && process.env.EVOTOR_TOKEN_ENCRYPTION_KEY
@@ -92,6 +106,7 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           Задача поставлена в очередь. Результат появится после завершения синхронизации.
         </div>
       ) : null}
+      {params.mapped ? <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800">Касса сопоставлена с устройством Эвотор.</div> : null}
       {params.error ? (
         <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
           Не удалось запустить операцию. Проверьте подключение или повторите позже.
@@ -105,6 +120,26 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           locationId={terminalLocations[0].id}
         />
       ) : null}
+      {terminalDevices.length ? <section className="admin-card mt-6 p-5 sm:p-6">
+        <h2 className="text-xl font-black">Сопоставление Bridge и облачной кассы</h2>
+        <p className="mt-2 text-sm text-karimoff-muted">Перед оплатой выберите для каждого Bridge ровно ту кассу, которая указана в облаке Эвотор. Изменение во время незавершённой операции заблокировано.</p>
+        <div className="mt-4 space-y-4">{terminalDevices.map((device) => {
+          const options = cloudOptions.filter((option) => option.location_id === device.locationId);
+          return <form key={device.id} action={bindTerminalCloudDeviceAction} className="rounded-lg border border-karimoff-line p-4">
+            <input type="hidden" name="bridge_device_id" value={device.id} />
+            <p className="font-bold">{device.label} · {device.id}</p>
+            <p className="mt-1 text-xs text-karimoff-muted">{device.cloudDeviceId ? `Привязано: ${device.cloudDeviceId} · магазин ${device.cloudStoreId}` : "Не сопоставлено: оплату запустить нельзя"}</p>
+            <div className="mt-3 flex flex-wrap items-end gap-3"><label className="min-w-60 flex-1 text-sm font-bold">Устройство Эвотор
+              <select name="cloud_device_id" defaultValue={options.find((option) => option.evotor_device_id === device.cloudDeviceId)?.id ?? ""} required className="admin-field mt-1" disabled={!options.length}>
+                <option value="">Выберите кассу</option>
+                {options.map((option) => <option key={option.id} value={option.id}>{option.store_name} · {option.device_name || option.evotor_device_id} · {option.evotor_device_id}</option>)}
+              </select></label>
+              <button type="submit" className="admin-secondary-button" disabled={!options.length || device.isBusy}>Сохранить сопоставление</button>
+            </div>
+            {!options.length ? <p className="mt-2 text-xs text-amber-800">Для этой точки нет облачной кассы. Сначала привяжите магазин Эвотор к точке.</p> : null}
+          </form>;
+        })}</div>
+      </section> : null}
 
       {!enabled || !callbackReady ? (
         <section className="mt-6 flex items-start gap-4 rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950">

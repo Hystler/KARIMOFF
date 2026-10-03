@@ -39,8 +39,9 @@ export function TerminalBridgePanel({
           <p className="admin-eyebrow">Смарт-терминал</p>
           <h2 id="terminal-bridge-title" className="mt-2 text-xl font-black">KARIMOFF Terminal Bridge</h2>
           <p className="mt-2 text-sm leading-6 text-karimoff-muted">
-            Защищённая доставка тестовых заказов на Эвотор. Этот этап только показывает состав и сумму:
-            чек, печать, ФН и эквайринг не запускаются.
+            Привязка приложения Bridge к точке и проверка связи. Кнопка «Отправить тестовый заказ»
+            только показывает состав и сумму: чек и эквайринг не запускаются. Оплата из KARIMOFF POS
+            доступна после сопоставления Bridge с облачной кассой ниже.
           </p>
         </div>
         <span className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-black ${

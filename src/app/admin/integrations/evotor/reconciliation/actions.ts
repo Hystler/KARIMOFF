@@ -52,6 +52,26 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
       if (receipt.location_id && receipt.location_id !== order.location_id) {
         throw new Error("LOCATION_MISMATCH");
       }
+      const [posIntent] = await transaction<{ id: string }[]>`
+        select id from public.evotor_terminal_payment_intents
+        where order_id = ${orderId}::uuid for update
+      `;
+      if (posIntent) {
+        const [proof] = await transaction<{ id: string }[]>`
+          select intent.id from public.evotor_terminal_payment_intents intent
+          join public.evotor_receipts imported on imported.id = ${receiptId}::uuid
+          join public.evotor_devices cloud on cloud.id = imported.device_id
+          join public.evotor_stores store on store.id = imported.store_id
+          where intent.id = ${posIntent.id}::uuid and intent.status = 'paid'
+            and intent.fiscal_storage_number = imported.fiscal_drive_number
+            and intent.fiscal_document_number = imported.fiscal_document_number
+            and intent.fiscal_sign = imported.fiscal_sign
+            and intent.evotor_cloud_device_id = cloud.evotor_device_id
+            and intent.evotor_cloud_store_id = store.evotor_store_id
+            and intent.amount = imported.total
+        `;
+        if (!proof) throw new Error("POS_PROOF_REQUIRED");
+      }
       if (!staff.legacy && !["owner", "admin"].includes(staff.role)) {
         const access = await transaction<{ allowed: boolean }[]>`
           select exists (
@@ -64,6 +84,10 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
         if (!access[0]?.allowed) throw new Error("FORBIDDEN");
       }
 
+      const [previous] = await transaction<{ evotor_receipt_id: string }[]>`
+        select evotor_receipt_id from public.analytics_sale_reconciliations
+        where web_order_id = ${orderId}::uuid for update
+      `;
       const links = await transaction<{ id: string }[]>`
         insert into public.analytics_sale_reconciliations (
           web_order_id, evotor_receipt_id, status, match_method, confidence,
@@ -80,6 +104,14 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
             note = excluded.note, updated_at = now()
         returning id
       `;
+      await transaction`update public.evotor_receipts
+        set pos_reconciliation_status = 'matched', updated_at = now()
+        where id = ${receiptId}::uuid`;
+      if (previous && previous.evotor_receipt_id !== receiptId) {
+        await transaction`update public.evotor_receipts
+          set pos_reconciliation_status = 'unreconciled', updated_at = now()
+          where id = ${previous.evotor_receipt_id}::uuid`;
+      }
       await transaction`
         insert into public.audit_logs (
           actor_type, actor_id, action, entity_type, entity_id, metadata, source_path
@@ -103,6 +135,7 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
     if (code === "NOT_FOUND") fail("Заказ или чек не найден.");
     if (code === "LOCATION_MISMATCH") fail("Заказ и чек относятся к разным точкам.");
     if (code === "FORBIDDEN") fail("Эта точка недоступна вашей учётной записи.");
+    if (code === "POS_PROOF_REQUIRED") fail("Для POS нужен точный ФН, ФД, ФП и та же касса Эвотор. Проверьте чек через состояние оплаты в POS.");
     if ((error as { code?: string }).code === "23505") fail("Этот заказ или чек уже связан с другой продажей.");
     fail("Не удалось сохранить сопоставление.");
   }
@@ -144,6 +177,9 @@ export async function removeSaleReconciliationAction(formData: FormData) {
         if (!access[0]?.allowed) throw new Error("FORBIDDEN");
       }
       await transaction`delete from public.analytics_sale_reconciliations where id = ${linkId}::uuid`;
+      await transaction`update public.evotor_receipts
+        set pos_reconciliation_status = 'unreconciled', updated_at = now()
+        where id = ${link.receipt_id}::uuid`;
       await transaction`
         insert into public.audit_logs (
           actor_type, actor_id, action, entity_type, entity_id, metadata, source_path

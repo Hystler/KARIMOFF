@@ -16,6 +16,8 @@ export type TerminalBridgeDevice = {
   lastSeenAt: string | null;
   isOnline: boolean;
   isBusy: boolean;
+  cloudDeviceId: string | null;
+  cloudStoreId: string | null;
 };
 
 function secret() {
@@ -49,14 +51,19 @@ export async function getTerminalBridgeDevices(
     last_seen_at: string | null;
     is_online: boolean;
     is_busy: boolean;
+    cloud_device_id: string | null;
+    cloud_store_id: string | null;
   }[]>`
     select device.id, device.location_id, device.label, device.app_version,
       device.paired_at, device.last_seen_at,
       device.last_seen_at >= now() - interval '90 seconds' as is_online,
       exists (select 1 from public.evotor_terminal_payment_intents intent
         where intent.device_id = device.id and intent.status in
-          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy
+          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy,
+      cloud.evotor_device_id as cloud_device_id, store.evotor_store_id as cloud_store_id
     from public.evotor_terminal_devices device
+    left join public.evotor_devices cloud on cloud.id = device.cloud_device_id
+    left join public.evotor_stores store on store.id = cloud.store_id
     where device.revoked_at is null and device.token_hash is not null
     order by paired_at desc nulls last, created_at desc
   ` : await sql<{
@@ -68,14 +75,19 @@ export async function getTerminalBridgeDevices(
     last_seen_at: string | null;
     is_online: boolean;
     is_busy: boolean;
+    cloud_device_id: string | null;
+    cloud_store_id: string | null;
   }[]>`
     select device.id, device.location_id, device.label, device.app_version,
       device.paired_at, device.last_seen_at,
       device.last_seen_at >= now() - interval '90 seconds' as is_online,
       exists (select 1 from public.evotor_terminal_payment_intents intent
         where intent.device_id = device.id and intent.status in
-          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy
+          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy,
+      cloud.evotor_device_id as cloud_device_id, store.evotor_store_id as cloud_store_id
     from public.evotor_terminal_devices device
+    left join public.evotor_devices cloud on cloud.id = device.cloud_device_id
+    left join public.evotor_stores store on store.id = cloud.store_id
     where device.revoked_at is null
       and device.token_hash is not null
       and device.location_id = any(${locationIds}::uuid[])
@@ -89,8 +101,39 @@ export async function getTerminalBridgeDevices(
     pairedAt: row.paired_at,
     lastSeenAt: row.last_seen_at,
     isOnline: row.is_online,
-    isBusy: row.is_busy
+    isBusy: row.is_busy,
+    cloudDeviceId: row.cloud_device_id,
+    cloudStoreId: row.cloud_store_id
   }));
+}
+
+export async function bindTerminalCloudDevice(params: { bridgeDeviceId: string; cloudDeviceId: string }) {
+  return getPostgresSql().begin(async (sql) => {
+    const [bridge] = await sql<{ id: string; location_id: string }[]>`
+      select id, location_id from public.evotor_terminal_devices
+      where id = ${params.bridgeDeviceId}::uuid and revoked_at is null for update
+    `;
+    if (!bridge) return false;
+    const [cloud] = await sql<{ id: string }[]>`
+      select cloud.id from public.evotor_devices cloud
+      join public.evotor_stores store on store.id = cloud.store_id
+      join public.evotor_connections connection on connection.id = cloud.connection_id
+      where cloud.id = ${params.cloudDeviceId}::uuid
+        and store.location_id = ${bridge.location_id}::uuid
+        and connection.status = 'connected'
+    `;
+    if (!cloud) return false;
+    const [busy] = await sql<{ id: string }[]>`
+      select id from public.evotor_terminal_payment_intents
+      where device_id = ${bridge.id}::uuid
+        and status in ('queued', 'processing', 'fiscal_pending', 'unknown') limit 1
+    `;
+    if (busy) return false;
+    await sql`update public.evotor_terminal_devices
+      set cloud_device_id = ${cloud.id}::uuid, updated_at = now()
+      where id = ${bridge.id}::uuid`;
+    return true;
+  });
 }
 
 export async function getTerminalBridgeDeviceLocation(deviceId: string) {

@@ -73,9 +73,10 @@ test('paid without fiscal identity stays locked and off KDS; exact callback is i
 });
 
 test('selected online device is required; no last-seen fallback or parallel task', () => {
-  assert.match(payments, /where id = \$\{input\.terminalDeviceId\}::uuid/);
+  assert.match(payments, /where bridge\.id = \$\{input\.terminalDeviceId\}::uuid/);
   assert.doesNotMatch(payments, /order by last_seen_at desc/);
   assert.match(payments, /Касса занята/);
+  assert.match(payments, /Касса не сопоставлена с облачным устройством Эвотор/);
   assert.match(payments, /where device_id = \$\{deviceId\}::uuid and status = 'queued'/);
   const ui = read('src/components/operations/PosWorkspace.tsx');
   assert.match(ui, /availableTerminals\.length === 1/);
@@ -93,6 +94,8 @@ test('matching fiscal identity links the existing order and stores cloud documen
   assert.equal(await harness.reconcile('receipt-1'), true);
   assert.ok(harness.queries.some(entry => entry.query.includes('insert into public.analytics_sale_reconciliations')));
   assert.ok(harness.queries.some(entry => entry.query.includes('evotor_cloud_document_id =')));
+  assert.ok(harness.queries.some(entry => entry.query.includes('intent.evotor_cloud_device_id =')));
+  assert.ok(harness.queries.some(entry => entry.query.includes('intent.evotor_cloud_store_id =')));
   assert.match(sync, /await reconcileEvotorReceipt\(transaction, receiptRows\[0\]\.id\)/);
 });
 
@@ -112,4 +115,12 @@ test('missing fiscal identity, ambiguous matches and duplicate import never add 
     const harness = reconciliationWith(options);
     assert.equal(await harness.reconcile('receipt-1'), false);
   }
+});
+
+test('general manual reconciliation cannot bypass fiscal proof for POS intents', () => {
+  const action = read('src/app/admin/integrations/evotor/reconciliation/actions.ts');
+  assert.match(action, /POS_PROOF_REQUIRED/);
+  assert.match(action, /intent\.fiscal_storage_number = imported\.fiscal_drive_number/);
+  assert.match(action, /intent\.evotor_cloud_device_id = cloud\.evotor_device_id/);
+  assert.match(action, /intent\.evotor_cloud_store_id = store\.evotor_store_id/);
 });

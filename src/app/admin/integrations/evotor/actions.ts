@@ -10,11 +10,40 @@ import { createEvotorSyncEvent } from "@/lib/integrations/evotor/repository";
 import { processEvotorSyncEvent } from "@/lib/integrations/evotor/sync";
 import { canStaffAccessOrderLocation } from "@/lib/order-flow/access";
 import {
+  bindTerminalCloudDevice,
   createTerminalPairingCode,
   getTerminalBridgeDeviceLocation,
   queueSyntheticTerminalPreview,
   terminalBridgeReady
 } from "@/lib/integrations/evotor/terminal-bridge";
+
+export async function bindTerminalCloudDeviceAction(formData: FormData) {
+  const staff = await terminalBridgeStaff();
+  const bridgeDeviceId = String(formData.get("bridge_device_id") ?? "");
+  const cloudDeviceId = String(formData.get("cloud_device_id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(bridgeDeviceId) || !/^[0-9a-f-]{36}$/i.test(cloudDeviceId)) {
+    redirect("/admin/integrations/evotor?error=terminal_mapping");
+  }
+  const locationId = await getTerminalBridgeDeviceLocation(bridgeDeviceId);
+  if (!locationId || !await canStaffAccessOrderLocation(staff, locationId)) {
+    redirect("/admin/integrations/evotor?error=terminal_mapping");
+  }
+  let bound = false;
+  try { bound = await bindTerminalCloudDevice({ bridgeDeviceId, cloudDeviceId }); }
+  catch { redirect("/admin/integrations/evotor?error=terminal_mapping"); }
+  if (!bound) redirect("/admin/integrations/evotor?error=terminal_mapping");
+  await writeAuditLog({
+    action: "evotor.terminal_cloud_device.bound",
+    actorType: staff.legacy ? "admin" : "staff",
+    actorId: staff.id,
+    entityType: "evotor_terminal_device",
+    entityId: bridgeDeviceId,
+    metadata: { cloud_device_id: cloudDeviceId },
+    sourcePath: "/admin/integrations/evotor"
+  });
+  revalidatePath("/admin/integrations/evotor");
+  redirect("/admin/integrations/evotor?mapped=1");
+}
 
 export type TerminalBridgeActionState = {
   status: "idle" | "success" | "error";
