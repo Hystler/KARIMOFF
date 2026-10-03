@@ -8,6 +8,7 @@ Resolve the final documentation commit with `git rev-parse release/karimoff-2026
 ## 1. Revision and production boundary
 
 Remote main was checked: `3a366cab71f6ffe39796567e83fd8eaca3bbe591`.
+Local main is still `d322914`; it was not advanced. RC contains origin/main as an ancestor.
 Timeweb application 229491 / karimoff-production: auto-deploy is **false**.
 Platform last commit and latest successful deployment identify `e478731`, not `3a366ca`.
 The latest successful platform deployment was 2026-10-03 06:35:41-06:38:18 UTC.
@@ -27,6 +28,7 @@ No production writes, provider operations, physical device commands, push or mai
 | 05345ab | Document migration credentials and OFF-by-default flags |
 | 97691ee | Isolated responsive customer/staff browser harness |
 | 2f0f3f5 | Required modifier interaction and customization persistence in the browser |
+| af57d4a | Final report, safe evidence and controlled rollout instructions |
 
 The final report/evidence commit is HEAD when this document is committed;
 all new commits are listed by `git log 635fb4d..HEAD --oneline`.
@@ -64,6 +66,12 @@ changing potentially applied migration history. All 25 main file checksums match
 ## 4-6. Fresh, upgrade and negative permissions
 
 PostgreSQL 17, local Docker, loopback 55443, unique scratch databases, no production DSN.
+Fresh scratch databases start empty, then the harness provisions legacy compatibility roles
+and auth.uid/auth.role/auth.jwt SQL functions before the historical migrations, plus synthetic
+catalog data after baseline. These are explicit local bootstrap fixtures, not real Supabase auth
+or a claim that unbootstrapped vanilla PostgreSQL can execute historical policies unchanged.
+The RC application uses its server sessions, not these fixture JWT functions. Production upgrade
+must verify its actual existing legacy dependencies; this task did not replace production auth.
 
 | Check | Result |
 | --- | --- |
