@@ -9,11 +9,13 @@ const TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,80}$/;
 
 export type TerminalBridgeDevice = {
   id: string;
+  locationId: string;
   label: string;
   appVersion: string | null;
   pairedAt: string | null;
   lastSeenAt: string | null;
   isOnline: boolean;
+  isBusy: boolean;
 };
 
 function secret() {
@@ -40,40 +42,54 @@ export async function getTerminalBridgeDevices(
   const sql = getPostgresSql();
   const rows = locationIds === null ? await sql<{
     id: string;
+    location_id: string;
     label: string;
     app_version: string | null;
     paired_at: string | null;
     last_seen_at: string | null;
     is_online: boolean;
+    is_busy: boolean;
   }[]>`
-    select id, label, app_version, paired_at, last_seen_at,
-      last_seen_at >= now() - interval '90 seconds' as is_online
-    from public.evotor_terminal_devices
-    where revoked_at is null and token_hash is not null
+    select device.id, device.location_id, device.label, device.app_version,
+      device.paired_at, device.last_seen_at,
+      device.last_seen_at >= now() - interval '90 seconds' as is_online,
+      exists (select 1 from public.evotor_terminal_payment_intents intent
+        where intent.device_id = device.id and intent.status in
+          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy
+    from public.evotor_terminal_devices device
+    where device.revoked_at is null and device.token_hash is not null
     order by paired_at desc nulls last, created_at desc
   ` : await sql<{
     id: string;
+    location_id: string;
     label: string;
     app_version: string | null;
     paired_at: string | null;
     last_seen_at: string | null;
     is_online: boolean;
+    is_busy: boolean;
   }[]>`
-    select id, label, app_version, paired_at, last_seen_at,
-      last_seen_at >= now() - interval '90 seconds' as is_online
-    from public.evotor_terminal_devices
-    where revoked_at is null
-      and token_hash is not null
-      and location_id = any(${locationIds}::uuid[])
+    select device.id, device.location_id, device.label, device.app_version,
+      device.paired_at, device.last_seen_at,
+      device.last_seen_at >= now() - interval '90 seconds' as is_online,
+      exists (select 1 from public.evotor_terminal_payment_intents intent
+        where intent.device_id = device.id and intent.status in
+          ('queued', 'processing', 'fiscal_pending', 'unknown')) as is_busy
+    from public.evotor_terminal_devices device
+    where device.revoked_at is null
+      and device.token_hash is not null
+      and device.location_id = any(${locationIds}::uuid[])
     order by paired_at desc nulls last, created_at desc
   `;
   return rows.map((row) => ({
     id: row.id,
+    locationId: row.location_id,
     label: row.label,
     appVersion: row.app_version,
     pairedAt: row.paired_at,
     lastSeenAt: row.last_seen_at,
-    isOnline: row.is_online
+    isOnline: row.is_online,
+    isBusy: row.is_busy
   }));
 }
 

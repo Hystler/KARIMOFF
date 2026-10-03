@@ -2,10 +2,12 @@ import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
 import { terminalBridgeReady } from "./terminal-bridge";
+import { reconcileEvotorReceipt } from "./fiscal-reconciliation";
 
 export type EvotorPosPaymentStatus =
   | "queued"
   | "processing"
+  | "fiscal_pending"
   | "paid"
   | "failed"
   | "cancelled"
@@ -26,6 +28,7 @@ type PosPaymentSummary = {
 
 type NewPosPayment = {
   locationId: string;
+  terminalDeviceId: string;
   customerId: string | null;
   customerName: string;
   comment: string | null;
@@ -56,7 +59,7 @@ function paymentError(message: string) {
 }
 
 function asStatus(value: string): EvotorPosPaymentStatus {
-  if (["queued", "processing", "paid", "failed", "cancelled", "unknown"].includes(value)) {
+  if (["queued", "processing", "fiscal_pending", "paid", "failed", "cancelled", "unknown"].includes(value)) {
     return value as EvotorPosPaymentStatus;
   }
   return "unknown";
@@ -109,23 +112,23 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
     const [device] = await sql<{ id: string }[]>`
       select id
       from public.evotor_terminal_devices
-      where location_id = ${input.locationId}::uuid
+      where id = ${input.terminalDeviceId}::uuid
+        and location_id = ${input.locationId}::uuid
         and revoked_at is null
         and token_hash is not null
         and last_seen_at >= now() - interval '90 seconds'
-      order by last_seen_at desc, paired_at desc nulls last
       limit 1
       for update
     `;
-    if (!device) throw paymentError("Терминал не на связи. Откройте приложение KARIMOFF Bridge на кассе и повторите.");
+    if (!device) throw paymentError("Выбранная касса не на связи. Выберите доступную кассу заново.");
 
     const [busy] = await sql<{ id: string }[]>`
       select id from public.evotor_terminal_payment_intents
       where device_id = ${device.id}::uuid
-        and status in ('queued', 'processing', 'unknown')
+        and status in ('queued', 'processing', 'fiscal_pending', 'unknown')
       limit 1
     `;
-    if (busy) throw paymentError("На кассе уже есть заказ с незавершённой оплатой. Сначала проверьте терминал.");
+    if (busy) throw paymentError("Касса занята. Сначала завершите предыдущую операцию.");
 
     const [createdOrder] = await sql<{
       order_id: string;
@@ -218,6 +221,7 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
     const payload = {
       schemaVersion: 1,
       orderId: createdOrder.order_id,
+      paymentId: payment.id,
       displayNumber: createdOrder.display_number || createdOrder.order_id.slice(0, 8),
       total: amount,
       items: orderItems.map((item) => ({
@@ -326,26 +330,65 @@ export async function nextEvotorTerminalPayment(deviceId: string) {
   });
 }
 
+export async function saveEvotorLocalReceipt(params: {
+  deviceId: string;
+  intentId: string;
+  orderId: string;
+  paymentId: string;
+  localReceiptUuid: string;
+  openedAt: string;
+}) {
+  const [saved] = await getPostgresSql()<{
+    id: string;
+  }[]>`
+    update public.evotor_terminal_payment_intents
+    set local_receipt_uuid = ${params.localReceiptUuid},
+        receipt_opened_at = ${params.openedAt}::timestamptz,
+        updated_at = now()
+    where id = ${params.intentId}::uuid
+      and device_id = ${params.deviceId}::uuid
+      and order_id = ${params.orderId}::uuid
+      and payment_id = ${params.paymentId}::uuid
+      and status = 'processing'
+      and (local_receipt_uuid is null or local_receipt_uuid = ${params.localReceiptUuid})
+    returning id
+  `;
+  return Boolean(saved);
+}
+
 export async function recordEvotorTerminalPaymentResult(params: {
   deviceId: string;
   intentId: string;
   status: "paid" | "failed" | "cancelled" | "unknown";
   receiptReference?: string | null;
+  fiscal?: {
+    storageNumber: string;
+    documentNumber: string;
+    sign: string;
+    fiscalizedAt: string;
+    receiptNumber?: string;
+    total?: number;
+    paymentIdentifier?: string;
+    documentType?: "SELL";
+  } | null;
   details?: string | null;
   safeBeforePayment?: boolean;
 }) {
-  return getPostgresSql().begin(async (sql) => {
+  const outcome = await getPostgresSql().begin(async (sql) => {
     const [intent] = await sql<{
       id: string;
       order_id: string;
       payment_id: string;
       device_id: string;
+      local_receipt_uuid: string | null;
+      amount: string | number;
       status: string;
       result: Record<string, unknown>;
       display_number: string | null;
       created_by_staff_id: string | null;
     }[]>`
       select intent.id, intent.order_id, intent.payment_id, intent.device_id,
+             intent.local_receipt_uuid, intent.amount,
              intent.status, intent.result, order_row.display_number,
              intent.created_by_staff_id
       from public.evotor_terminal_payment_intents intent
@@ -362,20 +405,29 @@ export async function recordEvotorTerminalPaymentResult(params: {
     if (["failed", "cancelled"].includes(intent.status)) {
       return { accepted: true, status: asStatus(intent.status) };
     }
-    if (intent.status !== "processing" && !(intent.status === "unknown"
+    if (intent.status !== "processing" && intent.status !== "fiscal_pending" && !(intent.status === "unknown"
       && (safeCancel || params.status === "paid" || params.status === "unknown"))) {
       return { accepted: false, status: asStatus(intent.status) };
     }
 
-    let nextStatus = params.status;
+    let nextStatus: EvotorPosPaymentStatus = params.status;
     const receiptReference = params.receiptReference?.trim() || "";
-    if (nextStatus === "paid" && !receiptReference) nextStatus = "unknown";
+    if (receiptReference && receiptReference !== intent.local_receipt_uuid) {
+      return { accepted: false, status: asStatus(intent.status) };
+    }
+    if (nextStatus === "paid" && (!intent.local_receipt_uuid || !receiptReference)) nextStatus = "unknown";
+    else if (nextStatus === "paid" && (!params.fiscal ||
+      (params.fiscal.total !== undefined && params.fiscal.total !== Number(intent.amount)))) {
+      nextStatus = "fiscal_pending";
+    }
+    if (intent.status === "fiscal_pending" && nextStatus !== "paid") nextStatus = "fiscal_pending";
     if (["failed", "cancelled"].includes(nextStatus) && !safeCancel) nextStatus = "unknown";
     const details = (params.details || "").trim().slice(0, 300);
     const result = {
       ...intent.result,
       terminalResult: nextStatus,
       receiptReference: receiptReference.slice(0, 128) || null,
+      fiscal: params.fiscal ?? null,
       details: details || null,
       safeBeforePayment: safeCancel,
       receivedAt: new Date().toISOString()
@@ -384,29 +436,51 @@ export async function recordEvotorTerminalPaymentResult(params: {
     await sql`
       update public.evotor_terminal_payment_intents
       set status = ${nextStatus}, result = ${sql.json(result)}::jsonb,
+          payment_confirmed_at = case when ${nextStatus} in ('paid', 'fiscal_pending')
+            then coalesce(payment_confirmed_at, now()) else payment_confirmed_at end,
+          fiscal_storage_number = case when ${nextStatus} = 'paid' then ${params.fiscal?.storageNumber ?? null} else fiscal_storage_number end,
+          fiscal_document_number = case when ${nextStatus} = 'paid' then ${params.fiscal?.documentNumber ?? null} else fiscal_document_number end,
+          fiscal_sign = case when ${nextStatus} = 'paid' then ${params.fiscal?.sign ?? null} else fiscal_sign end,
+          fiscalized_at = case when ${nextStatus} = 'paid' then ${params.fiscal?.fiscalizedAt ?? null}::timestamptz else fiscalized_at end,
+          receipt_number = case when ${nextStatus} = 'paid' then ${params.fiscal?.receiptNumber ?? null} else receipt_number end,
+          acquiring_reference = case when ${nextStatus} = 'paid' then ${params.fiscal?.paymentIdentifier ?? null} else acquiring_reference end,
           completed_at = case when ${nextStatus} in ('paid', 'failed', 'cancelled') then now() else completed_at end,
           updated_at = now()
       where id = ${intent.id}::uuid
     `;
 
-    if (nextStatus === "paid") {
+    if (nextStatus === "paid" || nextStatus === "fiscal_pending") {
       await sql`
         update public.payments
         set status = 'paid', provider_status = 'succeeded', payment_method = 'card',
-            receipt_registration = 'succeeded', paid_at = coalesce(paid_at, now()),
+            receipt_registration = ${nextStatus === "paid" ? "succeeded" : "pending"}, paid_at = coalesce(paid_at, now()),
             captured_at = coalesce(captured_at, now()),
             metadata = coalesce(metadata, '{}'::jsonb) || ${sql.json({
               terminalReceiptReference: receiptReference,
               terminalDeviceId: params.deviceId
             })}::jsonb,
             updated_at = now()
-        where id = ${intent.payment_id}::uuid and provider = 'evotor' and status = 'pending'
+        where id = ${intent.payment_id}::uuid and provider = 'evotor' and status in ('pending', 'paid')
       `;
+    }
+    if (nextStatus === "fiscal_pending") {
+      await sql`
+        update public.orders
+        set payment_status = 'paid', fiscal_status = 'pending', is_operational = false,
+            source_metadata = coalesce(source_metadata, '{}'::jsonb)
+              || jsonb_build_object('payment_confirmed', true,
+                'payment_provider', 'evotor',
+                'terminal_receipt_reference', ${intent.local_receipt_uuid}::text),
+            updated_at = now()
+        where id = ${intent.order_id}::uuid and payment_status in ('pending', 'paid')
+      `;
+    }
+    if (nextStatus === "paid") {
       await sql`
         update public.fiscal_receipts
-        set status = 'issued', provider_receipt_id = ${receiptReference},
+        set status = 'issued', provider_receipt_id = ${intent.local_receipt_uuid},
             provider_status = 'succeeded', receipt_registration = 'succeeded',
-            fiscalized_at = coalesce(fiscalized_at, now()),
+            fiscalized_at = ${params.fiscal?.fiscalizedAt ?? null}::timestamptz,
             payload = coalesce(payload, '{}'::jsonb) || ${sql.json(result)}::jsonb,
             updated_at = now()
         where payment_id = ${intent.payment_id}::uuid and provider = 'evotor'
@@ -422,7 +496,7 @@ export async function recordEvotorTerminalPaymentResult(params: {
                 'terminal_receipt_reference', ${receiptReference}::text
               ),
             updated_at = now()
-      where id = ${intent.order_id}::uuid and payment_status = 'pending'
+      where id = ${intent.order_id}::uuid and payment_status in ('pending', 'paid')
       `;
       await sql`
         insert into public.order_outbox (aggregate_id, event_type, payload, idempotency_key)
@@ -494,6 +568,28 @@ export async function recordEvotorTerminalPaymentResult(params: {
 
     return { accepted: true, status: asStatus(nextStatus), orderId: intent.order_id };
   });
+  if (outcome.accepted && outcome.status === "paid") {
+    await reconcileKnownEvotorFiscalIdentity(params.intentId);
+  }
+  return outcome;
+}
+
+async function reconcileKnownEvotorFiscalIdentity(intentId: string) {
+  await getPostgresSql().begin(async (sql) => {
+    const receipts = await sql<{ id: string }[]>`
+      select receipt.id from public.evotor_receipts receipt
+      join public.evotor_stores store on store.id = receipt.store_id
+      join public.orders order_row on order_row.location_id = store.location_id
+      join public.evotor_terminal_payment_intents intent on intent.order_id = order_row.id
+      where intent.id = ${intentId}::uuid and intent.status = 'paid'
+        and receipt.receipt_type = 'sale'
+        and receipt.fiscal_drive_number = intent.fiscal_storage_number
+        and receipt.fiscal_document_number = intent.fiscal_document_number
+        and receipt.fiscal_sign = intent.fiscal_sign
+      limit 2
+    `;
+    if (receipts.length === 1) await reconcileEvotorReceipt(sql, receipts[0].id);
+  });
 }
 
 export async function getEvotorPosPaymentStatus(intentId: string): Promise<PosPaymentSummary | null> {
@@ -556,7 +652,7 @@ export async function getActiveEvotorPosPayment(locationIds: string[]) {
     from public.evotor_terminal_payment_intents payment_intent
     join public.evotor_terminal_devices device on device.id = payment_intent.device_id
     where device.location_id = any(${locationIds}::uuid[])
-      and payment_intent.status in ('queued', 'processing', 'unknown')
+      and payment_intent.status in ('queued', 'processing', 'fiscal_pending', 'unknown')
     order by payment_intent.updated_at desc
     limit 1
   `;
@@ -568,20 +664,59 @@ export async function resolveUnknownEvotorPosPayment(params: {
   staffId: string | null;
   resolution: "paid" | "cancelled";
   receiptReference?: string;
+  fiscalStorageNumber?: string;
+  fiscalDocumentNumber?: string;
+  fiscalSign?: string;
 }) {
   const result = await getPostgresSql().begin(async (sql) => {
-    const [intent] = await sql<{ id: string; order_id: string; payment_id: string; status: string; delivered_at: string | null }[]>`
-      select id, order_id, payment_id, status, delivered_at
+    const [intent] = await sql<{ id: string; order_id: string; payment_id: string; status: string;
+      delivered_at: string | null;
+      local_receipt_uuid: string | null; fiscal_storage_number: string | null;
+      fiscal_document_number: string | null; fiscal_sign: string | null }[]>`
+      select id, order_id, payment_id, status, delivered_at, local_receipt_uuid,
+        fiscal_storage_number, fiscal_document_number, fiscal_sign
       from public.evotor_terminal_payment_intents
       where id = ${params.intentId}::uuid
       for update
     `;
-    if (!intent || intent.status !== "unknown") return false;
+    if (!intent || (intent.status !== "unknown" && intent.status !== "fiscal_pending")) return false;
     // A dispatched command may have charged despite a lost response. Only the
     // authenticated device result can establish a safe post-dispatch cancellation.
     if (params.resolution === "cancelled" && intent.delivered_at !== null) return false;
-    if (params.resolution === "paid" && !params.receiptReference?.trim()) return false;
+    if (intent.status === "fiscal_pending" && params.resolution !== "paid") return false;
+    if (params.resolution === "paid" && (!params.receiptReference?.trim() || !intent.local_receipt_uuid
+      || !params.fiscalStorageNumber?.trim() || !params.fiscalDocumentNumber?.trim()
+      || !params.fiscalSign?.trim())) return false;
+    if (params.resolution === "paid" && (
+      (intent.fiscal_storage_number && intent.fiscal_storage_number !== params.fiscalStorageNumber)
+      || (intent.fiscal_document_number && intent.fiscal_document_number !== params.fiscalDocumentNumber)
+      || (intent.fiscal_sign && intent.fiscal_sign !== params.fiscalSign)
+    )) return false;
     const receiptReference = params.receiptReference?.trim() || "";
+    const receipts = params.resolution === "paid" ? await sql<{
+      id: string;
+      fiscal_drive_number: string;
+      fiscal_document_number: string;
+      fiscal_sign: string;
+      closed_at: string;
+    }[]>`
+      select receipt.id, receipt.fiscal_drive_number, receipt.fiscal_document_number,
+        receipt.fiscal_sign, receipt.closed_at
+      from public.evotor_receipts receipt
+      join public.evotor_stores store on store.id = receipt.store_id
+      join public.orders order_row on order_row.location_id = store.location_id
+      where order_row.id = ${intent.order_id}::uuid
+        and receipt.external_receipt_id = ${receiptReference}
+        and receipt.receipt_type = 'sale'
+        and receipt.total = order_row.total
+        and receipt.fiscal_drive_number = ${params.fiscalStorageNumber ?? null}
+        and receipt.fiscal_document_number = ${params.fiscalDocumentNumber ?? null}
+        and receipt.fiscal_sign = ${params.fiscalSign ?? null}
+        and not exists (select 1 from public.analytics_sale_reconciliations link
+          where link.evotor_receipt_id = receipt.id and link.web_order_id <> order_row.id)
+      limit 2
+    ` : [];
+    if (params.resolution === "paid" && receipts.length !== 1) return false;
     const details = {
       manualResolution: params.resolution,
       resolvedByStaffId: params.staffId,
@@ -592,6 +727,10 @@ export async function resolveUnknownEvotorPosPayment(params: {
     await sql`
       update public.evotor_terminal_payment_intents
       set status = ${nextStatus}, result = result || ${sql.json(details)}::jsonb,
+          fiscal_storage_number = case when ${nextStatus} = 'paid' then ${receipts[0]?.fiscal_drive_number ?? null} else fiscal_storage_number end,
+          fiscal_document_number = case when ${nextStatus} = 'paid' then ${receipts[0]?.fiscal_document_number ?? null} else fiscal_document_number end,
+          fiscal_sign = case when ${nextStatus} = 'paid' then ${receipts[0]?.fiscal_sign ?? null} else fiscal_sign end,
+          fiscalized_at = case when ${nextStatus} = 'paid' then ${receipts[0]?.closed_at ?? null}::timestamptz else fiscalized_at end,
           completed_at = now(), updated_at = now()
       where id = ${intent.id}::uuid
     `;
@@ -603,11 +742,11 @@ export async function resolveUnknownEvotorPosPayment(params: {
             captured_at = coalesce(captured_at, now()), refundable_amount = 0,
             metadata = coalesce(metadata, '{}'::jsonb) || ${sql.json(details)}::jsonb,
             updated_at = now()
-        where id = ${intent.payment_id}::uuid and status = 'pending'
+        where id = ${intent.payment_id}::uuid and status in ('pending', 'paid')
       `;
       await sql`
         update public.fiscal_receipts
-        set status = 'issued', provider_receipt_id = ${receiptReference},
+        set status = 'issued', provider_receipt_id = ${intent.local_receipt_uuid},
             provider_status = 'succeeded', receipt_registration = 'succeeded',
             fiscalized_at = coalesce(fiscalized_at, now()),
             payload = coalesce(payload, '{}'::jsonb) || ${sql.json(details)}::jsonb,
@@ -620,10 +759,10 @@ export async function resolveUnknownEvotorPosPayment(params: {
             operational_started_at = coalesce(operational_started_at, now()),
             source_metadata = coalesce(source_metadata, '{}'::jsonb)
               || jsonb_build_object('payment_confirmed', true, 'payment_provider', 'evotor',
-                'terminal_receipt_reference', ${receiptReference}::text,
+                'terminal_receipt_reference', ${intent.local_receipt_uuid}::text,
                 'manual_payment_resolution', true),
             updated_at = now()
-        where id = ${intent.order_id}::uuid and payment_status = 'pending'
+        where id = ${intent.order_id}::uuid and payment_status in ('pending', 'paid')
       `;
       await sql`
         insert into public.order_outbox (aggregate_id, event_type, payload, idempotency_key)
@@ -641,6 +780,9 @@ export async function resolveUnknownEvotorPosPayment(params: {
           and order_row.is_operational = true
         on conflict (idempotency_key) do nothing
       `;
+      if (!await reconcileEvotorReceipt(sql, receipts[0].id)) {
+        throw new Error("Fiscal receipt could not be uniquely linked to this order.");
+      }
     } else {
       await sql`
         update public.payments

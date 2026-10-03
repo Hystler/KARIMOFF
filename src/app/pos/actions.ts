@@ -21,6 +21,7 @@ const itemSchema = z.object({
 
 const payloadSchema = z.object({
   locationId: z.string().uuid(),
+  terminalDeviceId: z.string().uuid(),
   customerName: z.string().trim().max(40).default("Гость"),
   customerId: z.union([z.string().uuid(), z.literal("")]).transform((value) => value || null),
   comment: z.string().trim().max(500).default(""),
@@ -48,6 +49,7 @@ export async function createPosOrderAction(
   }
   const parsed = payloadSchema.safeParse({
     locationId: formData.get("location_id"),
+    terminalDeviceId: formData.get("terminal_device_id"),
     customerName: formData.get("customer_name") || "Гость",
     customerId: formData.get("customer_id") || "",
     comment: formData.get("comment") || "",
@@ -64,6 +66,7 @@ export async function createPosOrderAction(
   try {
     const payment = await createEvotorPosPayment({
       locationId: parsed.data.locationId,
+      terminalDeviceId: parsed.data.terminalDeviceId,
       customerId: parsed.data.customerId,
       customerName: parsed.data.customerName || "Гость",
       comment: parsed.data.comment || null,
@@ -85,7 +88,7 @@ export async function createPosOrderAction(
     const failure = error as { code?: string; message?: string };
     return {
       status: "error",
-      message: failure.code === "P0001" || failure.code === "EVOTOR_POS_PAYMENT"
+      message: failure.code === "23505" ? "Касса занята. Сначала завершите предыдущую операцию." : failure.code === "P0001" || failure.code === "EVOTOR_POS_PAYMENT"
         ? failure.message || "Проверьте заказ."
         : "Не удалось отправить заказ на терминал. Повторите попытку."
     };

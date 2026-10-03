@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   resolution: z.enum(["paid", "cancelled"]),
-  receiptReference: z.string().trim().min(1).max(128).optional()
+  receiptReference: z.string().trim().min(1).max(128).optional(),
+  fiscalStorageNumber: z.string().trim().min(1).max(32).optional(),
+  fiscalDocumentNumber: z.string().trim().min(1).max(32).optional(),
+  fiscalSign: z.string().trim().min(1).max(32).optional()
 });
 const idSchema = z.string().uuid();
 
@@ -38,8 +41,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ ok: false, error: "Неверные данные подтверждения." }, { status: 400 });
-  if (parsed.data.resolution === "paid" && !parsed.data.receiptReference) {
-    return NextResponse.json({ ok: false, error: "Укажите номер или идентификатор фискального чека." }, { status: 400 });
+  if (parsed.data.resolution === "paid" && (!parsed.data.receiptReference
+    || !parsed.data.fiscalStorageNumber || !parsed.data.fiscalDocumentNumber || !parsed.data.fiscalSign)) {
+    return NextResponse.json({ ok: false, error: "Укажите ID импортированного документа и ФН, ФД, ФП из чека Эвотор." }, { status: 400 });
   }
 
   const resolved = await resolveUnknownEvotorPosPayment({
@@ -47,7 +51,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     staffId: staff.id,
     ...parsed.data
   });
-  if (!resolved) return NextResponse.json({ ok: false, error: "Результат не подтверждён или уже изменился. Проверьте оплату и чек на кассе, не повторяйте оплату." }, { status: 409 });
+  if (!resolved) return NextResponse.json({ ok: false, error: "Результат не подтверждён или чек не сопоставлен однозначно. Проверьте оплату, фискальные реквизиты и синхронизацию Эвотор. Не повторяйте оплату." }, { status: 409 });
   if (parsed.data.resolution === "paid") {
     revalidatePath("/kitchen");
     revalidatePath("/admin/kitchen");

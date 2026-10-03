@@ -4,6 +4,7 @@ import { PosWorkspace } from "@/components/operations/PosWorkspace";
 import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { evotorPosPaymentsEnabled, getActiveEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
+import { getTerminalBridgeDevices } from "@/lib/integrations/evotor/terminal-bridge";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCreatePosOrder } from "@/lib/order-flow/permissions";
 import { getActiveProducts } from "@/lib/products";
@@ -17,12 +18,14 @@ export default async function PosPage() {
   let products;
   let locations;
   let initialPayment: Awaited<ReturnType<typeof getActiveEvotorPosPayment>> = null;
+  let terminals: Awaited<ReturnType<typeof getTerminalBridgeDevices>> = [];
   try {
     [products, locations] = await Promise.all([
       getActiveProducts(250),
       getAccessibleOrderLocations(staff)
     ]);
     initialPayment = await getActiveEvotorPosPayment(locations.map((item) => item.id));
+    terminals = await getTerminalBridgeDevices(locations.map((item) => item.id));
   } catch {
     return <OperationsUnavailable title="POS временно недоступен" message="Не удалось загрузить меню и точку. Проверьте связь и повторите." />;
   }
@@ -32,6 +35,7 @@ export default async function PosPage() {
     <PosWorkspace
       products={products}
       locations={locations}
+      initialTerminals={terminals}
       initialLocationId={location.id}
       initialIdempotencyKey={randomUUID()}
       staffName={staff.name}

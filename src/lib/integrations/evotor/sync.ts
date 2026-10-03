@@ -17,6 +17,7 @@ import { EvotorConfigurationError } from "./errors";
 import { EXPLICIT_EVOTOR_PRODUCT_MAPPINGS } from "./product-mapping-rules";
 import { fetchEvotorProducts } from "./products";
 import { parseEvotorReceipt, sanitizeEvotorPayload } from "./receipts";
+import { reconcileEvotorReceipt } from "./fiscal-reconciliation";
 import { classifyEvotorFailure, evotorRetryDelaySeconds } from "./recovery";
 import { fetchEvotorStores } from "./stores";
 import type {
@@ -379,6 +380,7 @@ async function persistSnapshot(params: {
             where receipt_id = ${receiptRows[0].id}::uuid
           `;
         }
+        await reconcileEvotorReceipt(transaction, receiptRows[0].id);
       }
 
       const window = params.windowsByStore.get(externalStoreId);

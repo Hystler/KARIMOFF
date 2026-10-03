@@ -79,9 +79,12 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           <h1>Эвотор</h1>
           <p>Подключения облака, магазины, кассы и безопасная синхронизация продаж.</p>
         </div>
-        <Link href="/admin/integrations/evotor/reconciliation" className="admin-secondary-button">
-          <Cable size={17} /> Сопоставление продаж
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/integrations/evotor/pos-payments" className="admin-secondary-button">Цепочка POS и чека</Link>
+          <Link href="/admin/integrations/evotor/reconciliation" className="admin-secondary-button">
+            <Cable size={17} /> Сопоставление продаж
+          </Link>
+        </div>
       </header>
 
       {params.queued ? (

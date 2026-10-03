@@ -39,6 +39,7 @@ import {
   type PosCartLine
 } from "@/lib/order-flow/pos-cart";
 import type { OrderLocation } from "@/lib/order-flow/types";
+import type { TerminalBridgeDevice } from "@/lib/integrations/evotor/terminal-bridge";
 import type { Product } from "@/lib/product-types";
 
 function formatRub(value: number) {
@@ -78,7 +79,7 @@ type TerminalPaymentView = {
   intentId: string;
   orderId: string;
   displayNumber: string | null;
-  status: "queued" | "processing" | "paid" | "failed" | "cancelled" | "unknown";
+  status: "queued" | "processing" | "fiscal_pending" | "paid" | "failed" | "cancelled" | "unknown";
   amount: number;
   result: Record<string, unknown>;
 };
@@ -86,6 +87,7 @@ type TerminalPaymentView = {
 export function PosWorkspace({
   products,
   locations,
+  initialTerminals,
   initialLocationId,
   initialIdempotencyKey,
   staffName,
@@ -95,6 +97,7 @@ export function PosWorkspace({
 }: {
   products: Product[];
   locations: OrderLocation[];
+  initialTerminals: TerminalBridgeDevice[];
   initialLocationId: string;
   initialIdempotencyKey: string;
   staffName: string;
@@ -108,14 +111,39 @@ export function PosWorkspace({
   const [customerName, setCustomerName] = useState("Гость");
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<PosLoyaltyCustomer | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(initialIdempotencyKey);
-  const [payment, setPayment] = useState<TerminalPaymentView | null>(initialPayment);
+  const [payment, setPayment] = useState<TerminalPaymentView | null>(null);
+  const [recoveryPayment, setRecoveryPayment] = useState<TerminalPaymentView | null>(initialPayment);
+  const [locationId, setLocationId] = useState(initialLocationId);
+  const [terminals, setTerminals] = useState(initialTerminals);
+  const [terminalId, setTerminalId] = useState("");
   const [terminalMessage, setTerminalMessage] = useState("");
   const [receiptReference, setReceiptReference] = useState("");
+  const [manualFiscal, setManualFiscal] = useState({ storageNumber: "", documentNumber: "", sign: "" });
   const [resolutionPending, setResolutionPending] = useState(false);
   const [customizer, setCustomizer] = useState<{ product: Product; line: PosCartLine | null } | null>(null);
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/pos/terminals", { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json() as { devices?: TerminalBridgeDevice[] };
+          if (data.devices) setTerminals(data.devices);
+        }
+      } catch { /* Server selection checks freshness again. */ }
+    };
+    const timer = window.setInterval(() => void refresh(), 5000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const onlineTerminals = terminals.filter((device) => device.locationId === locationId && device.isOnline);
+  const availableTerminals = onlineTerminals.filter((device) => !device.isBusy);
+  const selectedTerminalId = terminalId
+    ? availableTerminals.some((device) => device.id === terminalId) ? terminalId : ""
+    : availableTerminals.length === 1 ? availableTerminals[0].id : "";
   const finishTerminalPayment = useCallback((result: TerminalPaymentView) => {
     setPayment(null);
+    setRecoveryPayment((current) => current?.intentId === result.intentId ? null : current);
     setReceiptReference("");
+    setManualFiscal({ storageNumber: "", documentNumber: "", sign: "" });
     if (result.status === "paid") {
       setCart([]);
       setCustomerName("Гость");
@@ -191,9 +219,11 @@ export function PosWorkspace({
   }, [finishTerminalPayment, paymentIntentId]);
 
   async function resolveUnknownPayment(resolution: "paid" | "cancelled") {
-    if (!payment || payment.status !== "unknown" || resolutionPending) return;
-    if (resolution === "paid" && !receiptReference.trim()) {
-      setTerminalMessage("Укажите номер или идентификатор выданного фискального чека.");
+    if (!payment || !["unknown", "fiscal_pending"].includes(payment.status) || resolutionPending) return;
+    if (payment.status === "fiscal_pending" && resolution !== "paid") return;
+    if (resolution === "paid" && (!receiptReference.trim() || !manualFiscal.storageNumber.trim()
+      || !manualFiscal.documentNumber.trim() || !manualFiscal.sign.trim())) {
+      setTerminalMessage("Укажите ID импортированного документа и ФН, ФД, ФП из закрытого чека.");
       return;
     }
     setResolutionPending(true);
@@ -201,7 +231,10 @@ export function PosWorkspace({
       const response = await fetch(`/api/pos/payments/${payment.intentId}/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resolution, receiptReference: receiptReference.trim() || undefined })
+        body: JSON.stringify({ resolution, receiptReference: receiptReference.trim() || undefined,
+          fiscalStorageNumber: manualFiscal.storageNumber.trim() || undefined,
+          fiscalDocumentNumber: manualFiscal.documentNumber.trim() || undefined,
+          fiscalSign: manualFiscal.sign.trim() || undefined })
       });
       const result = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !result.ok) {
@@ -399,10 +432,14 @@ export function PosWorkspace({
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-black text-black/60">Комментарий ко всему заказу<ChevronDown size={17} className="shrink-0 transition-transform group-open:rotate-180" /></summary>
                 <textarea name="comment" maxLength={500} rows={2} placeholder="Пожелание гостя" className="mt-2 w-full resize-none rounded-lg border border-black/10 bg-white px-4 py-3 text-base outline-none focus:border-[#FB670A] focus:ring-4 focus:ring-[#FB670A]/10" />
               </details>
-              {locations.length > 1 ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Точка</span><select name="location_id" defaultValue={initialLocationId} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold outline-none focus:border-[#FB670A]">{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label> : <input type="hidden" name="location_id" value={initialLocationId} />}
+              {locations.length > 1 ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Точка</span><select name="location_id" value={locationId} onChange={(event) => { setLocationId(event.target.value); setTerminalId(""); }} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold outline-none focus:border-[#FB670A]">{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label> : <input type="hidden" name="location_id" value={initialLocationId} />}
+              {availableTerminals.length > 1 || (terminalId && !selectedTerminalId && availableTerminals.length > 0) ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Касса для оплаты</span><select value={selectedTerminalId} onChange={(event) => setTerminalId(event.target.value)} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold"><option value="">Выберите кассу</option>{availableTerminals.map((device) => <option key={device.id} value={device.id}>{device.label}</option>)}</select></label> : null}
+              <input type="hidden" name="terminal_device_id" value={selectedTerminalId} />
+              {recoveryPayment ? <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-bold text-amber-950"><p>Есть незавершённая операция {recoveryPayment.displayNumber || recoveryPayment.orderId}. Проверьте её результат до повторной оплаты этого заказа.</p><button type="button" onClick={() => setPayment(recoveryPayment)} className="mt-2 underline underline-offset-2">Открыть состояние операции</button></div> : null}
+              {!availableTerminals.length ? <p className="text-sm font-bold text-amber-800">{onlineTerminals.length ? "Касса занята. Сначала завершите предыдущую операцию или выберите другую точку." : "Нет кассы на связи. Откройте KARIMOFF Bridge на Эвоторе."}</p> : null}
               <div className="flex items-center justify-between text-lg font-black"><span>Итого</span><span className="text-2xl tabular-nums text-[#D95405]">{formatRub(total)} ₽</span></div>
               {terminalMessage || state.status !== "idle" ? <div role="status" aria-live="polite" className={`rounded-lg px-4 py-3 text-sm font-bold ${state.status === "error" || terminalMessage.startsWith("Оплата не прошла") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>{state.status === "success" && !terminalMessage ? <CheckCircle2 className="mr-2 inline" size={18} /> : null}{terminalMessage || state.message}</div> : null}
-              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode || !paymentsEnabled} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : !paymentsEnabled ? "Оплата через терминал пока отключена" : "Перейти к оплате"}</button>
+              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode || !paymentsEnabled || !selectedTerminalId} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : !paymentsEnabled ? "Оплата через терминал пока отключена" : !selectedTerminalId ? onlineTerminals.length && !availableTerminals.length ? "Касса занята" : "Выберите свободную кассу" : "Перейти к оплате"}</button>
             </div>
           </form>
         </aside>
@@ -413,25 +450,27 @@ export function PosWorkspace({
           <section role="dialog" aria-modal="true" aria-labelledby="terminal-payment-title" className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-7">
             <p className="text-xs font-black uppercase tracking-wide text-[#C94F05]">Оплата через Эвотор</p>
             <h2 id="terminal-payment-title" className="mt-2 text-2xl font-black">
-              {payment.status === "unknown" ? "Проверьте терминал" : payment.status === "queued" ? "Отправляем заказ на кассу" : "Ожидаем оплату"}
+              {payment.status === "unknown" ? "Проверьте терминал" : payment.status === "fiscal_pending" ? "Оплата прошла, ожидаем подтверждение чека" : payment.status === "queued" ? "Отправляем заказ на кассу" : "Ожидаем оплату"}
             </h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-black/65">
               Заказ {payment.displayNumber || "создан"} · {formatRub(payment.amount)} ₽.
               {payment.status === "queued" ? " Приложение KARIMOFF Bridge должно быть открыто на терминале." : null}
-              {payment.status === "processing" ? " Заказ уже виден кухне. Приготовление станет доступно после успешной оплаты и чека." : null}
+              {payment.status === "processing" ? " Заказ будет передан на кухню после подтверждения оплаты и чека." : null}
+              {payment.status === "fiscal_pending" ? " Повторно оплачивать нельзя. Кухня получит заказ после подтверждения фискальных реквизитов." : null}
               {payment.status === "unknown" ? " Результат оплаты не подтвердился. Не запускайте оплату повторно, пока не проверите состояние кассы." : null}
             </p>
-            {payment.status === "unknown" ? (
+            {["unknown", "fiscal_pending"].includes(payment.status) ? (
               <div className="mt-5 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
                 <p className="text-sm font-bold leading-5 text-amber-950">{String(payment.result.details || "Проверьте, прошла ли оплата и выдан ли фискальный чек.")}</p>
                 <label className="block text-sm font-bold text-black/70">
-                  Номер/ID чека, если терминал подтверждает оплату
+                  ID импортированного документа Эвотор (после проверки оплаты и чека)
                   <input value={receiptReference} onChange={(event) => setReceiptReference(event.target.value.slice(0, 128))} maxLength={128} className="mt-2 min-h-12 w-full rounded-lg border border-black/15 bg-white px-3 text-base font-semibold outline-none focus:border-[#FB670A]" />
                 </label>
-                <button type="button" disabled={resolutionPending || !receiptReference.trim()} onClick={() => void resolveUnknownPayment("paid")} className="min-h-12 w-full rounded-lg bg-emerald-700 px-3 text-sm font-black text-white disabled:opacity-40">Подтвердить оплату и чек</button>
-                <button type="button" disabled={resolutionPending} onClick={() => void resolveUnknownPayment("cancelled")} className="min-h-12 w-full rounded-lg border border-red-300 bg-white px-3 text-sm font-black text-red-700 disabled:opacity-40">Подтвердить, что оплата точно не прошла</button>
+                {([['storageNumber', 'ФН'], ['documentNumber', 'ФД'], ['sign', 'ФП']] as const).map(([key, label]) => <label key={key} className="block text-sm font-bold text-black/70">{label} из закрытого чека<input value={manualFiscal[key]} onChange={(event) => setManualFiscal((current) => ({ ...current, [key]: event.target.value.slice(0, 32) }))} maxLength={32} className="mt-2 min-h-12 w-full rounded-lg border border-black/15 bg-white px-3 text-base font-semibold outline-none focus:border-[#FB670A]" /></label>)}
+                <button type="button" disabled={resolutionPending || !receiptReference.trim() || !manualFiscal.storageNumber.trim() || !manualFiscal.documentNumber.trim() || !manualFiscal.sign.trim()} onClick={() => void resolveUnknownPayment("paid")} className="min-h-12 w-full rounded-lg bg-emerald-700 px-3 text-sm font-black text-white disabled:opacity-40">Подтвердить оплату и чек</button>
+                {payment.status === "unknown" ? <button type="button" disabled={resolutionPending} onClick={() => void resolveUnknownPayment("cancelled")} className="min-h-12 w-full rounded-lg border border-red-300 bg-white px-3 text-sm font-black text-red-700 disabled:opacity-40">Подтвердить, что оплата точно не прошла</button> : null}
                 {terminalMessage ? <p role="status" className="text-sm font-bold text-red-700">{terminalMessage}</p> : null}
-                <p className="text-xs font-semibold leading-5 text-amber-900">Подтверждайте оплату только после проверки успешной операции и фискального чека на терминале. При подтверждённом отказе заказ останется вне кухни, а корзину можно будет отправить повторно.</p>
+                <p className="text-xs font-semibold leading-5 text-amber-900">Для ручного подтверждения нужен уже импортированный чек Эвотор с ФН, ФД и ФП. Совпадение только суммы и времени не подходит. При подтверждённом отказе заказ останется вне кухни.</p>
               </div>
             ) : (
               <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#F5F5F5] p-4 text-sm font-bold text-black/60">

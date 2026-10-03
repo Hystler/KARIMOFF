@@ -11,6 +11,16 @@ const idSchema = z.string().uuid();
 const resultSchema = z.object({
   status: z.enum(["paid", "failed", "cancelled", "unknown"]),
   receiptReference: z.string().trim().min(1).max(128).optional().nullable(),
+  fiscal: z.object({
+    storageNumber: z.string().trim().min(1).max(32),
+    documentNumber: z.string().trim().min(1).max(32),
+    sign: z.string().trim().min(1).max(32),
+    fiscalizedAt: z.iso.datetime(),
+    receiptNumber: z.string().trim().max(80).optional(),
+    total: z.number().positive().optional(),
+    paymentIdentifier: z.string().trim().max(128).optional(),
+    documentType: z.literal("SELL").optional()
+  }).optional().nullable(),
   details: z.string().trim().max(300).optional().nullable(),
   safeBeforePayment: z.boolean().optional()
 });

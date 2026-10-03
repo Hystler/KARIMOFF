@@ -4,7 +4,7 @@ export type PosOrderActionState = {
   orderId?: string;
   displayNumber?: string;
   paymentIntentId?: string;
-  paymentStatus?: "queued" | "processing" | "paid" | "failed" | "cancelled" | "unknown";
+  paymentStatus?: "queued" | "processing" | "fiscal_pending" | "paid" | "failed" | "cancelled" | "unknown";
   amount?: number;
   resetKey?: string;
 };

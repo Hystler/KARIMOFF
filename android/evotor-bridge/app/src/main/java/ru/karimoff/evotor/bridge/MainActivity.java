@@ -55,6 +55,7 @@ import ru.evotor.framework.receipt.Measure;
 import ru.evotor.framework.receipt.Position;
 import ru.evotor.framework.receipt.Receipt;
 import ru.evotor.framework.receipt.ReceiptApi;
+import ru.evotor.framework.receipt.FiscalReceipt;
 import ru.evotor.framework.payment.PaymentType;
 import ru.evotor.framework.payment.PaymentAccount;
 import ru.evotor.framework.payment.PaymentSystem;
@@ -71,6 +72,8 @@ public final class MainActivity extends Activity {
     private static final String TOKEN_KEY = "device_token";
     private static final String DEVICE_KEY = "device_key";
     private static final String PENDING_PAYMENT_RESULT_KEY = "pending_payment_result";
+    private static final String ACTIVE_RECEIPT_KEY = "active_receipt_identity";
+    private int fiscalReadAttempts;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler paymentPollHandler = new Handler(Looper.getMainLooper());
@@ -123,6 +126,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        fiscalReadAttempts = 0;
         paymentPollingEnabled = true;
         retryPendingPaymentResult();
         schedulePaymentPoll(1500);
@@ -289,6 +293,11 @@ public final class MainActivity extends Activity {
             .getString(PENDING_PAYMENT_RESULT_KEY, "").trim().isEmpty()) {
             retryPendingPaymentResult();
             schedulePaymentPoll(3000);
+            return;
+        }
+        if (!activeReceipt().isEmpty()) {
+            retryFiscalIdentity();
+            schedulePaymentPoll(5000);
             return;
         }
         if (paymentFlowBusy || paymentRequestInFlight) {
@@ -496,7 +505,7 @@ public final class MainActivity extends Activity {
                         );
                         return;
                     }
-                    moveReceiptToCardPayment(job, token, performer);
+                    saveReceiptBeforePayment(job, token, performer);
                 });
             });
         } catch (Throwable error) {
@@ -508,6 +517,54 @@ public final class MainActivity extends Activity {
             }
             queuePaymentResult(intentId, receiptStillOpen ? "unknown" : "cancelled", null,
                 getString(R.string.payment_prepare_error, errorMessage(error)), !receiptStillOpen);
+        }
+    }
+
+    private String activeReceipt() {
+        return getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getString(ACTIVE_RECEIPT_KEY, "").trim();
+    }
+
+    private void saveReceiptBeforePayment(JSONObject job, String token, PaymentPerformer performer) {
+        String intentId = job.optString("id", "");
+        JSONObject payload = job.optJSONObject("payload");
+        try {
+            Receipt receipt = ReceiptApi.getReceipt(this, Receipt.Type.SELL);
+            if (receipt == null || receipt.getHeader() == null || receipt.getHeader().getUuid() == null
+                || payload == null) throw new IllegalStateException("Не удалось получить UUID открытого чека");
+            String uuid = receipt.getHeader().getUuid().toString();
+            JSONObject identity = new JSONObject();
+            identity.put("intentId", intentId);
+            identity.put("bridgeTaskId", intentId);
+            identity.put("orderId", payload.getString("orderId"));
+            identity.put("paymentId", payload.getString("paymentId"));
+            identity.put("localReceiptUuid", uuid);
+            identity.put("deviceKey", deviceKey());
+            identity.put("openedAt", java.time.Instant.now().toString());
+            identity.put("paymentConfirmed", false);
+            if (!getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                .putString(ACTIVE_RECEIPT_KEY, identity.toString()).commit()) {
+                throw new IllegalStateException("UUID чека не удалось сохранить на кассе");
+            }
+            executor.execute(() -> {
+                try {
+                    JSONObject body = new JSONObject();
+                    body.put("orderId", identity.getString("orderId"));
+                    body.put("paymentId", identity.getString("paymentId"));
+                    body.put("localReceiptUuid", uuid);
+                    body.put("openedAt", identity.getString("openedAt"));
+                    JSONObject response = requestJson("POST", getString(R.string.bridge_api_base)
+                        + "/payments/" + intentId + "/receipt", token, body);
+                    if (!response.optBoolean("ok")) throw new IllegalStateException("Сервер не сохранил UUID чека");
+                    runOnUiThread(() -> moveReceiptToCardPayment(job, token, performer));
+                } catch (Throwable error) {
+                    runOnUiThread(() -> queuePaymentResult(intentId, "failed", null,
+                        "Оплата не запускалась: UUID чека не сохранён сервером. " + errorMessage(error), true));
+                }
+            });
+        } catch (Throwable error) {
+            queuePaymentResult(intentId, "failed", null,
+                "Оплата не запускалась: " + errorMessage(error), true);
         }
     }
 
@@ -527,22 +584,21 @@ public final class MainActivity extends Activity {
                 new MoveCurrentReceiptDraftToPaymentStageCallback() {
                     @Override
                     public void onSuccess() {
-                        String receiptReference = null;
+                        String savedUuid = null;
                         try {
-                            Receipt receipt = ReceiptApi.getReceipt(MainActivity.this, Receipt.Type.SELL);
-                            if (receipt != null && receipt.getHeader() != null
-                                && receipt.getHeader().getUuid() != null) {
-                                receiptReference = receipt.getHeader().getUuid().toString();
+                            JSONObject identity = new JSONObject(activeReceipt());
+                            savedUuid = identity.getString("localReceiptUuid");
+                            identity.put("paymentConfirmed", true);
+                            if (!getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                                .putString(ACTIVE_RECEIPT_KEY, identity.toString()).commit()) {
+                                throw new IllegalStateException("Не удалось сохранить результат оплаты");
                             }
-                        } catch (Throwable ignored) {
-                            // A missing local receipt reference requires cashier review before kitchen release.
-                        }
-                        if (receiptReference == null || receiptReference.trim().isEmpty()) {
-                            queuePaymentResult(intentId, "unknown", null,
-                                getString(R.string.payment_success_receipt_reference_missing), false);
-                        } else {
-                            queuePaymentResult(intentId, "paid", receiptReference,
-                                getString(R.string.payment_terminal_success), false);
+                            queuePaymentResult(intentId, "paid", identity.getString("localReceiptUuid"),
+                                "Оплата прошла, ожидаем фискальные реквизиты", false);
+                        } catch (Throwable error) {
+                            queuePaymentResult(intentId, savedUuid == null ? "unknown" : "paid", savedUuid,
+                                "Оплата подтверждена, локальный результат требует восстановления: "
+                                    + errorMessage(error), false);
                         }
                     }
 
@@ -559,12 +615,76 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void retryFiscalIdentity() {
+        if (fiscalReadAttempts >= 12) {
+            resultView.setText("Оплата прошла; фискальные реквизиты пока не найдены. Проверьте чек на кассе. Повторная оплата запрещена.");
+            return;
+        }
+        JSONObject identity;
+        try {
+            identity = new JSONObject(activeReceipt());
+            if (!identity.optBoolean("paymentConfirmed")) return;
+        } catch (Throwable ignored) { return; }
+        fiscalReadAttempts++;
+        executor.execute(() -> {
+            try {
+                String uuid = identity.getString("localReceiptUuid");
+                Receipt closed = ReceiptApi.getReceipt(this, uuid);
+                if (closed == null || closed.getHeader() == null || closed.getHeader().getUuid() == null
+                    || !uuid.equals(closed.getHeader().getUuid().toString())
+                    || closed.getHeader().getType() != Receipt.Type.SELL) return;
+                ru.evotor.query.Cursor<FiscalReceipt> cursor = ReceiptApi.getFiscalReceipts(this, uuid);
+                if (cursor == null) return;
+                List<FiscalReceipt> documents;
+                try { documents = cursor.toList(); } finally { cursor.close(); }
+                if (documents.size() != 1) return;
+                FiscalReceipt fiscal = documents.get(0);
+                if (fiscal.getFiscalStorageNumber() == null
+                    || fiscal.getFiscalStorageNumber().trim().isEmpty()
+                    || fiscal.getDocumentNumber() <= 0
+                    || fiscal.getFiscalIdentifier() == null
+                    || fiscal.getFiscalIdentifier().trim().isEmpty()
+                    || fiscal.getCreationDate() == null) return;
+                JSONObject fiscalJson = new JSONObject();
+                fiscalJson.put("storageNumber", fiscal.getFiscalStorageNumber());
+                fiscalJson.put("documentNumber", String.valueOf(fiscal.getDocumentNumber()));
+                fiscalJson.put("sign", fiscal.getFiscalIdentifier());
+                fiscalJson.put("fiscalizedAt", java.time.Instant.ofEpochMilli(
+                    fiscal.getCreationDate().getTime()).toString());
+                fiscalJson.put("documentType", "SELL");
+                if (closed.getHeader().getNumber() != null)
+                    fiscalJson.put("receiptNumber", closed.getHeader().getNumber());
+                BigDecimal paidTotal = BigDecimal.ZERO;
+                String paymentIdentifier = null;
+                for (ru.evotor.framework.receipt.Payment payment : closed.getPayments()) {
+                    paidTotal = paidTotal.add(payment.getValue());
+                    if (payment.getIdentifier() != null && !payment.getIdentifier().trim().isEmpty())
+                        paymentIdentifier = payment.getIdentifier();
+                }
+                if (paidTotal.signum() > 0) fiscalJson.put("total", paidTotal);
+                if (paymentIdentifier != null) fiscalJson.put("paymentIdentifier", paymentIdentifier);
+                runOnUiThread(() -> queuePaymentResult(identity.optString("intentId"), "paid", uuid,
+                    "Фискальные реквизиты получены", false, fiscalJson));
+            } catch (Throwable error) {
+                runOnUiThread(() -> resultView.setText("Оплата прошла; ожидаем фискальный чек: "
+                    + errorMessage(error)));
+            }
+        });
+    }
+
     private void queuePaymentResult(
         String intentId,
         String status,
         String receiptReference,
         String details,
         boolean safeBeforePayment
+    ) {
+        queuePaymentResult(intentId, status, receiptReference, details, safeBeforePayment, null);
+    }
+
+    private void queuePaymentResult(
+        String intentId, String status, String receiptReference, String details,
+        boolean safeBeforePayment, JSONObject fiscal
     ) {
         if (intentId == null || intentId.trim().isEmpty()) {
             paymentFlowBusy = false;
@@ -578,6 +698,7 @@ public final class MainActivity extends Activity {
             body.put("details", details);
             body.put("safeBeforePayment", safeBeforePayment);
             if (receiptReference != null) body.put("receiptReference", receiptReference);
+            if (fiscal != null) body.put("fiscal", fiscal);
             JSONObject saved = new JSONObject();
             saved.put("intentId", intentId);
             saved.put("body", body);
@@ -630,8 +751,15 @@ public final class MainActivity extends Activity {
                             .apply();
                     }
                     paymentFlowBusy = false;
+                    if ("paid".equals(finalStatus) || "cancelled".equals(finalStatus)
+                        || "failed".equals(finalStatus)) {
+                        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                            .remove(ACTIVE_RECEIPT_KEY).commit();
+                    }
                     if ("paid".equals(finalStatus)) {
                         resultView.setText(R.string.payment_server_confirmed);
+                    } else if ("fiscal_pending".equals(finalStatus)) {
+                        resultView.setText("Оплата прошла, ожидаем подтверждение фискального чека. Повторная оплата запрещена.");
                     } else if ("unknown".equals(finalStatus)) {
                         resultView.setText(R.string.payment_server_unknown);
                     } else {
