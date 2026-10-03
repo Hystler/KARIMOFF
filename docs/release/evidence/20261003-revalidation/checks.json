@@ -1,0 +1,53 @@
+{
+  "applicationRevision": "32edb9be56e15a2ca8b26247083335903984ab01",
+  "recordedAt": "2026-10-03 15:38:48 UTC",
+  "lint": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "typecheck": {
+    "exitCode": 0
+  },
+  "fullTests": {
+    "exitCode": 0,
+    "passed": 404,
+    "failed": 0,
+    "skipped": 0,
+    "formerPostgresSkipsExecuted": 33
+  },
+  "hostBuild": {
+    "exitCode": 0
+  },
+  "dockerBuild": {
+    "exitCode": 0,
+    "image": "sha256:5f57f8748eea414c69a869cfd1115598e230746207c0ca1457ad9efbad329614"
+  },
+  "runtime": {
+    "exitCode": 0,
+    "fresh": 200,
+    "upgrade": 200
+  },
+  "browser": {
+    "exitCode": 0,
+    "checks": 130,
+    "viewports": [
+      "390x844",
+      "430x932",
+      "768x1024",
+      "1024x768",
+      "1440x900",
+      "1920x1080"
+    ],
+    "engine": "Chrome/Chromium, not Safari or real iPhone"
+  },
+  "audit": {
+    "exitCode": 1,
+    "high": 2,
+    "critical": 0,
+    "mitigation": "Apple Wallet requires explicit opt-in; keep OFF"
+  },
+  "productionWrites": false,
+  "realProviderOperations": false,
+  "physicalCommands": false
+}

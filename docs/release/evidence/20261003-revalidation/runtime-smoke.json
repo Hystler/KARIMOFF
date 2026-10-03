@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-03T15:32:11.572Z",
+  "source": "32edb9be56e15a2ca8b26247083335903984ab01",
+  "image": "sha256:5f57f8748eea414c69a869cfd1115598e230746207c0ca1457ad9efbad329614",
+  "isolation": "unique synthetic PG17 databases; runtime DML-only; loopback HTTP; external fetch blocked; no payment/device keys",
+  "results": [
+    {
+      "database": "fresh",
+      "health": 200,
+      "catalog": 200,
+      "anonymousAdmin": 307,
+      "migrationCredentialInRuntime": false,
+      "delivery": false,
+      "physicalPayments": false,
+      "wallet": false
+    },
+    {
+      "database": "upgrade",
+      "health": 200,
+      "catalog": 200,
+      "anonymousAdmin": 307,
+      "migrationCredentialInRuntime": false,
+      "delivery": false,
+      "physicalPayments": false,
+      "wallet": false
+    }
+  ]
+}

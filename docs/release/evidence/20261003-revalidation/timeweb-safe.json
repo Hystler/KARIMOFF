@@ -1,0 +1,30 @@
+{
+  "checkedOn": "2026-10-03",
+  "source": "Read-only Timeweb API during this local revalidation; not an in-container revision measurement",
+  "app": {
+    "id": 229491,
+    "name": "karimoff-production",
+    "status": "active",
+    "is_auto_deploy": false,
+    "platformLastCommit": "e478731"
+  },
+  "missingEnvNames": [
+    "MIGRATION_DATABASE_URL",
+    "RUNTIME_MIGRATIONS_READ_ONLY",
+    "DELIVERY_ENABLED",
+    "EVOTOR_POS_PAYMENTS_ENABLED",
+    "APPLE_WALLET_ENABLED",
+    "YANDEX_GEOCODER_API_KEY",
+    "YANDEX_SUGGEST_API_KEY"
+  ],
+  "backupPolicy": {
+    "enabled": true,
+    "interval": "day",
+    "retentionCount": 1
+  },
+  "latestCompletedBackup": {
+    "createdAt": "2026-09-29T19:30:41.000Z",
+    "reportedSizeMb": 40960
+  },
+  "productionMutations": false
+}

@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-03T15:08:16.175Z",
+  "main": "3a366cab71f6ffe39796567e83fd8eaca3bbe591",
+  "container": "karimoff-rc-roles-20261003",
+  "image": "postgres:17-alpine",
+  "port": 55443,
+  "databases": {
+    "fresh": "karimoff_rc_fresh_1791040096174",
+    "upgrade": "karimoff_rc_upgrade_1791040096174",
+    "restore": "karimoff_rc_restore_1791040096174"
+  },
+  "migrations": {
+    "fresh": 28,
+    "main": 25,
+    "added": [
+      "20260929150000_add_delivery_checkout_and_courier_status.sql",
+      "20260930120000_delivery_release_hardening.sql",
+      "20261003070000_runtime_role_permissions.sql"
+    ],
+    "unchangedHistory": true,
+    "upgradeViaActualRunner": true,
+    "runtimeUrlIgnoredForDdl": true
+  },
+  "checks": {
+    "fresh": {
+      "permissions": {
+        "role": "karimoff_app",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "schema_create": false,
+        "database_create": false
+      },
+      "owners": 0,
+      "objects": {
+        "tables": 76,
+        "indexes": 284,
+        "constraints": 365,
+        "sequences": 1
+      },
+      "runtimeOrderCreated": true,
+      "createAlterDropDenied": true,
+      "runtimeSchemaVerification": true
+    },
+    "upgrade": {
+      "permissions": {
+        "role": "karimoff_app",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "schema_create": false,
+        "database_create": false
+      },
+      "owners": 0,
+      "objects": {
+        "tables": 76,
+        "indexes": 284,
+        "constraints": 365,
+        "sequences": 1
+      },
+      "runtimeOrderCreated": true,
+      "createAlterDropDenied": true,
+      "runtimeSchemaVerification": true
+    }
+  },
+  "restore": {
+    "method": "local synthetic pg_dump -Fc / pg_restore",
+    "bytes": 633912,
+    "milliseconds": 895,
+    "matched": {
+      "products": 40,
+      "orders": 1,
+      "payments": 1,
+      "receipts": 1,
+      "users": 1,
+      "inventory": 1,
+      "migrations": 28
+    },
+    "contentHashes": {
+      "products": "71312b122cd1b673820e57308d3dcbe1",
+      "orders": "1e9ad3957ee176c26b584663df931cea",
+      "payments": "2de3c766addc6fdc677f4ee6a597e5a9",
+      "fiscal_receipts": "0309bade16c629e9b0052a35b45e5e8b",
+      "customers": "468d3c8245ba560f5ef0735f7e2ac280",
+      "inventory_items": "7be183fe84109883c90e66381f0a6095"
+    },
+    "productionBackupRestored": false
+  }
+}
