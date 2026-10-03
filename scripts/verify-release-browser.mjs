@@ -20,8 +20,14 @@ try {
   assert.ok(!docker(['ps','-a','--format','{{.Names}}']).split('\n').includes(container),'Refusing to replace another container');
   const [customer]=await sql`select id from customers order by created_at limit 1`;
   const [staff]=await sql`insert into staff_users(name,phone,password_hash,role,is_active)
-    values('Synthetic RC owner','+70000000111','mock-only','owner',true) returning id`;
+    values('Synthetic RC owner',${`+7${String(Date.now()).slice(-10)}`},'mock-only','owner',true) returning id`;
   const [product]=await sql`select id,name,slug,price,image_url from products where is_active and image_url is not null order by id limit 1`;
+  const [ingredient]=await sql`insert into ingredients(name,unit,cost_per_unit)
+    values('Synthetic browser ingredient','g',1) returning id`;
+  const [group]=await sql`insert into product_modifier_groups(product_id,name,selection_type,min_selections,max_selections)
+    values(${product.id},'RC required modifier','single',1,1) returning id`;
+  const [option]=await sql`insert into product_modifier_options(group_id,label,modifier_type,ingredient_id,quantity_delta,price_delta)
+    values(${group.id},'RC modifier choice','add',${ingredient.id},10,30) returning id`;
   const tokens={};
   for(const [subject,id] of [['customer',customer.id],['staff',staff.id]]) {
     tokens[subject]=randomBytes(32).toString('base64url');
@@ -82,8 +88,13 @@ try {
     if(await cookieButton.count()) await cookieButton.click();
     await page.keyboard.press('Tab');
     assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');
+    const addButton=page.getByRole('button',{name:/Добавить в корзину/}).first();
+    assert.ok(await addButton.isDisabled(),'Required modifier blocks adding until selected');
+    await page.getByRole('button',{name:/RC modifier choice/}).click();
+    assert.ok(await addButton.isEnabled());
     await page.getByRole('button',{name:/Добавить в корзину/}).first().click();
-    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('karimoff_cart')??'[]').length)>0);
+    assert.ok(await page.evaluate(id=>JSON.parse(localStorage.getItem('karimoff_cart')??'[]')
+      .some(line=>line.customization.modifierOptionIds.includes(id)),option.id),'Chosen modifier survives into cart');
     if(viewport.width<1280) {
       await page.evaluate(()=>scrollTo(0,document.body.scrollHeight));
       assert.ok(await page.locator('.product-sticky-purchase').isVisible());
