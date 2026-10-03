@@ -18,7 +18,14 @@ type WebOrderInput = {
   source: "web";
   customerId: string;
   deliveryType: "pickup" | "delivery";
-  address: string | null;
+  deliveryAddressId: string | null;
+  deliveryDetails: {
+    apartment: string;
+    entrance: string;
+    floor: string;
+    intercom: string;
+    courierComment: string;
+  } | null;
   comment: string | null;
   items: CartItemInput[];
   idempotencyKey: string;
@@ -68,9 +75,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   if (input.source === "web") {
     const { data, error } = await database.rpc(
-      input.requiresPayment ? "create_site_order_with_payment" : "create_site_order",
+      input.requiresPayment
+        ? "create_site_order_with_payment_from_whitelist"
+        : "create_site_order_from_whitelist",
       {
-        p_address: input.deliveryType === "delivery" ? input.address : null,
+        p_delivery_address_id: input.deliveryType === "delivery" ? input.deliveryAddressId : null,
+        p_delivery_details: input.deliveryType === "delivery" ? input.deliveryDetails : null,
         p_comment: input.comment,
         p_customer_id: input.customerId,
         p_delivery_type: input.deliveryType,

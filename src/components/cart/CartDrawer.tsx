@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createOrderAction, getCheckoutContextAction } from "@/app/actions/orders";
+import {
+  createOrderAction,
+  getCheckoutContextAction,
+  listDeliveryHousesAction,
+  suggestDeliveryStreetsAction,
+  validateDeliveryAddressAction
+} from "@/app/actions/orders";
 import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { initialOrderActionState } from "@/lib/order-schema";
 import {
@@ -77,6 +83,19 @@ export function CartDrawer() {
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryStreetQuery, setDeliveryStreetQuery] = useState("");
+  const [selectedDeliveryStreet, setSelectedDeliveryStreet] = useState("");
+  const [deliveryStreetSuggestions, setDeliveryStreetSuggestions] = useState<string[]>([]);
+  const [deliveryHouseOptions, setDeliveryHouseOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [deliveryAddressId, setDeliveryAddressId] = useState("");
+  const [deliveryCheck, setDeliveryCheck] = useState<{
+    addressId: string;
+    available: boolean;
+    message: string;
+  } | null>(null);
+  const [isSearchingDeliveryStreets, setIsSearchingDeliveryStreets] = useState(false);
+  const [isLoadingDeliveryHouses, setIsLoadingDeliveryHouses] = useState(false);
+  const [isCheckingDeliveryAddress, setIsCheckingDeliveryAddress] = useState(false);
   const [fulfillmentMode, setFulfillmentMode] = useState<"asap" | "scheduled">("asap");
   const [clientNow, setClientNow] = useState(() => new Date());
   const [requestedSlotIndex, setRequestedSlotIndex] = useState(0);
@@ -109,6 +128,10 @@ export function CartDrawer() {
     [lines]
   );
   const isCheckoutDisabled = !checkoutSettings.pickup_enabled && !checkoutSettings.delivery_enabled;
+  const addressIsValidated = Boolean(deliveryAddressId)
+    && !isCheckingDeliveryAddress
+    && deliveryCheck?.available === true
+    && deliveryCheck.addressId === deliveryAddressId;
   const scheduledSlots = useMemo(
     () => (clientNow ? getSameDayOrderSlots(clientNow) : []),
     [clientNow]
@@ -118,6 +141,59 @@ export function CartDrawer() {
     const slot = scheduledSlots[Math.min(requestedSlotIndex, scheduledSlots.length - 1)];
     return moscowOrderSlotToIso(getMoscowDateKey(clientNow), slot);
   }, [clientNow, fulfillmentMode, requestedSlotIndex, scheduledSlots]);
+
+  const clearDeliveryAddressSelection = useCallback(() => {
+    setDeliveryStreetQuery("");
+    setSelectedDeliveryStreet("");
+    setDeliveryStreetSuggestions([]);
+    setDeliveryHouseOptions([]);
+    setDeliveryAddressId("");
+    setDeliveryCheck(null);
+    setIsSearchingDeliveryStreets(false);
+    setIsLoadingDeliveryHouses(false);
+    setIsCheckingDeliveryAddress(false);
+  }, []);
+
+  useEffect(() => {
+    if (deliveryType !== "delivery" || !deliveryStreetQuery.trim() || selectedDeliveryStreet) {
+      return undefined;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setIsSearchingDeliveryStreets(true);
+      void suggestDeliveryStreetsAction(deliveryStreetQuery).then((result) => {
+        if (active) setDeliveryStreetSuggestions(result.streets);
+      }).catch(() => {
+        if (active) setDeliveryStreetSuggestions([]);
+      }).finally(() => {
+        if (active) setIsSearchingDeliveryStreets(false);
+      });
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [deliveryStreetQuery, deliveryType, selectedDeliveryStreet]);
+
+  useEffect(() => {
+    if (!selectedDeliveryStreet || deliveryType !== "delivery") {
+      return undefined;
+    }
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return null;
+      setIsLoadingDeliveryHouses(true);
+      return listDeliveryHousesAction(selectedDeliveryStreet);
+    }).then((result) => {
+      if (!result) return;
+      if (active) setDeliveryHouseOptions(result.houses);
+    }).catch(() => {
+      if (active) setDeliveryHouseOptions([]);
+    }).finally(() => {
+      if (active) setIsLoadingDeliveryHouses(false);
+    });
+    return () => { active = false; };
+  }, [deliveryType, selectedDeliveryStreet]);
 
   const startCheckout = useCallback(async () => {
     if (!lines.length || checkoutContextPending.current) {
@@ -358,7 +434,10 @@ export function CartDrawer() {
                       value="pickup"
                       checked={deliveryType === "pickup"}
                       disabled={!checkoutSettings.pickup_enabled}
-                      onChange={() => setDeliveryType("pickup")}
+                      onChange={() => {
+                        clearDeliveryAddressSelection();
+                        setDeliveryType("pickup");
+                      }}
                       className="accent-karimoff-orange"
                     />
                     {checkoutSettings.pickup_enabled ? "Самовывоз" : "Самовывоз недоступен"}
@@ -370,7 +449,10 @@ export function CartDrawer() {
                       value="delivery"
                       checked={deliveryType === "delivery"}
                       disabled={!checkoutSettings.delivery_enabled}
-                      onChange={() => setDeliveryType("delivery")}
+                      onChange={() => {
+                        clearDeliveryAddressSelection();
+                        setDeliveryType("delivery");
+                      }}
                       className="accent-karimoff-orange"
                     />
                     {checkoutSettings.delivery_enabled ? "Доставка" : "Доставка недоступна"}
@@ -382,15 +464,127 @@ export function CartDrawer() {
                   </p>
                 ) : null}
                 {deliveryType === "delivery" ? (
-                  <label className="mt-4 grid gap-2 text-sm font-semibold text-karimoff-muted">
-                    Адрес доставки
-                    <input
-                      name="address"
-                      required
-                      className="h-[48px] rounded-lg border border-karimoff-line bg-white px-4 text-karimoff-black outline-none transition focus:border-karimoff-orange"
-                      placeholder="Улица, дом, квартира"
-                    />
-                  </label>
+                  <div className="mt-4 grid gap-3">
+                    <input type="hidden" name="delivery_address_id" value={deliveryAddressId} />
+                    <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Улица
+                      <input
+                        value={deliveryStreetQuery}
+                        onChange={(event) => {
+                          setDeliveryStreetQuery(event.target.value);
+                          setSelectedDeliveryStreet("");
+                          setDeliveryStreetSuggestions([]);
+                          setIsSearchingDeliveryStreets(false);
+                          setDeliveryHouseOptions([]);
+                          setIsLoadingDeliveryHouses(false);
+                          setDeliveryAddressId("");
+                          setDeliveryCheck(null);
+                        }}
+                        autoComplete="off"
+                        aria-label="Улица доставки"
+                        className="public-field min-w-0"
+                        placeholder="Начните вводить название улицы"
+                      />
+                    </label>
+                    {deliveryStreetSuggestions.length ? (
+                      <ul className="-mt-2 overflow-hidden rounded-md border border-karimoff-line bg-white" aria-label="Улицы из списка доставки">
+                        {deliveryStreetSuggestions.map((street) => (
+                          <li key={street}>
+                            <button
+                              type="button"
+                              className="w-full px-3 py-3 text-left text-sm leading-5 text-karimoff-black hover:bg-karimoff-cream"
+                              onClick={() => {
+                                setSelectedDeliveryStreet(street);
+                                setDeliveryStreetQuery(street);
+                                setDeliveryStreetSuggestions([]);
+                                setIsSearchingDeliveryStreets(false);
+                                setDeliveryHouseOptions([]);
+                                setIsLoadingDeliveryHouses(false);
+                                setDeliveryAddressId("");
+                                setDeliveryCheck(null);
+                              }}
+                            >
+                              {street}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {isSearchingDeliveryStreets ? <p className="-mt-2 text-xs text-karimoff-muted">Ищем улицу…</p> : null}
+                    {deliveryStreetQuery.trim() && !selectedDeliveryStreet && !isSearchingDeliveryStreets && !deliveryStreetSuggestions.length ? (
+                      <p role="status" className="-mt-2 text-sm text-karimoff-muted">
+                        По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз.
+                      </p>
+                    ) : null}
+                    <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Дом
+                      <select
+                        value={deliveryAddressId}
+                        disabled={!selectedDeliveryStreet || isLoadingDeliveryHouses || !deliveryHouseOptions.length}
+                        aria-label="Дом доставки"
+                        className="public-field min-w-0"
+                        onChange={(event) => {
+                          const addressId = event.target.value;
+                          setDeliveryAddressId(addressId);
+                          setDeliveryCheck(null);
+                          if (!addressId) return;
+                          setIsCheckingDeliveryAddress(true);
+                          void validateDeliveryAddressAction({ deliveryAddressId: addressId }).then((result) => {
+                            setDeliveryCheck({ addressId, available: result.available, message: result.message });
+                          }).catch(() => {
+                            setDeliveryCheck({
+                              addressId,
+                              available: false,
+                              message: "По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз."
+                            });
+                          }).finally(() => setIsCheckingDeliveryAddress(false));
+                        }}
+                      >
+                        <option value="">{isLoadingDeliveryHouses ? "Загружаем дома…" : "Выберите дом"}</option>
+                        {deliveryHouseOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {selectedDeliveryStreet && !isLoadingDeliveryHouses && !deliveryHouseOptions.length ? (
+                      <p role="status" className="-mt-2 text-sm text-karimoff-muted">
+                        По этому адресу доставка пока недоступна. Вы можете выбрать другой адрес или оформить самовывоз.
+                      </p>
+                    ) : null}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {[
+                        ["delivery_apartment", "Квартира", "12"],
+                        ["delivery_entrance", "Подъезд", "2"],
+                        ["delivery_floor", "Этаж", "3"],
+                        ["delivery_intercom", "Домофон", "Код"]
+                      ].map(([name, label, placeholder]) => (
+                        <label key={name} className="grid gap-1.5 text-xs font-semibold text-karimoff-muted">
+                          {label}
+                          <input
+                            name={name}
+                            maxLength={name === "delivery_intercom" ? 60 : 30}
+                            className="public-field h-11 min-w-0 px-3 text-sm"
+                            placeholder={placeholder}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <label className="grid gap-2 text-sm font-semibold text-karimoff-muted">
+                      Комментарий курьеру
+                      <textarea
+                        name="delivery_courier_comment"
+                        rows={2}
+                        maxLength={500}
+                        className="public-field min-h-20 resize-none py-3"
+                        placeholder="Как найти вход или квартиру"
+                      />
+                    </label>
+                    {deliveryCheck?.addressId === deliveryAddressId ? (
+                      <p role={deliveryCheck.available ? "status" : "alert"} className={`text-sm font-semibold ${deliveryCheck.available ? "text-emerald-700" : "text-red-700"}`}>
+                        {isCheckingDeliveryAddress ? "Проверяем адрес…" : deliveryCheck.message}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
                 <div className="mt-5 border-t border-karimoff-line pt-5">
                   <p className="text-sm font-bold text-karimoff-black">Когда приготовить</p>
@@ -518,7 +712,7 @@ export function CartDrawer() {
 
               <button
                 type="submit"
-                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || !checkoutSettings.online_payments_enabled}
+                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || !checkoutSettings.online_payments_enabled || (deliveryType === "delivery" && !addressIsValidated)}
                 className="public-button-primary py-4"
               >
                 {isOrderPending ? "Создаём платёж" : "Перейти к оплате"}

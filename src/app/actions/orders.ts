@@ -12,6 +12,15 @@ import { safeYooKassaErrorCode } from "@/lib/payments/yookassa/errors";
 import { createYooKassaPaymentForOrder } from "@/lib/payments/yookassa/service";
 import { validateSameDayMoscowRequestedAt } from "@/lib/order-time";
 import { getSiteSettings } from "@/lib/settings";
+import {
+  findDeliveryAddressById,
+  getDefaultDeliveryLocationId,
+  hasAvailableDeliveryAddresses,
+  isAvailableDeliveryAddress,
+  listDeliveryHouses,
+  searchDeliveryStreets,
+  unavailableDeliveryAddressMessage
+} from "@/lib/delivery/address-whitelist";
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -19,6 +28,13 @@ export async function getCurrentCustomerAction() {
 
 export async function getCheckoutContextAction() {
   const [customer, settings] = await Promise.all([getCurrentCustomer(), getSiteSettings()]);
+  let whitelistReady = false;
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    whitelistReady = Boolean(locationId && await hasAvailableDeliveryAddresses(locationId));
+  } catch {
+    whitelistReady = false;
+  }
   let receiptEmail = "";
   if (customer) {
     const database = createDatabaseServerClient();
@@ -54,10 +70,54 @@ export async function getCheckoutContextAction() {
       receiptEmail
     },
     settings: {
-      delivery_enabled: settings.delivery_enabled,
+      delivery_enabled: settings.delivery_enabled && whitelistReady,
       pickup_enabled: settings.pickup_enabled
     }
   };
+}
+
+export async function suggestDeliveryStreetsAction(query: string) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { streets: [], error: "Войдите, чтобы оформить заказ." };
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { streets: [], error: unavailableDeliveryAddressMessage() };
+    const streets = await searchDeliveryStreets(locationId, query);
+    return { streets: streets.map((street) => street.street), error: null };
+  } catch {
+    return { streets: [], error: unavailableDeliveryAddressMessage() };
+  }
+}
+
+export async function listDeliveryHousesAction(street: string) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { houses: [], error: "Войдите, чтобы оформить заказ." };
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { houses: [], error: unavailableDeliveryAddressMessage() };
+    const houses = await listDeliveryHouses(locationId, street);
+    return { houses, error: null };
+  } catch {
+    return { houses: [], error: unavailableDeliveryAddressMessage() };
+  }
+}
+
+export async function validateDeliveryAddressAction(input: { deliveryAddressId?: string }) {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { available: false, message: "Войдите, чтобы оформить заказ." };
+  const addressId = typeof input?.deliveryAddressId === "string" ? input.deliveryAddressId : "";
+  try {
+    const locationId = await getDefaultDeliveryLocationId();
+    if (!locationId) return { available: false, message: unavailableDeliveryAddressMessage() };
+    const address = await findDeliveryAddressById(addressId, locationId);
+    const available = isAvailableDeliveryAddress(address, addressId, locationId);
+    return {
+      available,
+      message: available ? "Доставка доступна." : unavailableDeliveryAddressMessage()
+    };
+  } catch {
+    return { available: false, message: unavailableDeliveryAddressMessage() };
+  }
 }
 
 export async function createOrderAction(
@@ -104,7 +164,12 @@ export async function createOrderAction(
     delivery_type: formData.get("delivery_type"),
     fulfillment_mode: formData.get("fulfillment_mode"),
     requested_at: String(formData.get("requested_at") || ""),
-    address: String(formData.get("address") || ""),
+    delivery_address_id: String(formData.get("delivery_address_id") || ""),
+    delivery_apartment: String(formData.get("delivery_apartment") || ""),
+    delivery_entrance: String(formData.get("delivery_entrance") || ""),
+    delivery_floor: String(formData.get("delivery_floor") || ""),
+    delivery_intercom: String(formData.get("delivery_intercom") || ""),
+    delivery_courier_comment: String(formData.get("delivery_courier_comment") || ""),
     comment: String(formData.get("comment") || ""),
     receipt_email: String(formData.get("receipt_email") || ""),
     cart: parsedCart
@@ -131,13 +196,6 @@ export async function createOrderAction(
     };
   }
 
-  if (parsed.data.delivery_type === "delivery" && !parsed.data.address) {
-    return {
-      status: "error",
-      message: "Укажите адрес доставки."
-    };
-  }
-
   if (parsed.data.fulfillment_mode === "scheduled") {
     const validation = validateSameDayMoscowRequestedAt(parsed.data.requested_at || "");
     if (!validation.ok) return { status: "error", message: validation.message };
@@ -159,6 +217,34 @@ export async function createOrderAction(
     };
   }
 
+  let deliveryAddressId: string | null = null;
+  let deliveryDetails: {
+    apartment: string;
+    entrance: string;
+    floor: string;
+    intercom: string;
+    courierComment: string;
+  } | null = null;
+
+  if (parsed.data.delivery_type === "delivery") {
+    const locationId = await getDefaultDeliveryLocationId().catch(() => null);
+    const address = locationId
+      ? await findDeliveryAddressById(parsed.data.delivery_address_id, locationId).catch(() => null)
+      : null;
+    if (!locationId || !address
+      || !isAvailableDeliveryAddress(address, parsed.data.delivery_address_id, locationId)) {
+      return { status: "error", message: unavailableDeliveryAddressMessage() };
+    }
+    deliveryAddressId = address.id;
+    deliveryDetails = {
+      apartment: parsed.data.delivery_apartment,
+      entrance: parsed.data.delivery_entrance,
+      floor: parsed.data.delivery_floor,
+      intercom: parsed.data.delivery_intercom,
+      courierComment: parsed.data.delivery_courier_comment
+    };
+  }
+
   const rawIdempotencyKey = String(formData.get("idempotency_key") || "");
   const idempotencyKey = /^[0-9a-f-]{36}$/i.test(rawIdempotencyKey)
     ? rawIdempotencyKey
@@ -166,7 +252,8 @@ export async function createOrderAction(
   try {
     const order = await createOrder({
       source: "web",
-      address: parsed.data.delivery_type === "delivery" ? parsed.data.address || null : null,
+      deliveryAddressId,
+      deliveryDetails,
       comment: parsed.data.comment || null,
       customerId: customer.id,
       deliveryType: parsed.data.delivery_type,
