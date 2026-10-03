@@ -66,6 +66,9 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.equal(await service(sql).nextEvotorTerminalPayment(double.deviceId),null, 'restart must not resend processing');
     await sql`update evotor_terminal_payment_intents set updated_at=now()-interval '6 minutes' where id=${a.intentId}`;
     assert.equal((await api.getEvotorPosPaymentStatus(a.intentId)).status,'unknown');
+    assert.equal(await api.resolveUnknownEvotorPosPayment({ intentId:a.intentId,staffId:null,resolution:'cancelled' }),false,
+      'manual cancellation cannot unlock a dispatched UNKNOWN charge');
+    assert.equal((await api.getEvotorPosPaymentStatus(a.intentId)).status,'unknown');
     await assert.rejects(api.createEvotorPosPayment({ ...double.input,idempotencyKey:randomUUID() }), /незавершённой/);
     const callback = { deviceId:double.deviceId,intentId:a.intentId,status:'paid',receiptReference:`synthetic-${randomUUID()}` };
     await Promise.all([service(sql).recordEvotorTerminalPaymentResult(callback),api.recordEvotorTerminalPaymentResult(callback)]);

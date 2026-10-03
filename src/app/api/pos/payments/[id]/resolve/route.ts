@@ -47,7 +47,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     staffId: staff.id,
     ...parsed.data
   });
-  if (!resolved) return NextResponse.json({ ok: false, error: "Платёж уже изменился. Обновите кассу." }, { status: 409 });
+  if (!resolved) return NextResponse.json({ ok: false, error: "Результат не подтверждён или уже изменился. Проверьте оплату и чек на кассе, не повторяйте оплату." }, { status: 409 });
   if (parsed.data.resolution === "paid") {
     revalidatePath("/kitchen");
     revalidatePath("/admin/kitchen");

@@ -570,13 +570,16 @@ export async function resolveUnknownEvotorPosPayment(params: {
   receiptReference?: string;
 }) {
   const result = await getPostgresSql().begin(async (sql) => {
-    const [intent] = await sql<{ id: string; order_id: string; payment_id: string; status: string }[]>`
-      select id, order_id, payment_id, status
+    const [intent] = await sql<{ id: string; order_id: string; payment_id: string; status: string; delivered_at: string | null }[]>`
+      select id, order_id, payment_id, status, delivered_at
       from public.evotor_terminal_payment_intents
       where id = ${params.intentId}::uuid
       for update
     `;
     if (!intent || intent.status !== "unknown") return false;
+    // A dispatched command may have charged despite a lost response. Only the
+    // authenticated device result can establish a safe post-dispatch cancellation.
+    if (params.resolution === "cancelled" && intent.delivered_at !== null) return false;
     if (params.resolution === "paid" && !params.receiptReference?.trim()) return false;
     const receiptReference = params.receiptReference?.trim() || "";
     const details = {
