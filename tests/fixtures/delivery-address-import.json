@@ -1,0 +1,31 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 901,
+      "lat": 55.9091,
+      "lon": 38.0559,
+      "tags": { "addr:city": "Щелково", "addr:street": "улица Бахчиванджи", "addr:housenumber": "5Б" }
+    },
+    {
+      "type": "way",
+      "id": 902,
+      "center": { "lat": 55.9091, "lon": 38.0559 },
+      "tags": { "addr:street": "ул Бахчиванджи", "addr:housenumber": "5 б" }
+    },
+    {
+      "type": "node",
+      "id": 903,
+      "lat": 55.9092,
+      "lon": 38.0561,
+      "tags": { "addr:street": "Бахчиванджи", "addr:housenumber": "5/1" }
+    },
+    {
+      "type": "node",
+      "id": 904,
+      "lat": 55.89,
+      "lon": 38.05,
+      "tags": { "addr:street": "Аэродромная улица", "addr:housenumber": "10" }
+    }
+  ]
+}

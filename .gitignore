@@ -15,6 +15,7 @@ yarn-error.log*
 pnpm-debug.log*
 *.tsbuildinfo
 tmp/
+outputs/delivery-whitelist-review-*/
 
 # Local Android tooling and generated builds
 android/**/local.properties
