@@ -46,6 +46,11 @@ export class EvotorPosPaymentError extends Error {
   readonly code = "EVOTOR_POS_PAYMENT";
 }
 
+export function evotorPosPaymentsEnabled() {
+  return process.env.EVOTOR_POS_PAYMENTS_ENABLED === "true"
+    && process.env.TEST_ORDER_MODE !== "true" && terminalBridgeReady();
+}
+
 function paymentError(message: string) {
   return new EvotorPosPaymentError(message);
 }
@@ -58,12 +63,14 @@ function asStatus(value: string): EvotorPosPaymentStatus {
 }
 
 export async function createEvotorPosPayment(input: NewPosPayment) {
+  if (!evotorPosPaymentsEnabled()) throw paymentError("Оплата через физический терминал пока отключена.");
   if (!terminalBridgeReady()) throw paymentError("Связь с кассой Эвотор ещё не включена.");
   if (process.env.TEST_ORDER_MODE === "true") {
     throw paymentError("Оплата картой через терминал отключена в тестовом режиме.");
   }
 
   return getPostgresSql().begin(async (sql) => {
+    await sql`select pg_advisory_xact_lock(hashtextextended(${`evotor:pos:${input.idempotencyKey}`}, 0))`;
     const [existing] = await sql<{
       intent_id: string;
       order_id: string;
@@ -298,6 +305,7 @@ export async function createEvotorPosPayment(input: NewPosPayment) {
 }
 
 export async function nextEvotorTerminalPayment(deviceId: string) {
+  if (!evotorPosPaymentsEnabled()) return null;
   return getPostgresSql().begin(async (sql) => {
     const [job] = await sql<{ id: string; payload: Record<string, unknown> }[]>`
       select id, payload
@@ -522,7 +530,7 @@ export async function getEvotorPosPaymentStatus(intentId: string): Promise<PosPa
       await sql`
         update public.evotor_terminal_payment_intents
         set status = 'unknown', result = ${sql.json(result)}::jsonb, updated_at = now()
-        where id = ${row.intent_id}::uuid and status = 'processing'
+        where id = ${row.intent_id}::uuid and status in ('queued', 'processing')
       `;
       row.result = result;
     }

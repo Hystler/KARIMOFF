@@ -90,6 +90,7 @@ export function PosWorkspace({
   initialIdempotencyKey,
   staffName,
   testMode,
+  paymentsEnabled,
   initialPayment
 }: {
   products: Product[];
@@ -98,6 +99,7 @@ export function PosWorkspace({
   initialIdempotencyKey: string;
   staffName: string;
   testMode: boolean;
+  paymentsEnabled: boolean;
   initialPayment: TerminalPaymentView | null;
 }) {
   const [cart, setCart] = useState<PosCartLine[]>([]);
@@ -400,7 +402,7 @@ export function PosWorkspace({
               {locations.length > 1 ? <label className="block"><span className="mb-1.5 block text-xs font-black text-black/60">Точка</span><select name="location_id" defaultValue={initialLocationId} className="min-h-12 w-full rounded-lg border border-black/10 bg-white px-4 text-base font-bold outline-none focus:border-[#FB670A]">{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label> : <input type="hidden" name="location_id" value={initialLocationId} />}
               <div className="flex items-center justify-between text-lg font-black"><span>Итого</span><span className="text-2xl tabular-nums text-[#D95405]">{formatRub(total)} ₽</span></div>
               {terminalMessage || state.status !== "idle" ? <div role="status" aria-live="polite" className={`rounded-lg px-4 py-3 text-sm font-bold ${state.status === "error" || terminalMessage.startsWith("Оплата не прошла") ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>{state.status === "success" && !terminalMessage ? <CheckCircle2 className="mr-2 inline" size={18} /> : null}{terminalMessage || state.message}</div> : null}
-              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : "Перейти к оплате"}</button>
+              <button type="submit" disabled={!itemCount || pending || Boolean(payment) || testMode || !paymentsEnabled} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#FB670A] px-5 text-base font-black text-[#121214] shadow-[0_14px_32px_rgba(251,103,10,0.28)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"><CreditCard size={21} />{pending ? "Отправляем на терминал…" : testMode ? "Оплата отключена в тестовом режиме" : !paymentsEnabled ? "Оплата через терминал пока отключена" : "Перейти к оплате"}</button>
             </div>
           </form>
         </aside>

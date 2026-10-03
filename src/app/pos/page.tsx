@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { PosWorkspace } from "@/components/operations/PosWorkspace";
 import { OperationsUnavailable } from "@/components/operations/OperationsUnavailable";
 import { getCurrentStaff } from "@/lib/admin-auth";
-import { getActiveEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
+import { evotorPosPaymentsEnabled, getActiveEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
 import { canCreatePosOrder } from "@/lib/order-flow/permissions";
 import { getActiveProducts } from "@/lib/products";
@@ -36,6 +36,7 @@ export default async function PosPage() {
       initialIdempotencyKey={randomUUID()}
       staffName={staff.name}
       testMode={process.env.TEST_ORDER_MODE === "true"}
+      paymentsEnabled={evotorPosPaymentsEnabled()}
       initialPayment={initialPayment ? {
         intentId: initialPayment.intentId,
         orderId: initialPayment.orderId,
