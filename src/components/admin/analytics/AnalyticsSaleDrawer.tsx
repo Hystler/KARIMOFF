@@ -104,7 +104,7 @@ export function AnalyticsSaleDrawer({ detail, closeHref }: { detail: AnalyticsSa
         <section>
           <h3>Источник</h3>
           <dl className="analytics-drawer-facts">
-            <div><dt>Получение</dt><dd>{sale.fulfillment === "delivery" ? "Доставка" : "Самовывоз"}</dd></div>
+            <div><dt>Получение</dt><dd>{sale.fulfillment === "delivery" ? "Доставка" : sale.fulfillment === "pickup" ? "Самовывоз" : "Неизвестно"}</dd></div>
             {sale.fulfillment === "delivery" ? <>
               <div><dt>Стоимость доставки</dt><dd>{formatRub(sale.deliveryFee, 2)}</dd></div>
               <div><dt>Статус доставки</dt><dd>{sale.deliveryStatus ?? "Не указан"}</dd></div>

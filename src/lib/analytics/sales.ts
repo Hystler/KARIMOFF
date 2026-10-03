@@ -72,7 +72,7 @@ function mapSale(row: SaleDatabaseRow): AnalyticsSaleRow {
     paymentProvider: row.payment_provider,
     currency: row.currency,
     included: row.analytics_included,
-    fulfillment: row.delivery_type === "delivery" ? "delivery" : "pickup",
+    fulfillment: row.delivery_type === "delivery" ? "delivery" : row.delivery_type === "pickup" ? "pickup" : "unknown",
     deliveryStatus: row.delivery_status ?? null,
     deliveryFee: number(row.delivery_fee)
   };

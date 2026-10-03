@@ -51,10 +51,10 @@ export function buildSalesWhere(
         and fulfillment_order.delivery_type = 'delivery'
     )`);
   } else if (filters.fulfillment === "pickup") {
-    clauses.push(`not exists (
+    clauses.push(`exists (
       select 1 from public.orders fulfillment_order
       where ${alias}.sale_id = 'web:' || fulfillment_order.id::text
-        and fulfillment_order.delivery_type = 'delivery'
+        and fulfillment_order.delivery_type = 'pickup'
     )`);
   }
   if (filters.location) clauses.push(`${alias}.location_id = ${parameters.add(filters.location)}`);

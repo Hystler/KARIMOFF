@@ -392,7 +392,7 @@ export type AnalyticsSaleRow = {
   paymentProvider: string;
   currency: string;
   included: boolean;
-  fulfillment: "pickup" | "delivery";
+  fulfillment: "pickup" | "delivery" | "unknown";
   deliveryStatus: string | null;
   deliveryFee: number;
 };
