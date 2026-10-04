@@ -372,6 +372,48 @@ test("SELL parser retains every print group and never promotes the first one", (
   }
 });
 
+test("SELL parser preserves single, incomplete, and conflicting print groups", () => {
+  const fixture = testModule("src/lib/integrations/evotor/receipts.ts", { removeTypeImport: true });
+  let result;
+  try {
+    result = runTypeScript(`
+      import { readFileSync } from "node:fs";
+      const { parseEvotorReceipt } = await import(${JSON.stringify(fixture.url)});
+      const source = JSON.parse(readFileSync("tests/fixtures/evotor-sell-multi-group.synthetic.json", "utf8"));
+      const one = structuredClone(source);
+      one.body.pos_print_results = [source.body.pos_print_results[0]];
+      const incomplete = structuredClone(source);
+      incomplete.body.pos_print_results[1] = {
+        ...incomplete.body.pos_print_results[1], fiscal_sign_doc_number: undefined
+      };
+      const conflicting = structuredClone(source);
+      conflicting.body.pos_print_results[1] = {
+        ...conflicting.body.pos_print_results[1],
+        fn_serial_number: source.body.pos_print_results[0].fn_serial_number,
+        fiscal_document_number: source.body.pos_print_results[0].fiscal_document_number,
+        fiscal_sign_doc_number: source.body.pos_print_results[0].fiscal_sign_doc_number
+      };
+      console.log(JSON.stringify({
+        one: parseEvotorReceipt(one),
+        incomplete: parseEvotorReceipt(incomplete),
+        conflicting: parseEvotorReceipt(conflicting)
+      }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.equal(result.one.fiscalGroups.length, 1);
+  assert.equal(result.one.fiscalDocumentNumber, "101");
+  assert.equal(result.one.fiscalDriveNumber, "SYNTHETIC_FN_A");
+  assert.equal(result.one.fiscalSign, "SYNTHETIC_FP_A");
+  assert.equal(result.incomplete.fiscalGroups.length, 2);
+  assert.equal(result.incomplete.fiscalGroups[1].fiscalSign, null);
+  assert.equal(result.incomplete.fiscalDocumentNumber, null);
+  assert.equal(result.conflicting.fiscalGroups.length, 2);
+  assert.deepEqual(result.conflicting.fiscalGroups.map(group => group.fiscalDocumentNumber), ["101", "101"]);
+  assert.equal(result.conflicting.fiscalDocumentNumber, null);
+});
+
 test("database constraints and upserts make token, store, product, and receipt imports idempotent", () => {
   assert.match(migration, /evotor_user_id text not null unique/);
   assert.match(migration, /token_fingerprint text not null unique/);

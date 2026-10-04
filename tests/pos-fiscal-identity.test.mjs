@@ -118,6 +118,25 @@ test('a later print group can uniquely link; two valid groups require manual rev
   assert.ok(ambiguous.queries.some(entry => entry.values.includes('ambiguous')));
 });
 
+test('incomplete group cannot link, while duplicate fiscal groups are ambiguous', async () => {
+  const incomplete = reconciliationWith({
+    receipt: { fiscal_drive_number: null, fiscal_document_number: null, fiscal_sign: null },
+    groups: [{ group_index: 0, fiscal_storage_number: 'fn-1',
+      fiscal_document_number: 'fd-1', fiscal_sign: null }]
+  });
+  assert.equal(await incomplete.reconcile('receipt-1'), false);
+  assert.ok(!incomplete.queries.some(entry => entry.query.includes('select intent.id, intent.order_id')));
+  assert.ok(incomplete.queries.some(entry => entry.values.includes('unreconciled')));
+
+  const duplicate = reconciliationWith({
+    groups: [0, 1].map(group_index => ({ group_index, fiscal_storage_number: 'fn-1',
+      fiscal_document_number: 'fd-1', fiscal_sign: 'fp-1' }))
+  });
+  assert.equal(await duplicate.reconcile('receipt-1'), false);
+  assert.ok(!duplicate.queries.some(entry => entry.query.includes('insert into public.analytics_sale_reconciliations')));
+  assert.ok(duplicate.queries.some(entry => entry.values.includes('ambiguous')));
+});
+
 test('same amount/time with a different fiscal identity remains unlinked', async () => {
   const harness = reconciliationWith({ intents: [] });
   assert.equal(await harness.reconcile('receipt-1'), false);
