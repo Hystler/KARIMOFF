@@ -622,6 +622,30 @@ const migrations = [
   }
 ];
 migrations.push({
+  name: "20260908181028_harden_yookassa_refund_idempotency",
+  applied: async (sql) => {
+    // The original functions have the same signatures; existence alone is insufficient.
+    const [state] = await sql`
+      select
+        coalesce((select
+          position('v_completed_refund' in prosrc) > 0
+          and position('v_payment.status in (''refunded'', ''partially_refunded'')' in prosrc) > 0
+          and position('p_provider_status is distinct from ''succeeded''' in prosrc) > 0
+          from pg_proc where oid = to_regprocedure(
+            'public.apply_yookassa_payment_state(uuid,text,text,boolean,numeric,text,text,text,numeric,timestamptz,timestamptz)'
+          )), false) as payment_hardened,
+        coalesce((select
+          position('v_refund.status in (''completed'', ''failed'')' in prosrc) > 0
+          and position('where id = v_payment_id for update' in prosrc) > 0
+          and position('v_refund.receipt_registration in (''succeeded'', ''canceled'')' in prosrc) > 0
+          from pg_proc where oid = to_regprocedure(
+            'public.apply_yookassa_refund_state(uuid,text,text,numeric,text,text)'
+          )), false) as refund_hardened
+    `;
+    return Boolean(state?.payment_hardened && state?.refund_hardened);
+  }
+});
+migrations.push({
   name: "20260911163830_kitchen_stations_and_pilot_inventory_policy",
   applied: async (sql) => {
     const [objects] = await sql`

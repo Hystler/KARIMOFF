@@ -7,11 +7,15 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
 const upgradeArgument = process.argv[3];
+const productionLike = upgradeArgument === "--production-like";
 if (process.argv[2] !== "--local-only" || process.argv.length > 4
-  || (upgradeArgument && !/^--upgrade-from=[a-f0-9]{40}$/.test(upgradeArgument))) {
+  || (upgradeArgument && !productionLike && !/^--upgrade-from=[a-f0-9]{40}$/.test(upgradeArgument))) {
   throw new Error("Use --local-only; external targets and application environment are not accepted.");
 }
-const upgradeFrom = upgradeArgument?.slice("--upgrade-from=".length) ?? "origin/main";
+// Read-only production preflight found this deployed revision with the Sept 8 SQL unapplied.
+const upgradeFrom = productionLike ? "e478731186552ad625b8f871f45e30e12c05c882"
+  : upgradeArgument?.slice("--upgrade-from=".length) ?? "origin/main";
+const omittedMigration = "20260908181028_harden_yookassa_refund_idempotency.sql";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = join(root, "outputs/release-20261003/database");
 mkdirSync(output, { recursive: true });
@@ -103,7 +107,7 @@ const candidate = readdirSync(directory).filter(name => /^\d+_[a-z0-9_]+\.sql$/.
 const mainPaths = new Map(exec("git", ["ls-tree", "-r", "--name-only", upgradeFrom])
   .split("\n").filter(path => /^(?:database|supabase)\/migrations\/\d+_[a-z0-9_]+\.sql$/.test(path))
   .map(path => [path.split("/").at(-1), path]));
-const mainFiles = [...mainPaths.keys()].sort();
+const mainFiles = [...mainPaths.keys()].filter(file => !productionLike || file !== omittedMigration).sort();
 assert.ok(mainFiles.length > 0, "Main migration history must be present");
 evidence.main = exec("git", ["rev-parse", "origin/main"]);
 evidence.upgradeBase = exec("git", ["rev-parse", `${upgradeFrom}^{commit}`]);
@@ -124,6 +128,25 @@ function apply(database, migration, source) {
 }
 for (const file of candidate) apply(names.fresh, file, readFileSync(join(directory, file), "utf8"));
 for (const file of mainFiles) apply(names.upgrade, file, exec("git", ["show", `${upgradeFrom}:${mainPaths.get(file)}`], undefined, true).toString("utf8"));
+const registrySource = readFileSync(join(root, "scripts/apply-runtime-schema-migrations.mjs"), "utf8")
+  .replace(/^import .*;\n/gm, "").split('const readOnly =')[0];
+const registry = new Function(`${registrySource}\nreturn migrations;`)();
+const probe = postgres(`postgres://karimoff_migrator@127.0.0.1:${port}/${names.upgrade}`, { max: 1, onnotice() {} });
+const pending = [];
+try {
+  for (const migration of registry) if (!(await migration.applied(probe))) pending.push(`${migration.name}.sql`);
+  if (productionLike) {
+    assert.equal(pending.length, 9, "Production-like snapshot must expose all nine missing migrations");
+    assert.equal(pending[0], omittedMigration);
+    const bodies = await probe`select proname, md5(prosrc) as fingerprint from pg_proc
+      where oid in (
+        to_regprocedure('public.apply_yookassa_payment_state(uuid,text,text,boolean,numeric,text,text,text,numeric,timestamptz,timestamptz)'),
+        to_regprocedure('public.apply_yookassa_refund_state(uuid,text,text,numeric,text,text)')) order by proname`;
+    assert.deepEqual(bodies.map(row => row.fingerprint),
+      ['779ba5af7615b9ccb78e8fcb4a465b7e', 'bab751d04cd276ca243a5c9c2db2c864'],
+      "Synthetic baseline must match the function bodies observed in production");
+  }
+} finally { await probe.end(); }
 const upgradeStart = query(names.upgrade, "karimoff_migrator", "select count(*) from public.products;");
 const upgradeRunner = spawnSync(process.execPath, ["scripts/apply-runtime-schema-migrations.mjs"], {
   cwd: root, encoding: "utf8", timeout: 60_000,
@@ -133,6 +156,8 @@ const upgradeRunner = spawnSync(process.execPath, ["scripts/apply-runtime-schema
 });
 assert.equal(upgradeRunner.status, 0, upgradeRunner.stderr);
 writeFileSync(join(output, "upgrade-runner.log"), upgradeRunner.stdout);
+assert.deepEqual([...upgradeRunner.stdout.matchAll(/^Runtime schema migration applied: (.+)\.$/gm)]
+  .map(match => `${match[1]}.sql`), pending, "Actual runner must apply every pending migration in order");
 for (const file of candidate) {
   const source = readFileSync(join(directory, file), "utf8");
   if (!mainFiles.includes(file)) {
@@ -144,7 +169,27 @@ for (const file of candidate) {
 }
 assert.equal(query(names.upgrade, "karimoff_app", "select count(*) from public.products;"), upgradeStart);
 evidence.migrations = { fresh: candidate.length, base: mainFiles.length, added: candidate.filter(file => !mainFiles.includes(file)),
-  unchangedHistory: true, upgradeViaActualRunner: true, runtimeUrlIgnoredForDdl: true };
+  unchangedHistory: true, upgradeViaActualRunner: true, runtimeUrlIgnoredForDdl: true, productionLike, pending };
+assert.throws(() => apply(names.fresh, omittedMigration,
+  readFileSync(join(directory, omittedMigration), "utf8") + "\n-- checksum mismatch fixture\n"),
+  /Previously applied migration changed/);
+evidence.migrations.localHistoryChecksumMismatchRejected = true;
+// Verify idempotence through the actual DDL runner, not just the local history ledger.
+for (const kind of ["fresh", "upgrade"]) {
+  const before = query(names[kind], "karimoff_migrator", "select count(*) from audit_logs where action like 'schema_migration.%';");
+  const repeat = spawnSync(process.execPath, ["scripts/apply-runtime-schema-migrations.mjs"], {
+    cwd: root, encoding: "utf8", timeout: 60_000,
+    env: { PATH: process.env.PATH, NODE_ENV: "production",
+      MIGRATION_DATABASE_URL: `postgres://karimoff_migrator@127.0.0.1:${port}/${names[kind]}` }
+  });
+  assert.equal(repeat.status, 0, repeat.stderr);
+  assert.doesNotMatch(repeat.stdout, /^Runtime schema migration applied:/m);
+  assert.equal(query(names[kind], "karimoff_migrator", "select count(*) from audit_logs where action like 'schema_migration.%';"), before);
+  assert.match(repeat.stdout, /already applied: 20260908181028_harden_yookassa_refund_idempotency/);
+  writeFileSync(join(output, `${kind}-repeat-runner.log`), repeat.stdout);
+}
+evidence.migrations.repeatPending = 0;
+evidence.migrations.alreadyAppliedNotReexecuted = true;
 
 for (const kind of ["fresh", "upgrade"]) {
   const database = names[kind];
