@@ -3,6 +3,7 @@ import "server-only";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { terminalBridgeReady } from "./terminal-bridge";
 import { reconcileEvotorReceipt } from "./fiscal-reconciliation";
+import { hasValidEvotorPaymentEvidence } from "./payment-result";
 
 export type EvotorPosPaymentStatus =
   | "queued"
@@ -381,6 +382,15 @@ export async function recordEvotorTerminalPaymentResult(params: {
     paymentIdentifier?: string;
     documentType?: "SELL";
   } | null;
+  paymentEvidence?: {
+    receiptClosed: true;
+    paymentType: "ELECTRON";
+    total: number;
+    paymentIdentifier: string;
+    paymentPerformerPackageName: string;
+    paymentPerformerComponentName: string;
+    paymentSystemId: string;
+  } | null;
   details?: string | null;
   safeBeforePayment?: boolean;
 }) {
@@ -425,8 +435,11 @@ export async function recordEvotorTerminalPaymentResult(params: {
     if (receiptReference && receiptReference !== intent.local_receipt_uuid) {
       return { accepted: false, status: asStatus(intent.status) };
     }
-    if (nextStatus === "paid" && (!intent.local_receipt_uuid || !receiptReference)) nextStatus = "unknown";
-    else if (nextStatus === "paid" && (!params.fiscal ||
+    const paymentEvidence = params.paymentEvidence;
+    const validPaymentEvidence = hasValidEvotorPaymentEvidence(paymentEvidence, Number(intent.amount));
+    if (nextStatus === "paid" && (!intent.local_receipt_uuid || !receiptReference || !validPaymentEvidence)) {
+      nextStatus = "unknown";
+    } else if (nextStatus === "paid" && (!params.fiscal ||
       (params.fiscal.total !== undefined && params.fiscal.total !== Number(intent.amount)))) {
       nextStatus = "fiscal_pending";
     }
@@ -437,6 +450,7 @@ export async function recordEvotorTerminalPaymentResult(params: {
       ...intent.result,
       terminalResult: nextStatus,
       receiptReference: receiptReference.slice(0, 128) || null,
+      paymentEvidence: validPaymentEvidence ? paymentEvidence : null,
       fiscal: params.fiscal ?? null,
       details: details || null,
       safeBeforePayment: safeCancel,
@@ -453,7 +467,8 @@ export async function recordEvotorTerminalPaymentResult(params: {
           fiscal_sign = case when ${nextStatus} = 'paid' then ${params.fiscal?.sign ?? null} else fiscal_sign end,
           fiscalized_at = case when ${nextStatus} = 'paid' then ${params.fiscal?.fiscalizedAt ?? null}::timestamptz else fiscalized_at end,
           receipt_number = case when ${nextStatus} = 'paid' then ${params.fiscal?.receiptNumber ?? null} else receipt_number end,
-          acquiring_reference = case when ${nextStatus} = 'paid' then ${params.fiscal?.paymentIdentifier ?? null} else acquiring_reference end,
+          acquiring_reference = case when ${nextStatus} in ('paid', 'fiscal_pending')
+            then ${validPaymentEvidence ? paymentEvidence.paymentIdentifier : null} else acquiring_reference end,
           completed_at = case when ${nextStatus} in ('paid', 'failed', 'cancelled') then now() else completed_at end,
           updated_at = now()
       where id = ${intent.id}::uuid

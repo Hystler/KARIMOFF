@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const activity = read('android/evotor-bridge/app/src/main/java/ru/karimoff/evotor/bridge/MainActivity.java');
@@ -53,17 +55,143 @@ test('bridge stores receipt identity locally and on server before SellApi can st
   assert.doesNotMatch(method.slice(method.indexOf('catch (Throwable error) {')), /moveReceiptToCardPayment\(job, token, performer\)/);
 });
 
-test('successful callback uses saved UUID to read closed receipt and persists delayed recovery', () => {
+test('successful callback uses saved UUID to read closed receipt and keeps delayed recovery active', () => {
   const success = activity.slice(activity.indexOf('public void onSuccess()'), activity.indexOf('public void onError('));
   assert.match(success, /activeReceipt\(\)/);
-  assert.match(success, /identity\.put\("paymentConfirmed", true\)/);
+  assert.match(success, /identity\.put\("paymentStageCallbackReceived", true\)/);
+  assert.match(success, /queuePaymentResult\(intentId, "unknown"/);
+  assert.doesNotMatch(success, /queuePaymentResult\(intentId, "paid"/);
+  assert.doesNotMatch(success, /paymentConfirmed/);
   assert.doesNotMatch(success, /getReceipt\(MainActivity\.this, Receipt\.Type\.SELL\)/);
   assert.match(activity, /ReceiptApi\.getReceipt\(this, uuid\)/);
   assert.match(activity, /ReceiptApi\.getFiscalReceipts\(this, uuid\)/);
+  assert.match(activity, /closed\.getHeader\(\)\.getNumber\(\) == null/);
+  assert.match(activity, /findConfirmedCardPayment\(closed, identity\)/);
+  assert.match(activity, /payment\.getPaymentPerformer\(\)/);
+  assert.match(activity, /selectedPayments\.get\(0\)\.getIdentifier\(\)/);
+  assert.match(activity, /expectedSystem\.equals\(system\.getPaymentSystemId\(\)\)/);
   assert.match(activity, /if \(!activeReceipt\(\)\.isEmpty\(\)\)/);
-  assert.match(activity, /fiscalReadAttempts >= 12/);
+  assert.match(activity, /fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS/);
+  assert.match(activity, /fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS\s*\?\s*SLOW_FISCAL_RETRY_DELAY_MS/);
+  assert.doesNotMatch(activity, /if \(fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS\) \{[^}]*return;/s);
   assert.match(activity, /retryPendingPaymentResult\(\);\s*schedulePaymentPoll\(1500\)/);
   assert.match(activity, /"fiscal_pending"\.equals\(finalStatus\)/);
+});
+
+test('opening acquiring screen without a completed card payment cannot become paid or fiscal_pending', () => {
+  const success = activity.slice(activity.indexOf('public void onSuccess()'), activity.indexOf('public void onError('));
+  assert.match(success, /queuePaymentResult\(intentId, "unknown"/);
+  assert.doesNotMatch(success, /queuePaymentResult\(intentId, "paid"/);
+  assert.match(activity, /closed\.getHeader\(\)\.getNumber\(\) == null/);
+  assert.match(activity, /selectedPayments\.size\(\) != 1/);
+  assert.match(activity, /selectedTotal\.compareTo\(expectedTotal\) != 0/);
+  assert.match(activity, /paymentIdentifier == null \|\| paymentIdentifier\.trim\(\)\.isEmpty\(\)/);
+  assert.match(payments, /!intent\.local_receipt_uuid \|\| !receiptReference \|\| !validPaymentEvidence/);
+  assert.match(payments, /paymentEvidence: validPaymentEvidence \? paymentEvidence : null/);
+  assert.match(payments, /if \(nextStatus === "paid" && \(!params\.fiscal/);
+});
+
+test('server payment proof rejects an opened or cancelled acquiring flow', () => {
+  const source = ts.transpileModule(read('src/lib/integrations/evotor/payment-result.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const exports = {};
+  new Function('exports', source)(exports);
+  const valid = {
+    receiptClosed: true,
+    paymentType: 'ELECTRON',
+    total: 40,
+    paymentIdentifier: 'rrn-1',
+    paymentPerformerPackageName: 'bank.app',
+    paymentPerformerComponentName: 'bank.app.CardPayment',
+    paymentSystemId: 'sber-card'
+  };
+  assert.equal(exports.hasValidEvotorPaymentEvidence(null, 40), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, receiptClosed: false }, 40), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentType: 'CASH' }, 40), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, total: 0 }, 40), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentIdentifier: '' }, 40), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence(valid, 40), true);
+});
+
+test('server downgrades paid without card proof to unknown and leaves payment/order pending', async () => {
+  const paymentResultSource = ts.transpileModule(read('src/lib/integrations/evotor/payment-result.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const paymentResultExports = {};
+  new Function('exports', paymentResultSource)(paymentResultExports);
+  const sqlCalls = [];
+  const sql = async (parts, ...values) => {
+    const query = parts.join(' ');
+    sqlCalls.push({ query, values });
+    if (query.includes('select intent.id, intent.order_id')) return [{
+      id: 'intent-1', order_id: 'order-1', payment_id: 'payment-1', device_id: 'device-1',
+      local_receipt_uuid: 'local-receipt-1', amount: 40, status: 'processing', result: {},
+      display_number: 'B-001', created_by_staff_id: 'staff-1'
+    }];
+    return [];
+  };
+  sql.json = value => value;
+  const database = { begin: callback => callback(sql) };
+  const source = ts.transpileModule(payments, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const exports = {};
+  const require = id => {
+    if (id === 'server-only') return {};
+    if (id === '@/lib/postgres/server') return { getPostgresSql: () => database };
+    if (id === './terminal-bridge') return { terminalBridgeReady: () => true };
+    if (id === './fiscal-reconciliation') return { reconcileEvotorReceipt: async () => true };
+    if (id === './payment-result') return paymentResultExports;
+    throw new Error(`Unexpected import: ${id}`);
+  };
+  new Function('require', 'exports', source)(require, exports);
+
+  const outcome = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'paid',
+    receiptReference: 'local-receipt-1',
+    fiscal: { storageNumber: 'fn', documentNumber: 'fd', sign: 'fp', fiscalizedAt: '2026-10-06T10:30:00.000Z' }
+  });
+  assert.deepEqual(outcome, { accepted: true, status: 'unknown', orderId: 'order-1' });
+  assert.ok(sqlCalls.some(call => call.query.includes('update public.evotor_terminal_payment_intents')
+    && call.values.includes('unknown')));
+  assert.equal(sqlCalls.some(call => call.query.includes('update public.payments')), false);
+  assert.equal(sqlCalls.some(call => call.query.includes('update public.orders')), false);
+
+  sqlCalls.length = 0;
+  const confirmed = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'paid',
+    receiptReference: 'local-receipt-1',
+    paymentEvidence: {
+      receiptClosed: true, paymentType: 'ELECTRON', total: 40, paymentIdentifier: 'rrn-1',
+      paymentPerformerPackageName: 'bank.app', paymentPerformerComponentName: 'bank.app.CardPayment',
+      paymentSystemId: 'sber-card'
+    }
+  });
+  assert.deepEqual(confirmed, { accepted: true, status: 'fiscal_pending', orderId: 'order-1' });
+  assert.ok(sqlCalls.some(call => call.query.includes('update public.payments')));
+  assert.ok(sqlCalls.some(call => call.query.includes('update public.orders')
+    && call.query.includes("fiscal_status = 'pending'") && call.query.includes('is_operational = false')));
+  assert.equal(sqlCalls.some(call => call.query.includes('insert into public.order_outbox')), false);
+});
+
+test('POS admin safely renders Postgres timestamps parsed as JavaScript Date objects', () => {
+  const source = ts.transpileModule(read('src/lib/integrations/evotor/pos-payment-display.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const exports = {};
+  new Function('exports', source)(exports);
+  assert.equal(exports.formatPosPaymentDisplayValue(new Date('2026-10-06T10:30:00.000Z')),
+    '2026-10-06T10:30:00.000Z');
+  assert.equal(exports.formatPosPaymentDisplayValue(new Date(Number.NaN)), '—');
+  assert.equal(exports.formatPosPaymentDisplayValue(null), '—');
+  assert.equal(exports.formatPosPaymentDisplayValue(undefined), '—');
+  assert.equal(exports.formatPosPaymentDisplayValue('2026-10-06 10:30:00'), '2026-10-06 10:30:00');
+  assert.equal(exports.formatPosPaymentDisplayValue(42), 42);
+  assert.throws(() => renderToStaticMarkup(React.createElement('dd', null,
+    new Date('2026-10-06T10:30:00.000Z'))), /Objects are not valid as a React child/);
+  assert.doesNotThrow(() => renderToStaticMarkup(React.createElement('dd', null,
+    exports.formatPosPaymentDisplayValue(new Date('2026-10-06T10:30:00.000Z')))));
 });
 
 test('paid without fiscal identity stays locked and off KDS; exact callback is idempotent', () => {

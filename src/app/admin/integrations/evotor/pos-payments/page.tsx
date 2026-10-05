@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
+import { formatPosPaymentDisplayValue } from "@/lib/integrations/evotor/pos-payment-display";
 import { getPostgresSql } from "@/lib/postgres/server";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,12 @@ type Row = {
   device_id: string;
   device_label: string;
   local_receipt_uuid: string | null;
-  receipt_opened_at: string | null;
-  payment_confirmed_at: string | null;
+  receipt_opened_at: Date | string | null;
+  payment_confirmed_at: Date | string | null;
   fiscal_storage_number: string | null;
   fiscal_document_number: string | null;
   fiscal_sign: string | null;
-  fiscalized_at: string | null;
+  fiscalized_at: Date | string | null;
   receipt_number: string | null;
   acquiring_reference: string | null;
   evotor_cloud_document_id: string | null;
@@ -38,9 +39,9 @@ type Row = {
   }>;
 };
 
-function Value({ label, value }: { label: string; value: string | number | null }) {
+function Value({ label, value }: { label: string; value: string | number | Date | null }) {
   return <div className="min-w-0"><dt className="text-xs font-bold text-black/50">{label}</dt>
-    <dd className="mt-1 break-all font-mono text-xs text-black/80">{value ?? "—"}</dd></div>;
+    <dd className="mt-1 break-all font-mono text-xs text-black/80">{formatPosPaymentDisplayValue(value)}</dd></div>;
 }
 
 export default async function EvotorPosPaymentsPage() {
