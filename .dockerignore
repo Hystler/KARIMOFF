@@ -22,6 +22,9 @@ tmp
 
 coverage
 outputs
+android/**/.gradle
+android/**/build
+android/**/local.properties
 *.log
 *.tsbuildinfo
 **/.DS_Store

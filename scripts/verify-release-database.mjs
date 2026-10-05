@@ -6,9 +6,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
-if (process.argv.length !== 3 || process.argv[2] !== "--local-only") {
+const upgradeArgument = process.argv[3];
+if (process.argv[2] !== "--local-only" || process.argv.length > 4
+  || (upgradeArgument && !/^--upgrade-from=[a-f0-9]{40}$/.test(upgradeArgument))) {
   throw new Error("Use --local-only; external targets and application environment are not accepted.");
 }
+const upgradeFrom = upgradeArgument?.slice("--upgrade-from=".length) ?? "origin/main";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const output = join(root, "outputs/release-20261003/database");
 mkdirSync(output, { recursive: true });
@@ -18,7 +21,7 @@ const label = "karimoff.rc-verification=20261004";
 const image = "postgres:17-alpine";
 const runId = Date.now().toString();
 const names = Object.fromEntries(["fresh", "upgrade", "restore"].map(kind => [kind, `karimoff_rc_${kind}_${runId}`]));
-const evidence = { checkedAt: new Date().toISOString(), main: "", container, image, port, databases: names, migrations: {}, checks: {} };
+const evidence = { checkedAt: new Date().toISOString(), main: "", upgradeBase: "", container, image, port, databases: names, migrations: {}, checks: {} };
 
 function exec(binary, args, input, binaryOutput = false) {
   const result = spawnSync(binary, args, {
@@ -97,12 +100,13 @@ for (const name of Object.values(names)) {
 }
 const directory = join(root, "database/migrations");
 const candidate = readdirSync(directory).filter(name => /^\d+_[a-z0-9_]+\.sql$/.test(name)).sort();
-const mainPaths = new Map(exec("git", ["ls-tree", "-r", "--name-only", "origin/main"])
+const mainPaths = new Map(exec("git", ["ls-tree", "-r", "--name-only", upgradeFrom])
   .split("\n").filter(path => /^(?:database|supabase)\/migrations\/\d+_[a-z0-9_]+\.sql$/.test(path))
   .map(path => [path.split("/").at(-1), path]));
 const mainFiles = [...mainPaths.keys()].sort();
 assert.ok(mainFiles.length > 0, "Main migration history must be present");
 evidence.main = exec("git", ["rev-parse", "origin/main"]);
+evidence.upgradeBase = exec("git", ["rev-parse", `${upgradeFrom}^{commit}`]);
 function apply(database, migration, source) {
   const hash = createHash("sha256").update(source).digest("hex");
   const previous = query(database, "karimoff_migrator", `select sha256 from rc_validation.migrations where name='${migration}'`);
@@ -119,7 +123,7 @@ function apply(database, migration, source) {
   }
 }
 for (const file of candidate) apply(names.fresh, file, readFileSync(join(directory, file), "utf8"));
-for (const file of mainFiles) apply(names.upgrade, file, exec("git", ["show", `origin/main:${mainPaths.get(file)}`], undefined, true).toString("utf8"));
+for (const file of mainFiles) apply(names.upgrade, file, exec("git", ["show", `${upgradeFrom}:${mainPaths.get(file)}`], undefined, true).toString("utf8"));
 const upgradeStart = query(names.upgrade, "karimoff_migrator", "select count(*) from public.products;");
 const upgradeRunner = spawnSync(process.execPath, ["scripts/apply-runtime-schema-migrations.mjs"], {
   cwd: root, encoding: "utf8", timeout: 60_000,
@@ -139,7 +143,7 @@ for (const file of candidate) {
   } else apply(names.upgrade, file, source);
 }
 assert.equal(query(names.upgrade, "karimoff_app", "select count(*) from public.products;"), upgradeStart);
-evidence.migrations = { fresh: candidate.length, main: mainFiles.length, added: candidate.filter(file => !mainFiles.includes(file)),
+evidence.migrations = { fresh: candidate.length, base: mainFiles.length, added: candidate.filter(file => !mainFiles.includes(file)),
   unchangedHistory: true, upgradeViaActualRunner: true, runtimeUrlIgnoredForDdl: true };
 
 for (const kind of ["fresh", "upgrade"]) {

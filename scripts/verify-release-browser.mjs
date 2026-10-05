@@ -15,7 +15,8 @@ const origin='http://127.0.0.1:3110'; const container=`karimoff-final-rc-browser
 const output=resolve('outputs/release-20261003/browser'); mkdirSync(output,{recursive:true});
 const {chromium}=await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE_PATH)).href);
 const secret=randomBytes(32).toString('hex'); let browser; let started=false; let child; let runtimeLog='';
-const image='karimoff-delivery-rc:20261004';
+const image=process.env.RC_DOCKER_IMAGE ?? 'karimoff-delivery-rc:20261004';
+assert.match(image,/^karimoff-[a-z0-9-]+:[a-z0-9-]+$/,'Use only a local KARIMOFF diagnostic image');
 const docker=(args)=>execFileSync('docker',args,{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const results=[];
 try {
@@ -166,7 +167,8 @@ try {
     results.push({viewport,path:'checkout-free-delivery',status:200,overflow:false,postgresWhitelist:true});
     await page.screenshot({path:`${output}/${viewport.width}-checkout-free-delivery.png`});
     await context.addCookies([{name:'karimoff_admin_session',value:tokens.staff,url:origin}]);
-    for(const path of ['/admin','/admin/orders','/admin/analytics','/admin/analytics/sales','/admin/economics','/admin/delivery-addresses','/pos','/kitchen']) {
+    for(const path of ['/admin','/admin/orders','/admin/analytics','/admin/analytics/sales','/admin/economics','/admin/delivery-addresses',
+      '/admin/integrations/evotor','/admin/integrations/evotor/pos-payments','/admin/integrations/evotor/reconciliation','/pos','/kitchen']) {
       await check(path); assert.equal(new URL(page.url()).pathname,path,'Staff session must not redirect to login');
     }
     await context.close();
