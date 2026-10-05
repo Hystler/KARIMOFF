@@ -341,18 +341,25 @@ begin
 end
 $$;
 
-revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from public, anon, authenticated;
+revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from public;
 revoke all on function public.create_site_order_from_whitelist(
   uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean,
   text, text, text, text, timestamptz, boolean
-) from public, anon, authenticated;
+) from public;
 revoke all on function public.create_site_order_with_payment_from_whitelist(
   uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean,
   text, text, text, text, timestamptz, text, text
-) from public, anon, authenticated;
+) from public;
 
 do $$
+declare
+  v_role text;
 begin
+  for v_role in select rolname from pg_roles where rolname in ('anon', 'authenticated') loop
+    execute format('revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from %I', v_role);
+    execute format('revoke all on function public.create_site_order_from_whitelist(uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean, text, text, text, text, timestamptz, boolean) from %I', v_role);
+    execute format('revoke all on function public.create_site_order_with_payment_from_whitelist(uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean, text, text, text, text, timestamptz, text, text) from %I', v_role);
+  end loop;
   if exists (select 1 from pg_roles where rolname = 'karimoff_app') then
     grant execute on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) to karimoff_app;
     grant execute on function public.create_site_order_from_whitelist(
@@ -391,5 +398,14 @@ create table if not exists public.delivery_whitelist_release_version (
   version integer primary key check (version = 1)
 );
 insert into public.delivery_whitelist_release_version values (1) on conflict do nothing;
-revoke all on public.delivery_whitelist_release_version from public, anon, authenticated;
+revoke all on public.delivery_whitelist_release_version from public;
+do $$
+declare
+  v_role text;
+begin
+  for v_role in select rolname from pg_roles where rolname in ('anon', 'authenticated') loop
+    execute format('revoke all on table public.delivery_whitelist_release_version from %I', v_role);
+  end loop;
+end
+$$;
 grant select on public.delivery_whitelist_release_version to karimoff_app;

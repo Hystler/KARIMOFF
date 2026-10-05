@@ -49,10 +49,15 @@ create index if not exists delivery_addresses_review_idx
   where not is_available;
 
 alter table public.delivery_addresses enable row level security;
-revoke all privileges on table public.delivery_addresses from public, anon, authenticated;
+revoke all privileges on table public.delivery_addresses from public;
 
 do $$
+declare
+  v_role text;
 begin
+  for v_role in select rolname from pg_roles where rolname in ('anon', 'authenticated') loop
+    execute format('revoke all privileges on table public.delivery_addresses from %I', v_role);
+  end loop;
   if exists (select 1 from pg_roles where rolname = 'karimoff_app') then
     grant select, insert, update on table public.delivery_addresses to karimoff_app;
     drop policy if exists delivery_addresses_app_all on public.delivery_addresses;
@@ -348,18 +353,25 @@ begin
 end
 $$;
 
-revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from public, anon, authenticated;
+revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from public;
 revoke all on function public.create_site_order_from_whitelist(
   uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean,
   text, text, text, text, timestamptz, boolean
-) from public, anon, authenticated;
+) from public;
 revoke all on function public.create_site_order_with_payment_from_whitelist(
   uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean,
   text, text, text, text, timestamptz, text, text
-) from public, anon, authenticated;
+) from public;
 
 do $$
+declare
+  v_role text;
 begin
+  for v_role in select rolname from pg_roles where rolname in ('anon', 'authenticated') loop
+    execute format('revoke all on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) from %I', v_role);
+    execute format('revoke all on function public.create_site_order_from_whitelist(uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean, text, text, text, text, timestamptz, boolean) from %I', v_role);
+    execute format('revoke all on function public.create_site_order_with_payment_from_whitelist(uuid, text, uuid, jsonb, text, jsonb, uuid, boolean, boolean, boolean, text, text, text, text, timestamptz, text, text) from %I', v_role);
+  end loop;
   if exists (select 1 from pg_roles where rolname = 'karimoff_app') then
     grant execute on function public.resolve_whitelisted_delivery_address(uuid, uuid, jsonb) to karimoff_app;
     grant execute on function public.create_site_order_from_whitelist(
