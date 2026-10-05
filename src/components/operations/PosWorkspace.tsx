@@ -122,6 +122,7 @@ export function PosWorkspace({
   const [resolutionPending, setResolutionPending] = useState(false);
   const [customizer, setCustomizer] = useState<{ product: Product; line: PosCartLine | null } | null>(null);
   useEffect(() => {
+    if (!paymentsEnabled) return;
     const refresh = async () => {
       try {
         const response = await fetch("/api/pos/terminals", { cache: "no-store" });
@@ -133,7 +134,7 @@ export function PosWorkspace({
     };
     const timer = window.setInterval(() => void refresh(), 5000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [paymentsEnabled]);
   const onlineTerminals = terminals.filter((device) => device.locationId === locationId && device.isOnline);
   const availableTerminals = onlineTerminals.filter((device) => !device.isBusy
     && device.cloudDeviceId && device.cloudStoreId);

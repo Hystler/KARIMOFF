@@ -65,7 +65,7 @@ export async function getTerminalBridgeDevices(
     left join public.evotor_devices cloud on cloud.id = device.cloud_device_id
     left join public.evotor_stores store on store.id = cloud.store_id
     where device.revoked_at is null and device.token_hash is not null
-    order by paired_at desc nulls last, created_at desc
+    order by device.paired_at desc nulls last, device.created_at desc
   ` : await sql<{
     id: string;
     location_id: string;
@@ -91,7 +91,7 @@ export async function getTerminalBridgeDevices(
     where device.revoked_at is null
       and device.token_hash is not null
       and device.location_id = any(${locationIds}::uuid[])
-    order by paired_at desc nulls last, created_at desc
+    order by device.paired_at desc nulls last, device.created_at desc
   `;
   return rows.map((row) => ({
     id: row.id,
