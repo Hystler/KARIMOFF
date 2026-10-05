@@ -58,18 +58,18 @@ for Android checks. Device-side verification is still required.
 2. Enter the code in the APK and pair the terminal.
 3. Keep KARIMOFF Bridge open on the paired terminal so it can poll for POS requests.
 4. In KARIMOFF POS, assemble the order and choose **Перейти к оплате**.
-5. The server creates an operational order, shows it in the kitchen as awaiting payment, and queues the authoritative server-priced items. Kitchen actions remain locked until payment succeeds.
-6. The bridge creates the Evotor sale receipt and passes it to an electronic payment performer.
-7. Evotor's success callback confirms payment and receipt printing; the server then unlocks kitchen actions.
+5. The server creates a non-operational order and one payment intent for the explicitly selected, cloud-bound cashbox. It queues authoritative server-priced items; the order is not in KDS yet.
+6. Bridge 0.21 (version code 21) saves the local receipt UUID before invoking the electronic payment performer.
+7. The server releases the order to KDS only after confirmed payment and complete fiscal identity (FN/FD/FP). A successful payment without that identity remains `fiscal_pending` and blocks another charge. Exact device/store and fiscal identity reconcile a later cloud SELL with the same canonical sale.
 
-The order stays visible but cannot be prepared while payment is queued, processing, or uncertain. If the terminal result is
-uncertain, check the actual terminal transaction and fiscal receipt in the POS before resolving it.
-The manual resolution screen records a receipt reference for confirmed payment or cancels the order
-only after staff confirms that no payment was taken. Never retry an unknown payment before checking
-the terminal.
+Queued, processing, fiscal-pending and uncertain orders remain outside KDS. A timeout is not a failed payment.
+The authenticated bridge retains/retries its result, not a new monetary command. Manual paid resolution requires
+an already imported SELL document and matching FN/FD/FP for the selected device/store. A dispatched UNKNOWN
+cannot be manually cancelled to unlock the cashbox. Never retry an unknown payment before reconciling its result.
 
-The site requires the prepared `evotor_terminal_pos_payment_flow` migration and enabled bridge
-configuration. `TEST_ORDER_MODE=true` disables card collection through the website POS.
+The site requires the terminal payment foundation and `20261003120000_pos_fiscal_identity.sql`, cloud binding,
+enabled bridge configuration and explicit `EVOTOR_POS_PAYMENTS_ENABLED=true`. Initial deployment keeps this
+payment flag OFF. `TEST_ORDER_MODE=true` disables card collection through the website POS.
 
 ## Hosted preview flow
 
