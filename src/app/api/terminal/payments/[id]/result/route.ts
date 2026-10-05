@@ -19,15 +19,13 @@ const resultSchema = z.object({
     receiptNumber: z.string().trim().max(80).optional(),
     total: z.number().positive().optional(),
     paymentIdentifier: z.string().trim().max(128).optional(),
-    documentType: z.literal("SELL").optional()
+    documentType: z.literal("SELL")
   }).optional().nullable(),
   paymentEvidence: z.object({
     receiptClosed: z.literal(true),
     paymentType: z.literal("ELECTRON"),
     total: z.number().positive(),
     paymentIdentifier: z.string().trim().min(1).max(128),
-    paymentPerformerPackageName: z.string().trim().min(1).max(255),
-    paymentPerformerComponentName: z.string().trim().min(1).max(255),
     paymentSystemId: z.string().trim().min(1).max(255)
   }).optional().nullable(),
   details: z.string().trim().max(300).optional().nullable(),

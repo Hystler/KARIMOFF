@@ -547,10 +547,13 @@ public final class MainActivity extends Activity {
             if (receipt == null || receipt.getHeader() == null || receipt.getHeader().getUuid() == null
                 || payload == null) throw new IllegalStateException("Не удалось получить UUID открытого чека");
             String uuid = receipt.getHeader().getUuid().toString();
-            if (performer.getPackageName() == null || performer.getPackageName().trim().isEmpty()
-                || performer.getComponentName() == null || performer.getComponentName().trim().isEmpty()) {
-                throw new IllegalStateException("Не удалось определить выбранное банковское приложение");
+            PaymentSystem selectedSystem = performer.getPaymentSystem();
+            if (selectedSystem == null || selectedSystem.getPaymentType() != PaymentType.ELECTRON
+                || selectedSystem.getPaymentSystemId() == null
+                || selectedSystem.getPaymentSystemId().trim().isEmpty()) {
+                throw new IllegalStateException("Не удалось определить выбранную карточную систему оплаты");
             }
+            String selectedSystemId = selectedSystem.getPaymentSystemId().trim();
             JSONObject identity = new JSONObject();
             identity.put("intentId", intentId);
             identity.put("bridgeTaskId", intentId);
@@ -559,14 +562,7 @@ public final class MainActivity extends Activity {
             identity.put("localReceiptUuid", uuid);
             identity.put("deviceKey", deviceKey());
             identity.put("expectedTotal", String.valueOf(payload.get("total")));
-            identity.put("paymentPerformerPackageName", performer.getPackageName());
-            identity.put("paymentPerformerComponentName", performer.getComponentName());
-            PaymentSystem selectedSystem = performer.getPaymentSystem();
-            if (selectedSystem == null || selectedSystem.getPaymentSystemId() == null
-                || selectedSystem.getPaymentSystemId().trim().isEmpty()) {
-                throw new IllegalStateException("Не удалось определить выбранную карточную систему оплаты");
-            }
-            identity.put("paymentSystemId", selectedSystem.getPaymentSystemId());
+            identity.put("paymentSystemId", selectedSystemId);
             identity.put("openedAt", utcIso(System.currentTimeMillis()));
             identity.put("paymentConfirmed", false);
             identity.put("paymentUnknownReported", false);
@@ -580,6 +576,7 @@ public final class MainActivity extends Activity {
                     body.put("orderId", identity.getString("orderId"));
                     body.put("paymentId", identity.getString("paymentId"));
                     body.put("localReceiptUuid", uuid);
+                    body.put("paymentSystemId", identity.getString("paymentSystemId"));
                     body.put("openedAt", identity.getString("openedAt"));
                     JSONObject response = requestJson("POST", getString(R.string.bridge_api_base)
                         + "/payments/" + intentId + "/receipt", token, body);
@@ -739,9 +736,8 @@ public final class MainActivity extends Activity {
 
     private JSONObject findConfirmedCardPayment(Receipt receipt, JSONObject identity) throws Exception {
         BigDecimal expectedTotal = new BigDecimal(identity.getString("expectedTotal"));
-        String expectedPackage = identity.getString("paymentPerformerPackageName");
-        String expectedComponent = identity.getString("paymentPerformerComponentName");
-        String expectedSystem = identity.getString("paymentSystemId");
+        String expectedSystem = identity.optString("paymentSystemId", "").trim();
+        if (expectedSystem.isEmpty()) return null;
         List<ru.evotor.framework.receipt.Payment> payments = receipt.getPayments();
         if (payments == null || payments.isEmpty()) return null;
 
@@ -752,10 +748,7 @@ public final class MainActivity extends Activity {
             receiptTotal = receiptTotal.add(payment.getValue());
             PaymentPerformer performer = payment.getPaymentPerformer();
             PaymentSystem system = performer == null ? null : performer.getPaymentSystem();
-            if (performer != null
-                && expectedPackage.equals(performer.getPackageName())
-                && expectedComponent.equals(performer.getComponentName())
-                && system != null
+            if (system != null
                 && expectedSystem.equals(system.getPaymentSystemId())
                 && system.getPaymentType() == PaymentType.ELECTRON) {
                 selectedPayments.add(payment);
@@ -773,8 +766,6 @@ public final class MainActivity extends Activity {
         evidence.put("paymentType", "ELECTRON");
         evidence.put("total", expectedTotal.doubleValue());
         evidence.put("paymentIdentifier", paymentIdentifier.trim());
-        evidence.put("paymentPerformerPackageName", expectedPackage);
-        evidence.put("paymentPerformerComponentName", expectedComponent);
         evidence.put("paymentSystemId", expectedSystem);
         return evidence;
     }

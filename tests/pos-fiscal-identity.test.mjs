@@ -10,6 +10,8 @@ const activity = read('android/evotor-bridge/app/src/main/java/ru/karimoff/evoto
 const payments = read('src/lib/integrations/evotor/pos-payments.ts');
 const migration = read('database/migrations/20261003120000_pos_fiscal_identity.sql');
 const sync = read('src/lib/integrations/evotor/sync.ts');
+const receiptRoute = read('src/app/api/terminal/payments/[id]/receipt/route.ts');
+const resultRoute = read('src/app/api/terminal/payments/[id]/result/route.ts');
 
 function reconciliationWith({ receipt = {}, groups = [], intents = [{}], copies = [{}], insert = true } = {}) {
   const source = ts.transpileModule(read('src/lib/integrations/evotor/fiscal-reconciliation.ts'), {
@@ -47,12 +49,31 @@ test('bridge stores receipt identity locally and on server before SellApi can st
   const method = activity.slice(activity.indexOf('private void saveReceiptBeforePayment('),
     activity.indexOf('private void moveReceiptToCardPayment('));
   assert.match(method, /ReceiptApi\.getReceipt\(this, Receipt\.Type\.SELL\)/);
+  assert.match(method, /performer\.getPaymentSystem\(\)/);
+  assert.match(method, /getPaymentSystemId\(\)/);
+  assert.doesNotMatch(method, /getPackageName\(\)|getComponentName\(\)/);
   assert.match(method, /putString\(ACTIVE_RECEIPT_KEY, identity\.toString\(\)\)\.commit\(\)/);
   assert.match(method, /"\/receipt", token, body/);
   assert.ok(method.indexOf('putString(ACTIVE_RECEIPT_KEY') < method.indexOf('"/receipt", token, body'));
   assert.ok(method.indexOf('"/receipt", token, body') < method.indexOf('moveReceiptToCardPayment(job, token, performer)'));
   assert.match(method, /queuePaymentResult\(intentId, "failed"/);
+  assert.match(method, /body\.put\("paymentSystemId", identity\.getString\("paymentSystemId"\)\)/);
+  assert.match(receiptRoute, /paymentSystemId: z\.string\(\)\.trim\(\)\.min\(1\)/);
+  assert.match(payments, /result = coalesce\(result, '\{\}'::jsonb\).*paymentSystemId/s);
+  assert.match(payments, /result->>'paymentSystemId' = \$\{params\.paymentSystemId\}/);
   assert.doesNotMatch(method.slice(method.indexOf('catch (Throwable error) {')), /moveReceiptToCardPayment\(job, token, performer\)/);
+});
+
+test('null performer package/component do not block payment when the ELECTRON system ID exists', () => {
+  const preparation = activity.slice(activity.indexOf('private void saveReceiptBeforePayment('),
+    activity.indexOf('private void moveReceiptToCardPayment('));
+  const verification = activity.slice(activity.indexOf('private JSONObject findConfirmedCardPayment('),
+    activity.indexOf('private void reportPaymentUnknownOnce('));
+  assert.doesNotMatch(preparation, /getPackageName\(\)|getComponentName\(\)/);
+  assert.doesNotMatch(verification, /getPackageName\(\)|getComponentName\(\)/);
+  assert.match(preparation, /selectedSystem\.getPaymentType\(\) != PaymentType\.ELECTRON/);
+  assert.match(verification, /expectedSystem\.equals\(system\.getPaymentSystemId\(\)\)/);
+  assert.match(resultRoute, /paymentSystemId: z\.string\(\)\.trim\(\)\.min\(1\)/);
 });
 
 test('successful callback uses saved UUID to read closed receipt and keeps delayed recovery active', () => {
@@ -88,7 +109,7 @@ test('opening acquiring screen without a completed card payment cannot become pa
   assert.match(activity, /paymentIdentifier == null \|\| paymentIdentifier\.trim\(\)\.isEmpty\(\)/);
   assert.match(payments, /!intent\.local_receipt_uuid \|\| !receiptReference \|\| !validPaymentEvidence/);
   assert.match(payments, /paymentEvidence: validPaymentEvidence \? paymentEvidence : null/);
-  assert.match(payments, /if \(nextStatus === "paid" && \(!params\.fiscal/);
+  assert.match(payments, /if \(nextStatus === "paid" && !hasValidEvotorFiscalIdentity\(params\.fiscal/);
 });
 
 test('server payment proof rejects an opened or cancelled acquiring flow', () => {
@@ -102,16 +123,23 @@ test('server payment proof rejects an opened or cancelled acquiring flow', () =>
     paymentType: 'ELECTRON',
     total: 40,
     paymentIdentifier: 'rrn-1',
-    paymentPerformerPackageName: 'bank.app',
-    paymentPerformerComponentName: 'bank.app.CardPayment',
     paymentSystemId: 'sber-card'
   };
-  assert.equal(exports.hasValidEvotorPaymentEvidence(null, 40), false);
-  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, receiptClosed: false }, 40), false);
-  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentType: 'CASH' }, 40), false);
-  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, total: 0 }, 40), false);
-  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentIdentifier: '' }, 40), false);
-  assert.equal(exports.hasValidEvotorPaymentEvidence(valid, 40), true);
+  assert.equal(exports.hasValidEvotorPaymentEvidence(null, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, receiptClosed: false }, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentType: 'CASH' }, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, total: 0 }, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentIdentifier: '' }, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence(valid, 40, 'other-bank'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({ ...valid, paymentSystemId: '' }, 40, 'sber-card'), false);
+  assert.equal(exports.hasValidEvotorPaymentEvidence({
+    ...valid, paymentPerformerPackageName: null, paymentPerformerComponentName: ''
+  }, 40, 'sber-card'), true);
+  assert.equal(exports.hasValidEvotorPaymentEvidence(valid, 40, 'sber-card'), true);
+  assert.equal(exports.hasValidEvotorFiscalIdentity(null, 40), false);
+  assert.equal(exports.hasValidEvotorFiscalIdentity({
+    storageNumber: '', documentNumber: '1', sign: '2', fiscalizedAt: '2026-10-06T10:30:00.000Z'
+  }, 40), false);
 });
 
 test('server downgrades paid without card proof to unknown and leaves payment/order pending', async () => {
@@ -126,7 +154,8 @@ test('server downgrades paid without card proof to unknown and leaves payment/or
     sqlCalls.push({ query, values });
     if (query.includes('select intent.id, intent.order_id')) return [{
       id: 'intent-1', order_id: 'order-1', payment_id: 'payment-1', device_id: 'device-1',
-      local_receipt_uuid: 'local-receipt-1', amount: 40, status: 'processing', result: {},
+      local_receipt_uuid: 'local-receipt-1', amount: 40, status: 'processing',
+      result: { paymentSystemId: 'sber-card' },
       display_number: 'B-001', created_by_staff_id: 'staff-1'
     }];
     return [];
@@ -164,7 +193,6 @@ test('server downgrades paid without card proof to unknown and leaves payment/or
     receiptReference: 'local-receipt-1',
     paymentEvidence: {
       receiptClosed: true, paymentType: 'ELECTRON', total: 40, paymentIdentifier: 'rrn-1',
-      paymentPerformerPackageName: 'bank.app', paymentPerformerComponentName: 'bank.app.CardPayment',
       paymentSystemId: 'sber-card'
     }
   });
@@ -173,6 +201,57 @@ test('server downgrades paid without card proof to unknown and leaves payment/or
   assert.ok(sqlCalls.some(call => call.query.includes('update public.orders')
     && call.query.includes("fiscal_status = 'pending'") && call.query.includes('is_operational = false')));
   assert.equal(sqlCalls.some(call => call.query.includes('insert into public.order_outbox')), false);
+
+  sqlCalls.length = 0;
+  const mismatchedSystem = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'paid',
+    receiptReference: 'local-receipt-1',
+    paymentEvidence: { receiptClosed: true, paymentType: 'ELECTRON', total: 40,
+      paymentIdentifier: 'rrn-1', paymentSystemId: 'other-bank' }
+  });
+  assert.deepEqual(mismatchedSystem, { accepted: true, status: 'unknown', orderId: 'order-1' });
+  assert.equal(sqlCalls.some(call => call.query.includes('update public.payments')), false);
+  assert.equal(sqlCalls.some(call => call.query.includes('update public.orders')), false);
+
+  sqlCalls.length = 0;
+  const wrongReceipt = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'paid',
+    receiptReference: 'another-receipt',
+    paymentEvidence: { receiptClosed: true, paymentType: 'ELECTRON', total: 40,
+      paymentIdentifier: 'rrn-1', paymentSystemId: 'sber-card' }
+  });
+  assert.deepEqual(wrongReceipt, { accepted: false, status: 'processing' });
+  assert.equal(sqlCalls.some(call => call.query.includes('update public.payments')), false);
+
+  sqlCalls.length = 0;
+  const paid = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'paid',
+    receiptReference: 'local-receipt-1',
+    paymentEvidence: {
+      receiptClosed: true, paymentType: 'ELECTRON', total: 40,
+      paymentIdentifier: 'rrn-1', paymentSystemId: 'sber-card'
+    },
+    fiscal: {
+      storageNumber: 'fn-1', documentNumber: 'fd-1', sign: 'fp-1',
+      fiscalizedAt: '2026-10-06T10:30:00.000Z', receiptNumber: '1',
+      total: 40, documentType: 'SELL'
+    }
+  });
+  assert.deepEqual(paid, { accepted: true, status: 'paid', orderId: 'order-1' });
+  assert.ok(sqlCalls.some(call => call.query.includes('update public.orders')
+    && call.query.includes("fiscal_status = 'issued'") && call.query.includes('is_operational = true')));
+  assert.ok(sqlCalls.some(call => call.query.includes('insert into public.order_outbox')));
+
+  sqlCalls.length = 0;
+  const cancelled = await exports.recordEvotorTerminalPaymentResult({
+    deviceId: 'device-1', intentId: 'intent-1', status: 'cancelled', safeBeforePayment: true
+  });
+  assert.deepEqual(cancelled, { accepted: true, status: 'cancelled', orderId: 'order-1' });
+  assert.ok(sqlCalls.some(call => call.query.includes('update public.orders')
+    && call.query.includes("payment_status = 'cancelled'")));
+  assert.equal(sqlCalls.some(call => call.query.includes("payment_status = 'paid'")), false);
+  assert.equal(sqlCalls.some(call => call.query.includes('insert into public.order_outbox')
+    && call.query.includes('payment_succeeded')), false);
 });
 
 test('POS admin safely renders Postgres timestamps parsed as JavaScript Date objects', () => {

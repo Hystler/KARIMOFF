@@ -8,6 +8,7 @@ const schema = z.object({
   orderId: z.string().uuid(),
   paymentId: z.string().uuid(),
   localReceiptUuid: z.string().uuid(),
+  paymentSystemId: z.string().trim().min(1).max(255),
   openedAt: z.iso.datetime()
 });
 

@@ -3,7 +3,7 @@ import "server-only";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { terminalBridgeReady } from "./terminal-bridge";
 import { reconcileEvotorReceipt } from "./fiscal-reconciliation";
-import { hasValidEvotorPaymentEvidence } from "./payment-result";
+import { hasValidEvotorFiscalIdentity, hasValidEvotorPaymentEvidence } from "./payment-result";
 
 export type EvotorPosPaymentStatus =
   | "queued"
@@ -347,14 +347,17 @@ export async function saveEvotorLocalReceipt(params: {
   orderId: string;
   paymentId: string;
   localReceiptUuid: string;
+  paymentSystemId: string;
   openedAt: string;
 }) {
-  const [saved] = await getPostgresSql()<{
+  const sql = getPostgresSql();
+  const [saved] = await sql<{
     id: string;
   }[]>`
     update public.evotor_terminal_payment_intents
     set local_receipt_uuid = ${params.localReceiptUuid},
         receipt_opened_at = ${params.openedAt}::timestamptz,
+        result = coalesce(result, '{}'::jsonb) || ${sql.json({ paymentSystemId: params.paymentSystemId })}::jsonb,
         updated_at = now()
     where id = ${params.intentId}::uuid
       and device_id = ${params.deviceId}::uuid
@@ -362,6 +365,7 @@ export async function saveEvotorLocalReceipt(params: {
       and payment_id = ${params.paymentId}::uuid
       and status = 'processing'
       and (local_receipt_uuid is null or local_receipt_uuid = ${params.localReceiptUuid})
+      and (result->>'paymentSystemId' is null or result->>'paymentSystemId' = ${params.paymentSystemId})
     returning id
   `;
   return Boolean(saved);
@@ -380,15 +384,13 @@ export async function recordEvotorTerminalPaymentResult(params: {
     receiptNumber?: string;
     total?: number;
     paymentIdentifier?: string;
-    documentType?: "SELL";
+    documentType: "SELL";
   } | null;
   paymentEvidence?: {
     receiptClosed: true;
     paymentType: "ELECTRON";
     total: number;
     paymentIdentifier: string;
-    paymentPerformerPackageName: string;
-    paymentPerformerComponentName: string;
     paymentSystemId: string;
   } | null;
   details?: string | null;
@@ -436,11 +438,15 @@ export async function recordEvotorTerminalPaymentResult(params: {
       return { accepted: false, status: asStatus(intent.status) };
     }
     const paymentEvidence = params.paymentEvidence;
-    const validPaymentEvidence = hasValidEvotorPaymentEvidence(paymentEvidence, Number(intent.amount));
+    const expectedPaymentSystemId = typeof intent.result?.paymentSystemId === "string"
+      ? intent.result.paymentSystemId
+      : null;
+    const validPaymentEvidence = hasValidEvotorPaymentEvidence(
+      paymentEvidence, Number(intent.amount), expectedPaymentSystemId
+    );
     if (nextStatus === "paid" && (!intent.local_receipt_uuid || !receiptReference || !validPaymentEvidence)) {
       nextStatus = "unknown";
-    } else if (nextStatus === "paid" && (!params.fiscal ||
-      (params.fiscal.total !== undefined && params.fiscal.total !== Number(intent.amount)))) {
+    } else if (nextStatus === "paid" && !hasValidEvotorFiscalIdentity(params.fiscal, Number(intent.amount))) {
       nextStatus = "fiscal_pending";
     }
     if (intent.status === "fiscal_pending" && nextStatus !== "paid") nextStatus = "fiscal_pending";
