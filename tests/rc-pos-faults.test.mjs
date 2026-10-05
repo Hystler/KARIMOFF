@@ -155,6 +155,27 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       assert.equal(Number(storedGroup.check_sum),parsed.fiscalGroups[0].checkSum);
       return { documentId:document.id, receiptId:cloudReceipt.id, reimport:snapshot };
     }
+    const competing = await fixture();
+    const tabletResults = await Promise.allSettled([
+      api.createEvotorPosPayment(competing.input),
+      service(sql).createEvotorPosPayment({ ...competing.input, idempotencyKey: randomUUID() })
+    ]);
+    assert.equal(tabletResults.filter(result => result.status === 'fulfilled').length, 1,
+      'two distinct tablet orders can reserve only one terminal payment');
+    const rejectedTablet = tabletResults.find(result => result.status === 'rejected');
+    assert.match(rejectedTablet.reason.message, /Касса занята/);
+    const [tabletCounts] = await sql`select
+      (select count(*)::int from orders where location_id=${competing.input.locationId}) as orders,
+      (select count(*)::int from evotor_terminal_payment_intents where device_id=${competing.deviceId}) as intents`;
+    assert.deepEqual(tabletCounts, { orders: 1, intents: 1 });
+    const winningTablet = tabletResults.find(result => result.status === 'fulfilled').value;
+    assert.deepEqual(await state(winningTablet), { payment_status:'pending',fiscal_status:'pending',
+      is_operational:false,payments:1,intents:1,kds:0,sales:1,inventory:0 });
+    const [unpaidSale] = await sql`select analytics_included,net_revenue::text as revenue
+      from canonical_analytics_sales where source_record_id=${winningTablet.orderId}`;
+    assert.equal(unpaidSale.analytics_included, false, 'the pending journal row is not a recognized sale');
+    assert.equal(Number(unpaidSale.revenue), 0, 'no unpaid POS revenue');
+
     const double = await fixture();
     const [a,b] = await Promise.all([api.createEvotorPosPayment(double.input), api.createEvotorPosPayment(double.input)]);
     assert.equal(a.intentId,b.intentId); assert.equal(a.orderId,b.orderId);
