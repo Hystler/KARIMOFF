@@ -372,6 +372,40 @@ test("SELL parser retains every print group and never promotes the first one", (
   }
 });
 
+test("SELL parser reads the sanitized production-shaped fiscal group", () => {
+  const fixture = testModule("src/lib/integrations/evotor/receipts.ts", { removeTypeImport: true });
+  let receipt;
+  try {
+    receipt = runTypeScript(`
+      import { readFileSync } from "node:fs";
+      const { parseEvotorReceipt } = await import(${JSON.stringify(fixture.url)});
+      const document = JSON.parse(readFileSync("tests/fixtures/evotor-sell-real-shape.synthetic.json", "utf8"));
+      console.log(JSON.stringify(parseEvotorReceipt(document)));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.equal(receipt.type, "sale");
+  assert.equal(receipt.total, 100);
+  assert.equal(receipt.fiscalGroups.length, 1);
+  assert.deepEqual(receipt.fiscalGroups[0], {
+    groupIndex: 0,
+    printGroupId: "d0000000-0000-4000-8000-000000000004",
+    fiscalStorageNumber: "SYNTHETIC_FN_001",
+    fiscalDocumentNumber: "17",
+    fiscalSign: "SYNTHETIC_FP_001",
+    receiptNumber: "3",
+    documentNumber: "4",
+    checkSum: 100
+  });
+  assert.equal(receipt.fiscalDriveNumber, "SYNTHETIC_FN_001");
+  assert.equal(receipt.fiscalDocumentNumber, "17");
+  assert.equal(receipt.fiscalSign, "SYNTHETIC_FP_001");
+  assert.equal(receipt.raw.store_id, "c0000000-0000-4000-8000-000000000003");
+  assert.equal(receipt.raw.device_id, "b0000000-0000-4000-8000-000000000002");
+  assert.doesNotMatch(JSON.stringify(receipt.raw), /SYNTHETIC_KKT_SERIAL/);
+});
+
 test("SELL parser preserves single, incomplete, and conflicting print groups", () => {
   const fixture = testModule("src/lib/integrations/evotor/receipts.ts", { removeTypeImport: true });
   let result;

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import postgres from 'postgres';
@@ -38,6 +38,32 @@ function service(sql, enabled = true) {
     throw new Error(`Unexpected import ${id}`);
   }, exports, { env: { EVOTOR_POS_PAYMENTS_ENABLED: String(enabled), TEST_ORDER_MODE: 'false' } });
   exports.reconcileEvotorReceipt = reconciliation.reconcileEvotorReceipt;
+  const receiptExports = {};
+  const receiptCode = ts.transpileModule(readFileSync('src/lib/integrations/evotor/receipts.ts','utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  new Function('require','exports',receiptCode)(id => {
+    if (id === 'server-only') return {};
+    throw new Error(`Unexpected receipt import ${id}`);
+  },receiptExports);
+  const syncSource = readFileSync('src/lib/integrations/evotor/sync.ts','utf8')
+    .replace('async function persistSnapshot(', 'export async function persistSnapshot(');
+  const syncCode = ts.transpileModule(syncSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const syncExports = {};
+  new Function('require','exports',syncCode)(id => {
+    if (id === 'server-only') return {};
+    if (id === 'node:crypto') return {createHash};
+    if (id === '@/lib/postgres/server') return {getPostgresSql:()=>sql};
+    if (id === './receipts') return receiptExports;
+    if (id === './fiscal-reconciliation') return reconciliation;
+    if (id === './product-mapping-rules') return {EXPLICIT_EVOTOR_PRODUCT_MAPPINGS:[]};
+    if (['@/lib/audit','@/lib/observability','./client','./crypto','./devices',
+      './documents','./employees','./errors','./products','./recovery','./stores'].includes(id)) return {};
+    throw new Error(`Unexpected sync import ${id}`);
+  },syncExports);
+  exports.persistSnapshot = syncExports.persistSnapshot;
   return exports;
 }
 
@@ -86,6 +112,48 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
         from orders o where id=${job.orderId}`;
       assert.equal(row.payments, 1); assert.equal(row.intents, 1);
       return row;
+    }
+    // Fixture derived from one sanitized production-shape SELL. Only synthetic
+    // values are committed; the actual importer writes into disposable PG.
+    async function importRealShape(point, fiscal) {
+      const document = JSON.parse(readFileSync('tests/fixtures/evotor-sell-real-shape.synthetic.json','utf8'));
+      const [store] = await sql`select evotor_store_id from evotor_stores where id=${point.cloudStoreId}`;
+      const [device] = await sql`select evotor_device_id from evotor_devices where id=${point.cloudDeviceId}`;
+      document.id = randomUUID();
+      document.store_id = store.evotor_store_id;
+      document.device_id = device.evotor_device_id;
+      const print = document.body.pos_print_results[0];
+      print.fn_serial_number = fiscal.storageNumber;
+      print.fiscal_document_number = Number(fiscal.documentNumber);
+      print.fiscal_sign_doc_number = fiscal.sign;
+      const parsed = parseCloudReceipt(document);
+      assert.equal(parsed.fiscalGroups.length,1);
+      const snapshot = () => api.persistSnapshot({
+        connectionId:connection.id,eventId:randomUUID(),syncType:'manual',
+        stores:[{id:document.store_id,name:'Synthetic cloud store'}],
+        devices:[{id:document.device_id,store_id:document.store_id}],
+        employees:[],productsByStore:new Map(),
+        documentsByStore:new Map([[document.store_id,[document]]]),windowsByStore:new Map()
+      });
+      await snapshot();
+      const [cloudReceipt] = await sql`select id,store_id,device_id,fiscal_drive_number,
+        fiscal_document_number,fiscal_sign from evotor_receipts
+        where connection_id=${connection.id} and external_receipt_id=${document.id}`;
+      assert.equal(cloudReceipt.store_id,point.cloudStoreId);
+      assert.equal(cloudReceipt.device_id,point.cloudDeviceId);
+      assert.equal(cloudReceipt.fiscal_drive_number,parsed.fiscalDriveNumber);
+      assert.equal(cloudReceipt.fiscal_document_number,parsed.fiscalDocumentNumber);
+      assert.equal(cloudReceipt.fiscal_sign,parsed.fiscalSign);
+      const [storedGroup] = await sql`select fiscal_storage_number,fiscal_document_number,fiscal_sign,
+        receipt_number,document_number,check_sum from evotor_receipt_fiscal_groups
+        where receipt_id=${cloudReceipt.id}`;
+      assert.equal(storedGroup.fiscal_storage_number,parsed.fiscalGroups[0].fiscalStorageNumber);
+      assert.equal(storedGroup.fiscal_document_number,parsed.fiscalGroups[0].fiscalDocumentNumber);
+      assert.equal(storedGroup.fiscal_sign,parsed.fiscalGroups[0].fiscalSign);
+      assert.equal(storedGroup.receipt_number,parsed.fiscalGroups[0].receiptNumber);
+      assert.equal(storedGroup.document_number,parsed.fiscalGroups[0].documentNumber);
+      assert.equal(Number(storedGroup.check_sum),parsed.fiscalGroups[0].checkSum);
+      return { documentId:document.id, receiptId:cloudReceipt.id, reimport:snapshot };
     }
     const double = await fixture();
     const [a,b] = await Promise.all([api.createEvotorPosPayment(double.input), api.createEvotorPosPayment(double.input)]);
@@ -156,30 +224,32 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.equal(savedFiscal.fiscal_document_number,fiscalIdentity.documentNumber);
     assert.equal(savedFiscal.fiscal_sign,fiscalIdentity.sign);
     assert.equal(savedFiscal.evotor_cloud_document_id,null);
+    for (const status of ['accepted','cooking','ready']) {
+      await sql`select set_order_kitchen_status_atomic(${pending.orderId}::uuid,${status},null::uuid,'owner','rc')`;
+    }
+    assert.equal((await state(pending)).inventory,1);
 
-    const cloudDocumentId = randomUUID();
-    const [document] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
-      evotor_document_id,document_type,close_date)
-      values(${connection.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${cloudDocumentId},'SELL',now()) returning id`;
-    const [receipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
-      external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${document.id},${delayed.cloudStoreId},${delayed.cloudDeviceId},${cloudDocumentId},'sale',now(),100,
-        ${fiscalIdentity.storageNumber},${fiscalIdentity.documentNumber},${fiscalIdentity.sign}) returning id`;
-    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,receipt.id)),true);
-    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,receipt.id)),true,'duplicate import is idempotent');
+    const importedAfterBridge = await importRealShape(delayed,fiscalIdentity);
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,importedAfterBridge.receiptId)),true);
+    await importedAfterBridge.reimport();
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,importedAfterBridge.receiptId)),true,
+      'duplicate import is idempotent');
     const [reconciled] = await sql`select evotor_cloud_document_id,evotor_cloud_device_id,evotor_cloud_store_id
       from evotor_terminal_payment_intents where id=${pending.intentId}`;
-    assert.equal(reconciled.evotor_cloud_document_id,cloudDocumentId);
+    assert.equal(reconciled.evotor_cloud_document_id,importedAfterBridge.documentId);
     assert.ok(reconciled.evotor_cloud_device_id);
     assert.ok(reconciled.evotor_cloud_store_id);
     const [saleCount] = await sql`select count(*)::int as count from canonical_analytics_sales
-      where source_record_id in (${pending.orderId}::uuid,${receipt.id}::uuid)`;
+      where source_record_id in (${pending.orderId}::uuid,${importedAfterBridge.receiptId}::uuid)`;
     assert.equal(saleCount.count,1,'cloud import must not add a second canonical sale');
     const [link] = await sql`select count(*)::int as count from analytics_sale_reconciliations
-      where web_order_id=${pending.orderId} and evotor_receipt_id=${receipt.id} and status='confirmed'`;
+      where web_order_id=${pending.orderId} and evotor_receipt_id=${importedAfterBridge.receiptId} and status='confirmed'`;
     assert.equal(link.count,1);
-    const [matchedReceipt] = await sql`select pos_reconciliation_status from evotor_receipts where id=${receipt.id}`;
+    const [matchedReceipt] = await sql`select pos_reconciliation_status from evotor_receipts
+      where id=${importedAfterBridge.receiptId}`;
     assert.equal(matchedReceipt.pos_reconciliation_status,'matched');
+    assert.deepEqual(await state(pending),{payment_status:'paid',fiscal_status:'issued',is_operational:true,
+      payments:1,intents:1,kds:1,sales:1,inventory:1});
 
     const [wrongDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
@@ -320,22 +390,22 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       localReceiptUuid:cloudFirstUuid,openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
       status:'paid',receiptReference:cloudFirstUuid});
-    const cloudFirstDocumentId = randomUUID();
-    const [cloudFirstDocument] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
-      evotor_document_id,document_type,close_date)
-      values(${connection.id},${cloudFirst.cloudStoreId},${cloudFirst.cloudDeviceId},${cloudFirstDocumentId},'SELL',now()) returning id`;
-    const [cloudFirstReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
-      external_receipt_id,receipt_type,closed_at,total,fiscal_drive_number,fiscal_document_number,fiscal_sign)
-      values(${connection.id},${cloudFirstDocument.id},${cloudFirst.cloudStoreId},${cloudFirst.cloudDeviceId},
-        ${cloudFirstDocumentId},'sale',now(),100,${fiscalStorageNumber},'116','379262311') returning id`;
-    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,cloudFirstReceipt.id)),false,
+    const cloudFirstFiscal = {storageNumber:fiscalStorageNumber,documentNumber:'116',sign:'379262311'};
+    const importedBeforeBridge = await importRealShape(cloudFirst,cloudFirstFiscal);
+    assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,importedBeforeBridge.receiptId)),false,
       'cloud import waits for fiscal identity from local bridge');
     await api.recordEvotorTerminalPaymentResult({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
-      status:'paid',receiptReference:cloudFirstUuid,fiscal:{storageNumber:fiscalStorageNumber,
-        documentNumber:'116',sign:'379262311',fiscalizedAt:new Date().toISOString(),total:100}});
+      status:'paid',receiptReference:cloudFirstUuid,fiscal:{...cloudFirstFiscal,
+        fiscalizedAt:new Date().toISOString(),total:100}});
     const [cloudFirstLink] = await sql`select count(*)::int as count from analytics_sale_reconciliations
-      where web_order_id=${cloudFirstJob.orderId} and evotor_receipt_id=${cloudFirstReceipt.id}`;
+      where web_order_id=${cloudFirstJob.orderId} and evotor_receipt_id=${importedBeforeBridge.receiptId}`;
     assert.equal(cloudFirstLink.count,1,'delayed local fiscal identity reconciles earlier import');
+    await importedBeforeBridge.reimport();
+    const [cloudFirstSales] = await sql`select count(*)::int as count from canonical_analytics_sales
+      where source_record_id in (${cloudFirstJob.orderId}::uuid,${importedBeforeBridge.receiptId}::uuid)`;
+    assert.equal(cloudFirstSales.count,1,'import-before-bridge remains one sale after reimport');
+    assert.deepEqual(await state(cloudFirstJob),{payment_status:'paid',fiscal_status:'issued',is_operational:true,
+      payments:1,intents:1,kds:1,sales:1,inventory:0});
 
     const split = await fixture();
     const splitJob = await api.createEvotorPosPayment(split.input);
@@ -362,21 +432,13 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       status:'paid',receiptReference:splitUuid,fiscal:{storageNumber:parsedSplit.fiscalGroups[1].fiscalStorageNumber,
         documentNumber:parsedSplit.fiscalGroups[1].fiscalDocumentNumber,
         sign:parsedSplit.fiscalGroups[1].fiscalSign,fiscalizedAt:new Date().toISOString(),total:100}});
-    const [splitDocRow] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
-      evotor_document_id,document_type,close_date,raw_metadata)
-      values(${connection.id},${split.cloudStoreId},${split.cloudDeviceId},${splitDocument.id},'SELL',now(),
-        ${sql.json(splitDocument)}) returning id`;
-    const [splitReceipt] = await sql`insert into evotor_receipts(connection_id,document_id,store_id,device_id,
-      external_receipt_id,receipt_type,closed_at,total,raw_metadata)
-      values(${connection.id},${splitDocRow.id},${split.cloudStoreId},${split.cloudDeviceId},
-        ${splitDocument.id},'sale',now(),100,${sql.json(parsedSplit.raw)}) returning id`;
-    for (const group of parsedSplit.fiscalGroups) {
-      await sql`insert into evotor_receipt_fiscal_groups(receipt_id,group_index,print_group_id,
-        fiscal_storage_number,fiscal_document_number,fiscal_sign,receipt_number,document_number,check_sum)
-        values(${splitReceipt.id},${group.groupIndex},${group.printGroupId},${group.fiscalStorageNumber},
-          ${group.fiscalDocumentNumber},${group.fiscalSign},${group.receiptNumber},
-          ${group.documentNumber},${group.checkSum})`;
-    }
+    await api.persistSnapshot({connectionId:connection.id,eventId:randomUUID(),syncType:'manual',
+      stores:[{id:splitDocument.store_id,name:'Synthetic cloud store'}],
+      devices:[{id:splitDocument.device_id,store_id:splitDocument.store_id}],
+      employees:[],productsByStore:new Map(),
+      documentsByStore:new Map([[splitDocument.store_id,[splitDocument]]]),windowsByStore:new Map()});
+    const [splitReceipt] = await sql`select id from evotor_receipts
+      where connection_id=${connection.id} and external_receipt_id=${splitDocument.id}`;
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,splitReceipt.id)),true,
       'second fiscal print group must be selected by exact identity');
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,splitReceipt.id)),true,

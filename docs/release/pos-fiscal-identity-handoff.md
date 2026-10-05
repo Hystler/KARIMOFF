@@ -8,20 +8,27 @@ release-чат интегрирует только POS commits с ручным �
 
 ## Облачный SELL
 
-Официальная модель Эвотор содержит `document.id`, `device_id`, `store_id` и
-`body.pos_print_results[]`. Parser принимает как плоский элемент массива, так
-и вариант с вложенным `pos_print_result`. Каждая группа сохраняется в
+Read-only handoff одного существующего SELL документа точки подтвердил:
+`document.id`, `device_id`, `store_id` — строки, `number` — число,
+`body.sum` и `body.result_sum` — числа. `body.pos_print_results` — массив
+из одного **плоского** объекта. В нём ФН и ФП — строки, ФД, `receipt_number`,
+`document_number`, `check_sum` и `session_number` — числа; также присутствуют
+`print_group_id`, `kkt_reg_number`, `kkt_serial_number` и `receipt_date`.
+Ни один реальный идентификатор или персональные данные в репозиторий не добавлены.
+Parser уже поддерживал эту фактическую структуру; доработки кода не потребовались.
+Он также принимает вариант с вложенным `pos_print_result`. Каждая группа сохраняется в
 `evotor_receipt_fiscal_groups` с порядковым индексом, `print_group_id`, ФН,
 ФД, ФП, номером чека, номером документа и `check_sum`. Для документа с
 несколькими группами scalar-фискальные поля `evotor_receipts` не получают
 произвольно первую группу; после однозначной сверки в них пишется выбранная.
 
 `tests/fixtures/evotor-sell-multi-group.synthetic.json` — синтетический пример
-официальной структуры. Он **не** выдан за документ точки. Проверка реального
-SELL ожидает обезличенный файл
-`/Users/akimkovalenko/.codex/handoffs/KARIMOFF/evotor-real-sell-sanitized.json`.
-Если он появится, сохранить только структуру и типы в отдельном коммитабельном
-fixture, заменив реальные ID, суммы и названия синтетическими значениями.
+официальной структуры для проверки нескольких групп. Отдельный
+`tests/fixtures/evotor-sell-real-shape.synthetic.json` создан по обезличенному
+production-shape документу: совпадают ключи, типы и число групп, все значения
+заменены синтетическими. Исходный read-only handoff находится вне репозитория и
+не изменён. Санитайзер не сохраняет `kkt_serial_number` в `raw_metadata`;
+фискальные реквизиты для сверки сохраняются в отдельной таблице полностью.
 
 ## Сверка
 
@@ -57,3 +64,19 @@ read-only.
 связанного документа.
 
 Hardware checklist: [pos-physical-acceptance.md](./pos-physical-acceptance.md).
+
+## Финальное подтверждение
+
+Реальный SELL shape проверен read-only. На fixture с этой же структурой
+PostgreSQL test запускает настоящий `persistSnapshot` importer: bridge-before-import,
+import-before-bridge и повторный import сохраняют точную связь по device/store и
+ФН/ФД/ФП, одну canonical sale, один KDS event и одно списание.
+Отдельные synthetic tests сохраняют покрытие нескольких, неполных и конфликтующих
+групп, unique exact match и ambiguity.
+
+Финальный regression: 417 tests passed, 0 failed, 0 skipped; lint, typecheck,
+Next.js build, PostgreSQL 17 fresh/upgrade/restore и Android `lintDebug assembleDebug`
+прошли. Bridge: versionName `0.21`, versionCode `21`; APK собран локально.
+POS software готов к hardware acceptance. Дальнейшая software-разработка POS
+остановлена; следующий этап — controlled physical test с отдельным разрешением
+владельца на оплату.

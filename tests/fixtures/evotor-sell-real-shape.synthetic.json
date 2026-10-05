@@ -1,0 +1,31 @@
+{
+  "type": "SELL",
+  "id": "a0000000-0000-4000-8000-000000000001",
+  "device_id": "b0000000-0000-4000-8000-000000000002",
+  "store_id": "c0000000-0000-4000-8000-000000000003",
+  "number": 12,
+  "close_date": "2026-10-01T12:00:00.000+0000",
+  "created_at": "2026-10-01T11:59:00.000+0000",
+  "time_zone_offset": 180,
+  "session_number": 5,
+  "version": "synthetic-version",
+  "body": {
+    "sum": 100,
+    "result_sum": 100,
+    "pos_print_results": [
+      {
+        "print_group_id": "d0000000-0000-4000-8000-000000000004",
+        "session_number": 5,
+        "fn_serial_number": "SYNTHETIC_FN_001",
+        "fiscal_document_number": 17,
+        "fiscal_sign_doc_number": "SYNTHETIC_FP_001",
+        "receipt_number": 3,
+        "document_number": 4,
+        "check_sum": 100,
+        "kkt_reg_number": "SYNTHETIC_KKT_REG",
+        "kkt_serial_number": "SYNTHETIC_KKT_SERIAL",
+        "receipt_date": "2026-10-01T12:00:00.000+0000"
+      }
+    ]
+  }
+}
