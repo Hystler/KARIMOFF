@@ -797,6 +797,28 @@ migrations.push({
     return Boolean(state?.installed);
   }
 });
+migrations.push({
+  name: "20261005174416_restore_checkout_pgcrypto_dependency",
+  applied: async (sql) => {
+    const [dependency] = await sql`
+      select n.nspname as schema,
+        has_schema_privilege('karimoff_app', n.oid, 'USAGE') as schema_usage,
+        case when to_regprocedure(format('%I.digest(text,text)', n.nspname)) is null
+          then false else has_function_privilege('karimoff_app',
+            to_regprocedure(format('%I.digest(text,text)', n.nspname)), 'EXECUTE') end as executable,
+        exists (select 1 from pg_proc p
+          where p.oid = to_regprocedure('public.create_site_order_with_payment_from_whitelist(uuid,text,uuid,jsonb,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamptz,text,text)')
+            and position(format('encode(%I.digest(jsonb_build_object(', n.nspname) in p.prosrc) > 0
+        ) as qualified_rpc
+      from pg_extension e join pg_namespace n on n.oid = e.extnamespace
+      where e.extname = 'pgcrypto'
+    `;
+    if (!dependency?.schema_usage || !dependency?.executable || !dependency?.qualified_rpc) return false;
+    const schema = dependency.schema.replaceAll('"', '""');
+    const [probe] = await sql.unsafe(`select encode("${schema}".digest('probe', 'sha256'), 'hex') as hash`);
+    return /^[0-9a-f]{64}$/.test(probe?.hash ?? "");
+  }
+});
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 

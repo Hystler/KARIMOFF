@@ -24,6 +24,7 @@ import {
 } from "@/lib/delivery/address-whitelist";
 import { isDeliveryAcceptingAt } from "@/lib/delivery/hours";
 import { getDeliveryLocationSettings } from "@/lib/delivery/settings";
+import { logOperationalError } from "@/lib/observability";
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
@@ -278,6 +279,7 @@ export async function createOrderAction(
   const idempotencyKey = /^[0-9a-f-]{36}$/i.test(rawIdempotencyKey)
     ? rawIdempotencyKey
     : randomUUID();
+  let stage: "create_order" | "create_payment" = "create_order";
   try {
     const order = await createOrder({
       source: "web",
@@ -301,6 +303,7 @@ export async function createOrderAction(
       userAgentShort: await getShortUserAgent()
     });
 
+    stage = "create_payment";
     if (!order.paymentId) throw new Error("YOOKASSA_PAYMENT_ATTEMPT_MISSING");
     const payment = await createYooKassaPaymentForOrder(order.paymentId);
 
@@ -313,6 +316,11 @@ export async function createOrderAction(
     };
   } catch (error) {
     const failure = error as { code?: string; message?: string };
+    logOperationalError("checkout.failed", {
+      stage,
+      error_type: error instanceof Error && /^[A-Za-z]{1,64}$/.test(error.name) ? error.name : "UnknownError",
+      sqlstate: typeof failure?.code === "string" && /^[0-9A-Z]{5}$/.test(failure.code) ? failure.code : undefined
+    });
     const providerCode = safeYooKassaErrorCode(error);
     return {
       status: "error",
