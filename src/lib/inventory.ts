@@ -1,7 +1,9 @@
 import "server-only";
 
+import { getCurrentStaff } from "@/lib/admin-auth";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { getPostgresSql } from "@/lib/postgres/server";
 import { getAdminIngredients, type Ingredient } from "./ingredients";
 
 export type InventoryMovementType =
@@ -108,6 +110,37 @@ function inventoryTableError(message: string | null | undefined, table = "invent
   return formatMissingTableError(message, table);
 }
 
+function hasGlobalInventoryAccess(staff: Awaited<ReturnType<typeof getCurrentStaff>>) {
+  return Boolean(staff && (staff.legacy || staff.role === "owner" || staff.role === "admin"));
+}
+
+function canViewInventory(staff: Awaited<ReturnType<typeof getCurrentStaff>>) {
+  return Boolean(staff && ["owner", "admin", "manager"].includes(staff.role));
+}
+
+async function countVisibleInventoryMovementsSince(createdAt: string, staff: NonNullable<Awaited<ReturnType<typeof getCurrentStaff>>>) {
+  const sql = getPostgresSql();
+  const unrestricted = hasGlobalInventoryAccess(staff);
+  const [row] = await sql<{ count: number }[]>`
+    select count(*)::int as count
+    from public.inventory_movements movement
+    where movement.created_at >= ${createdAt}::timestamptz
+      and (
+        ${unrestricted}::boolean
+        or movement.order_id is null
+        or exists (
+          select 1
+          from public.orders order_row
+          join public.staff_location_access access
+            on access.order_location_id = order_row.location_id
+           and access.staff_id = ${staff.id}::uuid
+          where order_row.id = movement.order_id
+        )
+      )
+  `;
+  return Number(row?.count ?? 0);
+}
+
 export function formatInventoryQuantity(value: number | null | undefined, unit: string | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return "—";
@@ -164,13 +197,16 @@ export async function getInventoryCards() {
   let movementsToday = 0;
 
   if (database && !inventoryResult.error) {
+    const staff = await getCurrentStaff();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const { count } = await database
-      .from("inventory_movements")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfDay.toISOString());
-    movementsToday = count ?? 0;
+    if (staff && canViewInventory(staff)) {
+      try {
+        movementsToday = await countVisibleInventoryMovementsSince(startOfDay.toISOString(), staff);
+      } catch {
+        movementsToday = 0;
+      }
+    }
   }
 
   const cards = ingredientsResult.ingredients.map((ingredient) => {
@@ -215,26 +251,51 @@ export async function getInventoryMovements(filters?: { ingredientId?: string; m
     };
   }
 
+  const staff = await getCurrentStaff();
+  if (!staff || !canViewInventory(staff)) {
+    return {
+      movements: [] as InventoryMovement[],
+      ingredients: [] as Ingredient[],
+      notConfigured: false,
+      error: "Недостаточно прав для просмотра движений склада."
+    };
+  }
+
   const ingredientsResult = await getAdminIngredients();
   const ingredientNames = new Map(ingredientsResult.ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
-  let query = database
-    .from("inventory_movements")
-    .select("id, created_at, ingredient_id, order_id, product_id, production_run_id, movement_type, quantity, unit, reason, comment, created_by")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (filters?.ingredientId) {
-    query = query.eq("ingredient_id", filters.ingredientId);
+  const sql = getPostgresSql();
+  const unrestricted = hasGlobalInventoryAccess(staff);
+  let data: Record<string, unknown>[] = [];
+  let error: { message?: string } | null = null;
+  try {
+    data = await sql<Record<string, unknown>[]>`
+      select movement.id, movement.created_at, movement.ingredient_id, movement.order_id,
+        movement.product_id, movement.production_run_id, movement.movement_type,
+        movement.quantity, movement.unit, movement.reason, movement.comment, movement.created_by
+      from public.inventory_movements movement
+      where (${filters?.ingredientId ?? null}::text is null or movement.ingredient_id::text = ${filters?.ingredientId ?? null}::text)
+        and (${filters?.movementType ?? null}::text is null or movement.movement_type = ${filters?.movementType ?? null}::text)
+        and (
+          ${unrestricted}::boolean
+          or movement.order_id is null
+          or exists (
+            select 1
+            from public.orders order_row
+            join public.staff_location_access access
+              on access.order_location_id = order_row.location_id
+             and access.staff_id = ${staff.id}::uuid
+            where order_row.id = movement.order_id
+          )
+        )
+      order by movement.created_at desc
+      limit 100
+    `;
+  } catch (queryError) {
+    error = { message: queryError instanceof Error ? queryError.message : "Query failed" };
   }
-
-  if (filters?.movementType) {
-    query = query.eq("movement_type", filters.movementType);
-  }
-
-  const { data, error } = await query;
 
   return {
-    movements: (data ?? []).map((row) => normalizeMovement(row, ingredientNames.get(String(row.ingredient_id)) ?? null)),
+    movements: data.map((row) => normalizeMovement(row, ingredientNames.get(String(row.ingredient_id)) ?? null)),
     ingredients: ingredientsResult.ingredients,
     notConfigured: false,
     error: inventoryTableError(error?.message, "inventory_movements")
