@@ -5,6 +5,15 @@ import { test } from 'node:test';
 import postgres from 'postgres';
 import ts from 'typescript';
 
+const testPaymentSystemId = 'synthetic-evotor-payment-system';
+const paymentEvidence = (paymentIdentifier, total = 100) => ({
+  receiptClosed: true,
+  paymentType: 'ELECTRON',
+  total,
+  paymentIdentifier,
+  paymentSystemId: testPaymentSystemId
+});
+
 function parseCloudReceipt(document) {
   const code = ts.transpileModule(readFileSync('src/lib/integrations/evotor/receipts.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -26,6 +35,14 @@ function service(sql, enabled = true) {
     if (id === 'server-only') return {};
     throw new Error(`Unexpected reconciliation import ${id}`);
   }, reconciliation);
+  const paymentResultCode = ts.transpileModule(readFileSync('src/lib/integrations/evotor/payment-result.ts', 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const paymentResult = {};
+  new Function('require', 'exports', paymentResultCode)(id => {
+    if (id === 'server-only') return {};
+    throw new Error(`Unexpected payment-result import ${id}`);
+  }, paymentResult);
   const code = ts.transpileModule(readFileSync('src/lib/integrations/evotor/pos-payments.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -35,6 +52,7 @@ function service(sql, enabled = true) {
     if (id === '@/lib/postgres/server') return { getPostgresSql: () => sql };
     if (id === './terminal-bridge') return { terminalBridgeReady: () => true };
     if (id === './fiscal-reconciliation') return reconciliation;
+    if (id === './payment-result') return paymentResult;
     throw new Error(`Unexpected import ${id}`);
   }, exports, { env: { EVOTOR_POS_PAYMENTS_ENABLED: String(enabled), TEST_ORDER_MODE: 'false' } });
   exports.reconcileEvotorReceipt = reconciliation.reconcileEvotorReceipt;
@@ -186,11 +204,13 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const localUuid = randomUUID();
     assert.equal(await api.saveEvotorLocalReceipt({ deviceId:double.deviceId,intentId:a.intentId,
       orderId:a.orderId,paymentId:randomUUID(),localReceiptUuid:localUuid,
+      paymentSystemId:testPaymentSystemId,
       openedAt:new Date().toISOString() }),false);
     const [beforeSave] = await sql`select local_receipt_uuid from evotor_terminal_payment_intents where id=${a.intentId}`;
     assert.equal(beforeSave.local_receipt_uuid,null);
     assert.equal(await api.saveEvotorLocalReceipt({ deviceId:double.deviceId,intentId:a.intentId,
       orderId:a.orderId,paymentId:payment.payment_id,localReceiptUuid:localUuid,
+      paymentSystemId:testPaymentSystemId,
       openedAt:new Date().toISOString() }),true);
     assert.equal(await service(sql).nextEvotorTerminalPayment(double.deviceId),null, 'restart must not resend processing');
     await sql`update evotor_terminal_payment_intents set updated_at=now()-interval '6 minutes' where id=${a.intentId}`;
@@ -200,7 +220,8 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.equal((await api.getEvotorPosPaymentStatus(a.intentId)).status,'unknown');
     await assert.rejects(api.createEvotorPosPayment({ ...double.input,idempotencyKey:randomUUID() }), /Касса занята/);
     const callback = { deviceId:double.deviceId,intentId:a.intentId,status:'paid',receiptReference:localUuid,
-      fiscal:{storageNumber:fiscalStorageNumber,documentNumber:'112',sign:'379262307',fiscalizedAt:new Date().toISOString(),total:100} };
+      paymentEvidence:paymentEvidence(localUuid),
+      fiscal:{storageNumber:fiscalStorageNumber,documentNumber:'112',sign:'379262307',fiscalizedAt:new Date().toISOString(),total:100,documentType:'SELL'} };
     await Promise.all([service(sql).recordEvotorTerminalPaymentResult(callback),api.recordEvotorTerminalPaymentResult(callback)]);
     assert.deepEqual(await state(a), { payment_status:'paid',fiscal_status:'issued',is_operational:true,
       payments:1,intents:1,kds:1,sales:1,inventory:0 });
@@ -223,8 +244,10 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const pendingUuid = randomUUID();
     assert.equal(await api.saveEvotorLocalReceipt({deviceId:delayed.deviceId,intentId:pending.intentId,
       orderId:pending.orderId,paymentId:pendingPayment.payment_id,localReceiptUuid:pendingUuid,
+      paymentSystemId:testPaymentSystemId,
       openedAt:new Date().toISOString()}),true);
-    const pendingCallback = {deviceId:delayed.deviceId,intentId:pending.intentId,status:'paid',receiptReference:pendingUuid};
+    const pendingCallback = {deviceId:delayed.deviceId,intentId:pending.intentId,status:'paid',receiptReference:pendingUuid,
+      paymentEvidence:paymentEvidence(pendingUuid)};
     assert.equal((await api.recordEvotorTerminalPaymentResult(pendingCallback)).status,'fiscal_pending');
     assert.deepEqual(await state(pending),{payment_status:'paid',fiscal_status:'pending',is_operational:false,
       payments:1,intents:1,kds:0,sales:1,inventory:0});
@@ -233,7 +256,7 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     await api.recordEvotorTerminalPaymentResult({...pendingCallback,status:'failed'});
     assert.equal((await api.getEvotorPosPaymentStatus(pending.intentId)).status,'fiscal_pending');
     const fiscalIdentity = {storageNumber:fiscalStorageNumber,documentNumber:'113',sign:'379262308',
-      fiscalizedAt:new Date().toISOString(),total:100};
+      fiscalizedAt:new Date().toISOString(),total:100,documentType:'SELL'};
     const complete = {...pendingCallback,fiscal:fiscalIdentity};
     await Promise.all([api.recordEvotorTerminalPaymentResult(complete),service(sql).recordEvotorTerminalPaymentResult(complete)]);
     assert.deepEqual(await state(pending),{payment_status:'paid',fiscal_status:'issued',is_operational:true,
@@ -350,11 +373,11 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const ambiguousUuid = randomUUID();
     await api.saveEvotorLocalReceipt({deviceId:ambiguous.deviceId,intentId:ambiguousJob.intentId,
       orderId:ambiguousJob.orderId,paymentId:ambiguousPayment.payment_id,
-      localReceiptUuid:ambiguousUuid,openedAt:new Date().toISOString()});
+      localReceiptUuid:ambiguousUuid,paymentSystemId:testPaymentSystemId,openedAt:new Date().toISOString()});
     const ambiguousFiscal = {storageNumber:fiscalStorageNumber,documentNumber:'114',sign:'379262309',
-      fiscalizedAt:new Date().toISOString(),total:100};
+      fiscalizedAt:new Date().toISOString(),total:100,documentType:'SELL'};
     await api.recordEvotorTerminalPaymentResult({deviceId:ambiguous.deviceId,intentId:ambiguousJob.intentId,
-      status:'paid',receiptReference:ambiguousUuid,fiscal:ambiguousFiscal});
+      status:'paid',receiptReference:ambiguousUuid,paymentEvidence:paymentEvidence(ambiguousUuid),fiscal:ambiguousFiscal});
     const ambiguousReceipts = [];
     for (let i=0;i<2;i++) {
       const externalId = randomUUID();
@@ -382,9 +405,9 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const manualUuid = randomUUID();
     await api.saveEvotorLocalReceipt({deviceId:manual.deviceId,intentId:manualJob.intentId,
       orderId:manualJob.orderId,paymentId:manualPayment.payment_id,
-      localReceiptUuid:manualUuid,openedAt:new Date().toISOString()});
+      localReceiptUuid:manualUuid,paymentSystemId:testPaymentSystemId,openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:manual.deviceId,intentId:manualJob.intentId,
-      status:'paid',receiptReference:manualUuid});
+      status:'paid',receiptReference:manualUuid,paymentEvidence:paymentEvidence(manualUuid)});
     const manualCloudId = randomUUID();
     const [manualDoc] = await sql`insert into evotor_documents(connection_id,store_id,device_id,
       evotor_document_id,document_type,close_date)
@@ -408,16 +431,16 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const cloudFirstUuid = randomUUID();
     await api.saveEvotorLocalReceipt({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
       orderId:cloudFirstJob.orderId,paymentId:cloudFirstPayment.payment_id,
-      localReceiptUuid:cloudFirstUuid,openedAt:new Date().toISOString()});
+      localReceiptUuid:cloudFirstUuid,paymentSystemId:testPaymentSystemId,openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
-      status:'paid',receiptReference:cloudFirstUuid});
+      status:'paid',receiptReference:cloudFirstUuid,paymentEvidence:paymentEvidence(cloudFirstUuid)});
     const cloudFirstFiscal = {storageNumber:fiscalStorageNumber,documentNumber:'116',sign:'379262311'};
     const importedBeforeBridge = await importRealShape(cloudFirst,cloudFirstFiscal);
     assert.equal(await sql.begin(tx=>api.reconcileEvotorReceipt(tx,importedBeforeBridge.receiptId)),false,
       'cloud import waits for fiscal identity from local bridge');
     await api.recordEvotorTerminalPaymentResult({deviceId:cloudFirst.deviceId,intentId:cloudFirstJob.intentId,
-      status:'paid',receiptReference:cloudFirstUuid,fiscal:{...cloudFirstFiscal,
-        fiscalizedAt:new Date().toISOString(),total:100}});
+      status:'paid',receiptReference:cloudFirstUuid,paymentEvidence:paymentEvidence(cloudFirstUuid),fiscal:{...cloudFirstFiscal,
+        fiscalizedAt:new Date().toISOString(),total:100,documentType:'SELL'}});
     const [cloudFirstLink] = await sql`select count(*)::int as count from analytics_sale_reconciliations
       where web_order_id=${cloudFirstJob.orderId} and evotor_receipt_id=${importedBeforeBridge.receiptId}`;
     assert.equal(cloudFirstLink.count,1,'delayed local fiscal identity reconciles earlier import');
@@ -436,6 +459,7 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     const splitUuid = randomUUID();
     await api.saveEvotorLocalReceipt({deviceId:split.deviceId,intentId:splitJob.intentId,
       orderId:splitJob.orderId,paymentId:splitPayment.payment_id,localReceiptUuid:splitUuid,
+      paymentSystemId:testPaymentSystemId,
       openedAt:new Date().toISOString()});
     const [splitStore] = await sql`select evotor_store_id from evotor_stores where id=${split.cloudStoreId}`;
     const [splitDevice] = await sql`select evotor_device_id from evotor_devices where id=${split.cloudDeviceId}`;
@@ -450,9 +474,9 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
     assert.equal(parsedSplit.fiscalGroups.length,2);
     assert.equal(parsedSplit.fiscalDocumentNumber,null,'no arbitrary first group in scalar field');
     await api.recordEvotorTerminalPaymentResult({deviceId:split.deviceId,intentId:splitJob.intentId,
-      status:'paid',receiptReference:splitUuid,fiscal:{storageNumber:parsedSplit.fiscalGroups[1].fiscalStorageNumber,
+      status:'paid',receiptReference:splitUuid,paymentEvidence:paymentEvidence(splitUuid),fiscal:{storageNumber:parsedSplit.fiscalGroups[1].fiscalStorageNumber,
         documentNumber:parsedSplit.fiscalGroups[1].fiscalDocumentNumber,
-        sign:parsedSplit.fiscalGroups[1].fiscalSign,fiscalizedAt:new Date().toISOString(),total:100}});
+        sign:parsedSplit.fiscalGroups[1].fiscalSign,fiscalizedAt:new Date().toISOString(),total:100,documentType:'SELL'}});
     await api.persistSnapshot({connectionId:connection.id,eventId:randomUUID(),syncType:'manual',
       stores:[{id:splitDocument.store_id,name:'Synthetic cloud store'}],
       devices:[{id:splitDocument.device_id,store_id:splitDocument.store_id}],
@@ -477,6 +501,7 @@ test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery ar
       where id=${unknownJob.intentId}`;
     await api.saveEvotorLocalReceipt({deviceId:pendingUnknown.deviceId,intentId:unknownJob.intentId,
       orderId:unknownJob.orderId,paymentId:unknownPayment.payment_id,localReceiptUuid:randomUUID(),
+      paymentSystemId:testPaymentSystemId,
       openedAt:new Date().toISOString()});
     await api.recordEvotorTerminalPaymentResult({deviceId:pendingUnknown.deviceId,
       intentId:unknownJob.intentId,status:'unknown'});
