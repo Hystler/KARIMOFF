@@ -78,9 +78,21 @@ export function getPhoneLookupCandidates(input: string) {
   const normalized = normalizeRussianPhone(input);
   const basic = basicPhone(input);
   const normalizedDigits = digitsOnly(normalized);
+  const legacySeven = normalizedDigits.length === 11 ? normalizedDigits : "";
   const legacyEight = normalizedDigits.length === 11 ? `8${normalizedDigits.slice(1)}` : "";
   const legacyTen = normalizedDigits.length === 11 ? normalizedDigits.slice(1) : "";
-  const candidates = [normalized, basic, legacyEight, legacyTen];
+  const candidates = [normalized, basic, legacySeven, legacyEight, legacyTen];
 
   return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+export function findRussianPhoneLookupCandidate<T extends { phone: string }>(
+  candidates: readonly T[],
+  input: string
+) {
+  const normalized = normalizeRussianPhone(input);
+  const exact = candidates.filter((candidate) => candidate.phone === normalized);
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return null;
+  return candidates.length === 1 ? candidates[0] : null;
 }

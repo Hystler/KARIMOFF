@@ -19,6 +19,8 @@ test("staff page confirms deletion and explains that the phone is reusable", () 
   assert.match(page, /ConfirmSubmitButton/);
   assert.match(page, /Удалить сотрудника/);
   assert.match(page, /Номер телефона можно использовать повторно/);
-  assert.match(actions, /error\?\.code === "23505"/);
-  assert.match(actions, /Сотрудник с таким номером телефона уже существует/);
+  assert.match(actions, /error instanceof DuplicateStaffPhoneError/);
+  assert.match(actions, /code\?: string[\s\S]+=== "23505"/);
+  assert.match(actions, /redirect\("\/admin\/staff\?error=duplicate_phone"\)/);
+  assert.match(page, /Сотрудник с таким номером телефона уже существует/);
 });

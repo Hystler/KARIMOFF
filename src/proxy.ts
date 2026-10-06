@@ -4,6 +4,7 @@ import {
   isReadOnlyRequest,
   MAINTENANCE_MESSAGE
 } from "@/lib/maintenance";
+import { getOpaqueStaffLoginOriginHeaders } from "@/lib/security/opaque-staff-login-origin";
 
 function isAdminPath(pathname: string) {
   return pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/api/admin" || pathname.startsWith("/api/admin/");
@@ -20,6 +21,10 @@ export function proxy(request: NextRequest) {
 
   if (isAdminPath(pathname)) {
     if (!isMaintenanceMode() || isReadOnlyRequest(request.method)) {
+      const requestHeaders = getOpaqueStaffLoginOriginHeaders(request);
+      if (requestHeaders) {
+        return adminResponseHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
+      }
       return adminResponseHeaders(NextResponse.next());
     }
   }

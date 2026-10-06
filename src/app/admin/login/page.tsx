@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { isAdminTotpConfigured } from "@/lib/admin-auth";
+import { createStaffLoginCsrfToken } from "@/lib/security/staff-login-csrf";
 import { loginAction } from "./actions";
 
 const errorMessages: Record<string, string> = {
   invalid: "Неверный телефон или пароль.",
+  session_expired: "Страница входа устарела. Обновите её и повторите попытку.",
+  unavailable: "Не удалось выполнить вход. Повторите попытку позже.",
   not_configured: "Вход владельца не настроен. Используйте безопасный сброс учётных данных."
 };
+
+export const dynamic = "force-dynamic";
 
 type AdminLoginPageProps = {
   searchParams: Promise<{
@@ -18,6 +23,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
   const params = await searchParams;
   const error = params.error ? errorMessages[params.error] ?? params.error : null;
   const hasTotp = isAdminTotpConfigured();
+  const csrfToken = createStaffLoginCsrfToken();
 
   return (
     <main className="admin-page">
@@ -28,6 +34,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
         <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card sm:p-8">
           <h1 className="text-3xl font-black leading-tight">Вход</h1>
           <form action={loginAction} className="mt-6 grid gap-4">
+            <input type="hidden" name="csrf_token" value={csrfToken} />
             <label className="grid gap-2">
               <span className="text-sm font-semibold text-karimoff-muted">Телефон</span>
               <PhoneInput
