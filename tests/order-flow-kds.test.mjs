@@ -174,9 +174,10 @@ test("status history, outbox, and realtime delivery do not expose customer PII",
 
 test("pickup display receives only explicitly public order fields", () => {
   assert.match(displayPage, /\.filter\(isPickupDisplayOrder\)/);
-  for (const field of ["displayNumber", "kitchenStatus", "publicDisplayName", "publicAvatarSeed", "publicAvatar"]) {
+  for (const field of ["displayNumber", "kitchenStatus"]) {
     assert.match(displayPage, new RegExp(`${field}: order\\.${field}`));
   }
+  assert.doesNotMatch(displayPage, /publicDisplayName|publicAvatar|id: order\.id/);
   assert.doesNotMatch(displayPage, /customerPhone|customer_phone|address: order|comment: order|total: order/);
   assert.match(migration, /regexp_replace\([\s\S]+\\s\+\.\*\$/);
 });

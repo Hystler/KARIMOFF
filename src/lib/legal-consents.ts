@@ -34,6 +34,22 @@ export function hashPrivacyValue(value: string) {
   return createHmac("sha256", secret).update(value).digest("hex");
 }
 
+export async function getCurrentConsentState(subjectId: string, type: ConsentType) {
+  const database = createDatabaseServerClient();
+  if (!database) return null;
+  const { data } = await database
+    .from("legal_consents")
+    .select("consent_type, granted, granted_at, revoked_at, document_version, source_path, subject_id")
+    .eq("subject_type", "customer")
+    .eq("subject_id", subjectId)
+    .eq("consent_type", type)
+    .or("granted.eq.true,source_path.neq./checkout")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
+}
+
 export async function recordLegalConsents(params: {
   subjectType: "customer" | "lead" | "candidate" | "anonymous";
   subjectId?: string | null;
@@ -43,26 +59,36 @@ export async function recordLegalConsents(params: {
 }) {
   const database = createDatabaseServerClient();
 
-  if (!database || params.consents.length === 0) {
+  if (!database) {
     return { ok: false as const, message: "Журнал согласий недоступен." };
   }
+  if (params.consents.length === 0) return { ok: true as const };
 
   const now = new Date().toISOString();
-  const { error } = await database.from("legal_consents").insert(
-    params.consents.map((consent) => ({
+  for (const consent of params.consents) {
+    const { data: existing } = await database
+      .from("legal_consents")
+      .select("granted, document_version")
+      .eq("subject_type", params.subjectType)
+      .eq("subject_id", params.subjectId ?? null)
+      .eq("consent_type", consent.type)
+      .or("granted.eq.true,source_path.neq./checkout")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing?.granted === consent.granted && existing.document_version === LEGAL_VERSION) continue;
+    const { error } = await database.from("legal_consents").insert({
       consent_type: consent.type,
       document_version: LEGAL_VERSION,
       granted: consent.granted,
       granted_at: consent.granted ? now : null,
-      revoked_at: consent.granted ? null : now,
+      revoked_at: !consent.granted && existing?.granted === true ? now : null,
       source_path: params.sourcePath,
       subject_id: params.subjectId ?? null,
       subject_type: params.subjectType,
       user_agent_short: params.userAgent ?? null
-    }))
-  );
-
-  return error
-    ? { ok: false as const, message: "Не удалось сохранить выбор согласий." }
-    : { ok: true as const };
+    });
+    if (error) return { ok: false as const, message: "Не удалось сохранить выбор согласий." };
+  }
+  return { ok: true as const };
 }

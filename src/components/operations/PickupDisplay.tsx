@@ -5,44 +5,10 @@ import { BellRing, Clock3, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandWordmark } from "@/components/Logo";
-import { AvatarPreview } from "@/components/avatar/AvatarPreview";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
-import type { AvatarConfig } from "@/lib/avatar-schema";
 import type { OrderLocation, PublicDisplayOrder } from "@/lib/order-flow/types";
 
 const SOUND_STORAGE_KEY = "karimoff-display-sound-v1";
-const fallbackColors = ["#D95706", "#B9382E", "#247A52", "#276B91", "#70549A", "#9A6A20"];
-
-function seedNumber(value: string) {
-  return Array.from(value).reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
-}
-
-function initials(value: string) {
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] || "Г") + (parts[1]?.[0] || "")).toUpperCase();
-}
-
-function GuestAvatar({ order, large = false }: { order: PublicDisplayOrder; large?: boolean }) {
-  if (order.publicAvatar) {
-    return (
-      <div className={`grid shrink-0 place-items-center overflow-hidden ${large ? "h-24 w-24 sm:h-28 sm:w-28" : "h-14 w-14"}`}>
-        <div className={large ? "scale-90" : "scale-[0.48]"}>
-          <AvatarPreview avatar={order.publicAvatar as AvatarConfig} size="sm" />
-        </div>
-      </div>
-    );
-  }
-  const color = fallbackColors[seedNumber(order.publicAvatarSeed) % fallbackColors.length];
-  return (
-    <span
-      className={`grid shrink-0 place-items-center rounded-full border border-white/15 font-black text-white ${large ? "h-20 w-20 text-2xl sm:h-24 sm:w-24 sm:text-3xl" : "h-14 w-14 text-lg"}`}
-      style={{ backgroundColor: color }}
-      aria-hidden="true"
-    >
-      {initials(order.publicDisplayName)}
-    </span>
-  );
-}
 
 async function playReadySound() {
   const AudioContextClass = window.AudioContext ||
@@ -116,12 +82,12 @@ export function PickupDisplay({
   }, []);
 
   useEffect(() => {
-    const next = new Set(ready.map((order) => order.id));
+    const next = new Set(ready.map((order) => order.displayNumber));
     if (
       soundEnabled &&
       soundUnlocked &&
       previousReady.current &&
-      ready.some((order) => !previousReady.current?.has(order.id))
+      ready.some((order) => !previousReady.current?.has(order.displayNumber))
     ) {
       void playReadySound();
     }
@@ -186,18 +152,16 @@ export function PickupDisplay({
                 {cooking.map((order) => (
                   <motion.article
                     layout={!reduceMotion}
-                    layoutId={`pickup-order-${order.id}`}
-                    key={order.id}
+                    layoutId={`pickup-order-${order.displayNumber}`}
+                    key={order.displayNumber}
                     initial={reduceMotion ? false : { opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
                     transition={{ duration: reduceMotion ? 0 : 0.22 }}
                     className="flex min-h-[118px] min-w-0 items-center gap-4 rounded-lg border border-white/10 bg-white/[0.055] p-4"
                   >
-                    <GuestAvatar order={order} />
                     <div className="min-w-0">
                       <strong className="block text-3xl font-black leading-none tabular-nums sm:text-4xl">{order.displayNumber}</strong>
-                      <p className="mt-2 truncate text-base font-bold text-white/55">{order.publicDisplayName}</p>
                       {order.isTest ? <span className="mt-2 inline-block rounded-md bg-sky-400/15 px-2 py-1 text-[10px] font-black uppercase text-sky-300">Test</span> : null}
                     </div>
                   </motion.article>
@@ -228,8 +192,8 @@ export function PickupDisplay({
                 {ready.map((order) => (
                   <motion.article
                     layout={!reduceMotion}
-                    layoutId={`pickup-order-${order.id}`}
-                    key={order.id}
+                    layoutId={`pickup-order-${order.displayNumber}`}
+                    key={order.displayNumber}
                     initial={reduceMotion ? false : { opacity: 0, scale: 0.9, y: 18 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
@@ -237,10 +201,8 @@ export function PickupDisplay({
                     className="relative flex min-h-[160px] min-w-0 items-center gap-4 overflow-hidden rounded-lg border border-[#FB670A]/40 bg-white p-4 text-[#121214] shadow-[0_18px_48px_rgba(0,0,0,0.24)] sm:p-5"
                   >
                     <span className="absolute inset-y-0 left-0 w-1.5 bg-[#FB670A]" aria-hidden="true" />
-                    <GuestAvatar order={order} large />
                     <div className="min-w-0">
                       <strong className="block text-5xl font-black leading-none tabular-nums sm:text-6xl">{order.displayNumber}</strong>
-                      <p className="mt-3 truncate text-lg font-black sm:text-xl">{order.publicDisplayName}</p>
                       {order.isTest ? <span className="mt-2 inline-block rounded-md bg-sky-100 px-2 py-1 text-[10px] font-black uppercase text-sky-800">Test</span> : null}
                     </div>
                   </motion.article>

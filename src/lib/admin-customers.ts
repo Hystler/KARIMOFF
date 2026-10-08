@@ -134,21 +134,10 @@ function normalizeTransaction(row: Record<string, unknown>): LoyaltyTransaction 
 }
 
 function normalizeIdentity(row: Record<string, unknown>): UserIdentityView {
-  const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-    ? row.metadata as Record<string, unknown>
-    : {};
   return {
     id: String(row.id),
     provider: row.provider as UserIdentityView["provider"],
-    providerUserId: String(row.provider_user_id),
-    username: typeof row.username === "string" ? row.username : null,
-    displayName: typeof row.display_name === "string" ? row.display_name : null,
-    avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
-    email: typeof row.email === "string" ? row.email : null,
-    phone: typeof row.phone === "string" ? row.phone : null,
     phoneVerified: Boolean(row.phone_verified),
-    givenName: typeof metadata.givenName === "string" ? metadata.givenName : null,
-    familyName: typeof metadata.familyName === "string" ? metadata.familyName : null,
     linkedAt: String(row.linked_at),
     lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
   };
@@ -187,7 +176,7 @@ export async function getAdminCustomers() {
           database.from("customer_avatars").select("customer_id, base, eyes, mouth, accessory, clothes, background").in("customer_id", customerIds),
           database.from("loyalty_accounts").select("customer_id, points_balance, total_earned, total_spent").in("customer_id", customerIds),
           database.from("orders").select("customer_id, total").in("customer_id", customerIds),
-          database.from("user_identities").select("id, user_id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at").in("user_id", customerIds).in("provider", ["phone", "telegram", "max"])
+          database.from("user_identities").select("id, user_id, provider, phone_verified, linked_at, last_login_at").in("user_id", customerIds).in("provider", ["phone", "telegram", "max"])
         ])
       : [
           { data: [], error: null },
@@ -317,7 +306,7 @@ export async function getAdminCustomerById(id: string) {
         .limit(100),
       database
         .from("user_identities")
-        .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at")
+        .select("id, provider, phone_verified, linked_at, last_login_at")
         .eq("user_id", id)
         .in("provider", ["phone", "telegram", "max"])
         .order("linked_at", { ascending: true })

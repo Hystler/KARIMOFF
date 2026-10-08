@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
-import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
+import { getCurrentConsentState, getShortUserAgent, isChecked, recordLegalConsents } from "@/lib/legal-consents";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { createOrderSchema, initialOrderActionState, type OrderActionState } from "@/lib/order-schema";
 import { createOrder } from "@/lib/order-flow/service";
@@ -42,6 +42,7 @@ export async function getCheckoutContextAction() {
     whitelistReady = false;
   }
   let receiptEmail = "";
+  let marketingChoiceMade = false;
   if (customer) {
     const database = createDatabaseServerClient();
     const [{ data: profile }, { data: identities }] = database
@@ -67,10 +68,13 @@ export async function getCheckoutContextAction() {
       : identity?.email
         ? String(identity.email)
         : "";
+    const marketing = await getCurrentConsentState(customer.id, "marketing");
+    marketingChoiceMade = Boolean(marketing && marketing.document_version === LEGAL_VERSION);
   }
 
   return {
     customer,
+    marketingChoiceMade,
     payment: {
       enabled: isYooKassaCheckoutEnabled(),
       receiptEmail
@@ -198,20 +202,6 @@ export async function createOrderAction(
     };
   }
 
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return {
-      status: "error",
-      message: "Нужно дать согласие на обработку персональных данных."
-    };
-  }
-
-  if (!isChecked(formData.get("offer_acceptance"))) {
-    return {
-      status: "error",
-      message: "Нужно принять условия публичной оферты."
-    };
-  }
-
   if (parsed.data.fulfillment_mode === "scheduled") {
     const validation = validateSameDayMoscowRequestedAt(parsed.data.requested_at || "");
     if (!validation.ok) return { status: "error", message: validation.message };
@@ -281,6 +271,17 @@ export async function createOrderAction(
     : randomUUID();
   let stage: "create_order" | "create_payment" = "create_order";
   try {
+    const marketingState = await getCurrentConsentState(customer.id, "marketing");
+    if (!marketingState || marketingState.document_version !== LEGAL_VERSION) {
+      const marketingSaved = await recordLegalConsents({
+        subjectId: customer.id,
+        subjectType: "customer",
+        sourcePath: "/checkout#marketing-consent",
+        userAgent: await getShortUserAgent(),
+        consents: [{ type: "marketing", granted: isChecked(formData.get("marketing_consent")) }]
+      });
+      if (!marketingSaved.ok) return { status: "error", message: marketingSaved.message };
+    }
     const order = await createOrder({
       source: "web",
       deliveryAddressId,
@@ -298,7 +299,7 @@ export async function createOrderAction(
       requiresPayment: true,
       marketingGranted: isChecked(formData.get("marketing_consent")),
       offerAccepted: true,
-      personalDataGranted: true,
+      personalDataGranted: false,
       sourcePath: "/checkout",
       userAgentShort: await getShortUserAgent()
     });

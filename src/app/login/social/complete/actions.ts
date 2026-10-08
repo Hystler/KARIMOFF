@@ -42,9 +42,6 @@ export async function requestSocialPhoneCodeAction(
 ): Promise<SocialCompleteState> {
   await assertTrustedRequestOrigin();
   if (!(await readPendingSocialIdentity())) return { status: "error", message: "Сессия входа истекла. Начните заново." };
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
-  }
   const parsed = requestSchema.safeParse({ phone: formData.get("phone"), name: formData.get("name") });
   if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте данные." };
 
@@ -64,9 +61,6 @@ export async function completeSocialPhoneAction(
   await assertTrustedRequestOrigin();
   const pending = await readPendingSocialIdentity();
   if (!pending) return { status: "error", message: "Сессия входа истекла. Начните заново." };
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
-  }
   const parsed = confirmSchema.safeParse({
     phone: formData.get("phone"),
     name: formData.get("name"),

@@ -185,7 +185,7 @@ test("POS server action exports functions only", () => {
 test("pickup display uses spatial transitions, persistent optional sound, and restrained brand color", () => {
   assert.match(display, /AnimatePresence mode="popLayout"/);
   assert.match(display, /LayoutGroup/);
-  assert.match(display, /layoutId={`pickup-order-\$\{order\.id\}`}/);
+  assert.match(display, /layoutId={`pickup-order-\$\{order\.displayNumber\}`}/);
   assert.match(display, /SOUND_STORAGE_KEY/);
   assert.match(display, /playReadySound/);
   assert.match(display, /useReducedMotion/);

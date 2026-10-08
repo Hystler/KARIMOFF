@@ -102,7 +102,6 @@ export default async function AdminCustomersPage() {
                             <IdentityProviderBadge
                               key={identity.id}
                               provider={identity.provider}
-                              username={identity.username}
                               phoneVerified={identity.phoneVerified}
                             />
                           ))}

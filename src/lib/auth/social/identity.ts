@@ -16,27 +16,16 @@ import type { SocialIdentityClaims, SocialProvider } from "./types";
 const claimsSchema = z.object({
   provider: z.enum(["telegram", "max"]),
   providerUserId: z.string().min(1).max(255),
-  username: z.string().max(128).nullable(),
   displayName: z.string().max(160).nullable(),
-  avatarUrl: z.string().url().max(2048).nullable(),
-  email: z.string().email().max(320).nullable(),
   phone: z.string().regex(/^\+7\d{10}$/).nullable(),
   phoneVerified: z.boolean(),
-  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+  telegramBotUserId: z.string().regex(/^[1-9]\d{0,15}$/).nullable().optional()
 });
 
 export type UserIdentityView = {
   id: string;
   provider: "phone" | SocialProvider;
-  providerUserId: string;
-  username: string | null;
-  displayName: string | null;
-  avatarUrl: string | null;
-  email: string | null;
-  phone: string | null;
   phoneVerified: boolean;
-  givenName: string | null;
-  familyName: string | null;
   linkedAt: string;
   lastLoginAt: string | null;
 };
@@ -75,22 +64,21 @@ export async function bindIdentityToUser(userId: string, rawClaims: SocialIdenti
 
     await transaction`
       insert into public.user_identities (
-        user_id, provider, provider_user_id, username, display_name, avatar_url,
-        email, phone, phone_verified, linked_at, last_login_at, metadata
+        user_id, provider, provider_user_id, phone_verified, linked_at, last_login_at, metadata
       )
       values (
-        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId}, ${claims.username},
-        ${claims.displayName}, ${claims.avatarUrl}, ${claims.email}, ${claims.phone},
-        ${claims.phoneVerified}, now(), now(), ${transaction.json(claims.metadata)}
+        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId},
+        ${claims.phoneVerified}, now(), now(),
+        ${transaction.json(claims.telegramBotUserId ? { telegramBotUserId: claims.telegramBotUserId } : {})}
       )
       on conflict (provider, provider_user_id) do update
-      set username = excluded.username,
-          display_name = excluded.display_name,
-          avatar_url = excluded.avatar_url,
-          email = excluded.email,
-          phone = excluded.phone,
-          phone_verified = excluded.phone_verified,
+      set username = null,
+          display_name = null,
+          avatar_url = null,
+          email = null,
+          phone = null,
           metadata = excluded.metadata,
+          phone_verified = excluded.phone_verified,
           last_login_at = now(),
           updated_at = now()
       where public.user_identities.user_id = excluded.user_id
@@ -172,22 +160,21 @@ async function resolveLoginIdentity(claims: SocialIdentityClaims) {
 
     await transaction`
       insert into public.user_identities (
-        user_id, provider, provider_user_id, username, display_name, avatar_url,
-        email, phone, phone_verified, linked_at, last_login_at, metadata
+        user_id, provider, provider_user_id, phone_verified, linked_at, last_login_at, metadata
       )
       values (
-        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId}, ${claims.username},
-        ${claims.displayName}, ${claims.avatarUrl}, ${claims.email}, ${claims.phone},
-        ${claims.phoneVerified}, now(), now(), ${transaction.json(claims.metadata)}
+        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId},
+        ${claims.phoneVerified}, now(), now(),
+        ${transaction.json(claims.telegramBotUserId ? { telegramBotUserId: claims.telegramBotUserId } : {})}
       )
       on conflict (provider, provider_user_id) do update
-      set username = excluded.username,
-          display_name = excluded.display_name,
-          avatar_url = excluded.avatar_url,
-          email = excluded.email,
-          phone = excluded.phone,
-          phone_verified = excluded.phone_verified,
+      set username = null,
+          display_name = null,
+          avatar_url = null,
+          email = null,
+          phone = null,
           metadata = excluded.metadata,
+          phone_verified = excluded.phone_verified,
           last_login_at = now(),
           updated_at = now()
       where public.user_identities.user_id = excluded.user_id
@@ -282,27 +269,16 @@ export async function getUserIdentities(userId: string): Promise<UserIdentityVie
   if (!database) return [];
   const { data } = await database
     .from("user_identities")
-    .select("id, provider, provider_user_id, username, display_name, avatar_url, email, phone, phone_verified, metadata, linked_at, last_login_at")
+    .select("id, provider, phone_verified, linked_at, last_login_at")
     .eq("user_id", userId)
     .in("provider", ["phone", "telegram", "max"])
     .order("linked_at", { ascending: true });
 
   return (data ?? []).map((row) => {
-    const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-      ? row.metadata as Record<string, unknown>
-      : {};
     return {
       id: String(row.id),
       provider: row.provider as UserIdentityView["provider"],
-      providerUserId: String(row.provider_user_id),
-      username: typeof row.username === "string" ? row.username : null,
-      displayName: typeof row.display_name === "string" ? row.display_name : null,
-      avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
-      email: typeof row.email === "string" ? row.email : null,
-      phone: typeof row.phone === "string" ? row.phone : null,
       phoneVerified: Boolean(row.phone_verified),
-      givenName: typeof metadata.givenName === "string" ? metadata.givenName : null,
-      familyName: typeof metadata.familyName === "string" ? metadata.familyName : null,
       linkedAt: String(row.linked_at),
       lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
     };
@@ -413,20 +389,20 @@ export async function completePendingIdentityRegistration(params: {
 
     await transaction`
       insert into public.user_identities (
-        user_id, provider, provider_user_id, username, display_name, avatar_url,
-        email, phone, phone_verified, linked_at, last_login_at, metadata
+        user_id, provider, provider_user_id, phone_verified, linked_at, last_login_at, metadata
       )
       values (
-        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId}, ${claims.username},
-        ${claims.displayName}, ${claims.avatarUrl}, ${claims.email}, ${claims.phone},
-        ${claims.phoneVerified}, now(), now(), ${transaction.json(claims.metadata)}
+        ${userId}::uuid, ${claims.provider}, ${claims.providerUserId},
+        ${claims.phoneVerified}, now(), now(),
+        ${transaction.json(claims.telegramBotUserId ? { telegramBotUserId: claims.telegramBotUserId } : {})}
       )
       on conflict (provider, provider_user_id) do update
-      set username = excluded.username,
-          display_name = excluded.display_name,
-          avatar_url = excluded.avatar_url,
-          email = excluded.email,
-          phone = excluded.phone,
+      set username = null,
+          display_name = null,
+          avatar_url = null,
+          email = null,
+          phone = null,
+          metadata = excluded.metadata,
           phone_verified = excluded.phone_verified,
           last_login_at = now(),
           updated_at = now()
@@ -449,12 +425,9 @@ export async function completePendingIdentityRegistration(params: {
         subject_type, subject_id, consent_type, document_version, granted,
         granted_at, revoked_at, source_path, user_agent_short
       )
-      values
-        ('customer', ${userId}::uuid, 'personal_data', ${LEGAL_VERSION}, true, now(), null, '/login/social/complete', ${params.userAgent}),
-        ('customer', ${userId}::uuid, 'marketing', ${LEGAL_VERSION}, ${params.marketingConsent},
-          case when ${params.marketingConsent} then now() else null end,
-          case when ${params.marketingConsent} then null else now() end,
-          '/login/social/complete', ${params.userAgent})
+      select 'customer', ${userId}::uuid, 'marketing', ${LEGAL_VERSION}, true,
+        now(), null, '/login/social/complete', ${params.userAgent}
+      where ${params.marketingConsent}
     `;
     await transaction`update public.customers set last_login_at = now(), updated_at = now() where id = ${userId}::uuid`;
     return { userId, redirectTo: pending.redirect_to ?? "/profile", provider: claims.provider };

@@ -67,9 +67,8 @@ async function saveRegistrationConsents(
     sourcePath,
     userAgent: await getShortUserAgent(),
     consents: [
-      { type: "personal_data", granted: true },
-      { type: "marketing", granted: isChecked(formData.get("marketing_consent")) },
-      { type: "loyalty_rules", granted: isChecked(formData.get("loyalty_consent")) }
+      ...(isChecked(formData.get("marketing_consent")) ? [{ type: "marketing" as const, granted: true }] : []),
+      ...(isChecked(formData.get("loyalty_consent")) ? [{ type: "loyalty_rules" as const, granted: true }] : [])
     ]
   });
 }
@@ -108,9 +107,6 @@ export async function requestRegisterCodeAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
-  }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const limit = await checkAuthRateLimit("send_code", normalizedPhone);
@@ -154,9 +150,6 @@ export async function registerWithPasswordAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
-  }
 
   const database = createDatabaseServerClient();
 
@@ -249,9 +242,6 @@ export async function confirmRegisterAction(
     return { status: "error", message: parsed.error.issues[0]?.message ?? "Проверьте поля." };
   }
 
-  if (!isChecked(formData.get("personal_data_consent"))) {
-    return { status: "error", message: "Нужно дать согласие на обработку персональных данных." };
-  }
 
   const normalizedPhone = normalizePhone(parsed.data.phone);
   const limit = await checkAuthRateLimit("verify_code", normalizedPhone);

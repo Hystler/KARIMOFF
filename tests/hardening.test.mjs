@@ -41,10 +41,11 @@ test("inventory rows are locked and negative balances are rejected", () => {
   assert.match(migration, /check \(current_quantity >= 0 and reserved_quantity >= 0 and min_quantity >= 0\)/);
 });
 
-test("personal-data consent is mandatory and marketing remains optional", () => {
-  assert.match(orderAction, /if \(!isChecked\(formData\.get\("personal_data_consent"\)\)\)/);
+test("contract processing is not consent-gated and marketing remains optional", () => {
+  assert.doesNotMatch(orderAction, /personal_data_consent/);
+  assert.match(orderAction, /personalDataGranted: false/);
   assert.match(orderAction, /marketingGranted: isChecked\(formData\.get\("marketing_consent"\)\)/);
-  assert.match(leadAction, /if \(!isChecked\(formData\.get\("personal_data_consent"\)\)\)/);
+  assert.match(leadAction, /interest === "career" \|\| parsed\.data\.interest === "franchise"/);
   assert.doesNotMatch(authForm, /name="marketing_consent"/);
   assert.doesNotMatch(authForm, /name="marketing_consent"[\s\S]{0,120}defaultChecked/);
 });
@@ -52,8 +53,12 @@ test("personal-data consent is mandatory and marketing remains optional", () => 
 test("cookie categories are disabled until consent and revocation is journaled", () => {
   assert.match(cookieBanner, /const \[analytics, setAnalytics\] = useState\(false\)/);
   assert.match(cookieBanner, /const \[marketing, setMarketing\] = useState\(false\)/);
-  assert.match(cookieRoute, /\{ type: "cookies_analytics", granted: categories\.analytics \}/);
-  assert.match(cookieRoute, /\{ type: "cookies_marketing", granted: categories\.marketing \}/);
+  assert.match(cookieRoute, /\["cookies_analytics", categories\.analytics\]/);
+  assert.match(cookieRoute, /\["cookies_marketing", categories\.marketing\]/);
+  assert.match(cookieRoute, /stored: false/);
+  assert.match(cookieRoute, /document_version/);
+  assert.match(cookieBanner, /result\.ok !== true \|\| result\.stored !== true/);
+  assert.match(cookieBanner, /setSaveError/);
   assert.doesNotMatch(cookieBanner, /google-analytics|googletagmanager|metrika|facebook\.net/i);
 });
 

@@ -7,7 +7,9 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { ensureLoyaltyAccount } from "@/lib/loyalty";
 import { ensureLoyaltyCard } from "@/lib/loyalty-card";
 import { getWalletConfiguration } from "@/lib/wallet/config";
-import { rotateLoyaltyCardAction } from "./actions";
+import { joinLoyaltyAction, rotateLoyaltyCardAction } from "./actions";
+import { getCurrentConsentState } from "@/lib/legal-consents";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,22 @@ function formatPoints(value: number) {
 export default async function LoyaltyCardPage() {
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login?redirectTo=/profile/loyalty");
+  const consent = await getCurrentConsentState(customer.id, "loyalty_rules");
+  if (consent?.granted !== true || consent.document_version !== LEGAL_VERSION) {
+    return (
+      <main className="min-h-dvh bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
+        <section className="container-page pb-16">
+          <div className="mx-auto max-w-2xl rounded-lg border border-karimoff-line bg-white p-7 shadow-card sm:p-10">
+            <p className="text-sm font-bold text-karimoff-orange-contrast">KARIMOFF Bonus</p>
+            <h1 className="mt-3 text-3xl font-black">Присоединиться к программе лояльности</h1>
+            <p className="mt-4 text-sm leading-6 text-karimoff-muted">Участие добровольное. Нажимая кнопку, вы принимаете действующую версию <Link href="/legal/loyalty" className="font-bold text-karimoff-orange-contrast">правил программы</Link>. Выбор сохранится в профиле и не будет повторно запрашиваться для каждого заказа.</p>
+            <form action={joinLoyaltyAction} className="mt-6"><button className="public-button-primary px-6">Присоединиться и принять правила</button></form>
+            <Link href="/profile" className="public-button-secondary mt-3 px-6">Назад в профиль</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
   const [card, account] = await Promise.all([
     ensureLoyaltyCard(customer.id),
     ensureLoyaltyAccount(customer.id)

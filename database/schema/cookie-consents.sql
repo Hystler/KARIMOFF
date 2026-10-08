@@ -7,7 +7,8 @@ create table if not exists public.cookie_consents (
   categories jsonb default '{}'::jsonb,
   user_agent text,
   page_url text,
-  ip_hash text null
+  ip_hash text null,
+  document_version text not null default 'legacy-unversioned'
 );
 
 alter table public.cookie_consents add column if not exists consent_id text;
@@ -17,6 +18,7 @@ alter table public.cookie_consents add column if not exists categories jsonb def
 alter table public.cookie_consents add column if not exists user_agent text;
 alter table public.cookie_consents add column if not exists page_url text;
 alter table public.cookie_consents add column if not exists ip_hash text null;
+alter table public.cookie_consents add column if not exists document_version text not null default 'legacy-unversioned';
 
 create index if not exists cookie_consents_created_at_idx on public.cookie_consents (created_at);
 create index if not exists cookie_consents_consent_id_idx on public.cookie_consents (consent_id);

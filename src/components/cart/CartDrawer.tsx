@@ -120,6 +120,7 @@ export function CartDrawer() {
     delivery_timezone: "Europe/Moscow"
   });
   const [receiptEmail, setReceiptEmail] = useState("");
+  const [marketingChoiceMade, setMarketingChoiceMade] = useState(false);
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
   const [checkoutContextError, setCheckoutContextError] = useState<string | null>(null);
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
@@ -249,6 +250,7 @@ export function CartDrawer() {
         online_payments_enabled: context.payment.enabled
       });
       setReceiptEmail(context.payment.receiptEmail);
+      setMarketingChoiceMade(context.marketingChoiceMade);
       setDeliveryType(context.settings.pickup_enabled ? "pickup" : "delivery");
       setCustomer(context.customer);
       setCheckoutRequestId(getOrCreateCheckoutRequestId(cartPayload));
@@ -726,35 +728,19 @@ export function CartDrawer() {
               </section>
 
               <section className="grid gap-2 border-t border-karimoff-line pt-3 text-xs">
-                <label className="flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    name="personal_data_consent"
-                    required
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange"
-                  />
-                  <span className="leading-5 text-karimoff-muted">
-                    Согласие на обработку персональных данных.{" "}
-                    <Link href="/legal/personal-data-consent" target="_blank" className="font-bold text-karimoff-orange-contrast">
-                      Текст согласия
-                    </Link>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    name="offer_acceptance"
-                    required
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange"
-                  />
-                  <span className="leading-5 text-karimoff-muted">
-                    Принимаю условия{" "}
+                <p className="leading-5 text-karimoff-muted">
+                  Данные используются для оформления и исполнения заказа. {" "}
+                  <Link href="/legal/privacy" target="_blank" className="font-bold text-karimoff-orange-contrast">
+                    Политика обработки персональных данных
+                  </Link>
+                </p>
+                <p className="leading-5 text-karimoff-muted">
+                    Нажимая «Оформить заказ», вы принимаете условия{" "}
                     <Link href="/legal/offer" target="_blank" className="font-bold text-karimoff-orange-contrast">
                       публичной оферты
                     </Link>
-                  </span>
-                </label>
-                <details className="group">
+                </p>
+                {!marketingChoiceMade ? <details className="group">
                   <summary className="flex min-h-8 cursor-pointer items-center gap-2 font-bold text-karimoff-muted">
                     Получать акции KARIMOFF
                     <ChevronDown size={15} className="transition-transform group-open:rotate-180" />
@@ -763,7 +749,7 @@ export function CartDrawer() {
                     <input type="checkbox" name="marketing_consent" className="mt-0.5 h-4 w-4 shrink-0 accent-karimoff-orange" />
                   <span className="leading-5 text-karimoff-muted">Согласен получать акции и предложения. <Link href="/legal/marketing-consent" target="_blank" className="font-bold text-karimoff-orange-contrast">Условия</Link></span>
                   </label>
-                </details>
+                </details> : null}
               </section>
 
               <section className="rounded-lg border border-karimoff-line bg-white p-4">

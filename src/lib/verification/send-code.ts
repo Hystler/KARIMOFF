@@ -6,7 +6,9 @@ export async function sendVerificationCode(phone: string, code?: string): Promis
   const sender = process.env.SMS_SENDER;
 
   if (process.env.NODE_ENV !== "production") {
-    console.info(`[KARIMOFF verification] ${phone}: ${code ?? "code generated"}`);
+    // Never expose verification secrets or full contact details in logs.
+    void phone;
+    void code;
     return { ok: true };
   }
 

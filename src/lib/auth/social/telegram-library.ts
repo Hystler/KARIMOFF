@@ -136,18 +136,9 @@ export async function verifyTelegramLibraryIdToken(params: {
   return {
     provider: "telegram",
     providerUserId: claims.sub,
-    username: claims.preferred_username ?? null,
     displayName: claims.name ?? null,
-    avatarUrl: claims.picture ?? null,
-    email: null,
     phone,
     phoneVerified: isTelegramPhoneVerified(phone, claims.phone_number_verified),
-    metadata: {
-      givenName: claims.given_name ?? null,
-      familyName: claims.family_name ?? null,
-      loginFlow: "telegram_login_library",
-      telegramBotUserId: normalizeTelegramBotUserId(claims.id),
-      botAccessRequested: true
-    }
+    telegramBotUserId: normalizeTelegramBotUserId(claims.id)
   };
 }

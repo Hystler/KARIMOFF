@@ -71,6 +71,17 @@ export async function ensureLoyaltyAccount(customerId: string) {
   return normalizeAccount(data, customerId);
 }
 
+export async function getLoyaltyAccount(customerId: string) {
+  const database = createDatabaseServerClient();
+  if (!database) return null;
+  const { data } = await database
+    .from("loyalty_accounts")
+    .select("customer_id, points_balance, total_earned, total_spent")
+    .eq("customer_id", customerId)
+    .maybeSingle();
+  return data ? normalizeAccount(data, customerId) : null;
+}
+
 export async function getAdminLoyalty() {
   const database = createDatabaseServerClient();
 

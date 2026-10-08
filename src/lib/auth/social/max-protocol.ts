@@ -155,28 +155,9 @@ function parseUser(value: string | undefined) {
 
   const givenName = cleanOptionalString(candidate.first_name, 80);
   const familyName = cleanOptionalString(candidate.last_name, 80);
-  const username = cleanOptionalString(candidate.username, 128);
-  const languageCode = cleanOptionalString(candidate.language_code, 16);
-  const avatarUrl = cleanOptionalString(candidate.photo_url, 2048);
-  if (avatarUrl) {
-    try {
-      if (new URL(avatarUrl).protocol !== "https:") throw new Error("invalid protocol");
-    } catch {
-      throw new MaxValidationError("init_data_user_invalid");
-    }
-  }
-
   return {
     providerUserId,
-    username,
-    displayName: [givenName, familyName].filter(Boolean).join(" ") || username,
-    avatarUrl,
-    metadata: {
-      givenName,
-      familyName,
-      languageCode,
-      source: "max_mini_app"
-    }
+    displayName: [givenName, familyName].filter(Boolean).join(" ") || null
   };
 }
 
@@ -222,13 +203,9 @@ export function validateMaxWebAppData(params: {
     claims: {
       provider: "max",
       providerUserId: user.providerUserId,
-      username: user.username,
       displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      email: null,
       phone: null,
-      phoneVerified: false,
-      metadata: user.metadata
+      phoneVerified: false
     }
   };
 }

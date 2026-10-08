@@ -40,12 +40,8 @@ export default async function DisplayPage({
     .filter((order) => order.isTest === displayTestOrders)
     .filter((order) => isOrderVisibleToKitchen(order, sla))
     .map((order) => ({
-      id: order.id,
       displayNumber: order.displayNumber,
       kitchenStatus: order.kitchenStatus,
-      publicDisplayName: order.publicDisplayName,
-      publicAvatarSeed: order.publicAvatarSeed,
-      publicAvatar: order.publicAvatar,
       isTest: order.isTest
     }));
   return <PickupDisplay orders={publicOrders} location={location} initialCursor={initialCursor} />;

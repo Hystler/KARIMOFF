@@ -819,6 +819,41 @@ migrations.push({
     return /^[0-9a-f]{64}$/.test(probe?.hash ?? "");
   }
 });
+migrations.push({
+  name: "20261008100000_correct_checkout_consent_basis",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select
+        exists (select 1 from pg_attribute
+          where attrelid = to_regclass('public.cookie_consents')
+            and attname = 'document_version' and not attisdropped) as cookie_version,
+        exists (select 1 from pg_attribute
+          where attrelid = to_regclass('public.legal_consents')
+            and attname = 'order_id' and not attisdropped) as offer_order_link,
+        to_regprocedure('public.create_site_order(uuid,text,text,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamp with time zone)') is not null as order_rpc,
+        to_regprocedure('public.create_lead_with_consents_atomic(text,text,text,text,text,text,text,text,text,boolean)') is not null as lead_rpc
+    `;
+    return Boolean(objects?.cookie_version && objects?.offer_order_link && objects?.order_rpc && objects?.lead_rpc);
+  }
+});
+migrations.push({
+  name: "20261008120000_minimize_social_identity_data",
+  applied: async (sql) => {
+    const [objects] = await sql`
+      select to_regclass('public.user_identities') is not null as identities,
+        not exists (
+          select 1 from public.user_identities
+          where provider in ('telegram', 'max')
+            and (username is not null or display_name is not null or avatar_url is not null
+              or email is not null or phone is not null
+              or metadata <> case when provider = 'telegram' and metadata ? 'telegramBotUserId'
+                then jsonb_build_object('telegramBotUserId', metadata->'telegramBotUserId')
+                else '{}'::jsonb end)
+        ) as claims_removed
+    `;
+    return Boolean(objects?.identities && objects?.claims_removed);
+  }
+});
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
 const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 

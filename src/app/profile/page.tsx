@@ -5,7 +5,6 @@ import { CustomerOrdersLive } from "@/components/profile/CustomerOrdersLive";
 import { getCustomerProfileData } from "@/lib/customer-data";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
-import { IdentityAvatar } from "@/components/auth/IdentityAvatar";
 import { QrCode } from "lucide-react";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
 import { MaxLoginButton } from "@/components/auth/MaxLoginButton";
@@ -32,7 +31,7 @@ function formatNumber(value: number) {
 type ProfilePageProps = { searchParams?: Promise<{ identity?: string; identity_error?: string }> };
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
-  const { customer, account, avatar, orders, transactions, marketingConsent, error } = await getCustomerProfileData();
+  const { customer, account, avatar, orders, transactions, marketingConsent, loyaltyJoined, error } = await getCustomerProfileData();
 
   if (!customer) {
     redirect("/login");
@@ -115,7 +114,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               <QrCode size={22} className="profile-accent shrink-0" />
             </div>
             <p className="mt-3 text-xl font-black">QR для кассы и Wallet</p>
-            <Link href="/profile/loyalty" className="public-button-primary mt-5 w-full px-5">Открыть карту</Link>
+            <Link href="/profile/loyalty" className="public-button-primary mt-5 w-full px-5">
+              {loyaltyJoined ? "Открыть карту" : "Присоединиться к программе"}
+            </Link>
           </article>
         </div>
 
@@ -165,19 +166,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               return (
                 <article key={provider} className="profile-border flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-3">
-                    <IdentityAvatar
-                      identityId={identity?.id ?? provider}
-                      label={provider === "telegram" ? "T" : "MAX"}
-                      hasImage={Boolean(identity?.avatarUrl)}
-                    />
+                    <span aria-hidden="true" className="profile-accent flex size-10 shrink-0 items-center justify-center rounded-full border font-black">
+                      {provider === "telegram" ? "T" : "M"}
+                    </span>
                     <div className="min-w-0">
                       <p className="font-black">{providerLabels[provider]}</p>
                       <p className="profile-muted mt-1 truncate text-xs font-semibold">
-                        {identity
-                          ? identity.username
-                            ? `@${identity.username}`
-                            : identity.displayName || identity.phone || "Подключено"
-                          : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
+                        {identity ? "Подключено" : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
                       </p>
                     </div>
                   </div>

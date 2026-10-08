@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/cart/CartProvider";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 const STORAGE_KEY = "karimoff_cookie_consent";
 const COOKIE_NAME = "karimoff_cookie_consent";
@@ -19,6 +20,7 @@ type SavedChoice = {
   categories: CookieCategories;
   consentId: string;
   savedAt: string;
+  documentVersion: string;
 };
 
 function createConsentId() {
@@ -47,6 +49,7 @@ export function CookieConsentBanner() {
   const [isSaving, setIsSaving] = useState(false);
   const [analytics, setAnalytics] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const openSettings = useCallback(() => {
     const saved = readSavedChoice();
@@ -59,7 +62,8 @@ export function CookieConsentBanner() {
   useEffect(() => {
     const saved = readSavedChoice();
     const hasCookie = document.cookie.split(";").some((item) => item.trim().startsWith(`${COOKIE_NAME}=`));
-    const visibilityTimeout = window.setTimeout(() => setIsVisible(!saved || !hasCookie), 0);
+    const isCurrent = saved?.documentVersion === LEGAL_VERSION;
+    const visibilityTimeout = window.setTimeout(() => setIsVisible(!saved || !hasCookie || !isCurrent), 0);
 
     window.addEventListener("karimoff-open-cookie-settings", openSettings);
     return () => {
@@ -87,16 +91,13 @@ export function CookieConsentBanner() {
   async function saveConsent(categories: CookieCategories) {
     const previous = readSavedChoice();
     const consentId = previous?.consentId || createConsentId();
-    const choice: SavedChoice = { categories, consentId, savedAt: new Date().toISOString() };
+    const choice: SavedChoice = { categories, consentId, savedAt: new Date().toISOString(), documentVersion: LEGAL_VERSION };
 
     setIsSaving(true);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
-    setConsentCookie(consentId);
-    setIsVisible(false);
-    setIsSettingsOpen(false);
+    setSaveError(null);
 
     try {
-      await fetch("/api/cookie-consent", {
+      const response = await fetch("/api/cookie-consent", {
         body: JSON.stringify({
           accepted: categories.analytics || categories.marketing,
           categories,
@@ -106,6 +107,19 @@ export function CookieConsentBanner() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
+      const result = await response.json() as { ok?: boolean; stored?: boolean; error?: string };
+      if (!response.ok || result.ok !== true || result.stored !== true) {
+        setSaveError(result.error || "Не удалось сохранить выбор. Попробуйте ещё раз.");
+        setIsVisible(true);
+        return;
+      }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
+      setConsentCookie(consentId);
+      setIsVisible(false);
+      setIsSettingsOpen(false);
+    } catch {
+      setSaveError("Не удалось сохранить выбор. Проверьте подключение и попробуйте ещё раз.");
+      setIsVisible(true);
     } finally {
       setIsSaving(false);
     }
@@ -210,6 +224,7 @@ export function CookieConsentBanner() {
                   </button>
                 )}
               </div>
+              {saveError ? <p role="alert" className="text-sm font-semibold text-red-300">{saveError}</p> : null}
             </div>
           </div>
         </motion.div>

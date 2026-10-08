@@ -327,7 +327,7 @@ test("MAX UI, profile and admin expose only safe identity details", () => {
   assert.doesNotMatch(profile, /\["phone", "telegram", "max"\]/);
   assert.match(profile, /MaxLoginButton/);
   assert.match(profileActions, /provider in \('phone', 'telegram', 'max'\)/);
-  assert.match(detail, /MAX user ID/);
+  assert.doesNotMatch(detail, /MAX user ID|providerUserId/);
   assert.match(detail, /Подтверждение телефона/);
   assert.match(detail, /Первый вход \/ привязка/);
   assert.match(list, /\["phone", "telegram", "max"\]/);

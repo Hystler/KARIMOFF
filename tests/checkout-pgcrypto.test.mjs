@@ -130,7 +130,12 @@ test("checkout failure logs stage/type/SQLSTATE, not error messages, SQL paramet
   Object.assign(imports, {
     "node:crypto": { randomUUID },
     "@/lib/customer-auth": { getCurrentCustomer: async () => ({ id: randomUUID() }) },
-    "@/lib/legal-consents": { getShortUserAgent: async () => "synthetic", isChecked: value => value === "on" },
+    "@/lib/legal-consents": {
+      getShortUserAgent: async () => "synthetic",
+      isChecked: value => value === "on",
+      getCurrentConsentState: async () => null,
+      recordLegalConsents: async () => ({ ok: true })
+    },
     "@/lib/legal": { LEGAL_VERSION: "test" },
     "@/lib/order-schema": schema,
     "@/lib/settings": { getSiteSettings: async () => ({ pickup_enabled: true }) },

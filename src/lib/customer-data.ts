@@ -1,12 +1,14 @@
 import "server-only";
 
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getCurrentConsentState } from "@/lib/legal-consents";
 import { getCustomerAvatar } from "@/lib/avatar";
 import { defaultAvatar, type AvatarConfig } from "@/lib/avatar-schema";
-import { ensureLoyaltyAccount, type LoyaltyAccount, type LoyaltyTransaction } from "@/lib/loyalty";
+import { getLoyaltyAccount, type LoyaltyAccount, type LoyaltyTransaction } from "@/lib/loyalty";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { getCustomerOrdersForCustomer, type CustomerOrder } from "@/lib/customer-orders";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 function normalizeTransaction(row: Record<string, unknown>): LoyaltyTransaction {
   return {
@@ -31,6 +33,7 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent: false,
+      loyaltyJoined: false,
       error: null as string | null
     };
   }
@@ -45,22 +48,18 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent: false,
+      loyaltyJoined: false,
       error: "База данных не подключена."
     };
   }
 
-  const account = await ensureLoyaltyAccount(customer.id);
+  const account = await getLoyaltyAccount(customer.id);
+  const loyaltyConsent = await getCurrentConsentState(customer.id, "loyalty_rules");
+  const loyaltyJoined = loyaltyConsent?.granted === true && loyaltyConsent.document_version === LEGAL_VERSION;
   const avatarResult = await getCustomerAvatar(customer.id);
-  const { data: marketingConsentData } = await database
-    .from("legal_consents")
-    .select("granted")
-    .eq("subject_type", "customer")
-    .eq("subject_id", customer.id)
-    .eq("consent_type", "marketing")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const marketingConsent = marketingConsentData?.granted === true;
+  const marketingConsentData = await getCurrentConsentState(customer.id, "marketing");
+  const marketingConsent = marketingConsentData?.granted === true
+    && marketingConsentData.document_version === LEGAL_VERSION;
 
   const customerOrders = await getCustomerOrdersForCustomer(customer.id);
   if (customerOrders.error) {
@@ -71,6 +70,7 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent,
+      loyaltyJoined,
       error: customerOrders.error
     };
   }
@@ -90,6 +90,7 @@ export async function getCustomerProfileData() {
       orders: [] as CustomerOrder[],
       transactions: [] as LoyaltyTransaction[],
       marketingConsent,
+      loyaltyJoined,
       error: formatMissingTableError(transactionsError.message, "loyalty_transactions")
     };
   }
@@ -99,6 +100,7 @@ export async function getCustomerProfileData() {
     account,
     avatar: avatarResult.avatar as AvatarConfig,
     marketingConsent,
+    loyaltyJoined,
     orders: customerOrders.orders,
     transactions: (transactionsData ?? []).map((transaction) => normalizeTransaction(transaction)),
     error: null as string | null

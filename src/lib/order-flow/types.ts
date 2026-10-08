@@ -29,12 +29,8 @@ export type OrderFlowModifier = {
 
 export type PublicDisplayOrder = Pick<
   OrderFlowOrder,
-  | "id"
   | "displayNumber"
   | "kitchenStatus"
-  | "publicDisplayName"
-  | "publicAvatarSeed"
-  | "publicAvatar"
   | "isTest"
 >;
 

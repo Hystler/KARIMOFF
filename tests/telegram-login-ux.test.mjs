@@ -87,14 +87,14 @@ test("missing Telegram phone offers retry and support without a false SMS fallba
   assert.match(consumeRoute, /readPendingSocialIdentity/);
 });
 
-test("Telegram profile names and identity status are available to admins without exposing tokens", () => {
+test("Telegram identity admin view keeps account status and dates without social profile extras", () => {
   const telegram = read("src/lib/auth/social/telegram-library.ts");
   const detail = read("src/app/admin/customers/[id]/page.tsx");
   const list = read("src/app/admin/customers/page.tsx");
-  assert.match(telegram, /givenName: claims\.given_name/);
-  assert.match(telegram, /familyName: claims\.family_name/);
-  assert.match(detail, /Telegram user ID/);
-  assert.match(detail, /Имя \/ фамилия/);
+  assert.match(telegram, /displayName: claims\.name/);
+  assert.match(telegram, /telegramBotUserId: normalizeTelegramBotUserId\(claims\.id\)/);
+  assert.doesNotMatch(telegram, /givenName:|familyName:|metadata:/);
+  assert.doesNotMatch(detail, /Telegram user ID|Имя \/ фамилия|Username|identity\.phone(?!Verified)/);
   assert.match(detail, /Подтверждение телефона/);
   assert.match(detail, /Первый вход \/ привязка/);
   assert.match(detail, /Последний вход/);

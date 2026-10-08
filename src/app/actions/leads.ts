@@ -1,9 +1,10 @@
 "use server";
 
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
-import { getShortUserAgent, isChecked, recordLegalConsents } from "@/lib/legal-consents";
+import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export async function createLeadAction(
   _previousState: LeadActionState,
@@ -23,7 +24,8 @@ export async function createLeadAction(
     };
   }
 
-  if (!isChecked(formData.get("personal_data_consent"))) {
+  if ((parsed.data.interest === "career" || parsed.data.interest === "franchise")
+    && !isChecked(formData.get("personal_data_consent"))) {
     return {
       status: "error",
       message: "Нужно дать отдельное согласие на обработку персональных данных."
@@ -44,40 +46,26 @@ export async function createLeadAction(
   }
 
   const { name, phone, interest, comment } = parsed.data;
-  const { data, error } = await database
-    .from("leads")
-    .insert({
-      name,
-      phone: normalizeRussianPhone(phone),
-      interest,
-      comment: comment || null,
-      source: "site"
-    })
-    .select("id")
-    .single();
+  const consentType = interest === "career" ? "careers" : interest === "franchise" ? "franchise" : null;
+  const sourcePath = interest === "career" ? "/careers" : interest === "franchise" ? "/franchise" : "/";
+  const { data, error } = await database.rpc("create_lead_with_consents_atomic", {
+    p_name: name,
+    p_phone: normalizeRussianPhone(phone),
+    p_interest: interest,
+    p_comment: comment || null,
+    p_source: "site",
+    p_consent_type: consentType,
+    p_document_version: LEGAL_VERSION,
+    p_source_path: sourcePath,
+    p_user_agent_short: await getShortUserAgent(),
+    p_marketing_granted: isChecked(formData.get("marketing_consent"))
+  });
 
-  if (error || !data) {
+  if (error || typeof data !== "string") {
     return {
       status: "error",
       message: "Заявка временно не отправлена."
     };
-  }
-
-  const consentType = interest === "career" ? "careers" : interest === "franchise" ? "franchise" : "personal_data";
-  const consents = await recordLegalConsents({
-    subjectId: String(data.id),
-    subjectType: interest === "career" ? "candidate" : "lead",
-    sourcePath: interest === "career" ? "/careers" : interest === "franchise" ? "/franchise" : "/",
-    userAgent: await getShortUserAgent(),
-    consents: [
-      { type: consentType, granted: true },
-      { type: "marketing", granted: isChecked(formData.get("marketing_consent")) }
-    ]
-  });
-
-  if (!consents.ok) {
-    await database.from("leads").delete().eq("id", data.id);
-    return { status: "error", message: consents.message };
   }
 
   return {

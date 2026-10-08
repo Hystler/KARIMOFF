@@ -3,6 +3,8 @@ import { ensureLoyaltyAccount } from "@/lib/loyalty";
 import { ensureLoyaltyCard } from "@/lib/loyalty-card";
 import { createAppleWalletPass } from "@/lib/wallet/apple";
 import { getWalletConfiguration } from "@/lib/wallet/config";
+import { getCurrentConsentState } from "@/lib/legal-consents";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,6 +12,8 @@ export const runtime = "nodejs";
 export async function GET() {
   const customer = await getCurrentCustomer();
   if (!customer) return new Response("Unauthorized", { status: 401 });
+  const consent = await getCurrentConsentState(customer.id, "loyalty_rules");
+  if (consent?.granted !== true || consent.document_version !== LEGAL_VERSION) return new Response("Loyalty membership is not active.", { status: 403 });
   if (!getWalletConfiguration().apple) return new Response("Not found", { status: 404 });
   const [card, account] = await Promise.all([
     ensureLoyaltyCard(customer.id),

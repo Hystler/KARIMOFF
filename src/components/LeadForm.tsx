@@ -71,6 +71,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
 
         <form
           ref={formRef}
+          onReset={() => setSelectedInterest(defaultInterest)}
           action={formAction}
           className="grid min-w-0 grid-cols-1 gap-4 border-t border-karimoff-line pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0"
         >
@@ -108,6 +109,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
             </select>
           </label>
           <div className="grid gap-2 border-t border-karimoff-line pt-3 text-xs">
+            {selectedInterest === "career" || selectedInterest === "franchise" ? (
             <label className="flex items-start gap-2.5">
               <input
                 type="checkbox"
@@ -127,9 +129,7 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
                   href={
                     selectedInterest === "career"
                       ? "/legal/careers-consent"
-                      : selectedInterest === "franchise"
-                        ? "/legal/franchise-consent"
-                        : "/legal/personal-data-consent"
+                      : "/legal/franchise-consent"
                   }
                   target="_blank"
                   className="font-bold text-karimoff-orange-contrast"
@@ -138,6 +138,9 @@ export function LeadForm({ defaultComment = "", defaultInterest = "b2b" }: LeadF
                 </Link>
               </span>
             </label>
+            ) : (
+              <p className="leading-5 text-karimoff-muted">Используем контакт, чтобы ответить на ваше обращение. <Link href="/legal/privacy" target="_blank" className="font-bold text-karimoff-orange-contrast">Политика обработки ПД</Link></p>
+            )}
             <details className="group">
               <summary className="flex min-h-8 cursor-pointer items-center gap-2 font-bold text-karimoff-muted">
                 Получать акции KARIMOFF
