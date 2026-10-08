@@ -89,18 +89,21 @@ test("catalog copy migration is one-time, slug-based, and leaves business values
   assert.match(dockerfile, /database\/migrations/);
 });
 
-test("menu cards show complete guest copy and use a readable mobile layout", () => {
+test("menu cards use the compact responsive marketplace grid", () => {
   const card = read("src/components/ProductCard.tsx");
   const menu = read("src/app/menu/page.tsx");
   const popular = read("src/components/PopularMenu.tsx");
   const styles = read("src/app/globals.css");
 
   assert.match(card, /min-w-0/);
-  assert.doesNotMatch(card, /line-clamp-[23]/);
+  assert.match(card, /line-clamp-2/);
   assert.match(card, /overflow-wrap-anywhere/);
-  assert.match(menu, /grid-cols-1 gap-4 min-\[520px\]:grid-cols-2/);
-  assert.match(popular, /grid-cols-1 gap-4 min-\[520px\]:grid-cols-2/);
-  assert.match(card, /calc\(100vw - 2\.5rem\)/);
+  assert.match(menu, /className="product-grid"/);
+  assert.match(popular, /className="product-grid"/);
+  assert.match(styles, /\.product-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(styles, /@media\s*\(min-width:\s*768px\)[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(styles, /@media\s*\(min-width:\s*1280px\)[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(card, /calc\(\(100vw - 2rem\) \/ 2\)/);
   assert.match(styles, /\.overflow-wrap-anywhere\s*\{\s*overflow-wrap: anywhere;/);
 });
 

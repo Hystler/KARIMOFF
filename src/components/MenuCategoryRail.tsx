@@ -40,7 +40,7 @@ export function MenuCategoryRail({
   }, [filters.length]);
 
   return (
-    <div className="category-rail -mx-page-mobile mb-7 sm:mx-0">
+    <div className="category-rail -mx-page-mobile mb-5 sm:mx-0 sm:mb-7">
       <nav ref={railRef} aria-label="Категории меню" className="scrollbar-hide flex gap-2 overflow-x-auto overflow-y-hidden px-page-mobile sm:flex-wrap sm:overflow-visible sm:px-0">
         {filters.map((filter) => {
           const isActive = activeCategory === filter.value;

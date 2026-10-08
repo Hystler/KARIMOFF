@@ -63,7 +63,7 @@ function ProductImage({ product }: { product: Product }) {
         src={src}
         alt={product.name}
         fill
-        sizes="(min-width: 1280px) 280px, (min-width: 1024px) calc((100vw - 7rem) / 3), (min-width: 520px) calc((100vw - 3.25rem) / 2), calc(100vw - 2.5rem)"
+        sizes="(min-width: 1280px) 288px, (min-width: 1024px) calc((100vw - 7rem) / 3), (min-width: 768px) calc((100vw - 5.5rem) / 3), (min-width: 640px) calc((100vw - 4.75rem) / 2), (min-width: 520px) calc((100vw - 3.25rem) / 2), calc((100vw - 2rem) / 2)"
         loading="lazy"
         fetchPriority="low"
         className="object-cover transition duration-500 group-hover:scale-[1.03]"
@@ -94,30 +94,30 @@ export function ProductCard({ product }: ProductCardProps) {
     >
       <Link
         href={href}
-        className="product-photo relative block aspect-[4/3] shrink-0 overflow-hidden border-b border-karimoff-line/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-karimoff-orange"
+        className="product-photo relative block aspect-[16/10] shrink-0 overflow-hidden border-b border-karimoff-line/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-karimoff-orange sm:aspect-[4/3]"
         aria-label={`Открыть ${product.name}`}
       >
         <ProductImage product={product} />
       </Link>
-      <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
+      <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3 lg:p-4">
         <Link
           href={href}
           className="flex min-w-0 flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
         >
-          <h3 className="min-h-[48px] overflow-wrap-anywhere text-lg font-bold leading-6 text-karimoff-black transition group-hover:text-karimoff-orange-contrast">
+          <h3 className="line-clamp-2 min-h-9 overflow-wrap-anywhere text-sm font-bold leading-[18px] text-karimoff-black transition group-hover:text-karimoff-orange-contrast sm:min-h-[48px] sm:text-lg sm:leading-6">
             {product.name}
           </h3>
-          <p className="admin-number mt-2 font-heading text-lg font-black leading-none text-karimoff-orange-contrast sm:text-xl">
+          <p className="admin-number mt-1 font-heading text-base font-black leading-5 text-karimoff-orange-contrast sm:mt-2 sm:text-xl sm:leading-none">
             {getPortionGroup(product) ? "от " : ""}{formatPrice(product.price)} ₽
           </p>
-          <p className="mt-3 overflow-wrap-anywhere text-sm leading-[1.5] text-karimoff-muted">
+          <p className="mt-2 hidden overflow-wrap-anywhere text-sm leading-[1.5] text-karimoff-muted md:line-clamp-2 md:block">
             {product.description || "Описание блюда скоро появится."}
           </p>
         </Link>
         {servingLabel ? (
-          <p className="mt-4 text-sm font-medium leading-5 text-karimoff-muted">{servingLabel}</p>
+          <p className="mt-2 hidden text-xs font-medium leading-4 text-karimoff-muted sm:line-clamp-1 sm:block">{servingLabel}</p>
         ) : null}
-        <div className="mt-4">
+        <div className="mt-2 sm:mt-3">
           <ProductCustomizer product={product} />
         </div>
       </div>

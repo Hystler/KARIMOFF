@@ -40,9 +40,9 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
         imageUrl={settings.menu_hero_image_url}
         objectPosition="center"
       />
-      <section className="container-page py-8 sm:py-12">
+      <section className="container-page py-6 sm:py-12">
         <MenuCategoryRail filters={availableCategoryFilters} activeCategory={activeCategory} />
-        <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="product-grid">
           {visibleProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

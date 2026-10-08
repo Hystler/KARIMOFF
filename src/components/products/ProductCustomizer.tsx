@@ -15,7 +15,8 @@ export function ProductCustomizer({ product }: { product: Product }) {
   const { addItem } = useCart();
   const router = useRouter();
   const [isAdded, setIsAdded] = useState(false);
-  const needsConfiguration = Boolean(getPortionGroup(product)) ||
+  const portionGroup = getPortionGroup(product);
+  const needsConfiguration = Boolean(portionGroup) ||
     Boolean(product.modifier_options?.some((option) => option.is_removable || option.is_extra_available)) ||
     Boolean(product.modifier_groups?.length);
 
@@ -24,6 +25,15 @@ export function ProductCustomizer({ product }: { product: Product }) {
     const timeoutId = window.setTimeout(() => setIsAdded(false), 1100);
     return () => window.clearTimeout(timeoutId);
   }, [isAdded]);
+
+  const actionLabel = portionGroup ? "Выбрать порцию" : needsConfiguration ? "Настроить" : "В корзину";
+  const accessibleLabel = isAdded
+    ? `${product.name} добавлен в корзину`
+    : portionGroup
+      ? `Выбрать порцию для ${product.name}`
+      : needsConfiguration
+        ? `Настроить ${product.name}`
+        : `Добавить ${product.name} в корзину`;
 
   return (
     <button
@@ -37,11 +47,14 @@ export function ProductCustomizer({ product }: { product: Product }) {
         addItem(product, customization);
         setIsAdded(true);
       }}
-      className={`public-button-primary product-cta ${isAdded ? "product-cta-added" : ""}`}
+      className={`public-button-primary product-cta gap-1 sm:gap-2 ${isAdded ? "product-cta-added" : ""}`}
       aria-live="polite"
+      aria-label={accessibleLabel}
     >
-      {isAdded ? <Check aria-hidden size={18} strokeWidth={2.8} /> : <ShoppingBasket aria-hidden size={18} strokeWidth={2.4} />}
-      <span>{isAdded ? "Добавлено" : getPortionGroup(product) ? "Выбрать порцию" : needsConfiguration ? "Настроить" : "В корзину"}</span>
+      {isAdded ? <Check aria-hidden size={16} className="shrink-0 sm:size-[18px]" strokeWidth={2.8} /> : <ShoppingBasket aria-hidden size={16} className="shrink-0 sm:size-[18px]" strokeWidth={2.4} />}
+      <span className="min-w-0 truncate">
+        {isAdded ? "Добавлено" : portionGroup ? <><span className="sm:hidden">Выбрать</span><span className="hidden sm:inline">{actionLabel}</span></> : actionLabel}
+      </span>
     </button>
   );
 }
