@@ -11,7 +11,9 @@ const migration = "20261005174416_restore_checkout_pgcrypto_dependency.sql";
 const migrationSql = readFileSync(`database/migrations/${migration}`, "utf8");
 const signature = "public.create_site_order_with_payment_from_whitelist(uuid,text,uuid,jsonb,text,jsonb,uuid,boolean,boolean,boolean,text,text,text,text,timestamptz,text,text)";
 
-test("PG17 repairs missing pgcrypto and preserves an existing non-public extension, without runtime DDL", async () => {
+test("PG17 repairs missing pgcrypto and preserves an existing non-public extension, without runtime DDL", {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && "Requires a disposable local PostgreSQL database",
+}, async () => {
   const dsn = process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn ?? "", /^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
   const admin = postgres("postgres://postgres@127.0.0.1:55445/postgres", { max: 1, onnotice() {} });
@@ -140,6 +142,8 @@ test("checkout failure logs stage/type/SQLSTATE, not error messages, SQL paramet
     "@/lib/order-schema": schema,
     "@/lib/settings": { getSiteSettings: async () => ({ pickup_enabled: true }) },
     "@/lib/payments/yookassa/config": { isYooKassaCheckoutEnabled: () => true },
+    "@/lib/staging-ui-mode": { isStagingUiMode: () => false, isStagingDeliveryUiEnabled: () => false,
+      getStagingDemoCustomer: () => ({ id: "demo", name: "Demo", phone: "", birthday: null }) },
     "@/lib/payments/yookassa/errors": { safeYooKassaErrorCode: () => "YOOKASSA_UNEXPECTED" },
     "@/lib/observability": { logOperationalError: (event, fields) => messages.push({ event, ...fields }) },
     "@/lib/order-flow/service": { createOrder: async () => {

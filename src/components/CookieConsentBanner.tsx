@@ -107,8 +107,8 @@ export function CookieConsentBanner() {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
-      const result = await response.json() as { ok?: boolean; stored?: boolean; error?: string };
-      if (!response.ok || result.ok !== true || result.stored !== true) {
+      const result = await response.json() as { ok?: boolean; stored?: boolean; localOnly?: boolean; error?: string };
+      if (!response.ok || result.ok !== true || (result.stored !== true && result.localOnly !== true)) {
         setSaveError(result.error || "Не удалось сохранить выбор. Попробуйте ещё раз.");
         setIsVisible(true);
         return;

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 import { YooKassaError } from "./errors";
 
 export type YooKassaConfiguration = {
@@ -86,11 +87,14 @@ export function requireYooKassaConfiguration() {
 
 export function isYooKassaCheckoutEnabled() {
   return (
+    !isStagingUiMode() &&
     process.env.PAYMENTS_ENABLED === "true" &&
     isYooKassaReconciliationEnabled()
   );
 }
 
 export function isYooKassaReconciliationEnabled() {
-  return process.env.TEST_ORDER_MODE !== "true" && Boolean(getYooKassaConfiguration());
+  return !isStagingUiMode()
+    && process.env.TEST_ORDER_MODE !== "true"
+    && Boolean(getYooKassaConfiguration());
 }

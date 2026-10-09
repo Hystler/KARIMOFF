@@ -16,7 +16,9 @@ function queryBuilder() {
   return exports.buildSalesWhere;
 }
 
-test('RC PG17 runtime: legacy unknown fulfillment never becomes pickup; totals retain all three groups',async()=> {
+test('RC PG17 runtime: legacy unknown fulfillment never becomes pickup; totals retain all three groups', {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && 'Requires a disposable local PostgreSQL database'
+}, async()=> {
   const dsn=process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn??'',/^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
   const sql=postgres(dsn,{max:1,onnotice(){}});

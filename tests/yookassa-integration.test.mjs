@@ -49,8 +49,11 @@ function fixture() {
     join(directory, "runtime-config.ts"),
     read("src/lib/payments/yookassa/config.ts")
       .replace('import "server-only";\n\n', "")
+      .replace('from "@/lib/staging-ui-mode"', 'from "./staging-ui-mode.ts"')
       .replace('from "./errors"', 'from "./errors.ts"')
   );
+  writeFileSync(join(directory, "staging-ui-mode.ts"),
+    'export function isStagingUiMode() { return process.env.STAGING_UI_MODE === "true"; }\n');
 
   return {
     cleanup: () => rmSync(directory, { recursive: true, force: true }),
@@ -276,7 +279,7 @@ test("reconciliation backoff follows the bounded schedule and stops after 24 hou
 });
 
 test("checkout is server-priced, atomic, disabled by default, and double-click safe", () => {
-  assert.match(checkoutAction, /if \(!isYooKassaCheckoutEnabled\(\)\)/);
+  assert.match(checkoutAction, /if \(!stagingUiMode && !isYooKassaCheckoutEnabled\(\)\)/);
   assert.match(checkoutAction, /createOrder\([\s\S]+requiresPayment: true/);
   assert.match(checkoutAction, /createYooKassaPaymentForOrder\(order\.paymentId\)/);
   assert.doesNotMatch(checkoutAction, /amount:\s*(formData|parsed)/);
@@ -475,6 +478,7 @@ test("checkout remains disabled until every server-side setting is valid", () =>
         YOOKASSA_WEBHOOK_URL: "https://karimoff.site/api/webhooks/yookassa",
         YOOKASSA_RETURN_URL: "https://karimoff.site/checkout/payment/return",
         TEST_ORDER_MODE: "false",
+        STAGING_UI_MODE: "false",
         PAYMENTS_ENABLED: "false"
       });
       const configured = Boolean(config.getYooKassaConfiguration());

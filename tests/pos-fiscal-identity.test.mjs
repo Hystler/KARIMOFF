@@ -169,6 +169,7 @@ test('server downgrades paid without card proof to unknown and leaves payment/or
   const require = id => {
     if (id === 'server-only') return {};
     if (id === '@/lib/postgres/server') return { getPostgresSql: () => database };
+    if (id === '@/lib/staging-ui-mode') return { isStagingUiMode: () => false };
     if (id === './terminal-bridge') return { terminalBridgeReady: () => true };
     if (id === './fiscal-reconciliation') return { reconcileEvotorReceipt: async () => true };
     if (id === './payment-result') return paymentResultExports;

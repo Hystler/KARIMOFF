@@ -108,7 +108,9 @@ test("opening POS uses only read dependencies and feature OFF stops terminal pol
   assert.match(workspace, /disabled=\{[^\n]*!paymentsEnabled/);
 });
 
-test("PG17 terminal listing resolves joined timestamp columns under runtime SELECT access", async () => {
+test("PG17 terminal listing resolves joined timestamp columns under runtime SELECT access", {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && "Requires a disposable local PostgreSQL database",
+}, async () => {
   const dsn = process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn ?? "", /^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
   const sql = postgres(dsn, { max: 1, onnotice() {}, connection: { default_transaction_read_only: "on" } });
@@ -116,6 +118,7 @@ test("PG17 terminal listing resolves joined timestamp columns under runtime SELE
     const api = loadModule("src/lib/integrations/evotor/terminal-bridge.ts", {
       "server-only": {},
       "node:crypto": { createHmac, randomBytes, randomInt },
+      "@/lib/staging-ui-mode": { isStagingUiMode: () => false },
       "@/lib/postgres/server": { getPostgresSql: () => sql }
     }, { env: { EVOTOR_TERMINAL_BRIDGE_ENABLED: "true", EVOTOR_TERMINAL_BRIDGE_SECRET: "synthetic-test-key-not-a-real-secret" } });
     await assert.rejects(sql`select device.id from evotor_terminal_devices device

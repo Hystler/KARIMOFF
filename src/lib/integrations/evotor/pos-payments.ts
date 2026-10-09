@@ -4,6 +4,7 @@ import { getPostgresSql } from "@/lib/postgres/server";
 import { terminalBridgeReady } from "./terminal-bridge";
 import { reconcileEvotorReceipt } from "./fiscal-reconciliation";
 import { hasValidEvotorFiscalIdentity, hasValidEvotorPaymentEvidence } from "./payment-result";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export type EvotorPosPaymentStatus =
   | "queued"
@@ -51,7 +52,8 @@ export class EvotorPosPaymentError extends Error {
 }
 
 export function evotorPosPaymentsEnabled() {
-  return process.env.EVOTOR_POS_PAYMENTS_ENABLED === "true"
+  return !isStagingUiMode()
+    && process.env.EVOTOR_POS_PAYMENTS_ENABLED === "true"
     && process.env.TEST_ORDER_MODE !== "true" && terminalBridgeReady();
 }
 

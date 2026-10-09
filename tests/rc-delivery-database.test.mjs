@@ -17,7 +17,9 @@ function loadWithEnvironment(file, imports, environment) {
   return exports;
 }
 
-test('combined order service uses the real named PostgreSQL adapter for pickup and whitelist delivery',async()=>{
+test('combined order service uses the real named PostgreSQL adapter for pickup and whitelist delivery', {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && 'Requires a disposable local PostgreSQL database'
+}, async()=>{
   const dsn=process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn??'',/^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
   const sql=postgres(dsn,{max:1,onnotice(){}});
@@ -62,7 +64,9 @@ test('combined order service uses the real named PostgreSQL adapter for pickup a
   finally {await sql.end();}
 });
 
-test('RC PG17 runtime: delivery pricing, payment gating, immutable address and two receipts', async () => {
+test('RC PG17 runtime: delivery pricing, payment gating, immutable address and two receipts', {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && 'Requires a disposable local PostgreSQL database'
+}, async () => {
   const dsn=process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn??'',/^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/);
   const sql=postgres(dsn,{max:1,onnotice(){}});

@@ -13,6 +13,7 @@ import {
 import { normalizePhone } from "@/lib/customer-auth";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 import {
   consumeCustomerVerificationCode,
   issueCustomerVerificationCode
@@ -40,6 +41,7 @@ export async function requestSocialPhoneCodeAction(
   _state: SocialCompleteState,
   formData: FormData
 ): Promise<SocialCompleteState> {
+  if (isStagingUiMode()) return { status: "error", message: "Вход отключён в тестовом режиме." };
   await assertTrustedRequestOrigin();
   if (!(await readPendingSocialIdentity())) return { status: "error", message: "Сессия входа истекла. Начните заново." };
   const parsed = requestSchema.safeParse({ phone: formData.get("phone"), name: formData.get("name") });
@@ -58,6 +60,7 @@ export async function completeSocialPhoneAction(
   _state: SocialCompleteState,
   formData: FormData
 ): Promise<SocialCompleteState> {
+  if (isStagingUiMode()) return { status: "error", message: "Вход отключён в тестовом режиме." };
   await assertTrustedRequestOrigin();
   const pending = await readPendingSocialIdentity();
   if (!pending) return { status: "error", message: "Сессия входа истекла. Начните заново." };

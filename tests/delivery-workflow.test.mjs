@@ -18,7 +18,7 @@ const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
 const fiscalMigration = read("database/migrations/20260827143000_refine_yookassa_fiscal_operations.sql");
 
 test("delivery is guarded by server configuration and charges only below the free threshold", () => {
-  assert.match(checkout, /delivery_enabled: settings\.delivery_enabled && settings\.delivery_coverage_enabled/);
+  assert.match(checkout, /const deliveryEnabled = stagingUiMode[\s\S]+settings\.delivery_enabled && settings\.delivery_coverage_enabled/);
   assert.match(checkout, /delivery_type === "delivery" && !settings\.delivery_coverage_enabled/);
   assert.match(migration, /settings\.delivery_coverage_enabled[\s\S]+Доставка временно недоступна/);
   assert.match(migration, /v_subtotal < 2500 then 200/);

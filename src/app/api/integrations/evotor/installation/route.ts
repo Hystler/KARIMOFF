@@ -12,12 +12,13 @@ import {
 } from "@/lib/integrations/evotor/repository";
 import { processEvotorSyncEvent } from "@/lib/integrations/evotor/sync";
 import { evotorInstallationEventSchema } from "@/lib/integrations/evotor/types";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (process.env.EVOTOR_ENABLED !== "true") {
+  if (isStagingUiMode() || process.env.EVOTOR_ENABLED !== "true") {
     return NextResponse.json({ ok: false, error: "Integration is disabled." }, { status: 503 });
   }
   const rate = await consumeEvotorRateLimit(request, "evotor-installation", 30);

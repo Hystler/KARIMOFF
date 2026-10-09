@@ -5,11 +5,19 @@ import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export async function createLeadAction(
   _previousState: LeadActionState,
   formData: FormData
 ): Promise<LeadActionState> {
+  if (isStagingUiMode()) {
+    return {
+      status: "error",
+      message: "Отправка заявок отключена в тестовом режиме."
+    };
+  }
+
   const parsed = leadFormSchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),

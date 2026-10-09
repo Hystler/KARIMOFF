@@ -6,6 +6,7 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { createEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
 import { canStaffAccessOrderLocation } from "@/lib/order-flow/access";
 import type { PosOrderActionState } from "@/lib/order-flow/pos-action-state";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 const itemSchema = z.object({
   product_id: z.string().uuid(),
@@ -33,6 +34,9 @@ export async function createPosOrderAction(
   _previous: PosOrderActionState,
   formData: FormData
 ): Promise<PosOrderActionState> {
+  if (isStagingUiMode()) {
+    return { status: "error", message: "Кассовые операции отключены в тестовом режиме." };
+  }
   if (process.env.MAINTENANCE_MODE === "true") {
     return { status: "error", message: "Сервис временно обновляется. Попробуйте снова через несколько минут." };
   }

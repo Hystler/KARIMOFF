@@ -7,6 +7,7 @@ import {
 import { registerEvotorConnection } from "@/lib/integrations/evotor/repository";
 import { processEvotorSyncEvent } from "@/lib/integrations/evotor/sync";
 import { evotorTokenDeliverySchema } from "@/lib/integrations/evotor/types";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ function jsonError(message: string, status: number, headers?: HeadersInit) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.EVOTOR_ENABLED !== "true") {
+  if (isStagingUiMode() || process.env.EVOTOR_ENABLED !== "true") {
     return jsonError("Integration is disabled.", 503);
   }
 

@@ -33,6 +33,11 @@ import {
 import { createDatabaseServerClient } from "@/lib/database/server";
 import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
 import { syncPhoneIdentity } from "@/lib/auth/social/identity";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
+
+function stagingAuthUnavailable(): AuthActionState {
+  return { status: "error", message: "Вход и регистрация отключены в тестовом режиме." };
+}
 
 function sanitizeRedirectPath(path?: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) {
@@ -95,8 +100,9 @@ export async function requestRegisterCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = registerRequestSchema.safeParse({
     name: formData.get("name"),
@@ -134,8 +140,9 @@ export async function registerWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = passwordRegisterSchema.safeParse({
     name: formData.get("name"),
@@ -227,8 +234,9 @@ export async function confirmRegisterAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = registerConfirmSchema.safeParse({
     name: formData.get("name"),
@@ -315,8 +323,9 @@ export async function requestLoginCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = loginRequestSchema.safeParse({
     phone: formData.get("phone")
@@ -367,8 +376,9 @@ export async function loginWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = passwordLoginSchema.safeParse({
     phone: formData.get("phone"),
@@ -444,8 +454,9 @@ export async function confirmLoginAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  await assertTrustedRequestOrigin();
   void _previousState;
+  if (isStagingUiMode()) return stagingAuthUnavailable();
+  await assertTrustedRequestOrigin();
 
   const parsed = loginConfirmSchema.safeParse({
     phone: formData.get("phone"),

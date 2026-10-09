@@ -57,7 +57,7 @@ test("cookie categories are disabled until consent and revocation is journaled",
   assert.match(cookieRoute, /\["cookies_marketing", categories\.marketing\]/);
   assert.match(cookieRoute, /stored: false/);
   assert.match(cookieRoute, /document_version/);
-  assert.match(cookieBanner, /result\.ok !== true \|\| result\.stored !== true/);
+  assert.match(cookieBanner, /result\.ok !== true \|\| \(result\.stored !== true && result\.localOnly !== true\)/);
   assert.match(cookieBanner, /setSaveError/);
   assert.doesNotMatch(cookieBanner, /google-analytics|googletagmanager|metrika|facebook\.net/i);
 });

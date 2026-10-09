@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Logo } from "@/components/Logo";
 import { getConfiguredSocialProviders, logMaxAuthDiagnostics } from "@/lib/auth/social/config";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,8 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await searchParams : {};
-  logMaxAuthDiagnostics("login");
+  const stagingUiMode = isStagingUiMode();
+  if (!stagingUiMode) logMaxAuthDiagnostics("login");
   const socialErrors: Record<string, string> = {
     unavailable: "Этот способ входа пока не настроен.",
     rate_limit: "Слишком много попыток. Попробуйте позже.",
@@ -34,13 +36,23 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <Logo />
           <Link href="/" className="text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange-contrast">На главную</Link>
         </div>
-        <AuthForm
-          mode="login"
-          next={params.next}
-          redirectTo={returnTo}
-          socialProviders={getConfiguredSocialProviders()}
-          socialError={params.socialError ? socialErrors[params.socialError] ?? "Не удалось выполнить вход." : null}
-        />
+        {stagingUiMode ? (
+          <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card">
+            <p className="text-lg font-black">Вход не нужен</p>
+            <p className="mt-2 text-sm leading-6 text-karimoff-muted">
+              Для тестового оформления используется временный демо-профиль. Учётная запись и сессия не создаются.
+            </p>
+            <Link href="/menu" className="public-button-primary mt-5 w-full">Перейти в меню</Link>
+          </section>
+        ) : (
+          <AuthForm
+            mode="login"
+            next={params.next}
+            redirectTo={returnTo}
+            socialProviders={getConfiguredSocialProviders()}
+            socialError={params.socialError ? socialErrors[params.socialError] ?? "Не удалось выполнить вход." : null}
+          />
+        )}
       </div>
     </main>
   );

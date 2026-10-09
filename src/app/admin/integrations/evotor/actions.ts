@@ -16,6 +16,7 @@ import {
   queueSyntheticTerminalPreview,
   terminalBridgeReady
 } from "@/lib/integrations/evotor/terminal-bridge";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export async function bindTerminalCloudDeviceAction(formData: FormData) {
   const staff = await terminalBridgeStaff();
@@ -53,6 +54,7 @@ export type TerminalBridgeActionState = {
 };
 
 async function terminalBridgeStaff() {
+  if (isStagingUiMode()) redirect("/admin/integrations/evotor?error=disabled");
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");
@@ -60,6 +62,7 @@ async function terminalBridgeStaff() {
 }
 
 async function queueAdminSync(formData: FormData, syncType: "manual" | "check" | "incremental") {
+  if (isStagingUiMode()) redirect("/admin/integrations/evotor?error=disabled");
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");
