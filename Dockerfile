@@ -29,6 +29,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=dependencies --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/import-delivery-addresses.mjs ./scripts/import-delivery-addresses.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/decrypt-delivery-seed-snapshot.mjs ./scripts/decrypt-delivery-seed-snapshot.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/delivery ./src/lib/delivery
+COPY --from=builder --chown=nextjs:nodejs /app/outputs/delivery-whitelist-review-2026-10-03 ./outputs/delivery-whitelist-review-2026-10-03
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-data-migrations.mjs ./scripts/apply-runtime-data-migrations.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-menu-images.mjs ./scripts/apply-menu-images.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/apply-runtime-schema-migrations.mjs ./scripts/apply-runtime-schema-migrations.mjs

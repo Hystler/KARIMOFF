@@ -22,6 +22,11 @@ tmp
 
 coverage
 outputs
+!outputs/delivery-whitelist-review-2026-10-03/
+outputs/delivery-whitelist-review-2026-10-03/*
+!outputs/delivery-whitelist-review-2026-10-03/raw-overpass.json.gz.enc
+!outputs/delivery-whitelist-review-2026-10-03/approval-manifest.json
+!outputs/delivery-whitelist-review-2026-10-03/approval-manifest.sha256
 android/**/.gradle
 android/**/build
 android/**/local.properties
