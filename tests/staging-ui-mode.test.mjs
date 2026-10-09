@@ -444,7 +444,7 @@ test("read-only SQL runbook grants no customer/order/payment/session reads or wr
   assert.match(runbook, /REVOKE ALL PRIVILEGES \(%s\) ON TABLE/);
   assert.doesNotMatch(runbook, /GRANT SELECT \([^)]*(?:cost_per_unit|package_price)/s);
   assert.match(runbook, /has_function_privilege\('karimoff_staging_ro', p\.oid, 'EXECUTE'\)/);
-  assert.match(runbook, /has_sequence_privilege\('karimoff_staging_ro', c\.oid, 'USAGE,UPDATE'\)/);
+  assert.match(runbook, /has_sequence_privilege\('karimoff_staging_ro', c\.oid, 'USAGE'\)[\s\S]*?has_sequence_privilege\('karimoff_staging_ro', c\.oid, 'SELECT'\)[\s\S]*?has_sequence_privilege\('karimoff_staging_ro', c\.oid, 'UPDATE'\)/);
   assert.match(runbook, /WITH RECURSIVE reachable_roles/);
   assert.match(runbook, /unexpected_select_column/);
   assert.match(runbook, /GRANT SELECT \(action\) ON TABLE public\.audit_logs/);
@@ -460,6 +460,15 @@ test("read-only SQL runbook grants no customer/order/payment/session reads or wr
   assert.doesNotMatch(runbook, /ALTER TABLE public\.[a-z_]+ ENABLE ROW LEVEL SECURITY/);
   assert.match(runbook, /GRANT SELECT \(version, pickup_rpc_initialized\)[\s\S]*?delivery_whitelist_release_version/);
   assert.match(runbook, /forbidden_readable_table/);
+  assert.match(runbook, /database ownership does\s+not imply ownership of `public` or its tables/);
+  assert.match(runbook, /Read-only owner inventory/);
+  assert.match(runbook, /Column-level and schema-level PUBLIC ACLs/);
+  assert.match(runbook, /aclexplode\(a\.attacl\)[\s\S]*?a\.attacl IS NOT NULL/);
+  assert.match(runbook, /Existing policies on every table/);
+  assert.match(runbook, /has_schema_privilege\('karimoff_staging_ro', n\.oid, 'USAGE'\)/);
+  assert.match(runbook, /PostgreSQL has no deny ACL that can\s+override `PUBLIC` function `EXECUTE`/);
+  assert.match(runbook, /has_database_privilege\('karimoff_staging_ro', current_database\(\), 'TEMP'\)/);
+  assert.match(runbook, /If `TEMP` is inherited from `PUBLIC`/);
   const runner = readFileSync("scripts/apply-runtime-schema-migrations.mjs", "utf8");
   assert.match(runner, /if \(process\.env\.STAGING_UI_MODE === "true"\)[\s\S]*?to_regclass\('public\.user_identities'\)/);
 });

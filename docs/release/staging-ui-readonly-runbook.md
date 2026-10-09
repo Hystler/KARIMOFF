@@ -51,17 +51,138 @@ WHERE n.nspname = 'public'
   AND NOT c.relrowsecurity;
 ```
 
-Create the role in the Timeweb UI if required, then run the grants/policies and
-verification below as one transaction. Commit only if every required result is
-empty/false; otherwise roll the transaction back and resolve the specific
-privilege/RLS issue first. Do not point the stand at the role before this gate.
+Before any changes, inspect object ownership and existing public grants/policies
+with the read-only inventory queries below. PostgreSQL database ownership does
+not imply ownership of `public` or its tables. The role-creation principal needs
+`CREATEROLE`; the principal applying relation grants/revokes and policies must
+own each target relation (or have the applicable grant option), and the schema
+and `pgcrypto` grants must be run by their owners/grantors. Use the existing
+Timeweb database administrator/migrator only after the owner inventory confirms
+those rights. If ownership is split and no authorized principal can safely
+perform the whole transaction, stop; do not transfer ownership or grant broad
+privileges as a workaround.
 
-The SQL below is intended for the database owner. It grants reads only to the
-catalogue and address data used by public browsing and checkout. The role gets
-no access to customer/session/order/payment/receipt/staff/inventory data,
-integration secrets, sequences, or application RPCs. For startup verification,
-it gets only the `action` column for one migration marker in `audit_logs`,
-filtered by a role-specific RLS policy. The only function grant below is
+After that preflight, create the role through the Timeweb UI if needed, then
+apply the grants/policies and verification below in an owner-authorized
+transaction. Commit only if every required result is empty/false; otherwise
+roll the transaction back and resolve the specific privilege/RLS issue first.
+Do not point the stand at the role before this gate.
+
+```sql
+-- Read-only owner inventory: every listed relation and schema owner must be
+-- known before running the role/policy transaction.
+SELECT 'schema' AS object_type, n.nspname AS object_name,
+       pg_get_userbyid(n.nspowner) AS owner
+FROM pg_namespace n
+WHERE n.nspname IN ('public')
+UNION ALL
+SELECT 'relation', c.oid::regclass::text, pg_get_userbyid(c.relowner)
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relname::text = ANY (ARRAY[
+    'products', 'product_images', 'product_ingredients', 'ingredients',
+    'product_modifier_groups', 'product_modifier_options', 'site_settings',
+    'audit_logs', 'order_locations', 'delivery_location_settings',
+    'delivery_addresses', 'delivery_whitelist_release_version'
+  ])
+ORDER BY object_type, object_name;
+
+SELECT n.nspname AS pgcrypto_schema,
+       pg_get_userbyid(n.nspowner) AS schema_owner,
+       p.oid::regprocedure::text AS digest_function,
+       pg_get_userbyid(p.proowner) AS function_owner
+FROM pg_extension e
+JOIN pg_namespace n ON n.oid = e.extnamespace
+JOIN pg_proc p ON p.pronamespace = n.oid AND p.proname = 'digest'
+WHERE e.extname = 'pgcrypto' AND p.oid = to_regprocedure(format('%I.digest(text,text)', n.nspname));
+
+-- Existing PUBLIC ACL entries on the target public relations/functions.
+SELECT c.oid::regclass::text AS object_name, acl.privilege_type,
+       acl.is_grantable
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+CROSS JOIN LATERAL aclexplode(COALESCE(
+  c.relacl,
+  acldefault((CASE WHEN c.relkind = 'S' THEN 'S' ELSE 'r' END)::"char", c.relowner)
+)) acl
+WHERE n.nspname = 'public'
+  AND acl.grantee = 0
+  AND c.relname::text = ANY (ARRAY[
+    'products', 'product_images', 'product_ingredients', 'ingredients',
+    'product_modifier_groups', 'product_modifier_options', 'site_settings',
+    'audit_logs', 'order_locations', 'delivery_location_settings',
+    'delivery_addresses', 'delivery_whitelist_release_version'
+  ])
+UNION ALL
+SELECT p.oid::regprocedure::text, acl.privilege_type, acl.is_grantable
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+CROSS JOIN LATERAL aclexplode(COALESCE(
+  p.proacl, acldefault('f', p.proowner)
+)) acl
+WHERE n.nspname = 'public' AND acl.grantee = 0
+ORDER BY object_name, privilege_type;
+
+-- Column-level and schema-level PUBLIC ACLs (not shown by the relation ACL
+-- inventory above).
+SELECT c.oid::regclass::text AS object_name, a.attname AS column_name,
+       acl.privilege_type, acl.is_grantable
+FROM pg_attribute a
+JOIN pg_class c ON c.oid = a.attrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+CROSS JOIN LATERAL aclexplode(a.attacl) acl
+WHERE n.nspname = 'public'
+  AND a.attacl IS NOT NULL
+  AND a.attnum > 0 AND NOT a.attisdropped
+  AND acl.grantee = 0
+  AND c.relname::text = ANY (ARRAY[
+    'products', 'product_images', 'product_ingredients', 'ingredients',
+    'product_modifier_groups', 'product_modifier_options', 'site_settings',
+    'audit_logs', 'order_locations', 'delivery_location_settings',
+    'delivery_addresses', 'delivery_whitelist_release_version'
+  ])
+UNION ALL
+SELECT n.nspname, NULL, acl.privilege_type, acl.is_grantable
+FROM pg_namespace n
+CROSS JOIN LATERAL aclexplode(COALESCE(
+  n.nspacl, acldefault('n', n.nspowner)
+)) acl
+WHERE n.nspname IN ('public') AND acl.grantee = 0
+ORDER BY object_name, column_name, privilege_type;
+
+-- Existing policies on every table whose rows/columns the staging role needs.
+SELECT schemaname, tablename, policyname, permissive, roles, cmd,
+       qual, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = ANY (ARRAY[
+    'products', 'product_images', 'product_ingredients', 'ingredients',
+    'product_modifier_groups', 'product_modifier_options', 'site_settings',
+    'audit_logs', 'order_locations', 'delivery_location_settings',
+    'delivery_addresses'
+  ])
+ORDER BY tablename, policyname;
+
+SELECT d.datname, acl.privilege_type, acl.is_grantable
+FROM pg_database d
+CROSS JOIN LATERAL aclexplode(COALESCE(
+  d.datacl, acldefault('d', d.datdba)
+)) acl
+WHERE d.datname = current_database() AND acl.grantee = 0
+ORDER BY acl.privilege_type;
+```
+
+The SQL below grants reads only to the catalogue and address data used by public
+browsing and checkout. The role gets no access to customer/session/order/payment/
+receipt/staff/inventory data or integration secrets. It receives no explicit
+application-function or sequence grants. PostgreSQL has no deny ACL that can
+override `PUBLIC` function `EXECUTE`; the inventory below reports those
+existing grants, while the effective privilege gate rejects every callable
+`SECURITY DEFINER` function. Invoker-security functions remain constrained by
+the role's table/column ACLs and RLS. For startup verification, the role gets
+only the `action` column for one migration marker in `audit_logs`, filtered by
+its role-specific RLS policy. The only explicit function grant below is
 `pgcrypto.digest`.
 
 ```sql
@@ -381,13 +502,17 @@ FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public'
   AND c.relkind = 'S'
-  AND has_sequence_privilege('karimoff_staging_ro', c.oid, 'USAGE,UPDATE');
+  AND (
+    has_sequence_privilege('karimoff_staging_ro', c.oid, 'USAGE')
+    OR has_sequence_privilege('karimoff_staging_ro', c.oid, 'SELECT')
+    OR has_sequence_privilege('karimoff_staging_ro', c.oid, 'UPDATE')
+  );
 
 SELECT p.oid::regprocedure AS callable_security_definer
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.prosecdef
+WHERE p.prosecdef
+  AND has_schema_privilege('karimoff_staging_ro', n.oid, 'USAGE')
   AND has_function_privilege('karimoff_staging_ro', p.oid, 'EXECUTE');
 
 -- No permissive PUBLIC policy may widen the row scope of an allowlisted table.
@@ -403,6 +528,7 @@ WHERE schemaname = 'public'
   AND 'public' = ANY (roles);
 
 SELECT has_database_privilege('karimoff_staging_ro', current_database(), 'CREATE') AS database_create,
+       has_database_privilege('karimoff_staging_ro', current_database(), 'TEMP') AS database_temp,
        has_schema_privilege('karimoff_staging_ro', 'public', 'CREATE') AS schema_create;
 
 SELECT n.nspname AS owned_schema
@@ -435,11 +561,13 @@ JOIN pg_roles r ON r.oid = d.datdba
 WHERE r.rolname = 'karimoff_staging_ro';
 ```
 
-The database/schema `CREATE` values must both be `false`; the membership,
-write-privilege, callable-security-definer, sequence-privilege, and ownership
-queries must return no rows. If any check fails, do not point the test stand at
-this role; resolve the specific inherited grant first without weakening the
-app role.
+The database/schema `CREATE` values and `database_temp` must be `false`; the
+membership, write-privilege, callable-security-definer, sequence-privilege, and
+ownership queries must return no rows. If `TEMP` is inherited from `PUBLIC`, do
+not try to deny it only for this role (PostgreSQL ACLs have no deny entry); stop
+and review the shared-database impact of any database-wide ACL change. If any
+check fails, do not point the test stand at this role; resolve the specific
+inherited grant first without weakening the app role.
 
 Before changing the stand's `DATABASE_URL`, verify the role attributes,
 `has_database_privilege(..., 'CREATE') = false`,
