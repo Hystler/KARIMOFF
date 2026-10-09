@@ -4,6 +4,7 @@ import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { normalizeRussianPhone } from "@/lib/phone";
 import { createDatabaseServerClient } from "@/lib/database/server";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export type CustomerSession = {
   customerId: string;
@@ -52,6 +53,9 @@ export function getVerificationExpiresAt() {
 }
 
 export async function setCustomerSession(customerId: string) {
+  if (isStagingUiMode()) {
+    throw new Error("Customer sessions are disabled in staging UI mode.");
+  }
   const database = createDatabaseServerClient();
 
   if (!database) {
@@ -96,6 +100,10 @@ export async function setCustomerSession(customerId: string) {
 export async function clearCustomerSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+  if (isStagingUiMode()) {
+    cookieStore.delete(CUSTOMER_COOKIE_NAME);
+    return;
+  }
   const database = createDatabaseServerClient();
 
   if (token && database) {
@@ -110,6 +118,7 @@ export async function clearCustomerSession() {
 }
 
 export async function getCustomerSession(): Promise<CustomerSession | null> {
+  if (isStagingUiMode()) return null;
   const cookieStore = await cookies();
   const token = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
   const database = createDatabaseServerClient();
@@ -138,6 +147,7 @@ export async function getCustomerSession(): Promise<CustomerSession | null> {
 }
 
 export async function getCurrentCustomer(): Promise<CustomerProfile | null> {
+  if (isStagingUiMode()) return null;
   const session = await getCustomerSession();
 
   if (!session) {

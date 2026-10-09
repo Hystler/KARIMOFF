@@ -130,7 +130,15 @@ function getSql() {
     connect_timeout: 10,
     idle_timeout: 20,
     max: 10,
-    prepare: false
+    prepare: false,
+    ...(process.env.STAGING_UI_MODE === "true"
+      ? {
+          connection: {
+            application_name: "karimoff-staging-ui-readonly",
+            default_transaction_read_only: true
+          }
+        }
+      : {})
   });
   return sharedSql;
 }

@@ -839,6 +839,14 @@ migrations.push({
 migrations.push({
   name: "20261008120000_minimize_social_identity_data",
   applied: async (sql) => {
+    if (process.env.STAGING_UI_MODE === "true") {
+      // This data-only compliance migration touches identity PII. The staging
+      // read-only role must not receive SELECT on that table just for startup.
+      const [objects] = await sql`
+        select to_regclass('public.user_identities') is not null as identities
+      `;
+      return Boolean(objects?.identities);
+    }
     const [objects] = await sql`
       select to_regclass('public.user_identities') is not null as identities,
         not exists (

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { queueDueEvotorSyncs } from "@/lib/integrations/evotor/repository";
 import { processPendingEvotorSyncEvents } from "@/lib/integrations/evotor/sync";
 import { verifyInternalBearer } from "@/lib/security/internal-request";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (process.env.EVOTOR_ENABLED !== "true") {
+  if (isStagingUiMode() || process.env.EVOTOR_ENABLED !== "true") {
     return NextResponse.json({ ok: false, error: "Integration is disabled." }, { status: 503 });
   }
   if (!verifyInternalBearer(request, process.env.EVOTOR_SYNC_SECRET)) {

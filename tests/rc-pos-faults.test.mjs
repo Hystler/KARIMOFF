@@ -50,6 +50,7 @@ function service(sql, enabled = true) {
   new Function('require', 'exports', 'process', code)(id => {
     if (id === 'server-only') return {};
     if (id === '@/lib/postgres/server') return { getPostgresSql: () => sql };
+    if (id === '@/lib/staging-ui-mode') return { isStagingUiMode: () => false };
     if (id === './terminal-bridge') return { terminalBridgeReady: () => true };
     if (id === './fiscal-reconciliation') return reconciliation;
     if (id === './payment-result') return paymentResult;
@@ -85,7 +86,9 @@ function service(sql, enabled = true) {
   return exports;
 }
 
-test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery are fail-safe', async () => {
+test('RC PG17 runtime: concurrent POS, unknown outcomes, restart and recovery are fail-safe', {
+  skip: !process.env.KARIMOFF_RC_LOCAL_DSN && 'Requires a disposable local PostgreSQL database'
+}, async () => {
   const dsn = process.env.KARIMOFF_RC_LOCAL_DSN;
   assert.match(dsn ?? '', /^postgres:\/\/karimoff_app@127\.0\.0\.1:55445\/karimoff_rc_fresh_\d+$/,
     'Run verify-release-database --local-only first and provide its runtimeDsn');

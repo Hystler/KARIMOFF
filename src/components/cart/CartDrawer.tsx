@@ -119,6 +119,7 @@ export function CartDrawer() {
     delivery_acceptance_end: "20:30",
     delivery_timezone: "Europe/Moscow"
   });
+  const [stagingUiMode, setStagingUiMode] = useState(false);
   const [receiptEmail, setReceiptEmail] = useState("");
   const [marketingChoiceMade, setMarketingChoiceMade] = useState(false);
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
@@ -245,6 +246,7 @@ export function CartDrawer() {
         return;
       }
 
+      setStagingUiMode(context.stagingUiMode === true);
       setCheckoutSettings({
         ...context.settings,
         online_payments_enabled: context.payment.enabled
@@ -348,6 +350,10 @@ export function CartDrawer() {
 
   useEffect(() => {
     if (orderState.status === "success") {
+      if (orderState.stagingPreview) {
+        const timeoutId = window.setTimeout(() => setMode("success"), 0);
+        return () => window.clearTimeout(timeoutId);
+      }
       if (orderState.paymentConfirmationUrl) {
         if (orderState.paymentId && checkoutRequestId) {
           rememberCheckoutPayment({
@@ -368,7 +374,7 @@ export function CartDrawer() {
     }
 
     return undefined;
-  }, [cartPayload, checkoutRequestId, clearCart, orderState.paymentConfirmationUrl, orderState.paymentId, orderState.status]);
+  }, [cartPayload, checkoutRequestId, clearCart, orderState.paymentConfirmationUrl, orderState.paymentId, orderState.stagingPreview, orderState.status]);
 
   if (!isOpen) {
     return null;
@@ -415,12 +421,25 @@ export function CartDrawer() {
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
           {mode === "success" ? (
             <div className="rounded-lg border border-karimoff-orange/25 bg-karimoff-orange/10 p-6">
-              <p className="text-lg font-black text-karimoff-black">Заказ отправлен.</p>
+              <p className="text-lg font-black text-karimoff-black">
+                {orderState.stagingPreview ? "Проверка оформления пройдена." : "Заказ отправлен."}
+              </p>
               <p className="mt-2 text-sm leading-6 text-karimoff-muted">
-                Мы свяжемся с вами для подтверждения.
+                {orderState.stagingPreview
+                  ? orderState.message
+                  : "Мы свяжемся с вами для подтверждения."}
               </p>
               {orderState.orderId ? (
                 <p className="mt-4 text-xs font-semibold text-karimoff-muted">ID заказа: {orderState.orderId}</p>
+              ) : null}
+              {orderState.stagingPreview ? (
+                <button
+                  type="button"
+                  onClick={() => setMode("checkout")}
+                  className="public-button-secondary mt-5 w-full"
+                >
+                  Вернуться к оформлению
+                </button>
               ) : null}
             </div>
           ) : lines.length === 0 ? (
@@ -452,6 +471,11 @@ export function CartDrawer() {
             </div>
           ) : mode === "checkout" && customer ? (
             <form action={orderFormAction} className="grid gap-5">
+              {stagingUiMode ? (
+                <p role="status" className="rounded-md border border-karimoff-orange/25 bg-karimoff-orange/10 px-3 py-2 text-sm font-semibold leading-5 text-karimoff-black">
+                  Тестовый режим. Заказы и платежи не создаются.
+                </p>
+              ) : null}
               <input type="hidden" name="cart" value={cartPayload} />
               <input type="hidden" name="idempotency_key" value={checkoutRequestId} />
               <input type="hidden" name="fulfillment_mode" value={fulfillmentMode} />
@@ -794,16 +818,20 @@ export function CartDrawer() {
 
               {!checkoutSettings.online_payments_enabled ? (
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
-                  Онлайн-оплата временно недоступна. Заказ не будет создан до перехода в ЮKassa.
+                  {stagingUiMode
+                    ? "Это только preview оформления: заказ и платёж не будут созданы."
+                    : "Онлайн-оплата временно недоступна. Заказ не будет создан до перехода в ЮKassa."}
                 </p>
               ) : null}
 
               <button
                 type="submit"
-                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || !checkoutSettings.online_payments_enabled || (deliveryType === "delivery" && (!addressIsValidated || deliveryAcceptanceState !== "open"))}
+                disabled={isOrderPending || !lines.length || isCheckoutDisabled || !checkoutRequestId || (!stagingUiMode && !checkoutSettings.online_payments_enabled) || (deliveryType === "delivery" && (!addressIsValidated || deliveryAcceptanceState !== "open"))}
                 className="public-button-primary py-4"
               >
-                {isOrderPending ? "Создаём платёж" : "Перейти к оплате"}
+                {isOrderPending
+                  ? stagingUiMode ? "Проверяем оформление…" : "Создаём платёж"
+                  : stagingUiMode ? "Проверить оформление" : "Перейти к оплате"}
               </button>
             </form>
           ) : (

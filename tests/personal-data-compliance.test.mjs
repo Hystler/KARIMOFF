@@ -82,7 +82,7 @@ test("loyalty membership requires a versioned one-time opt-in", () => {
 test("cookie evidence failure leaves banner visible and optional categories disabled", () => {
   const banner = read("src/components/CookieConsentBanner.tsx");
   const route = read("src/app/api/cookie-consent/route.ts");
-  assert.match(banner, /result\.ok !== true \|\| result\.stored !== true/);
+  assert.match(banner, /result\.ok !== true \|\| \(result\.stored !== true && result\.localOnly !== true\)/);
   assert.match(banner, /setSaveError\("Не удалось сохранить выбор/);
   assert.match(route, /stored: false/);
   assert.match(route, /await sql\.begin/);

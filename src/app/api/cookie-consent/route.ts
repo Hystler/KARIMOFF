@@ -2,6 +2,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { isAllowedSameOriginRequest } from "@/lib/request-security";
 import { getPostgresSql } from "@/lib/postgres/server";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -18,6 +19,11 @@ export async function POST(request: Request) {
   }
   if (!isAllowedSameOriginRequest(request)) {
     return NextResponse.json({ ok: false, error: "Недопустимый источник запроса." }, { status: 403 });
+  }
+  if (isStagingUiMode()) {
+    return NextResponse.json({ ok: true, stored: false, localOnly: true }, {
+      headers: { "Cache-Control": "no-store" }
+    });
   }
 
   let payload: CookieConsentPayload;

@@ -19,6 +19,38 @@ function adminResponseHeaders(response: NextResponse) {
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  const stagingBlockedPrefixes = [
+    "/api/auth",
+    "/api/webhooks/yookassa",
+    "/api/internal/evotor",
+    "/api/integrations/evotor",
+    "/api/terminal",
+    "/api/pos"
+  ];
+  if (process.env.STAGING_UI_MODE === "true"
+    && stagingBlockedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return NextResponse.json({ ok: false, error: "Operation is disabled in staging UI mode." }, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
+
+  if (process.env.STAGING_UI_MODE === "true" && !isReadOnlyRequest(request.method)) {
+    const isStaffAction = isAdminPath(pathname)
+      || pathname === "/kitchen"
+      || pathname.startsWith("/kitchen/")
+      || pathname === "/pos"
+      || pathname.startsWith("/pos/");
+    const isApiWrite = pathname.startsWith("/api/") && pathname !== "/api/cookie-consent";
+
+    if (isStaffAction || isApiWrite) {
+      return NextResponse.json({ ok: false, error: "Writes are disabled in staging UI mode." }, {
+        status: 503,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+  }
+
   if (isAdminPath(pathname)) {
     if (!isMaintenanceMode() || isReadOnlyRequest(request.method)) {
       const requestHeaders = getOpaqueStaffLoginOriginHeaders(request);

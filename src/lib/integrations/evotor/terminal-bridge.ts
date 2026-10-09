@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, randomBytes, randomInt } from "node:crypto";
 import { getPostgresSql } from "@/lib/postgres/server";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 const DEVICE_KEY_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
 const PAIRING_CODE_PATTERN = /^\d{8}$/;
@@ -32,7 +33,8 @@ function digest(namespace: string, value: string) {
 
 export function terminalBridgeReady() {
   const bridgeSecret = process.env.EVOTOR_TERMINAL_BRIDGE_SECRET?.trim() ?? "";
-  return process.env.EVOTOR_TERMINAL_BRIDGE_ENABLED === "true"
+  return !isStagingUiMode()
+    && process.env.EVOTOR_TERMINAL_BRIDGE_ENABLED === "true"
     && bridgeSecret.length >= 32;
 }
 

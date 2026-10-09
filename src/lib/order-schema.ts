@@ -53,6 +53,7 @@ export type OrderActionState = {
   orderId?: string;
   paymentConfirmationUrl?: string;
   paymentId?: string;
+  stagingPreview?: boolean;
 };
 
 export const initialOrderActionState: OrderActionState = {

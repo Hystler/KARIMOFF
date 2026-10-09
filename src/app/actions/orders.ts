@@ -25,14 +25,22 @@ import {
 import { isDeliveryAcceptingAt } from "@/lib/delivery/hours";
 import { getDeliveryLocationSettings } from "@/lib/delivery/settings";
 import { logOperationalError } from "@/lib/observability";
+import {
+  getStagingDemoCustomer,
+  isStagingDeliveryUiEnabled,
+  isStagingUiMode
+} from "@/lib/staging-ui-mode";
 
 export async function getCurrentCustomerAction() {
   return getCurrentCustomer();
 }
 
 export async function getCheckoutContextAction() {
+  const stagingUiMode = isStagingUiMode();
   const [customer, settings, deliveryConfig] = await Promise.all([
-    getCurrentCustomer(), getSiteSettings(), getDeliveryLocationSettings()
+    stagingUiMode ? Promise.resolve(getStagingDemoCustomer()) : getCurrentCustomer(),
+    getSiteSettings(),
+    getDeliveryLocationSettings()
   ]);
   let whitelistReady = false;
   try {
@@ -43,7 +51,7 @@ export async function getCheckoutContextAction() {
   }
   let receiptEmail = "";
   let marketingChoiceMade = false;
-  if (customer) {
+  if (customer && !stagingUiMode) {
     const database = createDatabaseServerClient();
     const [{ data: profile }, { data: identities }] = database
       ? await Promise.all([
@@ -72,15 +80,20 @@ export async function getCheckoutContextAction() {
     marketingChoiceMade = Boolean(marketing && marketing.document_version === LEGAL_VERSION);
   }
 
+  const deliveryEnabled = stagingUiMode
+    ? isStagingDeliveryUiEnabled() && Boolean(deliveryConfig) && whitelistReady
+    : settings.delivery_enabled && settings.delivery_coverage_enabled && Boolean(deliveryConfig?.enabled) && whitelistReady;
+
   return {
+    stagingUiMode,
     customer,
     marketingChoiceMade,
     payment: {
-      enabled: isYooKassaCheckoutEnabled(),
+      enabled: !stagingUiMode && isYooKassaCheckoutEnabled(),
       receiptEmail
     },
     settings: {
-      delivery_enabled: settings.delivery_enabled && settings.delivery_coverage_enabled && Boolean(deliveryConfig?.enabled) && whitelistReady,
+      delivery_enabled: deliveryEnabled,
       pickup_enabled: settings.pickup_enabled,
       delivery_fee: deliveryConfig?.deliveryFee ?? 200,
       free_delivery_threshold: deliveryConfig?.freeThreshold ?? 2500,
@@ -93,8 +106,11 @@ export async function getCheckoutContextAction() {
 }
 
 export async function suggestDeliveryStreetsAction(query: string) {
-  const customer = await getCurrentCustomer();
+  const customer = isStagingUiMode() ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { streets: [], error: "Войдите, чтобы оформить заказ." };
+  if (isStagingUiMode() && !isStagingDeliveryUiEnabled()) {
+    return { streets: [], error: unavailableDeliveryAddressMessage() };
+  }
   try {
     const locationId = await getDefaultDeliveryLocationId();
     if (!locationId) return { streets: [], error: unavailableDeliveryAddressMessage() };
@@ -106,8 +122,11 @@ export async function suggestDeliveryStreetsAction(query: string) {
 }
 
 export async function listDeliveryHousesAction(street: string) {
-  const customer = await getCurrentCustomer();
+  const customer = isStagingUiMode() ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { houses: [], error: "Войдите, чтобы оформить заказ." };
+  if (isStagingUiMode() && !isStagingDeliveryUiEnabled()) {
+    return { houses: [], error: unavailableDeliveryAddressMessage() };
+  }
   try {
     const locationId = await getDefaultDeliveryLocationId();
     if (!locationId) return { houses: [], error: unavailableDeliveryAddressMessage() };
@@ -119,15 +138,20 @@ export async function listDeliveryHousesAction(street: string) {
 }
 
 export async function validateDeliveryAddressAction(input: { deliveryAddressId?: string }) {
-  const customer = await getCurrentCustomer();
+  const stagingUiMode = isStagingUiMode();
+  const customer = stagingUiMode ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { available: false, message: "Войдите, чтобы оформить заказ." };
+  if (stagingUiMode && !isStagingDeliveryUiEnabled()) {
+    return { available: false, message: unavailableDeliveryAddressMessage() };
+  }
   const addressId = typeof input?.deliveryAddressId === "string" ? input.deliveryAddressId : "";
   try {
     const locationId = await getDefaultDeliveryLocationId();
     if (!locationId) return { available: false, message: unavailableDeliveryAddressMessage() };
     const address = await findDeliveryAddressById(addressId, locationId);
     const config = await getDeliveryLocationSettings();
-    const available = Boolean(config?.enabled && address
+    const deliveryEnabled = stagingUiMode ? isStagingDeliveryUiEnabled() : Boolean(config?.enabled);
+    const available = Boolean(deliveryEnabled && config && address
       && isAvailableDeliveryAddress(address, addressId, locationId)
       && assessDeliveryZone({ address: [Number(address.longitude), Number(address.latitude)],
         center: config.center, radiusMeters: config.radiusMeters, excludedAreas: config.excludedAreas }).available);
@@ -153,7 +177,8 @@ export async function createOrderAction(
     };
   }
 
-  const customer = await getCurrentCustomer();
+  const stagingUiMode = isStagingUiMode();
+  const customer = stagingUiMode ? getStagingDemoCustomer() : await getCurrentCustomer();
 
   if (!customer) {
     return {
@@ -162,7 +187,7 @@ export async function createOrderAction(
     };
   }
 
-  if (!isYooKassaCheckoutEnabled()) {
+  if (!stagingUiMode && !isYooKassaCheckoutEnabled()) {
     return {
       status: "error",
       message: "Онлайн-оплата временно недоступна. Попробуйте немного позже."
@@ -191,7 +216,9 @@ export async function createOrderAction(
     delivery_intercom: String(formData.get("delivery_intercom") || ""),
     delivery_courier_comment: String(formData.get("delivery_courier_comment") || ""),
     comment: String(formData.get("comment") || ""),
-    receipt_email: String(formData.get("receipt_email") || ""),
+    receipt_email: stagingUiMode
+      ? "demo-checkout@invalid.example"
+      : String(formData.get("receipt_email") || ""),
     cart: parsedCart
   });
 
@@ -209,14 +236,14 @@ export async function createOrderAction(
 
   const settings = await getSiteSettings();
 
-  if (parsed.data.delivery_type === "delivery" && !settings.delivery_enabled) {
+  if (!stagingUiMode && parsed.data.delivery_type === "delivery" && !settings.delivery_enabled) {
     return {
       status: "error",
       message: "Доставка временно недоступна."
     };
   }
 
-  if (parsed.data.delivery_type === "delivery" && !settings.delivery_coverage_enabled) {
+  if (!stagingUiMode && parsed.data.delivery_type === "delivery" && !settings.delivery_coverage_enabled) {
     return {
       status: "error",
       message: "Доставка пока недоступна. Вы можете оформить самовывоз."
@@ -241,7 +268,10 @@ export async function createOrderAction(
 
   if (parsed.data.delivery_type === "delivery") {
     const config = await getDeliveryLocationSettings();
-    if (!config?.enabled) return { status: "error", message: "Доставка временно недоступна." };
+    const deliveryEnabled = stagingUiMode
+      ? isStagingDeliveryUiEnabled()
+      : Boolean(config?.enabled);
+    if (!config || !deliveryEnabled) return { status: "error", message: "Доставка временно недоступна." };
     if (!isDeliveryAcceptingAt(new Date(), config)) {
       return { status: "error", message: "Сегодня доставка уже закончилась. Вы можете выбрать самовывоз." };
     }
@@ -262,6 +292,14 @@ export async function createOrderAction(
       floor: parsed.data.delivery_floor,
       intercom: parsed.data.delivery_intercom,
       courierComment: parsed.data.delivery_courier_comment
+    };
+  }
+
+  if (stagingUiMode) {
+    return {
+      status: "success",
+      message: "Тестовая проверка оформления завершена. Заказ и платёж не создавались.",
+      stagingPreview: true
     };
   }
 

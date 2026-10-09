@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getEvotorPosPaymentStatus, resolveUnknownEvotorPosPayment } from "@/lib/integrations/evotor/pos-payments";
 import { canStaffAccessOrderLocation } from "@/lib/order-flow/access";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,9 @@ const schema = z.object({
 const idSchema = z.string().uuid();
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  if (isStagingUiMode()) {
+    return NextResponse.json({ ok: false, error: "POS operations are disabled in staging UI mode." }, { status: 503 });
+  }
   const staff = await getCurrentStaff();
   if (!staff || !["owner", "admin", "manager", "cashier"].includes(staff.role)) {
     return NextResponse.json({ ok: false }, { status: 401 });

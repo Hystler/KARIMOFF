@@ -6,6 +6,7 @@ import {
   isSupportedYooKassaWebhookEvent,
   processYooKassaWebhook
 } from "@/lib/payments/yookassa/service";
+import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ function response(body: unknown, status = 200) {
 }
 
 export async function POST(request: NextRequest) {
+  if (isStagingUiMode()) return response({ ok: false, error: "staging_ui_mode" }, 503);
+
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (Number.isFinite(contentLength) && contentLength > 65_536) {
     return response({ ok: false, error: "payload_too_large" }, 413);
