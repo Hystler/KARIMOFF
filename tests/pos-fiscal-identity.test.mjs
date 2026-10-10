@@ -95,7 +95,7 @@ test('successful callback uses saved UUID to read closed receipt and keeps delay
   assert.match(activity, /fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS/);
   assert.match(activity, /fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS\s*\?\s*SLOW_FISCAL_RETRY_DELAY_MS/);
   assert.doesNotMatch(activity, /if \(fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS\) \{[^}]*return;/s);
-  assert.match(activity, /retryPendingPaymentResult\(\);\s*schedulePaymentPoll\(1500\)/);
+  assert.match(activity, /retryPendingPaymentResult\(\);\s*drainPendingPaymentJob\(\);\s*schedulePaymentPoll\(1500\)/);
   assert.match(activity, /"fiscal_pending"\.equals\(finalStatus\)/);
 });
 
