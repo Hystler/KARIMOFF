@@ -1,0 +1,62 @@
+{
+  "store_id": "20210531-CD63-40C9-8068-51E33151C208",
+  "valid_from": "2026-09-11T00:00:00+03:00",
+  "evidence": "Read-only receipt SKU/name/unit snapshots, 2026-10-10; existing owner tech cards and modifier quantities. No customer data. Ingredient prices, never retail prices.",
+  "replacement_groups": [
+    { "product_slug": "aydahobox", "original_ingredient_id": "7c857ea4-1b67-4f90-a223-667cc694553c", "quantity": 90, "unit": "g", "variants": [
+      { "sku": "6990e9a1-2999-48b3-807a-d1cbe77af4df", "names": ["Айдахо Бокс с курицей"], "ingredient_id": "7c857ea4-1b67-4f90-a223-667cc694553c" },
+      { "sku": "ca08de1b-6a69-4f93-b94d-14540a8f8887", "names": ["Айдахо Бокс со свининой"], "ingredient_id": "03823e02-5f82-4ff9-8a45-9067979b7bb0" },
+      { "sku": "daaab4dd-7468-4a99-afa6-7e51b175493a", "names": ["Айдахо Бокс с говядиной"], "ingredient_id": "0a985a10-71aa-4fd9-a047-04d5e240f8b7" }
+    ] },
+    { "product_slug": "boxfood", "original_ingredient_id": "7c857ea4-1b67-4f90-a223-667cc694553c", "quantity": 90, "unit": "g", "variants": [
+      { "sku": "1efe3a31-4def-4c16-9acb-c66054ced0b0", "names": ["Бокс Фуд с курицей"], "ingredient_id": "7c857ea4-1b67-4f90-a223-667cc694553c" },
+      { "sku": "b708d0dc-50f8-4eb6-b587-51349277a24c", "names": ["Бокс Фуд со свининой"], "ingredient_id": "03823e02-5f82-4ff9-8a45-9067979b7bb0" },
+      { "sku": "3c8bf670-1efd-4b34-99f1-d3765ed01b94", "names": ["Бокс Фуд с говядиной"], "ingredient_id": "0a985a10-71aa-4fd9-a047-04d5e240f8b7" }
+    ] },
+    { "product_slug": "hot-dog-barbekyu", "original_ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34", "quantity": 1, "unit": "pcs", "variants": [
+      { "sku": "b09c86cc-6ef9-4127-9f7f-a362eff166c0", "names": ["Хот-дог Барбекю Курица"], "ingredient_id": "3cdf1255-89b9-44b2-8000-3b05a203be81" },
+      { "sku": "f7a6d1aa-acd5-4cf1-bda8-82195bf4e935", "names": ["Хот-дог Барбекю Свинина"], "ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34" },
+      { "sku": "888c7b03-acfa-4164-9e57-5f6c295d3195", "names": ["Хот-дог Барбекю Говядина"], "ingredient_id": "31a83671-8e69-4dbd-b037-4a1533dd6786" }
+    ] },
+    { "product_slug": "hot-dog-datskiy", "original_ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34", "quantity": 1, "unit": "pcs", "variants": [
+      { "sku": "4627f888-b519-434d-8a2e-c8c5994ab722", "names": ["Хот-дог Датский Курица"], "ingredient_id": "3cdf1255-89b9-44b2-8000-3b05a203be81" },
+      { "sku": "fc647b81-bd91-4601-b11c-949e26b2a617", "names": ["Хот-дог Датский Свинина"], "ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34" },
+      { "sku": "91ff72ed-5ec1-41cc-9a41-4acba1b088e6", "names": ["Хот-дог Датский Говядина"], "ingredient_id": "31a83671-8e69-4dbd-b037-4a1533dd6786" }
+    ] },
+    { "product_slug": "hot-dog-itali", "original_ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34", "quantity": 1, "unit": "pcs", "variants": [
+      { "sku": "d7edf6d8-53e6-424c-993e-7dc9e302d401", "names": ["Хот-дог Итали Курица"], "ingredient_id": "3cdf1255-89b9-44b2-8000-3b05a203be81" },
+      { "sku": "84330c26-4de5-4b01-bcf7-badd9058244a", "names": ["Хот-дог Итали Свинина"], "ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34" },
+      { "sku": "447be292-7ef0-4df1-8735-5dd50bc4d668", "names": ["Хот-дог Итали Говядина"], "ingredient_id": "31a83671-8e69-4dbd-b037-4a1533dd6786" }
+    ] },
+    { "product_slug": "frenchdog", "original_ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34", "quantity": 1, "unit": "pcs", "variants": [
+      { "sku": "90d78d55-70a2-4a21-88f0-8c21d003c3f1", "names": ["Френчдог Курица"], "ingredient_id": "3cdf1255-89b9-44b2-8000-3b05a203be81" },
+      { "sku": "6ecd22b9-99e2-468a-9dcb-4a1a4281b6a9", "names": ["Френчдог Свинина"], "ingredient_id": "a84bf3a1-912f-48a3-8508-0c4d9dd16e34" },
+      { "sku": "9885255c-481f-4a2e-a0d4-cd8cc887cc9e", "names": ["Френчдог Говядина"], "ingredient_id": "31a83671-8e69-4dbd-b037-4a1533dd6786" }
+    ] }
+  ],
+  "rules": [
+    { "sku": "ebb1161e-3ecb-4180-93b8-e6d793d8330a", "names": ["Картофель по-деревенски 150 гр."], "kind": "portion", "product_slug": "kartofel-po-derevenski", "ingredient_id": "fe514676-cd2f-4b80-9171-44c8dcfa21e6", "quantity": 150, "unit": "g" },
+    { "sku": "ebf2f604-0bad-41c2-8a9f-a80da7bfc050", "names": ["Картофель по-деревенски 200 гр."], "kind": "portion", "product_slug": "kartofel-po-derevenski", "ingredient_id": "fe514676-cd2f-4b80-9171-44c8dcfa21e6", "quantity": 200, "unit": "g" },
+    { "sku": "8c446400-8f03-4e33-abb5-0bd94dbd3498", "names": ["Картофель фри 150 гр."], "kind": "portion", "product_slug": "kartoshka-fri", "ingredient_id": "2305b9c4-08fb-4e62-87bc-d20e50c85882", "quantity": 150, "unit": "g" },
+    { "sku": "80b15fce-2883-4999-be95-1fd78d3f236b", "names": ["Картофель фри 200 гр."], "kind": "portion", "product_slug": "kartoshka-fri", "ingredient_id": "2305b9c4-08fb-4e62-87bc-d20e50c85882", "quantity": 200, "unit": "g" },
+    { "sku": "2215ee8f-f897-4471-b4cb-35af138c60a5", "names": ["Королевские креветки в панировке 6 шт."], "kind": "portion", "product_slug": "krevetki-v-panirovke", "ingredient_id": "2b315ebc-cd46-48e9-a188-d39c9ddffabf", "quantity": 6, "unit": "pcs" },
+    { "sku": "a006e476-7ce9-44c6-a90d-135235fd4b6d", "names": ["Королевские креветки в панировке 12 шт."], "kind": "portion", "product_slug": "krevetki-v-panirovke", "ingredient_id": "2b315ebc-cd46-48e9-a188-d39c9ddffabf", "quantity": 12, "unit": "pcs" },
+    { "sku": "c74b0900-17da-4b80-8977-15da82fa0336", "names": ["Крылышки Барбекю 8 шт."], "kind": "portion", "product_slug": "krylyshki-barbekyu", "ingredient_id": "7d1a1972-16c7-4f43-b852-e4e0c30f6f5b", "quantity": 8, "unit": "pcs" },
+    { "sku": "5860b55d-5efb-4e00-8a3f-321a314d6e2f", "names": ["Крылышки Барбекю 16 шт."], "kind": "portion", "product_slug": "krylyshki-barbekyu", "ingredient_id": "7d1a1972-16c7-4f43-b852-e4e0c30f6f5b", "quantity": 16, "unit": "pcs" },
+    { "sku": "9d2f1691-3051-4cf9-a948-7df1049ece05", "names": ["Наггетсы 6 шт."], "kind": "portion", "product_slug": "naggetsy", "ingredient_id": "ea8b041a-7efd-4f82-859b-972c3ce2dfc5", "quantity": 6, "unit": "pcs" },
+    { "sku": "cddd60f0-ea02-4643-a94b-87371cc44631", "names": ["Наггетсы 12 шт."], "kind": "portion", "product_slug": "naggetsy", "ingredient_id": "ea8b041a-7efd-4f82-859b-972c3ce2dfc5", "quantity": 12, "unit": "pcs" },
+    { "sku": "36bf2cee-80ae-4898-a44e-fe314eec7159", "names": ["Сырные палочки 6 шт."], "kind": "portion", "product_slug": "syrnye-palochki", "ingredient_id": "657fdd55-7cf8-4ecc-85d3-07a968e311c2", "quantity": 6, "unit": "pcs" },
+    { "sku": "c4c9945e-32d2-4e43-9915-2a474d09b3cd", "names": ["Сырные палочки 12 шт."], "kind": "portion", "product_slug": "syrnye-palochki", "ingredient_id": "657fdd55-7cf8-4ecc-85d3-07a968e311c2", "quantity": 12, "unit": "pcs" },
+    { "sku": "86933c56-c863-485b-95eb-29263582f7d4", "names": ["Мини шаурма"], "kind": "recipe", "product_slug": "mini-shaurma" },
+    { "sku": "4af7d942-1521-4c10-9acd-08e1f44eafc4", "names": ["Биф ролл"], "kind": "recipe", "product_slug": "beef-roll" },
+    { "sku": "2c929b5e-2922-4f48-8b10-960c4633395d", "names": ["Татарин"], "kind": "recipe", "product_slug": "tatarin" },
+    { "sku": "03ac2e63-f8f2-442b-bfa2-6ccecdf07651", "names": ["Чикен ролл"], "kind": "recipe", "product_slug": "chicken-roll" },
+    { "sku": "158e3d05-799c-4d85-9904-ddcc1beb9c90", "names": ["Чикен бургер"], "kind": "recipe", "product_slug": "chickenburger" },
+    { "sku": "9ee927e0-2479-4ed5-b63c-25c1b5fb6461", "names": ["Курица 90гр"], "kind": "component", "ingredient_id": "7c857ea4-1b67-4f90-a223-667cc694553c", "quantity": 90, "unit": "g" },
+    { "sku": "59b53ba4-bc39-4b9b-87e4-0baf546f9659", "names": ["Свинина 90гр"], "kind": "component", "ingredient_id": "03823e02-5f82-4ff9-8a45-9067979b7bb0", "quantity": 90, "unit": "g" },
+    { "sku": "ba111d9d-b683-4a15-87c3-a85983d73f69", "names": ["Ломтик сыра"], "kind": "component", "ingredient_id": "eca4a2d2-043b-437a-9d55-e490c8f96a50", "quantity": 1, "unit": "pcs" },
+    { "sku": "04de4719-6f31-4105-92c1-a11d081a56a0", "names": ["сырные палочки", "Сырные палочки"], "kind": "component", "ingredient_id": "657fdd55-7cf8-4ecc-85d3-07a968e311c2", "quantity": 1, "unit": "pcs" },
+    { "sku": "7a592dad-61f7-4deb-ad46-5729af75ce19", "names": ["Котлета из говядины"], "kind": "component", "ingredient_id": "5479d61f-ea8d-4654-a034-8e74f737ab8c", "quantity": 110, "unit": "g" },
+    { "sku": "d607435d-2dbd-4c10-bb2d-6a1436605136", "names": ["Лаваш"], "kind": "component", "ingredient_id": "d6483dcf-5eab-421c-a0ee-b29f993ddc70", "quantity": 1, "unit": "pcs" }
+  ]
+}

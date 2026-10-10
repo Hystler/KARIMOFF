@@ -286,13 +286,13 @@ async function getProductAggregates(filters: AnalyticsFilters, range: AnalyticsR
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       coalesce(sum(i.quantity) filter (where i.operation_type = 'sale'), 0)::numeric as quantity,
       coalesce(sum(i.net_revenue) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as covered_revenue,
       coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as food_cost,
-      bool_and(i.product_id is not null and coalesce(product_cost.is_complete, false)) as food_cost_complete,
-      case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status
+      bool_and(coalesce(product_cost.is_complete, false)) as food_cost_complete,
+      case when bool_and(product_cost.is_mapped) then 'mapped' else 'unmapped' end as mapping_status
     from public.canonical_analytics_sales s
     join public.analytics_sale_items i on i.sale_id = s.sale_id
     ${SALE_FOOD_COST_JOIN}
