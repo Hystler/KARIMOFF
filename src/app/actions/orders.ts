@@ -296,6 +296,17 @@ export async function createOrderAction(
   }
 
   if (stagingUiMode) {
+    if (process.env.STAGING_DATA_MODE === "fixture") {
+      const { validateFixtureCart } = await import("@/lib/staging-fixtures");
+      const subtotal = validateFixtureCart(parsed.data.cart);
+      if (subtotal === null) return { status: "error", message: "Корзина содержит неизвестный тестовый товар или модификатор. Обновите корзину." };
+      const fee = parsed.data.delivery_type === "delivery" && subtotal < 2500 ? 200 : 0;
+      return {
+        status: "success",
+        message: `Тестовая проверка оформления завершена. Товары: ${subtotal} ₽; доставка: ${fee} ₽; итого: ${subtotal + fee} ₽. Заказ и платёж не создавались.`,
+        stagingPreview: true
+      };
+    }
     return {
       status: "success",
       message: "Тестовая проверка оформления завершена. Заказ и платёж не создавались.",

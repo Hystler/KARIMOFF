@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { isStagingFixtureMode } from "@/lib/staging-ui-mode";
 import { normalizeHouse, normalizeStreet } from "./address-normalization.mjs";
 import { deliveryAddressText } from "./address-geometry.mjs";
 
@@ -55,6 +56,7 @@ export function formatDeliveryAddress(address: Pick<DeliveryAddressRecord,
 }
 
 export async function getDefaultDeliveryLocationId() {
+  if (isStagingFixtureMode()) return (await import("@/lib/staging-fixtures")).fixtureLocationId;
   const sql = getPostgresSql();
   const [location] = await sql<{ id: string }[]>`
     select id from public.order_locations
@@ -65,6 +67,7 @@ export async function getDefaultDeliveryLocationId() {
 }
 
 export async function hasAvailableDeliveryAddresses(locationId: string) {
+  if (isStagingFixtureMode()) return (await import("@/lib/staging-fixtures")).getFixtureAddresses(locationId).length > 0;
   const sql = getPostgresSql();
   const [result] = await sql<{ available: boolean }[]>`
     select exists (
@@ -78,6 +81,14 @@ export async function hasAvailableDeliveryAddresses(locationId: string) {
 export async function searchDeliveryStreets(locationId: string, query: string, limit = 10) {
   const normalizedQuery = normalizeStreet(query);
   if (!normalizedQuery) return [];
+  if (isStagingFixtureMode()) {
+    const { getFixtureAddresses } = await import("@/lib/staging-fixtures");
+    const streets = new Map(getFixtureAddresses(locationId)
+      .filter(address => address.street_normalized.includes(normalizedQuery))
+      .map(address => [address.street_normalized, address.street]));
+    return [...streets].map(([street_normalized, street]) => ({ street_normalized, street }))
+      .sort((a, b) => a.street.localeCompare(b.street, "ru")).slice(0, Math.max(1, Math.min(limit, 20)));
+  }
   const sql = getPostgresSql();
   const pattern = `%${normalizedQuery}%`;
   return sql<{ street: string; street_normalized: string }[]>`
@@ -94,6 +105,14 @@ export async function searchDeliveryStreets(locationId: string, query: string, l
 export async function listDeliveryHouses(locationId: string, street: string) {
   const streetNormalized = normalizeStreet(street);
   if (!streetNormalized) return [];
+  if (isStagingFixtureMode()) {
+    const { getFixtureAddresses } = await import("@/lib/staging-fixtures");
+    return getFixtureAddresses(locationId)
+    .filter(address => address.street_normalized === streetNormalized)
+    .sort((a, b) => a.house_normalized.localeCompare(b.house_normalized, "ru", { numeric: true })
+      || a.building_normalized.localeCompare(b.building_normalized, "ru", { numeric: true }))
+    .slice(0, 300).map(address => ({ id: address.id, label: formatDeliveryHouse(address) }));
+  }
   const sql = getPostgresSql();
   const records = await sql<DeliveryAddressOption[]>`
     select id, coalesce(nullif(display_name, ''), house ||
@@ -109,6 +128,8 @@ export async function listDeliveryHouses(locationId: string, street: string) {
 
 export async function findDeliveryAddressById(id: string, locationId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null;
+  if (isStagingFixtureMode()) return (await import("@/lib/staging-fixtures"))
+    .getFixtureAddresses(locationId).find(address => address.id === id) ?? null;
   const sql = getPostgresSql();
   const [address] = await sql<DeliveryAddressRecord[]>`
     select id, location_id, city, street, street_normalized, house, house_normalized,

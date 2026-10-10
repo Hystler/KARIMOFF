@@ -1,5 +1,9 @@
 # Test Stand: Read-Only UI Mode
 
+For the current DB-less UI/UX stand, use [staging-fixture-runbook.md](staging-fixture-runbook.md)
+instead. This document remains an optional DB-backed mode; do not continue its
+role/GRANT/RLS setup for autonomous fixtures.
+
 This runbook prepares the existing Timeweb test stand to use the same `main`
 commit as production while keeping its differences in environment configuration.
 It is a plan only: no database role, grant, policy, environment variable, or

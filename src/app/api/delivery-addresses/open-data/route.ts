@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDefaultDeliveryLocationId } from "@/lib/delivery/address-whitelist";
 import { getPostgresSql } from "@/lib/postgres/server";
+import { isStagingFixtureMode } from "@/lib/staging-ui-mode";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (isStagingFixtureMode()) return NextResponse.json((await import("@/lib/staging-fixtures")).getFixtureOpenData(), {
+    headers: { "Cache-Control": "public, max-age=300" }
+  });
   try {
     const locationId = await getDefaultDeliveryLocationId();
     if (!locationId) return NextResponse.json({ error: "Address data is unavailable." }, { status: 503 });

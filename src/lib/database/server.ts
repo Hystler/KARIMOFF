@@ -17,7 +17,7 @@ export type LeadRow = {
 export type ProductRow = Product;
 
 export function isDatabaseConfigured() {
-  return Boolean(process.env.DATABASE_URL);
+  return process.env.STAGING_DATA_MODE !== "fixture" && Boolean(process.env.DATABASE_URL);
 }
 
 export function createDatabaseServerClient() {

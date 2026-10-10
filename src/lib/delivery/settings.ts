@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { isStagingFixtureMode } from "@/lib/staging-ui-mode";
 import type { PolygonGeometry } from "./geo";
 import type { DeliveryHours } from "./hours";
 
@@ -18,6 +19,8 @@ export type DeliveryLocationSettings = DeliveryHours & {
 };
 
 export async function getDeliveryLocationSettings(locationKey = "karimoff-main"): Promise<DeliveryLocationSettings | null> {
+  if (isStagingFixtureMode()) return locationKey === "karimoff-main"
+    ? (await import("@/lib/staging-fixtures")).getFixtureDeliverySettings() : null;
   try {
     const sql = getPostgresSql();
     const rows = await sql.unsafe<Array<{

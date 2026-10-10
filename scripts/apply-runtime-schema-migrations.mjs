@@ -863,6 +863,14 @@ migrations.push({
   }
 });
 const readOnly = process.env.RUNTIME_MIGRATIONS_READ_ONLY === "true";
+if (process.env.STAGING_DATA_MODE === "fixture") {
+  if (process.env.STAGING_UI_MODE !== "true") {
+    console.error("STAGING_DATA_MODE=fixture requires STAGING_UI_MODE=true.");
+    process.exit(1);
+  }
+  console.log("Schema migrations skipped: autonomous staging fixtures; PostgreSQL disabled.");
+  process.exit(0);
+}
 const databaseUrl = readOnly ? process.env.DATABASE_URL : process.env.MIGRATION_DATABASE_URL;
 
 if (!databaseUrl) {
