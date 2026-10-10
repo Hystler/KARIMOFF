@@ -153,13 +153,13 @@ async function getFoodCostMetricRow(
     with ${PRODUCT_FOOD_COST_CTE}
     select
       count(*) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       )::integer as covered_item_rows,
       coalesce(sum(i.net_revenue) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as covered_revenue,
       coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as food_cost,
       coalesce(sum(abs(i.net_revenue)), 0)::numeric as total_revenue
     from public.analytics_sale_items i
@@ -386,20 +386,20 @@ async function getProductRows(
       coalesce(i.product_id::text, i.source || ':' || coalesce(i.source_product_id, i.external_source_id)) as product_key,
       i.product_name,
       max(${itemCategory}) as category,
-      case when bool_and(i.mapping_status in ('native', 'confirmed')) then 'mapped' else 'unmapped' end as mapping_status,
+      case when bool_and(product_cost.is_mapped) then 'mapped' else 'unmapped' end as mapping_status,
       count(distinct i.source)::integer as channel_count,
       min(i.source) as single_channel,
       coalesce(sum(i.net_quantity), 0)::numeric as quantity,
       coalesce(sum(i.net_revenue), 0)::numeric as revenue,
       count(distinct s.sale_id) filter (where s.sale_count_eligible)::integer as receipts,
       coalesce(sum(i.net_revenue) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as covered_revenue,
       coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
-        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+        where coalesce(product_cost.is_complete, false)
       ), 0)::numeric as food_cost,
       bool_and(
-        i.product_id is not null and coalesce(product_cost.is_complete, false)
+        coalesce(product_cost.is_complete, false)
       ) as food_cost_complete
     from public.analytics_sale_items i
     join public.canonical_analytics_sales s on s.sale_id = i.sale_id

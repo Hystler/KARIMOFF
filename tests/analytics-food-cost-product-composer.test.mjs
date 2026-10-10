@@ -81,7 +81,8 @@ test("analytics exposes covered gross profit and does not invent food cost for u
   assert.match(foodCostSql, /product_food_costs as/);
   assert.match(foodCostSql, /ingredient\.waste_percent/);
   assert.match(dashboard, /i\.net_quantity \* product_cost\.unit_food_cost/);
-  assert.match(dashboard, /i\.product_id is not null and coalesce\(product_cost\.is_complete, false\)/);
+  assert.match(dashboard, /coalesce\(product_cost\.is_complete, false\)/);
+  assert.doesNotMatch(dashboard, /i\.product_id is not null and coalesce\(product_cost\.is_complete, false\)/);
   assert.match(dashboard, /grossProfitAvailable/);
   assert.match(overview, /Валовая прибыль по food cost/);
   assert.match(overview, /покрытие/);
@@ -187,12 +188,13 @@ test("explicit Evotor aliases confirm only recipe-equivalent products", () => {
   assert.match(dockerfile, /data\/analytics/);
 });
 
-test("Evotor food cost resolves sausage variants by the meat in the receipt name", () => {
+test("Evotor food cost resolves sausage variants by verified receipt SKU and ingredient IDs", () => {
   const foodCostSql = read("src/lib/analytics/sale-food-cost.ts");
 
-  assert.match(foodCostSql, /variant_group\.name in \('Начинка', 'Колбаска'\)/);
-  assert.match(foodCostSql, /replacement_ingredient\.name\) like '%курин%'/);
-  assert.match(foodCostSql, /i\.product_name\) like '%говядин%'/);
+  assert.match(foodCostSql, /cost_identity\.sku = cost_receipt_item\.evotor_product_id/);
+  assert.match(foodCostSql, /identity_option\.replacement_ingredient_id = cost_identity\.ingredient_id/);
+  assert.match(foodCostSql, /original_component\.unit_food_cost/);
+  assert.doesNotMatch(foodCostSql, /like '%курин%'|like '%говядин%'/);
 });
 
 test("unmapped Evotor products still receive useful analytics categories without false recipe mappings", () => {

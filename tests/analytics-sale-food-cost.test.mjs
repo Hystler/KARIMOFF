@@ -40,7 +40,8 @@ test("both dashboard cost aggregates resolve each canonical item before multiply
   for (const query of queries) {
     assert.ok(query.includes(SALE_FOOD_COST_JOIN));
     assert.match(query, /sum\(i\.net_quantity \* product_cost\.unit_food_cost\)/);
-    assert.match(query, /i\.product_id is not null and coalesce\(product_cost\.is_complete, false\)/);
+    assert.match(query, /coalesce\(product_cost\.is_complete, false\)/);
+    assert.doesNotMatch(query, /i\.product_id is not null and coalesce\(product_cost\.is_complete, false\)/);
     assert.match(query, /canonical_analytics_sales s on s\.sale_id = i\.sale_id/);
   }
   assert.match(queries[0], /sum\(abs\(i\.net_revenue\)\)/);
@@ -56,10 +57,10 @@ test("native snapshots use canonical item provenance and do not apply current wa
   assert.doesNotMatch(SALE_FOOD_COST_JOIN, /coalesce\(snapshot_cost\.unit_food_cost/);
 });
 
-test("confirmed Evotor portions require an explicit size in the source product name", () => {
-  assert.match(SALE_FOOD_COST_JOIN, /regexp_match\(lower\(i\.product_name\)/);
-  assert.match(SALE_FOOD_COST_JOIN, /option\.quantity_delta = replace/);
-  assert.match(SALE_FOOD_COST_JOIN, /portion_cost\.is_complete then portion_cost\.unit_food_cost/);
+test("Evotor variants require store/SKU identity and receipt proof, not name/price guesses", () => {
+  assert.match(SALE_FOOD_COST_JOIN, /cost_identity\.sku = cost_receipt_item\.evotor_product_id/);
+  assert.match(SALE_FOOD_COST_JOIN, /cost_identity\.store_id = cost_store\.evotor_store_id/);
+  assert.doesNotMatch(SALE_FOOD_COST_JOIN, /regexp_match|like '%'|limit 1/i);
 });
 
 const fixtures = {
@@ -160,10 +161,6 @@ const expectedCosts = {
   six: 150, twelve: 300, extras: 474, removal: 8, "changed-recipe": 300,
   "native-pos": 300, "zero-usage": 0, "refunded-native": 0,
   "evotor-plain": 150, "evotor-return": -150, "evotor-id-collision": 150,
-  "Snack 6 шт.": 75,
-  "Айдахо Бокс с говядиной": 180,
-  "Хот-дог Датский Курица": 50,
-  "Хот-дог Датский Говядина": 76,
   "portion-six": 86.4, "portion-twelve": 172.8
 };
 
@@ -193,6 +190,15 @@ const fixtureCtes = `
   ), fixture_sales as (
     select * from jsonb_to_recordset($7::text::jsonb)
       as x(sale_id text, source text, sale_count_eligible boolean)
+  ), fixture_receipt_items as (
+    select null::text id, null::text receipt_id, null::text evotor_product_id,
+      null::text name, null::jsonb raw_metadata where false
+  ), fixture_receipts as (
+    select null::text id, null::text store_id, null::timestamptz closed_at where false
+  ), fixture_stores as (
+    select null::text id, null::text evotor_store_id where false
+  ), fixture_products as (
+    select null::text id, null::text slug where false
   )
 `;
 
@@ -201,11 +207,14 @@ function fixtureQuery(query) {
     product_ingredients: "fixture_recipes", ingredients: "fixture_ingredients",
     product_modifier_groups: "fixture_groups", product_modifier_options: "fixture_options",
     order_item_ingredient_usage: "fixture_usage",
-    analytics_sale_items: "fixture_items", canonical_analytics_sales: "fixture_sales"
+    analytics_sale_items: "fixture_items", canonical_analytics_sales: "fixture_sales",
+    evotor_receipt_items: "fixture_receipt_items", evotor_receipts: "fixture_receipts",
+    evotor_stores: "fixture_stores", products: "fixture_products"
   };
   assert.match(query.trimStart(), /^with /);
   let result = `with ${fixtureCtes}, ${query.trimStart().slice(5)}`;
   for (const [table, fixture] of Object.entries(tables)) result = result.replaceAll(`public.${table}`, fixture);
+  result = result.replaceAll('ingredient_id uuid', 'ingredient_id text');
   assert.doesNotMatch(result, /public\.|\b(insert|update|delete|create|drop|alter)\b/i);
   return result;
 }
