@@ -45,23 +45,19 @@ export default async function LoyaltyCardPage() {
   return (
     <main className="min-h-dvh bg-karimoff-cream pt-24 text-karimoff-black sm:pt-28">
       <section className="container-page pb-16">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-bold text-karimoff-orange-contrast">KARIMOFF Bonus</p>
-            <h1 className="mt-2 text-3xl font-black sm:text-4xl">Карта гостя</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-karimoff-muted">Покажите QR кассиру до оплаты. Заказ появится в профиле, а начисления попадут на эту карту.</p>
-          </div>
-          <Link href="/profile" className="public-button-secondary px-5">В профиль</Link>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-base font-bold">Карта гостя</h1>
+          <Link href="/profile" className="public-button-ghost min-h-11 px-3 text-sm">В профиль</Link>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.75fr)]">
-          <section className="overflow-hidden rounded-lg bg-[#111114] text-white shadow-[0_24px_70px_rgba(17,17,20,0.2)]">
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+        <div className="mt-3 grid gap-4 sm:mt-5 sm:gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.75fr)]">
+          <section className="overflow-hidden rounded-lg bg-karimoff-black text-white shadow-card">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6 sm:py-5">
               <div><BrandWordmark inverse size="sm" /><p className="mt-1 text-xs font-bold uppercase text-white/45">Карта гостя</p></div>
               <WalletCards className="text-karimoff-orange-contrast" size={30} />
             </div>
-            <div className="grid gap-6 p-6 sm:grid-cols-[1fr_230px] sm:items-center">
-              <div>
+            <div className="grid gap-4 p-4 sm:grid-cols-[1fr_230px] sm:items-center sm:gap-6 sm:p-6">
+              <div className="order-2 min-w-0 sm:order-1">
                 <p className="text-sm font-bold text-white/55">Баланс</p>
                 <p className="mt-2 font-heading text-5xl font-black tabular-nums">{formatPoints(account?.points_balance ?? 0)}</p>
                 <p className="mt-2 text-sm font-bold text-karimoff-orange-contrast">баллов</p>
@@ -72,10 +68,11 @@ export default async function LoyaltyCardPage() {
                   <p className="mt-2 font-mono text-base font-bold tracking-[0.12em]">{card.publicCode}</p>
                 </div>
               </div>
-              <div className="rounded-lg bg-white p-3">
+              <div data-loyalty-qr className="order-1 mx-auto w-full max-w-[256px] rounded-lg p-3 sm:order-2" style={{ backgroundColor: "#FFFFFF" }}>
                 <Image src="/api/loyalty/card/qr" width={520} height={520} unoptimized alt="QR-код карты гостя KARIMOFF" className="aspect-square h-auto w-full" />
               </div>
             </div>
+            <p className="px-4 pb-4 text-sm leading-5 text-white/70 sm:px-6 sm:pb-6">Покажите QR кассиру до оплаты.</p>
           </section>
 
           <aside className="space-y-5">

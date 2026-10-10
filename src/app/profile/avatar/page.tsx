@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthDocumentLink } from "@/components/auth/AuthDocumentLink";
 import { AvatarBuilder } from "@/components/avatar/AvatarBuilder";
-import { getAvatarAssets, getCustomerAvatar } from "@/lib/avatar";
+import { getCustomerAvatar } from "@/lib/avatar";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import "../profile-theme.css";
 
@@ -19,8 +19,8 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
   }
 
   const params = searchParams ? await searchParams : {};
-  const [{ avatar, error }, assetsResult] = await Promise.all([getCustomerAvatar(customer.id), getAvatarAssets()]);
-  const message = params.error === "database" ? "База данных не подключена." : params.error ? decodeURIComponent(params.error) : error ?? assetsResult.error;
+  const { avatar, error } = await getCustomerAvatar(customer.id);
+  const message = params.error === "database" ? "База данных не подключена." : params.error ? decodeURIComponent(params.error) : error;
 
   return (
     <main className="profile-theme pt-24 sm:pt-28">
@@ -29,14 +29,14 @@ export default async function AvatarPage({ searchParams }: AvatarPageProps) {
           <AuthDocumentLink href="/profile" className="profile-back profile-muted text-sm font-semibold transition">
             Профиль
           </AuthDocumentLink>
-          <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Создать 3D-персонажа</h1>
-          <p className="profile-muted mt-5 max-w-2xl text-base leading-7">
-            Выберите типаж, характер и образ. Персонажа можно вращать, приближать и сохранить в личном кабинете.
+          <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">Выбрать аватар</h1>
+          <p className="profile-muted mt-3 max-w-2xl text-base leading-6">
+            Десять панд, десять характеров. Выберите свою.
           </p>
         </div>
 
-        <div className="mt-8">
-          <AvatarBuilder initialAvatar={avatar} options={assetsResult.options} error={message} />
+        <div className="container-page mt-6">
+          <AvatarBuilder initialAvatar={avatar} error={message} />
         </div>
       </section>
     </main>

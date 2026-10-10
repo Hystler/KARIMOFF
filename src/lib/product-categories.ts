@@ -1,13 +1,14 @@
-export type NormalizedProductCategory = "burgers" | "shaurma" | "snacks" | "drinks" | "sauces" | "other";
+export type NormalizedProductCategory = "burgers" | "shaurma" | "hotdogs" | "snacks" | "drinks" | "sauces" | "other";
 
 export const menuCategoryFilters: Array<{ label: string; value: "all" | NormalizedProductCategory }> = [
   { label: "Всё меню", value: "all" },
   { label: "Бургеры", value: "burgers" },
   { label: "Шаурма", value: "shaurma" },
+  { label: "Хот-доги", value: "hotdogs" },
   { label: "Снэки", value: "snacks" }
 ];
 
-export const adminProductCategoryOptions = ["Бургеры", "Шаурма", "Снэки", "Напитки", "Соусы", "Другое"];
+export const adminProductCategoryOptions = ["Бургеры", "Шаурма", "Хот-Доги", "Снэки", "Напитки", "Соусы", "Другое"];
 
 export function isPublicMenuCategory(category: string | null | undefined) {
   return normalizeProductCategory(category) !== "drinks";
@@ -38,7 +39,11 @@ export function normalizeProductCategory(category: string | null | undefined): N
     return "sauces";
   }
 
-  if (/(снэк|snack|snacks|закуск|горяч|бокс|box|boxes|карто|фри|наггет|хот.?дог|hot.?dog|dog)/i.test(value)) {
+  if (/(хот[\s-]?дог|hot[\s-]?dog|френчдог|frenchdog)/i.test(value)) {
+    return "hotdogs";
+  }
+
+  if (/(снэк|snack|snacks|закуск|горяч|бокс|box|boxes|карто|фри|наггет)/i.test(value)) {
     return "snacks";
   }
 

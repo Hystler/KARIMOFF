@@ -3,7 +3,7 @@ import "server-only";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { analyticsCategorySql } from "./categories";
 import { channelLabels } from "./channels";
-import { calculateMetricDelta, safeAverage } from "./metrics";
+import { calculateMetricDelta, foodCostCoveragePercent, safeAverage } from "./metrics";
 import { getAnalyticsConfiguration, getAnalyticsIntelligence } from "./intelligence";
 import {
   averagePerAnalyticsDay,
@@ -50,6 +50,7 @@ type TimelineRow = MetricRow & { bucket: string; source: AnalyticsChannel };
 type FoodCostMetricRow = {
   covered_item_rows: string | number;
   covered_revenue: string | number;
+  covered_absolute_revenue: string | number;
   food_cost: string | number;
   total_revenue: string | number;
 };
@@ -158,6 +159,9 @@ async function getFoodCostMetricRow(
       coalesce(sum(i.net_revenue) filter (
         where i.product_id is not null and coalesce(product_cost.is_complete, false)
       ), 0)::numeric as covered_revenue,
+      coalesce(sum(abs(i.net_revenue)) filter (
+        where i.product_id is not null and coalesce(product_cost.is_complete, false)
+      ), 0)::numeric as covered_absolute_revenue,
       coalesce(sum(i.net_quantity * product_cost.unit_food_cost) filter (
         where i.product_id is not null and coalesce(product_cost.is_complete, false)
       ), 0)::numeric as food_cost,
@@ -170,6 +174,7 @@ async function getFoodCostMetricRow(
   return rows[0] ?? {
     covered_item_rows: 0,
     covered_revenue: 0,
+    covered_absolute_revenue: 0,
     food_cost: 0,
     total_revenue: 0
   };
@@ -895,9 +900,10 @@ export async function getAnalyticsDashboard(params: {
   const currentCoveredRevenue = number(currentFoodCostMetric.covered_revenue);
   const currentGrossProfit = currentCoveredRevenue - currentFoodCost;
   const currentFoodCostCoverageRevenue = number(currentFoodCostMetric.total_revenue);
-  const currentFoodCostCoveragePercent = currentFoodCostCoverageRevenue > 0
-    ? Math.min(100, (Math.abs(currentCoveredRevenue) / currentFoodCostCoverageRevenue) * 100)
-    : 0;
+  const currentFoodCostCoveragePercent = foodCostCoveragePercent(
+    number(currentFoodCostMetric.covered_absolute_revenue),
+    currentFoodCostCoverageRevenue
+  );
   const previous = {
     revenue: number(previousMetric.revenue),
     saleRevenue: number(previousMetric.sale_revenue),

@@ -262,10 +262,11 @@ class PostgresQueryBuilder implements PromiseLike<QueryResult> {
         const parts = String(filter.value)
           .split(",")
           .map((part) => {
-            const [column, operator, rawValue] = part.split(".");
-            if (!column || operator !== "eq") throw new Error("Unsupported OR filter.");
+            const match = /^([a-z_][a-z0-9_]*)\.(eq|neq)\.(.*)$/.exec(part);
+            if (!match) throw new Error("Unsupported OR filter.");
+            const [, column, operator, rawValue] = match;
             parameters.push(rawValue === "true" ? true : rawValue === "false" ? false : rawValue);
-            return `${quoteIdentifier(column)} = $${parameters.length}`;
+            return `${quoteIdentifier(column)} ${operator === "neq" ? "<>" : "="} $${parameters.length}`;
           });
         return `(${parts.join(" OR ")})`;
       }

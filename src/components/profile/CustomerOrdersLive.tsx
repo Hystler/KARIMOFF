@@ -232,7 +232,7 @@ export function CustomerOrdersLive({
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <p className="font-heading text-xl font-black text-karimoff-orange-contrast">{formatPrice(order.total)} ₽</p>
-                    {canRepeat && order.items.some((item) => item.product_id) ? <RepeatOrderButton items={order.items} /> : null}
+                    {canRepeat && order.items.length > 0 ? <RepeatOrderButton orderId={order.id} /> : null}
                   </div>
                 </div>
 

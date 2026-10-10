@@ -47,11 +47,11 @@ test("listing and detail keep quick add, quantity, and server-authoritative modi
   const detail = read("src/components/products/ProductDetailPurchase.tsx");
   const drawer = read("src/components/cart/CartDrawer.tsx");
   const schema = read("src/lib/order-schema.ts");
-  assert.match(card, /href=\{href\}/);
+  assert.match(card, /ProductCustomizationDialog/);
   assert.match(listingAdd, /addItem\(product, customization\)/);
-  assert.match(listingAdd, /option\.is_removable \|\| option\.is_extra_available/);
-  assert.match(listingAdd, /router\.push\(`\/menu\/\$\{encodeURIComponent\(product\.slug\)\}`\)/);
-  assert.match(listingAdd, /needsConfiguration \? "Настроить"/);
+  assert.match(listingAdd, /!isCartCustomizationValid\(product, customization\)/);
+  assert.doesNotMatch(listingAdd, /router\.push/);
+  assert.match(listingAdd, /onCustomize\(\)/);
   assert.match(detail, /addItem\(product, customization, quantity\)/);
   assert.match(detail, /modifierOptionIds/);
   assert.match(detail, /Убрать из состава/);
