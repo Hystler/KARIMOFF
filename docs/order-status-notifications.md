@@ -6,7 +6,7 @@ KARIMOFF ставит транзакционное уведомление в о�
 
 - Telegram: официальный Bot API `sendMessage`. Login Library запрашивает scope `write`; для OIDC документация отдельно называет `telegram:bot_access`. Запрошенное разрешение не равно сохранённому доказательству его выдачи и не является согласием на рекламу.
 - Telegram использует **только** `identity.metadata.telegramBotUserId`: parent/auth сохраняет это строковое поле из положительного safe-integer `claims.id` после проверки подписи. `provider_user_id=claims.sub` остаётся ключом входа и никогда не используется как fallback `chat_id`. Worker повторно проверяет формат и безопасный диапазон ID; отсутствие/некорректное значение останавливает доставку с `telegram_recipient_unverified`.
-- Старые identities получат поле при следующем обычном входе в Telegram. Принудительный relink и DB migration не требуются. `botAccessRequested` означает только запрошенный доступ; отказ провайдера остаётся действующим ограничением доставки.
+- Старые identities получат поле при следующем обычном входе в Telegram. Если Telegram уже подключён как способ входа, но Bot API ID отсутствует, профиль показывает это состояние и предлагает подтвердить Telegram через тот же Telegram Login. Принудительный relink и DB migration не требуются. Наличие Bot API ID само по себе не доказывает право бота писать; это проверяет отдельный адресный `sendMessage`.
 - MAX: официальный `POST https://platform-api2.max.ru/messages?user_id=...`, bot token передаётся только в заголовке `Authorization`.
 - Обе ссылки ведут только на HTTPS origin из `APP_ORIGIN` + `/profile/orders`; credentials, query, fragment, session ID, order token и PII в URL не передаются. Следование HTTP redirect при POST запрещено.
 
@@ -54,3 +54,33 @@ TELEGRAM_BOT_TOKEN=
 **Важно:** migration не создаёт записи для событий до её установки, но trigger продолжает ставить новые события в очередь при выключенном worker. Включение может отправить накопленные ранее `pending/retry`, включая старые отмены. Нет автоматического TTL или даты начала доставки. До включения требуется согласованный разбор накопленной очереди, не автоматический исторический backfill и не массовый retry.
 
 Полный список шагов включения, остающихся рисков и архитектура согласий: [аудит сентября 2026](audit-2026-09-notifications.md). Migration, смена окружения, DB writes, реальные пробные отправки и deploy требуют отдельного разрешения; в этой задаче они не выполнялись.
+
+## Проверка перед включением и адресный smoke-test
+
+Команда `npm run telegram:notifications:preflight` не меняет базу и конфигурацию. Она вызывает Bot API `getMe`, читает агрегаты очереди отдельно для Telegram и MAX и при заданном `TELEGRAM_SAFE_TEST_CHAT_ID` проверяет, что этот ID связан ровно с одной записью Telegram Login в KARIMOFF. Она сообщает только наличие `MAX_BOT_TOKEN`, не проверяя доставку через MAX. В выводе нет токенов, chat ID, номеров заказов или персональных данных.
+
+`queueAndConfigPreflightPassed` будет `true` только при выключенном worker, корректной HTTPS-ссылке, доступном Telegram Bot API, настроенном MAX-токене, доступной схеме и отсутствии `pending`, `retry` и `processing` в обеих очередях и зависших блокировок. Если есть backlog, в том числе старше 24 часов, команда только покажет счётчики и оставит включение заблокированным; исключать старые записи можно только отдельным согласованным действием. Успешный preflight не подтверждает доставку через MAX или право Telegram-бота писать конкретному пользователю. Перед включением нужны отдельные проверки MAX и Telegram-адресата.
+
+Для одноразового smoke-test нужны временные переменные оператора `TELEGRAM_SAFE_TEST_CHAT_ID` (ID заранее разрешённого тестового аккаунта) и `TELEGRAM_EXPECTED_BOT_USERNAME` (ожидаемый username бота), кроме обычных `TELEGRAM_BOT_TOKEN`, read-only `DATABASE_URL` и `APP_ORIGIN`. Telegram Login уже запрашивает разрешение `write`, но `getMe` проверяет только токен и самого бота, не право писать конкретному пользователю. Только `sendMessage` конкретному тестовому чату проверяет это право; отказ `400/403` показывается как отказ адресата/разрешения, а сетевой/серверный неизвестный исход не повторяется.
+
+Без `--send-once` команда никогда не отправляет сообщение. Режим `--send-once` дополнительно требует TTY-подтверждение по последним четырём цифрам ID, проверяет единственную связь ID с аккаунтом и блокируется, если worker включён, активен maintenance или username бота не совпадает. Он отправляет ровно одно явное тестовое сообщение, не пишет в outbox и не повторяет запрос при неизвестном исходе.
+
+```sh
+npm run telegram:notifications:preflight
+npm run telegram:notifications:preflight -- --send-once
+```
+
+Запуск `--send-once` требует отдельного разрешения владельца на одно реальное сообщение. Эта задача его не запускала. Секреты не сохраняются в checkout.
+
+### Снимок production Timeweb от 2026-10-10
+
+Проверка выполнена read-only в `karimoff-production`; ни production env, ни очередь не изменялись.
+
+- Bot API `getMe` подтвердил доступность `@Karimoff_food_bot`. Сообщения не отправлялись.
+- В runtime заданы `TELEGRAM_OIDC_CLIENT_ID`, `TELEGRAM_OIDC_CLIENT_SECRET`, `DATABASE_URL` и `APP_ORIGIN`; `APP_ORIGIN` ведёт на HTTPS `karimoff.site`, ссылка кабинета — `/profile/orders`.
+- `TELEGRAM_BOT_TOKEN` отсутствует, `ORDER_STATUS_NOTIFICATIONS_ENABLED` не задан и worker выключен. `MAINTENANCE_MODE` выключен. `TELEGRAM_EXPECTED_BOT_USERNAME` не задан; он нужен операторскому preflight, но не является production-флагом worker.
+- В Telegram-части очереди 2 `pending` события `ready`, оба уже доступны к отправке; возраст самой старой записи — около 693 часов. `processing`, `retry` и `permanent_failure` — 0; у этих двух записей `last_error_code` не задан. Включать worker до разбора этих старых событий нельзя.
+- Указанный тестовый Telegram ID не найден среди связей `metadata.telegramBotUserId` (0 точных совпадений). Всего в БД 3 Telegram identity, из них у 1 записан Bot user ID.
+- Право писать этому получателю не подтверждено. `getMe` проверяет бота, а не адресата; отдельное тестовое `sendMessage` не выполнялось. Последующая read-only попытка `getChat` не дала диагностического ответа после того, как буфер обмена перестал содержать token-shaped значение.
+
+Перед запуском нужно связать аккаунт получателя через Telegram Login и телефон KARIMOFF, отдельно разобрать или пометить `superseded` обе старые записи, затем выполнить согласованный одноразовый тест. Только после этого, с отдельным разрешением, добавлять production `TELEGRAM_BOT_TOKEN` как secret и включать `ORDER_STATUS_NOTIFICATIONS_ENABLED=true`.

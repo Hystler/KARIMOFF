@@ -25,6 +25,7 @@ type TelegramLibraryResult = {
 
 type TelegramLoginButtonProps = {
   intent?: "login" | "link";
+  linkLabel?: string;
   onAttemptStart?: () => void;
   returnTo: string;
   suppressTransientError?: boolean;
@@ -129,6 +130,7 @@ async function requestAttempt(key: string, intent: "login" | "link", returnTo: s
 
 export function TelegramLoginButton({
   intent = "login",
+  linkLabel,
   onAttemptStart,
   returnTo,
   suppressTransientError = false,
@@ -452,7 +454,7 @@ export function TelegramLoginButton({
         : visibleState.kind === "preparing"
           ? "Готовим безопасный вход…"
           : intent === "link"
-              ? "Подключить Telegram"
+              ? linkLabel ?? "Подключить Telegram"
               : "Войти через Telegram";
 
   return (

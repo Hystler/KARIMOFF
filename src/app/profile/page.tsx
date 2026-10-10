@@ -172,13 +172,25 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     <div className="min-w-0">
                       <p className="font-black">{providerLabels[provider]}</p>
                       <p className="profile-muted mt-1 truncate text-xs font-semibold">
-                        {identity ? "Подключено" : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
+                        {identity
+                          ? provider === "telegram" && identity.telegramBotUserIdPresent === false
+                            ? "Вход подключён; подтвердите Telegram для уведомлений"
+                            : "Подключено"
+                          : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
                       </p>
                     </div>
                   </div>
                   {identity ? (
                     <div className="flex shrink-0 flex-wrap items-center gap-3">
                       <span className="profile-success-badge rounded-full px-3 py-2 text-xs font-bold">Подключено</span>
+                      {provider === "telegram" && identity.telegramBotUserIdPresent === false && isConfigured ? (
+                        <TelegramLoginButton
+                          intent="link"
+                          linkLabel="Подтвердить Telegram"
+                          returnTo="/profile?identity=linked"
+                          variant="compact"
+                        />
+                      ) : null}
                       {identities.some((item) => item.provider !== provider && (item.provider === "telegram" || item.provider === "max") && configuredProviders[item.provider]) ? (
                         <form action={unlinkSocialIdentityAction}>
                           <input type="hidden" name="provider" value={provider} />
