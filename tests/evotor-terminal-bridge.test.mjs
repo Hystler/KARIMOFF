@@ -14,6 +14,7 @@ const runtimeMigrations = read("scripts/apply-runtime-schema-migrations.mjs");
 const dockerfile = read("Dockerfile");
 const manifest = read("android/evotor-bridge/app/src/main/AndroidManifest.xml");
 const activity = read("android/evotor-bridge/app/src/main/java/ru/karimoff/evotor/bridge/MainActivity.java");
+const pollingService = read("android/evotor-bridge/app/src/main/java/ru/karimoff/evotor/bridge/BridgePollingService.java");
 const strings = read("android/evotor-bridge/app/src/main/res/values/strings.xml");
 
 test("terminal bridge storage is private, scoped, and included in runtime startup", () => {
@@ -69,7 +70,54 @@ test("Evotor APK keeps hosted pairing separate from terminal payment requests", 
   assert.doesNotMatch(activity, /setRequestProperty\("Authorization"/);
   assert.match(activity, /\/orders\/next/);
   assert.match(activity, /\/orders\/" \+ jobId \+ "\/ack/);
-  assert.match(activity, /\/payments\/next/);
+  assert.match(pollingService, /\/payments\/next/);
   assert.match(activity, /SellApi\.INSTANCE\.moveCurrentReceiptDraftToPaymentStage/);
   assert.doesNotMatch(healthRoute, /ReceiptApi|SellApi|PaybackApi/);
+});
+
+test("POS polling belongs to a sticky foreground service, not the Activity lifecycle", () => {
+  assert.match(manifest, /android\.permission\.FOREGROUND_SERVICE/);
+  assert.match(manifest, /android\.permission\.FOREGROUND_SERVICE_SPECIAL_USE/);
+  assert.match(manifest, /android\.permission\.POST_NOTIFICATIONS/);
+  assert.match(manifest, /android:foregroundServiceType="specialUse"/);
+  assert.match(manifest, /android\.app\.PROPERTY_SPECIAL_USE_FGS_SUBTYPE/);
+  assert.match(manifest, /android:exported="false"/);
+  assert.match(pollingService, /startForegroundCompat\(buildNotification/);
+  assert.match(pollingService, /return START_STICKY/);
+  assert.match(pollingService, /PENDING_PAYMENT_JOB_KEY/);
+  assert.match(pollingService, /STATUS_OPERATION_PENDING/);
+  assert.match(pollingService, /STATUS_PAYMENT_WAITING/);
+  assert.match(pollingService, /hasFinalServerResult\(activeReceipt\)/);
+  assert.match(pollingService, /preferences\.edit\(\)\.remove\(ACTIVE_RECEIPT_KEY\)\.commit\(\)/);
+  assert.match(pollingService, /Math\.min\(retryDelayMs \* 2, MAX_RETRY_DELAY_MS\)/);
+  assert.match(pollingService, /scheduleRetry\(STATUS_PAIRING_REQUIRED\)/);
+  assert.match(pollingService, /PendingIntent\.getActivity/);
+  assert.doesNotMatch(pollingService, /SellApi|moveCurrentReceiptDraftToPaymentStage/);
+  assert.match(pollingService, /claimedJobPersistenceFailed/);
+  assert.match(pollingService, /PENDING_PAYMENT_JOB_KEY\).*commit\(\)/s);
+  assert.match(pollingService, /ACTIVE_RECEIPT_KEY.*PENDING_PAYMENT_RESULT_KEY/s);
+  assert.match(pollingService, /ReceiptApi\.getReceipt\(this, Receipt\.Type\.SELL\)/);
+  assert.match(pollingService, /setRequestProperty\("X-Karimoff-Terminal-Token", token\)/);
+  const onPause = activity.slice(activity.indexOf("protected void onPause()"), activity.indexOf("protected void onNewIntent"));
+  assert.doesNotMatch(onPause, /paymentPollingEnabled = false|removeCallbacks/);
+  assert.doesNotMatch(activity, /\/payments\/next/);
+  assert.match(activity, /startForegroundService\(service\)/);
+  assert.match(activity, /ACTION_PAYMENT_JOB_AVAILABLE/);
+  assert.match(activity, /background_service_status/);
+  assert.match(activity, /background_service_notification_disabled/);
+  assert.match(activity, /areNotificationsEnabled\(\)/);
+  assert.match(activity, /clearPendingPaymentJob\(intentId\)/);
+  assert.match(activity, /markServerFinalStatus\(intentId, finalStatus\)/);
+  assert.match(activity, /if \(!clearPendingPaymentJob\(intentId\)\)/);
+  assert.match(activity, /if \(!activityResumed \|\| !paymentPollingEnabled/);
+  assert.match(activity, /intentId\.equals\(handledPaymentJobId\)/);
+
+  const cacheJob = pollingService.indexOf(".putString(PENDING_PAYMENT_JOB_KEY, envelope.toString())");
+  const persistJob = pollingService.indexOf(".commit();", cacheJob);
+  const broadcastJob = pollingService.indexOf("ACTION_PAYMENT_JOB_AVAILABLE", persistJob);
+  assert.ok(cacheJob >= 0 && persistJob > cacheJob && broadcastJob > persistJob,
+    "claimed server job must be durably cached before the Activity is notified");
+  const resultHandling = activity.slice(activity.indexOf("if (resultAccepted)"), activity.indexOf("private void pairTerminal()"));
+  assert.doesNotMatch(resultHandling, /remove\(ACTIVE_RECEIPT_KEY\)/,
+    "keep the active receipt lock until the service confirms the cached job was removed");
 });

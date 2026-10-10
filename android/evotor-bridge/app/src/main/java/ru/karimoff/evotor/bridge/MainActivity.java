@@ -2,9 +2,13 @@ package ru.karimoff.evotor.bridge;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -82,6 +86,8 @@ public final class MainActivity extends Activity {
     private static final String DEVICE_KEY = "device_key";
     private static final String PENDING_PAYMENT_RESULT_KEY = "pending_payment_result";
     private static final String ACTIVE_RECEIPT_KEY = "active_receipt_identity";
+    private static final String PENDING_PAYMENT_JOB_KEY = BridgePollingService.PENDING_PAYMENT_JOB_KEY;
+    private static final String NOTIFICATION_PERMISSION_REQUESTED_KEY = "notification_permission_requested";
     private static final int FAST_FISCAL_RETRY_ATTEMPTS = 12;
     private static final long FAST_FISCAL_RETRY_DELAY_MS = 5000L;
     private static final long SLOW_FISCAL_RETRY_DELAY_MS = 30000L;
@@ -100,13 +106,27 @@ public final class MainActivity extends Activity {
     private Button pairButton;
     private EditText pairingCodeInput;
     private TextView pairingStatusView;
+    private TextView backgroundServiceStatusView;
     private ServiceConnection paySystemConnection;
     private boolean paySystemBound;
     private BridgeHttps bridgeHttps;
     private boolean paymentPollingEnabled;
-    private boolean paymentRequestInFlight;
+    private boolean activityResumed;
     private boolean paymentFlowBusy;
     private boolean paymentResultRequestInFlight;
+    private boolean serviceReceiverRegistered;
+    private String handledPaymentJobId = "";
+
+    private final BroadcastReceiver serviceReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (BridgePollingService.ACTION_STATE_CHANGED.equals(intent.getAction())) {
+                refreshBackgroundServiceStatus(intent.getStringExtra(BridgePollingService.BACKGROUND_SERVICE_STATUS_KEY));
+            } else if (BridgePollingService.ACTION_PAYMENT_JOB_AVAILABLE.equals(intent.getAction())) {
+                drainPendingPaymentJob();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,6 +143,7 @@ public final class MainActivity extends Activity {
         pairButton = findViewById(R.id.pair_button);
         pairingCodeInput = findViewById(R.id.pairing_code);
         pairingStatusView = findViewById(R.id.pairing_status);
+        backgroundServiceStatusView = findViewById(R.id.background_service_status);
         refreshButton.setOnClickListener(view -> runDiagnostics());
         receivePreviewButton.setOnClickListener(view -> receiveOrderPreview());
         paymentTestButton.setOnClickListener(view -> confirmPaymentScreenTest());
@@ -138,16 +159,21 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        activityResumed = true;
         fiscalReadAttempts = 0;
         paymentPollingEnabled = true;
+        registerServiceReceiver();
+        requestNotificationPermissionIfNeeded();
+        startBackgroundPollingService();
+        refreshBackgroundServiceStatus(null);
         retryPendingPaymentResult();
+        drainPendingPaymentJob();
         schedulePaymentPoll(1500);
     }
 
     @Override
     protected void onPause() {
-        paymentPollingEnabled = false;
-        paymentPollHandler.removeCallbacks(paymentPollRunnable);
+        activityResumed = false;
         super.onPause();
     }
 
@@ -156,12 +182,18 @@ public final class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         showOrderPreview(intent);
+        drainPendingPaymentJob();
     }
 
     @Override
     protected void onDestroy() {
+        activityResumed = false;
         paymentPollingEnabled = false;
         paymentPollHandler.removeCallbacks(paymentPollRunnable);
+        if (serviceReceiverRegistered) {
+            unregisterReceiver(serviceReceiver);
+            serviceReceiverRegistered = false;
+        }
         unbindPaySystem();
         executor.shutdownNow();
         super.onDestroy();
@@ -308,51 +340,44 @@ public final class MainActivity extends Activity {
             return;
         }
         if (!activeReceipt().isEmpty()) {
-            retryFiscalIdentity();
+            if (!hasServerFinalStatus(activeReceipt())) retryFiscalIdentity();
             schedulePaymentPoll(fiscalReadAttempts >= FAST_FISCAL_RETRY_ATTEMPTS
                 ? SLOW_FISCAL_RETRY_DELAY_MS
                 : FAST_FISCAL_RETRY_DELAY_MS);
             return;
         }
-        if (paymentFlowBusy || paymentRequestInFlight) {
+        if (paymentFlowBusy) {
             schedulePaymentPoll(3000);
             return;
         }
+        drainPendingPaymentJob();
+        schedulePaymentPoll(3000);
+    }
 
-        paymentRequestInFlight = true;
-        String token = deviceToken();
-        executor.execute(() -> {
-            JSONObject job = null;
-            String problem = null;
-            try {
-                if (ReceiptApi.getReceipt(this, Receipt.Type.SELL) != null) {
-                    problem = getString(R.string.payment_waiting_open_receipt);
-                } else {
-                    JSONObject envelope = requestJson(
-                        "GET",
-                        getString(R.string.bridge_api_base) + "/payments/next",
-                        token,
-                        null
-                    );
-                    if (!envelope.isNull("job")) job = envelope.getJSONObject("job");
-                }
-            } catch (Throwable error) {
-                problem = getString(R.string.payment_poll_error, errorMessage(error));
+    private void drainPendingPaymentJob() {
+        if (!activityResumed || !paymentPollingEnabled || paymentFlowBusy || deviceToken().isEmpty()) return;
+        if (!activeReceipt().isEmpty()
+            || !getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+                .getString(PENDING_PAYMENT_RESULT_KEY, "").trim().isEmpty()) return;
+        String savedJob = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getString(PENDING_PAYMENT_JOB_KEY, "").trim();
+        if (savedJob.isEmpty()) return;
+        try {
+            JSONObject job = new JSONObject(savedJob).getJSONObject("job");
+            String intentId = job.optString("id", "").trim();
+            if (intentId.isEmpty()) {
+                getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                    .remove(PENDING_PAYMENT_JOB_KEY).commit();
+                refreshBackgroundServiceStatus(BridgePollingService.STATUS_ERROR);
+                return;
             }
-            JSONObject foundJob = job;
-            String finalProblem = problem;
-            runOnUiThread(() -> {
-                paymentRequestInFlight = false;
-                if (!paymentPollingEnabled) return;
-                if (foundJob != null) {
-                    paymentFlowBusy = true;
-                    handleTerminalPaymentJob(foundJob, token);
-                } else {
-                    if (finalProblem != null) resultView.setText(finalProblem);
-                    schedulePaymentPoll(finalProblem == null ? 2500 : 5000);
-                }
-            });
-        });
+            if (intentId.equals(handledPaymentJobId)) return;
+            handledPaymentJobId = intentId;
+            paymentFlowBusy = true;
+            handleTerminalPaymentJob(job, deviceToken());
+        } catch (Throwable error) {
+            resultView.setText(getString(R.string.payment_poll_error, errorMessage(error)));
+        }
     }
 
     private void handleTerminalPaymentJob(JSONObject job, String token) {
@@ -581,7 +606,14 @@ public final class MainActivity extends Activity {
                     JSONObject response = requestJson("POST", getString(R.string.bridge_api_base)
                         + "/payments/" + intentId + "/receipt", token, body);
                     if (!response.optBoolean("ok")) throw new IllegalStateException("Сервер не сохранил UUID чека");
-                    runOnUiThread(() -> moveReceiptToCardPayment(job, token, performer));
+                    runOnUiThread(() -> {
+                        if (!clearPendingPaymentJob(intentId)) {
+                            queuePaymentResult(intentId, "failed", uuid,
+                                "Оплата не запускалась: не удалось безопасно передать задание из локальной очереди.", true);
+                            return;
+                        }
+                        moveReceiptToCardPayment(job, token, performer);
+                    });
                 } catch (Throwable error) {
                     runOnUiThread(() -> queuePaymentResult(intentId, "failed", null,
                         "Оплата не запускалась: UUID чека не сохранён сервером. " + errorMessage(error), true));
@@ -812,6 +844,7 @@ public final class MainActivity extends Activity {
         }
         try {
             JSONObject body = new JSONObject();
+            clearPendingPaymentJob(intentId);
             body.put("status", status);
             body.put("details", details);
             body.put("safeBeforePayment", safeBeforePayment);
@@ -864,17 +897,38 @@ public final class MainActivity extends Activity {
                 if (resultAccepted) {
                     String current = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
                         .getString(PENDING_PAYMENT_RESULT_KEY, "");
-                    if (saved.equals(current)) {
-                        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
-                            .remove(PENDING_PAYMENT_RESULT_KEY)
-                            .apply();
+                    if (!saved.equals(current)) {
+                        resultView.setText(getString(R.string.payment_result_save_failed,
+                            "локальный результат изменился во время сверки"));
+                        schedulePaymentPoll(3000);
+                        return;
+                    }
+                    String intentId;
+                    try {
+                        intentId = new JSONObject(saved).getString("intentId");
+                    } catch (Throwable error) {
+                        resultView.setText(getString(R.string.payment_result_save_failed, errorMessage(error)));
+                        schedulePaymentPoll(3000);
+                        return;
+                    }
+                    if (!clearPendingPaymentJob(intentId)) {
+                        resultView.setText("Сервер принял результат, но локальная задача ещё не очищена. Повторная оплата заблокирована.");
+                        schedulePaymentPoll(3000);
+                        return;
+                    }
+                    if (!markServerFinalStatus(intentId, finalStatus)) {
+                        resultView.setText("Сервер принял результат, но локальное состояние не сохранено. Повторная оплата заблокирована.");
+                        schedulePaymentPoll(3000);
+                        return;
+                    }
+                    if (!getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                        .remove(PENDING_PAYMENT_RESULT_KEY).commit()) {
+                        resultView.setText("Сервер принял результат, ответ сохранён для сверки. Повторная оплата заблокирована.");
+                        schedulePaymentPoll(3000);
+                        return;
                     }
                     paymentFlowBusy = false;
-                    if ("paid".equals(finalStatus) || "cancelled".equals(finalStatus)
-                        || "failed".equals(finalStatus)) {
-                        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
-                            .remove(ACTIVE_RECEIPT_KEY).commit();
-                    }
+                    handledPaymentJobId = "";
                     if ("paid".equals(finalStatus)) {
                         resultView.setText(R.string.payment_server_confirmed);
                     } else if ("fiscal_pending".equals(finalStatus)) {
@@ -923,6 +977,8 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     pairingCodeInput.setText("");
                     updatePairingUi();
+                    requestNotificationPermissionIfNeeded();
+                    startBackgroundPollingService();
                     schedulePaymentPoll(500);
                 });
             } catch (Throwable error) {
@@ -1079,6 +1135,131 @@ public final class MainActivity extends Activity {
         pairButton.setEnabled(true);
         pairButton.setText(R.string.pair_terminal);
         receivePreviewButton.setEnabled(paired);
+        refreshBackgroundServiceStatus(null);
+    }
+
+    private void startBackgroundPollingService() {
+        if (deviceToken().isEmpty()) {
+            refreshBackgroundServiceStatus(BridgePollingService.STATUS_PAIRING_REQUIRED);
+            return;
+        }
+        try {
+            Intent service = new Intent(this, BridgePollingService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(service);
+            } else {
+                startService(service);
+            }
+            refreshBackgroundServiceStatus(BridgePollingService.STATUS_STARTING);
+        } catch (Throwable error) {
+            Log.e("KARIMOFFBridge", "Could not start the POS background service", error);
+            refreshBackgroundServiceStatus(BridgePollingService.STATUS_ERROR);
+        }
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private void registerServiceReceiver() {
+        if (serviceReceiverRegistered) return;
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BridgePollingService.ACTION_STATE_CHANGED);
+        filter.addAction(BridgePollingService.ACTION_PAYMENT_JOB_AVAILABLE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(serviceReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(serviceReceiver, filter);
+        }
+        serviceReceiverRegistered = true;
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || deviceToken().isEmpty()
+            || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) return;
+        SharedPreferences preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
+        if (preferences.getBoolean(NOTIFICATION_PERMISSION_REQUESTED_KEY, false)) return;
+        preferences.edit().putBoolean(NOTIFICATION_PERMISSION_REQUESTED_KEY, true).apply();
+        requestPermissions(new String[] {android.Manifest.permission.POST_NOTIFICATIONS}, 2302);
+    }
+
+    private void refreshBackgroundServiceStatus(String requestedStatus) {
+        if (backgroundServiceStatusView == null) return;
+        String status = requestedStatus;
+        if (status == null || status.trim().isEmpty()) {
+            status = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+                .getString(BridgePollingService.BACKGROUND_SERVICE_STATUS_KEY, "");
+        }
+        int textResource;
+        if (BridgePollingService.STATUS_CONNECTED.equals(status)) {
+            textResource = R.string.background_service_connected;
+        } else if (BridgePollingService.STATUS_RECONNECTING.equals(status)) {
+            textResource = R.string.background_service_reconnecting;
+        } else if (BridgePollingService.STATUS_PAYMENT_WAITING.equals(status)) {
+            textResource = R.string.background_service_payment_waiting;
+        } else if (BridgePollingService.STATUS_OPERATION_PENDING.equals(status)) {
+            textResource = R.string.background_service_operation_pending;
+        } else if (BridgePollingService.STATUS_OPEN_RECEIPT.equals(status)) {
+            textResource = R.string.payment_waiting_open_receipt;
+        } else if (BridgePollingService.STATUS_PAIRING_REQUIRED.equals(status)) {
+            textResource = R.string.background_service_pairing_required;
+        } else if (BridgePollingService.STATUS_ERROR.equals(status)) {
+            textResource = R.string.background_service_error;
+        } else {
+            textResource = R.string.background_service_starting;
+        }
+        String statusText = getString(textResource);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        boolean notificationsEnabled = notificationManager == null || Build.VERSION.SDK_INT < 24
+            || notificationManager.areNotificationsEnabled();
+        boolean notificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED;
+        if (!notificationsEnabled || !notificationPermissionGranted) {
+            statusText += "\n" + getString(R.string.background_service_notification_disabled);
+        }
+        backgroundServiceStatusView.setText(statusText);
+    }
+
+    private boolean clearPendingPaymentJob(String intentId) {
+        String savedJob = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getString(PENDING_PAYMENT_JOB_KEY, "").trim();
+        if (savedJob.isEmpty()) return true;
+        try {
+            String savedIntentId = new JSONObject(savedJob).getJSONObject("job").optString("id", "");
+            if (intentId.equals(savedIntentId)) {
+                return getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                    .remove(PENDING_PAYMENT_JOB_KEY).commit();
+            }
+            return false;
+        } catch (Throwable error) {
+            Log.w("KARIMOFFBridge", "Could not clear handed-off POS task", error);
+            return false;
+        }
+    }
+
+    private boolean markServerFinalStatus(String intentId, String status) {
+        if (!("paid".equals(status) || "cancelled".equals(status) || "failed".equals(status))) return true;
+        String savedIdentity = activeReceipt();
+        if (savedIdentity.isEmpty()) return true;
+        try {
+            JSONObject identity = new JSONObject(savedIdentity);
+            if (!intentId.equals(identity.optString("intentId", ""))) return false;
+            identity.put("serverFinalStatus", status);
+            return getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+                .putString(ACTIVE_RECEIPT_KEY, identity.toString()).commit();
+        } catch (Throwable error) {
+            Log.w("KARIMOFFBridge", "Could not persist final terminal payment state", error);
+            return false;
+        }
+    }
+
+    private boolean hasServerFinalStatus(String savedIdentity) {
+        try {
+            String status = new JSONObject(savedIdentity).optString("serverFinalStatus", "");
+            return "paid".equals(status) || "cancelled".equals(status) || "failed".equals(status);
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private String deviceToken() {
