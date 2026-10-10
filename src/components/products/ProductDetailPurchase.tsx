@@ -22,7 +22,7 @@ function selectedCount(group: ProductModifierGroup, selected: Set<string>) {
   return group.options.filter((option) => selected.has(option.id)).length;
 }
 
-export function ProductDetailPurchase({ product, composition = [], nutritionIngredients = [] }: { product: Product; composition?: ProductCompositionItem[]; nutritionIngredients?: ProductCompositionItem[] }) {
+export function ProductDetailPurchase({ product, composition = [], nutritionIngredients = [], compact = false, onAdded }: { product: Product; composition?: ProductCompositionItem[]; nutritionIngredients?: ProductCompositionItem[]; compact?: boolean; onAdded?: () => void }) {
   const { addItem } = useCart();
   const inlinePurchaseRef = useRef<HTMLButtonElement>(null);
   const [inlinePurchaseVisible, setInlinePurchaseVisible] = useState(true);
@@ -62,6 +62,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
   const nutrition = getCustomizedNutrition(product, composition, nutritionIngredients, customization);
 
   useEffect(() => {
+    if (compact) return;
     const root = document.documentElement;
     const updateOffset = () => {
       const offset = Number.parseFloat(getComputedStyle(root).getPropertyValue("--cookie-consent-offset")) || 0;
@@ -76,9 +77,10 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
       mutationObserver.disconnect();
       window.removeEventListener("resize", updateOffset);
     };
-  }, []);
+  }, [compact]);
 
   useEffect(() => {
+    if (compact) return;
     const purchaseButton = inlinePurchaseRef.current;
     if (!purchaseButton || !("IntersectionObserver" in window)) return undefined;
 
@@ -88,10 +90,10 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
 
     observer.observe(purchaseButton);
     return () => observer.disconnect();
-  }, [cookieConsentOffset]);
+  }, [compact, cookieConsentOffset]);
 
   useEffect(() => {
-    if (inlinePurchaseVisible) {
+    if (compact || inlinePurchaseVisible) {
       return undefined;
     }
 
@@ -119,7 +121,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
       resizeObserver.disconnect();
       window.removeEventListener("resize", observeFooter);
     };
-  }, [cookieConsentOffset, inlinePurchaseVisible]);
+  }, [compact, cookieConsentOffset, inlinePurchaseVisible]);
 
   function toggleGroupOption(group: ProductModifierGroup, optionId: string) {
     setSelectedOptions((current) => {
@@ -141,6 +143,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
     if (!valid) return;
     addItem(product, customization, quantity);
     setAdded(true);
+    onAdded?.();
   }
 
   function changeQuantity(delta: number) {
@@ -150,7 +153,7 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
 
   return (
     <>
-    <div className="product-detail-purchase mt-6 border-t border-karimoff-line pt-6">
+    <div className={`product-detail-purchase mt-6 border-t border-karimoff-line pt-6 ${compact ? "product-purchase-compact" : ""}`}>
       {portion ? <fieldset className="mb-6">
         <legend className="text-lg font-bold text-karimoff-black">Размер порции</legend>
         <div className="mt-4 grid grid-cols-2 gap-3">
@@ -301,13 +304,13 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
             setNote(event.target.value.slice(0, 300));
             setAdded(false);
           }}
-          rows={3}
+          rows={compact ? 2 : 3}
           placeholder="Например: хорошо прожарить"
           className="public-field mt-4 min-h-[96px] resize-none py-3 leading-6"
         />
       </label>
 
-      <div className="mt-6 flex flex-col gap-4 border-t border-karimoff-line pt-6 sm:flex-row sm:items-center">
+      <div className={`product-purchase-actions mt-6 flex flex-col gap-4 border-t border-karimoff-line pt-6 sm:flex-row sm:items-center ${compact ? "product-purchase-actions-compact" : ""}`}>
         <div className="grid w-fit grid-cols-[48px_56px_48px] items-center rounded-lg border border-karimoff-line bg-white p-1">
           <button type="button" onClick={() => { setQuantity((value) => Math.max(1, value - 1)); setAdded(false); }} className="grid h-12 place-items-center rounded-md hover:bg-karimoff-soft" aria-label="Уменьшить количество"><Minus size={20} /></button>
           <strong className="text-center text-xl tabular-nums">{quantity}</strong>
@@ -322,11 +325,11 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
           aria-live="polite"
         >
           {added ? <Check size={21} aria-hidden /> : <ShoppingBasket size={21} aria-hidden />}
-          <span>{!portionChosen ? "Выберите порцию" : added ? "Добавлено" : <>Добавить в корзину · <span className="font-heading">{formatPrice(total)} ₽</span></>}</span>
+          <span>{!portionChosen ? "Выберите порцию" : added ? "Добавлено" : <>{compact ? "В корзину" : "Добавить в корзину"} · <span className="font-heading">{formatPrice(total)} ₽</span></>}</span>
         </button>
       </div>
       {!valid ? <p className="mt-3 text-sm text-karimoff-muted">{!portionChosen ? "Выберите размер порции выше." : "Выберите обязательные варианты блюда."}</p> : null}
-      <section className="mt-6 border-t border-karimoff-line pt-6" aria-label="Пищевая ценность выбранного блюда">
+      {!compact ? <section className="mt-6 border-t border-karimoff-line pt-6" aria-label="Пищевая ценность выбранного блюда">
         <h2 className="text-xl font-bold text-karimoff-black">КБЖУ на порцию</h2>
         {portion ? (
           <p className="mt-2 text-sm text-karimoff-muted">
@@ -342,9 +345,9 @@ export function ProductDetailPurchase({ product, composition = [], nutritionIngr
           </dl>
           <p className="mt-3 text-xs text-karimoff-muted">Расчёт по составу выбранной порции. Значения ориентировочные.</p>
         </> : <p className="mt-3 text-sm text-karimoff-muted">{portionChosen ? "Данные уточняются." : "Пищевая ценность появится после выбора порции."}</p>}
-      </section>
+      </section> : null}
     </div>
-    {!inlinePurchaseVisible && typeof document !== "undefined" ? createPortal(
+    {!compact && !inlinePurchaseVisible && typeof document !== "undefined" ? createPortal(
       <div
         className={`product-sticky-purchase xl:hidden ${inlinePurchaseVisible || footerVisible ? "invisible pointer-events-none" : ""}`}
         role="region"

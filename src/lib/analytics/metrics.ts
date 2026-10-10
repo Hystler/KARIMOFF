@@ -21,6 +21,14 @@ export function safeAverage(total: number, count: number) {
   return count > 0 ? total / count : 0;
 }
 
+// Coverage measures known turnover, so costed returns must not cancel costed sales.
+// Signed revenue remains separate for revenue and gross-profit calculations.
+export function foodCostCoveragePercent(coveredAbsoluteRevenue: number, totalAbsoluteRevenue: number) {
+  return totalAbsoluteRevenue > 0
+    ? Math.min(100, Math.max(0, coveredAbsoluteRevenue / totalAbsoluteRevenue * 100))
+    : 0;
+}
+
 export function normalizePaymentMethod(value: string | null | undefined) {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (["cash", "cash_on_delivery"].includes(normalized)) return "cash";

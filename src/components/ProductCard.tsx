@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useState } from "react";
+import { ProductCustomizationDialog } from "@/components/products/ProductCustomizationDialog";
 import { ProductCustomizer } from "@/components/products/ProductCustomizer";
 import { getProductImageUrl } from "@/lib/product-image-url";
 import type { Product } from "@/lib/product-types";
@@ -85,42 +86,44 @@ function ProductImage({ product }: { product: Product }) {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const href = `/menu/${encodeURIComponent(product.slug)}`;
+  const [customizationOpen, setCustomizationOpen] = useState(false);
+  const [customizationVisited, setCustomizationVisited] = useState(false);
+  const openCustomization = () => { setCustomizationVisited(true); setCustomizationOpen(true); };
   const servingLabel = getServingLabel(product);
 
   return (
+    <>
     <article
       className="product-card group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-karimoff-line bg-white shadow-card transition-colors duration-200 hover:border-karimoff-orange/55"
     >
-      <Link
-        href={href}
+      <button
+        type="button"
+        onClick={openCustomization}
         className="product-photo relative block aspect-[16/10] shrink-0 overflow-hidden border-b border-karimoff-line/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-karimoff-orange sm:aspect-[4/3]"
         aria-label={`Открыть ${product.name}`}
+        aria-haspopup="dialog"
       >
         <ProductImage product={product} />
-      </Link>
+      </button>
       <div className="flex min-w-0 flex-1 flex-col p-2 sm:p-3 lg:p-4">
-        <Link
-          href={href}
-          className="flex min-w-0 flex-1 flex-col rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-karimoff-orange"
-        >
-          <h3 className="line-clamp-2 min-h-9 overflow-wrap-anywhere text-sm font-bold leading-[18px] text-karimoff-black transition group-hover:text-karimoff-orange-contrast sm:min-h-[48px] sm:text-lg sm:leading-6">
-            {product.name}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h3 className="h-9 shrink-0 text-sm font-bold leading-[18px] text-karimoff-black transition group-hover:text-karimoff-orange-contrast sm:h-12 sm:text-lg sm:leading-6">
+            <button type="button" onClick={openCustomization} className="line-clamp-2 w-full overflow-wrap-anywhere rounded-sm text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-karimoff-orange" aria-haspopup="dialog">{product.name}</button>
           </h3>
           <p className="admin-number mt-1 font-heading text-base font-black leading-5 text-karimoff-orange-contrast sm:mt-2 sm:text-xl sm:leading-none">
             {getPortionGroup(product) ? "от " : ""}{formatPrice(product.price)} ₽
           </p>
-          <p className="mt-2 hidden overflow-wrap-anywhere text-sm leading-[1.5] text-karimoff-muted md:line-clamp-2 md:block">
+          <p className="mt-2 hidden overflow-wrap-anywhere text-sm leading-[1.5] text-karimoff-muted md:line-clamp-2 md:block md:min-h-[42px]">
             {product.description || "Описание блюда скоро появится."}
           </p>
-        </Link>
-        {servingLabel ? (
-          <p className="mt-2 hidden text-xs font-medium leading-4 text-karimoff-muted sm:line-clamp-1 sm:block">{servingLabel}</p>
-        ) : null}
+        </div>
+        <p className="mt-2 hidden min-h-4 text-xs font-medium leading-4 text-karimoff-muted sm:line-clamp-1 sm:block">{servingLabel}</p>
         <div className="mt-2 sm:mt-3">
-          <ProductCustomizer product={product} />
+          <ProductCustomizer product={product} onCustomize={openCustomization} />
         </div>
       </div>
     </article>
+    {customizationVisited ? <ProductCustomizationDialog product={product} open={customizationOpen} onClose={() => setCustomizationOpen(false)} /> : null}
+    </>
   );
 }

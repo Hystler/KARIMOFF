@@ -10,7 +10,7 @@ const checkout = read("src/app/actions/orders.ts");
 const orderService = read("src/lib/order-flow/service.ts");
 const kitchen = read("src/components/operations/KitchenWorkspace.tsx");
 const adminOrders = read("src/app/admin/orders/page.tsx");
-const repeatOrder = read("src/components/profile/RepeatOrderButton.tsx");
+const repeatOrder = read("src/lib/customer-repeat-order.ts");
 const orders = read("src/lib/orders.ts");
 const erp = read("src/lib/erp.ts");
 const kitchenQueries = read("src/lib/order-flow/queries.ts");
@@ -41,7 +41,7 @@ test("delivery fee is fiscalized as a service but stays out of kitchen and produ
   assert.match(migration, /item\.item_type = 'food'[\s\S]+web_items\.items_count/);
   assert.match(orders, /item_type: row\.item_type === "delivery_fee" \? "delivery_fee" : "food"/);
   assert.match(erp, /if \(item\.item_type !== "food"\) continue/);
-  assert.match(repeatOrder, /items\.filter\(\(item\) => item\.product_id\)/);
+  assert.match(repeatOrder, /\.eq\("item_type", "food"\)/);
   assert.match(adminOrders, /const canViewDeliveryAddress = staff\.legacy \|\| \["owner", "admin", "manager"\]\.includes\(staff\.role\)/);
   assert.match(adminOrders, /canViewDeliveryAddress \? order\.address/);
   assert.match(adminOrders, /\{canViewDeliveryAddress \? \(/);

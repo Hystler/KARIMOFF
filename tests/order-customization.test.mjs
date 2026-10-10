@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { loadTypeScript } from "./helpers/load-typescript.mjs";
 
 const read = (path) => readFileSync(join(process.cwd(), path), "utf8");
 const migration = read("database/migrations/20260728083046_add_staff_kitchen_modifiers_scheduling_and_registers.sql");
@@ -33,7 +34,11 @@ test("modifier price is authoritative and effective ingredients are snapshotted"
 });
 
 test("cart keeps separately configured products as separate lines", () => {
-  assert.match(cart, /function customizationKey/);
+  const { makeCartLineId } = loadTypeScript("src/lib/cart-line-key.ts");
+  const plain = { removed: [], extras: [], modifierOptionIds: [], note: "" };
+  const withoutOnions = { ...plain, removed: [{ ingredient_id: "onion", name: "Лук" }] };
+  assert.notEqual(makeCartLineId("product", plain), makeCartLineId("product", withoutOnions));
+  assert.equal(makeCartLineId("product", plain), makeCartLineId("product", { ...plain }));
   assert.match(cart, /lineId: string/);
   assert.match(cart, /line\.lineId === lineId/);
   assert.match(cart, /updateCustomization/);

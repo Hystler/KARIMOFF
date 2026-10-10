@@ -86,7 +86,7 @@ function CartCustomizationSummary({ line, compact = false }: { line: CartLine; c
 }
 
 export function CartDrawer() {
-  const { clearCart, closeCart, decrement, increment, isOpen, lines, openCart, removeItem, totalPrice, checkout } = useCart();
+  const { clearCart, closeCart, decrement, increment, isOpen, lines, openCart, removeItem, totalPrice, checkout, repeatOrderIssues } = useCart();
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [mode, setMode] = useState<"cart" | "auth" | "checkout" | "success">("cart");
@@ -425,6 +425,15 @@ export function CartDrawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
+          {repeatOrderIssues.length > 0 && mode !== "success" ? (
+            <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-950">
+              <p className="font-bold">Не всё из прошлого заказа доступно</p>
+              <p className="mt-1">В корзине — доступные позиции по текущим ценам. Не добавились:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                {repeatOrderIssues.map(issue => <li key={issue.itemId}><span className="font-semibold">{issue.name}</span> — {issue.reason}</li>)}
+              </ul>
+            </div>
+          ) : null}
           {mode === "success" ? (
             <div className="rounded-lg border border-karimoff-orange/25 bg-karimoff-orange/10 p-6">
               <p className="text-lg font-black text-karimoff-black">

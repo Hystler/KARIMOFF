@@ -1,6 +1,10 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
+import { parseAnalyticsFilters } from "@/lib/analytics/filters";
+import { getAnalyticsRange } from "@/lib/analytics/periods";
+import { buildSalesWhere } from "@/lib/analytics/query";
+import type { AnalyticsScope } from "@/lib/analytics/types";
 
 export type AdminOverviewSnapshot = {
   activeProducts: number;
@@ -35,6 +39,25 @@ const emptySnapshot: AdminOverviewSnapshot = {
 function numeric(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export async function getAdminDailySales(scope: AnalyticsScope, now = new Date()) {
+  try {
+    const filters = parseAnalyticsFilters({ period: "today" });
+    const range = getAnalyticsRange({ period: "today", now });
+    const where = buildSalesWhere(filters, range, scope, { includedOnly: true });
+    const sql = getPostgresSql();
+    const [row] = await sql.unsafe<{ revenue: string | number; sales: string | number }[]>(`
+      select coalesce(sum(s.net_revenue), 0)::numeric as revenue,
+        count(*) filter (where s.sale_count_eligible)::integer as sales
+      from public.canonical_analytics_sales s
+      where ${where.text}
+    `, where.values as never[]);
+    if (!row) throw new Error("Нет данных продаж");
+    return { revenue: numeric(row.revenue), sales: numeric(row.sales), error: false };
+  } catch {
+    return { revenue: null, sales: null, error: true };
+  }
 }
 
 export async function getAdminOverviewSnapshot() {

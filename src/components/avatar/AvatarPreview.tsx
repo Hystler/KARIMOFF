@@ -2,13 +2,14 @@ import type { AvatarConfig } from "@/lib/avatar-schema";
 
 type AvatarPreviewProps = {
   avatar: AvatarConfig;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "tile";
 };
 
 const sizeClasses = {
   sm: "h-24 w-24",
   md: "h-40 w-40",
-  lg: "h-64 w-64"
+  lg: "h-64 w-64",
+  tile: "aspect-square w-full"
 };
 
 const backgroundClasses: Record<string, string> = {
@@ -23,7 +24,7 @@ const backgroundClasses: Record<string, string> = {
 };
 
 export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
-  const isSmall = size === "sm";
+  const isSmall = size === "sm" || size === "tile";
   const backgroundClass = backgroundClasses[avatar.background] ?? backgroundClasses.orange;
   const isRoundBase = avatar.base === "panda_round" || avatar.base === "panda_rookie";
   const isStrictBase = avatar.base === "panda_strict" || avatar.base === "panda_titan";
@@ -32,7 +33,7 @@ export function AvatarPreview({ avatar, size = "md" }: AvatarPreviewProps) {
   const isUtility = avatar.clothes === "utility_black";
 
   return (
-    <div className={`${sizeClasses[size]} relative shrink-0 overflow-hidden rounded-[28%] border border-karimoff-line ${backgroundClass} shadow-[0_24px_70px_rgba(18,18,20,0.16)]`}>
+    <div className={`${sizeClasses[size]} relative shrink-0 overflow-hidden rounded-[28%] border border-karimoff-line ${backgroundClass} ${size === "tile" ? "" : "shadow-[0_24px_70px_rgba(18,18,20,0.16)]"}`}>
       <svg viewBox="0 0 220 220" className="absolute inset-0 h-full w-full" aria-hidden="true">
         {avatar.background === "grill" || avatar.background === "neon" || avatar.background === "kitchen_line" || avatar.background === "night_city" ? (
           <g opacity="0.18" stroke="#fff" strokeWidth="3">

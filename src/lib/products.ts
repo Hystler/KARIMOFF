@@ -498,3 +498,18 @@ export async function getAdminProductById(id: string) {
     error: formatMissingTableError(error?.message, "products")
   };
 }
+
+// Repeat an order by its exact product IDs; never substitute a similarly named item.
+export async function getActiveProductsByIds(ids: string[]): Promise<Product[]> {
+  const uniqueIds = [...new Set(ids)];
+  if (!uniqueIds.length) return [];
+  if (isStagingFixtureMode()) {
+    const { getFixtureProducts } = await import("@/lib/staging-fixtures");
+    return getFixtureProducts().filter(product => uniqueIds.includes(product.id));
+  }
+  const database = createDatabaseServerClient();
+  if (!database) throw new Error("Products unavailable");
+  const { data, error } = await database.from("products").select(PRODUCT_SELECT).in("id", uniqueIds).eq("is_active", true);
+  if (error) throw new Error("Products unavailable");
+  return attachProductDetails((data ?? []).map(normalizeProduct).filter(isPublicMenuProduct));
+}

@@ -85,6 +85,53 @@ html[data-theme="dark"] {
 .product-photo { background: var(--product-photo-bg); }
 .product-card .product-cta { margin-top: 0; }
 
+.product-customization-dialog {
+  width: min(100% - 24px, 600px);
+  max-height: min(90dvh, 800px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--public-control-border);
+  border-radius: 12px;
+  background: var(--public-control-bg);
+  color: var(--foreground);
+  box-shadow: 0 12px 40px rgba(18, 18, 20, 0.24);
+}
+
+.product-customization-dialog::backdrop { background: rgba(18, 18, 20, 0.65); }
+.product-customization-content { padding: 16px 16px 0; }
+.product-purchase-compact.product-detail-purchase { margin-top: 0; padding-top: 16px; padding-bottom: 0; border-top: 0; }
+.product-purchase-compact > fieldset,
+.product-purchase-compact > details,
+.product-purchase-compact > label { margin-top: 16px; margin-bottom: 0; }
+.product-purchase-compact > fieldset:first-child { margin-top: 0; }
+.product-purchase-compact legend,
+.product-purchase-compact > label > span { font-size: 16px; line-height: 24px; font-weight: 700; }
+.product-purchase-compact fieldset > div { margin-top: 8px; gap: 8px; }
+.product-purchase-compact fieldset > p { font-size: 12px; line-height: 18px; }
+.product-purchase-compact fieldset button { min-height: 44px; }
+.product-purchase-compact fieldset button:not(.h-11) { padding: 8px 12px; }
+.product-purchase-compact fieldset > div > div { min-height: 56px; gap: 8px; padding: 4px 8px; }
+.product-purchase-compact textarea { margin-top: 8px; min-height: 72px; }
+.product-purchase-actions-compact {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 16px -16px 0;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  background: var(--public-control-bg);
+}
+.product-purchase-actions-compact > div { grid-template-columns: 44px 24px 44px; padding: 0; }
+.product-purchase-actions-compact > div button { height: 44px; }
+.product-purchase-actions-compact > div strong { font-size: 16px; }
+.product-purchase-actions-compact > button { min-height: 48px; gap: 4px; padding: 8px; font-size: 13px; }
+.product-purchase-actions-compact > button > svg { display: none; }
+.product-purchase-compact > p:last-child { padding-bottom: 12px; }
+
 .skip-link {
   position: fixed;
   z-index: 100;

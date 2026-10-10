@@ -6,10 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
 import type { Product, ProductModifierGroup, ProductModifierOption } from "@/lib/product-types";
+import { makeCartLineId as makeLineId } from "@/lib/cart-line-key";
+import { readRepeatOrderNotice, saveRepeatOrderNotice } from "@/lib/repeat-order-notice";
+import { buildReplacementCartLines } from "@/lib/replacement-cart";
+import type { RepeatCartItem, RepeatOrderIssue } from "@/lib/repeat-order";
 import { CART_STORAGE_KEY } from "@/lib/cart-checkout-storage";
 import { useRouter } from "next/navigation";
 
@@ -56,6 +61,8 @@ type CartContextValue = {
   decrement: (lineId: string) => void;
   removeItem: (lineId: string) => void;
   clearCart: () => void;
+  replaceCart: (items: RepeatCartItem[], issues?: RepeatOrderIssue[]) => void;
+  repeatOrderIssues: RepeatOrderIssue[];
   openCart: () => void;
   closeCart: () => void;
   checkout: () => void;
@@ -105,21 +112,6 @@ function toCartProduct(product: Product): CartProduct {
     modifier_options: product.modifier_options ?? [],
     modifier_groups: product.modifier_groups ?? []
   };
-}
-
-function customizationKey(customization: CartCustomization) {
-  const removed = customization.removed.map((item) => item.ingredient_id).sort().join(",");
-  const extras = customization.extras
-    .map((item) => `${item.ingredient_id}:${item.quantity}`)
-    .sort()
-    .join(",");
-  const groups = [...customization.modifierOptionIds].sort().join(",");
-
-  return `${removed}|${extras}|${groups}|${customization.note.trim()}`;
-}
-
-function makeLineId(productId: string, customization: CartCustomization) {
-  return `${productId}:${customizationKey(customization)}`;
 }
 
 export function getConfiguredCartUnitPrice(product: CartProduct, customization: CartCustomization) {
@@ -177,12 +169,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [addAnimationKey, setAddAnimationKey] = useState(0);
+  const replacementPending = useRef(false);
+  const [repeatOrderIssues, setRepeatOrderIssues] = useState<RepeatOrderIssue[]>([]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
+      if (replacementPending.current) return;
       try {
         const saved = window.localStorage.getItem(CART_STORAGE_KEY);
         const parsed = saved ? (JSON.parse(saved) as Partial<CartLine>[]) : [];
+        setRepeatOrderIssues(readRepeatOrderNotice(saved ?? "[]"));
         setLines(parsed.map(normalizeStoredLine).filter((line): line is CartLine => Boolean(line)));
       } catch {
         setLines([]);
@@ -196,9 +192,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isHydrated) {
-      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lines));
+      const snapshot = JSON.stringify(lines);
+      window.localStorage.setItem(CART_STORAGE_KEY, snapshot);
+      saveRepeatOrderNotice(snapshot, repeatOrderIssues);
     }
-  }, [isHydrated, lines]);
+  }, [isHydrated, lines, repeatOrderIssues]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -225,6 +223,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const detail = (event as CustomEvent<{ clear?: boolean }>).detail;
       if (detail?.clear === false) return;
       setLines([]);
+      setRepeatOrderIssues([]);
+      saveRepeatOrderNotice("[]", []);
       setIsOpen(false);
     }
     window.addEventListener("karimoff-cart-clear-after-payment", clearAfterPayment);
@@ -315,7 +315,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLines((current) => current.filter((line) => line.lineId !== lineId));
   }, []);
 
-  const clearCart = useCallback(() => setLines([]), []);
+  const clearCart = useCallback(() => {
+    setLines([]);
+    setRepeatOrderIssues([]);
+    saveRepeatOrderNotice("[]", []);
+  }, []);
+
+  const replaceCart = useCallback((items: RepeatCartItem[], issues: RepeatOrderIssue[] = []) => {
+    // Build the complete next state first; a failed validation leaves today's cart untouched.
+    const nextLines = buildReplacementCartLines(items);
+    replacementPending.current = true;
+    setLines(nextLines);
+    setRepeatOrderIssues(issues);
+    setIsHydrated(true);
+    setIsOpen(false);
+    const snapshot = JSON.stringify(nextLines);
+    saveRepeatOrderNotice(snapshot, issues);
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, snapshot);
+    } catch {
+      // The in-memory cart still works when browser storage is unavailable.
+    }
+  }, []);
 
   const checkout = useCallback(() => {
     if (!lines.length) {
@@ -344,11 +365,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       decrement,
       removeItem,
       clearCart,
+      replaceCart,
+      repeatOrderIssues,
       openCart: () => setIsOpen(true),
       closeCart: () => setIsOpen(false),
       checkout
     }),
-    [addAnimationKey, addItem, checkout, clearCart, decrement, increment, isOpen, lines, removeItem, totalItems, totalPrice, updateCustomization]
+    [addAnimationKey, addItem, checkout, clearCart, decrement, increment, isOpen, lines, removeItem, repeatOrderIssues, replaceCart, totalItems, totalPrice, updateCustomization]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -32,13 +32,13 @@ function TextBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="container-page pb-12 sm:pb-16">
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[0.72fr_1fr]">
+    <section className="container-page pb-8 sm:pb-16">
+      <div className="grid grid-cols-1 gap-4 sm:gap-7 lg:grid-cols-[0.72fr_1fr]">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-karimoff-orange-contrast">{eyebrow}</p>
           <h2 className="mt-3 max-w-xl text-balance text-2xl font-black leading-[1.15] sm:text-3xl">{title}</h2>
         </div>
-        <div className="grid min-w-0 max-w-[760px] grid-cols-1 gap-5 text-[17px] leading-8 text-karimoff-muted sm:text-lg">{children}</div>
+        <div className="grid min-w-0 max-w-[760px] grid-cols-1 gap-3 text-base leading-6 text-karimoff-muted sm:gap-5 sm:text-lg sm:leading-8">{children}</div>
       </div>
     </section>
   );
@@ -59,10 +59,10 @@ export default async function FranchisePage() {
         objectPosition="center"
       />
 
-      <section className="container-page py-12 sm:py-16">
-        <div className="rounded-lg bg-karimoff-black p-5 text-white shadow-[0_20px_56px_rgba(18,18,20,0.16)] sm:p-8">
-          <div className="mb-5 h-1.5 w-14 rounded-full bg-karimoff-orange" />
-          <p className="max-w-4xl text-balance text-xl font-black leading-[1.28] sm:text-3xl">
+      <section className="container-page py-8 sm:py-16">
+        <div className="rounded-lg bg-karimoff-black p-4 text-white shadow-[0_20px_56px_rgba(18,18,20,0.16)] sm:p-8">
+          <div className="mb-3 h-1.5 sm:mb-5 w-14 rounded-full bg-karimoff-orange" />
+          <p className="max-w-4xl text-balance text-lg font-black leading-[1.28] sm:text-3xl">
             Настоящий ресторанный бизнес строится не на красивых презентациях.
             Он строится на внимании к деталям каждый день.
           </p>
@@ -119,40 +119,40 @@ export default async function FranchisePage() {
         </p>
       </TextBlock>
 
-      <section className="container-page pb-12 sm:pb-16">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+      <section className="container-page pb-8 sm:pb-16">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+          <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-4 shadow-card sm:p-7">
             <p className="text-sm font-semibold text-karimoff-orange-contrast">Что получает партнер</p>
             <h2 className="mt-3 max-w-xl text-2xl font-black leading-[1.15] sm:text-3xl">
               Не просто имя бренда, а систему управления
             </h2>
-            <p className="mt-5 max-w-[680px] text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
+            <p className="mt-4 max-w-[680px] text-base leading-6 text-karimoff-muted sm:text-lg sm:leading-8">
               Мы передаем не просто имя бренда. Мы передаем систему, которая
               помогает ежедневно управлять бизнесом.
             </p>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-6 sm:grid-cols-2 sm:gap-3">
               {partnerGets.map((item) => (
-                <div key={item.title} className="rounded-lg border border-karimoff-line bg-karimoff-cream p-4">
+                <div key={item.title} className="rounded-lg border border-karimoff-line bg-karimoff-cream p-3 sm:p-4">
                   <h3 className="text-sm font-black text-karimoff-black">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-karimoff-muted">{item.text}</p>
+                  <p className="mt-1 text-sm leading-5 sm:mt-2 sm:leading-6 text-karimoff-muted">{item.text}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
+            <p className="mt-4 text-base leading-6 sm:mt-6 text-karimoff-muted sm:text-lg sm:leading-8">
               Наша задача — не продать франшизу и исчезнуть.
             </p>
-            <p className="mt-3 text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
+            <p className="mt-3 text-base leading-6 text-karimoff-muted sm:text-lg sm:leading-8">
               Наша задача — помочь партнеру построить сильный и устойчивый
               бизнес.
             </p>
           </article>
 
-          <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-5 shadow-card sm:p-7">
+          <article className="min-w-0 rounded-lg border border-karimoff-line bg-white p-4 shadow-card sm:p-7">
             <p className="text-sm font-semibold text-karimoff-orange-contrast">Кому подойдет KARIMOFF</p>
             <h2 className="mt-3 max-w-xl text-2xl font-black leading-[1.15] sm:text-3xl">
               Предпринимателям, которые готовы быть внутри дела
             </h2>
-            <ul className="mt-6 grid grid-cols-1 gap-3">
+            <ul className="mt-4 grid grid-cols-1 gap-2 sm:mt-6 sm:gap-3">
               {partnerFit.map((item) => (
                 <li key={item} className="flex gap-3 text-sm leading-6 text-karimoff-muted">
                   <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-karimoff-orange" />
@@ -160,7 +160,7 @@ export default async function FranchisePage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6 grid grid-cols-1 gap-4 text-base leading-7 text-karimoff-muted sm:text-lg sm:leading-8">
+            <div className="mt-4 grid grid-cols-1 gap-3 text-base leading-6 sm:mt-6 sm:gap-4 text-karimoff-muted sm:text-lg sm:leading-8">
               <p>Если вы ищете пассивную инвестицию, вероятно, мы вам не подходим.</p>
               <p>
                 Если вы хотите построить сильный бизнес своими руками и стать
@@ -177,9 +177,9 @@ export default async function FranchisePage() {
       </section>
 
       <section className="container-page pb-8">
-        <div className="rounded-lg bg-karimoff-black p-5 text-white shadow-[0_20px_56px_rgba(18,18,20,0.16)] sm:p-8">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-            <p className="max-w-3xl text-balance text-xl font-black leading-[1.28] sm:text-3xl">
+        <div className="rounded-lg bg-karimoff-black p-4 text-white shadow-[0_20px_56px_rgba(18,18,20,0.16)] sm:p-8">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <p className="max-w-3xl text-balance text-lg font-black leading-[1.28] sm:text-3xl">
               Если вам близок такой подход, давайте познакомимся.
             </p>
             <Link

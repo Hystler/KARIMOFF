@@ -5,6 +5,7 @@ import { CustomerOrdersLive } from "@/components/profile/CustomerOrdersLive";
 import { getCustomerProfileData } from "@/lib/customer-data";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 import { getUserIdentities } from "@/lib/auth/social/identity";
+import { SocialProviderIcon } from "@/components/auth/SocialProviderIcon";
 import { QrCode } from "lucide-react";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
 import { MaxLoginButton } from "@/components/auth/MaxLoginButton";
@@ -166,8 +167,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               return (
                 <article key={provider} className="profile-border flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span aria-hidden="true" className="profile-accent flex size-10 shrink-0 items-center justify-center rounded-full border font-black">
-                      {provider === "telegram" ? "T" : "M"}
+                    <span aria-hidden="true" className={`flex size-10 shrink-0 items-center justify-center rounded-lg text-white ${provider === "telegram" ? "bg-[#229ED9]" : "bg-[#7651C9]"}`}>
+                      <SocialProviderIcon provider={provider} className="size-6" />
                     </span>
                     <div className="min-w-0">
                       <p className="font-black">{providerLabels[provider]}</p>

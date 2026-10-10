@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAdminOverviewSnapshot } from "@/lib/admin-overview";
+import { getAdminDailySales, getAdminOverviewSnapshot } from "@/lib/admin-overview";
+import { getAnalyticsScope } from "@/lib/analytics/permissions";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getAdminOrders } from "@/lib/orders";
 import { getAccessibleOrderLocations } from "@/lib/order-flow/access";
@@ -60,9 +61,11 @@ export default async function AdminPage() {
   const locationIds = staff.legacy || ["owner", "admin"].includes(staff.role)
     ? null
     : locations.map((location) => location.id);
-  const [{ orders, error, notConfigured }, overview] = await Promise.all([
+  const scope = await getAnalyticsScope();
+  const [{ orders, error, notConfigured }, overview, dailySales] = await Promise.all([
     getAdminOrders(locationIds),
-    getAdminOverviewSnapshot()
+    getAdminOverviewSnapshot(),
+    getAdminDailySales(scope)
   ]);
   const activeOrders = orders
     .filter((order) => order.is_operational && !isStaleActiveOrder(order) && !["handed_out", "cancelled"].includes(order.kitchen_status))
@@ -72,7 +75,7 @@ export default async function AdminPage() {
   const readyCount = activeOrders.filter((order) => order.kitchen_status === "ready").length;
   const todayKey = getMoscowDateKey();
   const todayOrders = orders.filter((order) => getMoscowDateKey(new Date(order.created_at)) === todayKey && order.status !== "cancelled");
-  const todayTotal = todayOrders.reduce((sum, order) => sum + order.total, 0);
+  const ordersUnavailable = Boolean(error || notConfigured);
   const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", timeZone: ORDER_TIME_ZONE }).format(new Date());
   const statusLabels = { new: "Новый", accepted: "Принят", cooking: "Готовится", ready: "Готов", handed_to_courier: "Курьер в пути", handed_out: "Выдан", cancelled: "Отменён" };
   const snapshot = overview.snapshot;
@@ -89,12 +92,13 @@ export default async function AdminPage() {
 
       {error || notConfigured ? <p role="alert" className="admin-alert admin-alert-error">Не удалось загрузить заказы. Попробуйте обновить страницу.</p> : null}
       {overview.error ? <p role="alert" className="admin-alert admin-alert-warning">Часть сводных показателей временно недоступна.</p> : null}
+      {dailySales.error ? <p role="alert" className="admin-alert admin-alert-warning">Не удалось загрузить выручку. Попробуйте обновить страницу.</p> : null}
 
       <section className="admin-overview-summary" aria-label="Итоги дня">
-        <article className="is-revenue"><span>Выручка сегодня</span><strong>{number.format(todayTotal)} ₽</strong><small>{todayOrders.length} заказов</small></article>
-        <article className="is-orders"><span>В работе</span><strong>{activeOrders.length}</strong><small>{newCount} новых</small></article>
-        <article className="is-kitchen"><span>На кухне</span><strong>{inProgressCount}</strong><small>готовятся сейчас</small></article>
-        <article className="is-ready"><span>К выдаче</span><strong>{readyCount}</strong><small>видны на табло</small></article>
+        <article className="is-revenue"><span>Выручка сегодня</span><strong>{dailySales.revenue === null ? "—" : `${number.format(dailySales.revenue)} ₽`}</strong><small>{dailySales.sales === null ? "данные недоступны" : `${dailySales.sales} продаж · МСК`}</small></article>
+        <article className="is-orders"><span>В работе</span><strong>{ordersUnavailable ? "—" : activeOrders.length}</strong><small>{ordersUnavailable ? "данные недоступны" : `${newCount} новых`}</small></article>
+        <article className="is-kitchen"><span>На кухне</span><strong>{ordersUnavailable ? "—" : inProgressCount}</strong><small>готовятся сейчас</small></article>
+        <article className="is-ready"><span>К выдаче</span><strong>{ordersUnavailable ? "—" : readyCount}</strong><small>видны на табло</small></article>
       </section>
 
       <section className="admin-overview-workflow" aria-labelledby="overview-workflow-title">

@@ -37,16 +37,34 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
       return () => window.clearTimeout(timeoutId);
     }
 
-    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    let savedTheme: string | null = null;
+    try {
+      savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    } catch {
+      // Private / restricted browsers can deny storage. Theme controls still work for this visit.
+    }
     const hasManualTheme = savedTheme === "dark" || savedTheme === "light";
-    const nextTheme = hasManualTheme ? savedTheme : getSystemTheme(defaultTheme);
+    const nextTheme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : getSystemTheme(defaultTheme);
     applyDocumentTheme(nextTheme);
     const timeoutId = window.setTimeout(() => {
       setTheme(nextTheme);
       setUsesSystemTheme(!hasManualTheme);
     }, 0);
 
-    return () => window.clearTimeout(timeoutId);
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY && event.key !== null) return;
+      const stored = event.key === null ? null : event.newValue;
+      const isManual = stored === "dark" || stored === "light";
+      const syncedTheme = isManual ? stored : getSystemTheme(defaultTheme);
+      applyDocumentTheme(syncedTheme);
+      setTheme(syncedTheme);
+      setUsesSystemTheme(!isManual);
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [defaultTheme, forceTheme]);
 
   useEffect(() => {
@@ -67,7 +85,11 @@ export function ThemeProvider({ children, defaultTheme, forceTheme }: ThemeProvi
     if (forceTheme) return;
     const nextTheme = theme === "dark" ? "light" : "dark";
     applyDocumentTheme(nextTheme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch {
+      // Apply the selection even when persistence is unavailable.
+    }
     setUsesSystemTheme(false);
     setTheme(nextTheme);
   }, [forceTheme, theme]);

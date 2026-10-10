@@ -6,6 +6,7 @@ import ts from "typescript";
 import { loadTypeScript } from "./helpers/load-typescript.mjs";
 
 const { PRODUCT_FOOD_COST_CTE, SALE_FOOD_COST_JOIN } = loadTypeScript("src/lib/analytics/sale-food-cost.ts");
+const { foodCostCoveragePercent } = loadTypeScript("src/lib/analytics/metrics.ts");
 
 async function dashboardQueries() {
   const captured = [];
@@ -44,7 +45,15 @@ test("both dashboard cost aggregates resolve each canonical item before multiply
     assert.match(query, /canonical_analytics_sales s on s\.sale_id = i\.sale_id/);
   }
   assert.match(queries[0], /sum\(abs\(i\.net_revenue\)\)/);
+  assert.match(queries[0], /sum\(abs\(i\.net_revenue\)\) filter \([\s\S]+?as covered_absolute_revenue/);
   assert.match(queries[1], /sum\(i\.net_revenue\)/);
+});
+
+test("fully costed sales and returns retain 100% coverage without cancelling turnover", () => {
+  // A costed sale of 1000 and a costed return of 20 used to appear as 96.08%.
+  assert.equal(foodCostCoveragePercent(1020, 1020), 100);
+  assert.equal(foodCostCoveragePercent(1000, 1020), 1000 / 1020 * 100);
+  assert.equal(foodCostCoveragePercent(0, 0), 0);
 });
 
 test("native snapshots use canonical item provenance and do not apply current waste twice", () => {
@@ -244,6 +253,8 @@ test("PostgreSQL: portions, extras, removals, unknown coverage and canonical sou
     assert.equal(Number(metric.covered_revenue), fixtures.items.filter((item) => Object.hasOwn(expectedCosts, item.product_name))
       .reduce((sum, item) => sum + item.net_revenue, 0));
     assert.equal(Number(metric.total_revenue), fixtures.items.reduce((sum, item) => sum + Math.abs(item.net_revenue), 0));
+    assert.equal(Number(metric.covered_absolute_revenue), fixtures.items.filter((item) => Object.hasOwn(expectedCosts, item.product_name))
+      .reduce((sum, item) => sum + Math.abs(item.net_revenue), 0));
 
     const groupedItems = fixtures.items.filter((item) => item.product_id === "actual-portion")
       .map((item) => ({ ...item, product_name: "Same product, two serving sizes" }));
