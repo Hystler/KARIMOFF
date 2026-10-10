@@ -132,7 +132,8 @@ test("operational cutover excludes legacy orders without mutating history", () =
   assert.doesNotMatch(migration, /update public\.orders[\s\S]+set is_operational = true[\s\S]+where is_operational = false/);
   assert.match(queries, /and o\.is_operational = true/);
   assert.match(queries, /and order_row\.is_operational = true/);
-  assert.match(kitchen, /operationalElapsedSeconds/);
+  assert.match(kitchen, /kitchenSlaElapsedSeconds\(order\.kitchenStatus, anchor, order\.readyAt, now\)/);
+  assert.match(read("src/lib/order-flow/sla.ts"), /return operationalElapsedSeconds\(operationalStartedAt, now\)/);
   assert.doesNotMatch(kitchen, /order\.id\.slice/);
 });
 

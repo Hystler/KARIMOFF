@@ -1,4 +1,4 @@
-import type { KitchenSla } from "./types";
+import type { KitchenSla, KitchenStatus } from "./types";
 
 export type SlaTone = "normal" | "warning" | "critical";
 
@@ -31,6 +31,34 @@ export function operationalElapsedSeconds(
     return null;
   }
   return seconds;
+}
+
+export function kitchenSlaElapsedSeconds(
+  status: KitchenStatus,
+  operationalStartedAt: string | Date | null,
+  readyAt: string | Date | null,
+  now: string | Date | number = Date.now()
+) {
+  if (status === "cancelled") return null;
+
+  if (status === "ready" || status === "handed_to_courier" || status === "handed_out") {
+    if (!readyAt) return null;
+
+    const readyTime = readyAt instanceof Date ? readyAt.getTime() : new Date(readyAt).getTime();
+    const currentTime = typeof now === "number" ? now : now instanceof Date ? now.getTime() : new Date(now).getTime();
+    if (
+      !Number.isFinite(readyTime)
+      || !Number.isFinite(currentTime)
+      || readyTime > currentTime + 60_000
+      || currentTime - readyTime > MAX_OPERATIONAL_ORDER_AGE_SECONDS * 1000
+    ) {
+      return null;
+    }
+
+    return operationalElapsedSeconds(operationalStartedAt, readyAt);
+  }
+
+  return operationalElapsedSeconds(operationalStartedAt, now);
 }
 
 export function formatElapsed(seconds: number) {

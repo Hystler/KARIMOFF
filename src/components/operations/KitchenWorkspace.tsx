@@ -27,7 +27,7 @@ import { getProductImageUrl } from "@/lib/product-image-url";
 import { initialKitchenActionState } from "@/lib/order-flow/kitchen-action-state";
 import { useOrderRealtime } from "@/hooks/useOrderRealtime";
 import { canCancelOrder, canTransitionKitchen } from "@/lib/order-flow/permissions";
-import { classifySla, formatElapsed, operationalElapsedSeconds } from "@/lib/order-flow/sla";
+import { classifySla, formatElapsed, kitchenSlaElapsedSeconds } from "@/lib/order-flow/sla";
 import {
   type KitchenOperationsMetrics,
   orderSourceLabel,
@@ -208,7 +208,7 @@ function OrderTicket({
   const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt
     ? order.requestedAt
     : order.operationalStartedAt;
-  const elapsed = operationalElapsedSeconds(anchor, now);
+  const elapsed = kitchenSlaElapsedSeconds(order.kitchenStatus, anchor, order.readyAt, now);
   const tone = elapsed === null ? "normal" : classifySla(elapsed, sla);
   const visibleItems = stationItems(order, view);
   const viewStatus = kitchenViewStatus(order, view);
@@ -411,7 +411,7 @@ export function KitchenWorkspace({
     const anchor = order.fulfillmentMode === "scheduled" && order.requestedAt
       ? order.requestedAt
       : order.operationalStartedAt;
-    const elapsed = operationalElapsedSeconds(anchor, now);
+    const elapsed = kitchenSlaElapsedSeconds(order.kitchenStatus, anchor, order.readyAt, now);
     return elapsed === null ? [] : [elapsed];
   });
   const overdue = elapsedValues.filter((elapsed) => classifySla(elapsed, sla) === "critical").length;
