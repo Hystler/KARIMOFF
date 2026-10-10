@@ -1,6 +1,7 @@
 import "server-only";
 
 import { demoProducts } from "@/data/products";
+import { isStagingFixtureMode } from "@/lib/staging-ui-mode";
 import { resolvePublicMediaUrl } from "@/lib/media-url";
 import { formatMissingTableError } from "@/lib/database/errors";
 import { createDatabaseServerClient } from "@/lib/database/server";
@@ -296,6 +297,10 @@ async function attachProductDetails(products: Product[]) {
 }
 
 export async function getActiveProducts(limit = 4): Promise<Product[]> {
+  if (isStagingFixtureMode()) {
+    const { getFixtureProducts } = await import("@/lib/staging-fixtures");
+    return getFixtureProducts().slice(0, limit);
+  }
   const database = createDatabaseServerClient();
 
   if (!database) {
@@ -329,6 +334,10 @@ export async function getActiveProducts(limit = 4): Promise<Product[]> {
 }
 
 export async function getActiveProductBySlug(slug: string): Promise<Product | null> {
+  if (isStagingFixtureMode()) {
+    const { getFixtureProducts } = await import("@/lib/staging-fixtures");
+    return getFixtureProducts().find(product => product.slug === slug) ?? null;
+  }
   const database = createDatabaseServerClient();
 
   if (!database) {

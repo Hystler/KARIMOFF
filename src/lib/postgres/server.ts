@@ -122,6 +122,9 @@ function databaseError(error: unknown) {
 }
 
 function getSql() {
+  if (process.env.STAGING_DATA_MODE === "fixture") {
+    throw new Error("PostgreSQL access is disabled in staging fixture mode.");
+  }
   if (sharedSql) return sharedSql;
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is not configured.");
@@ -432,6 +435,7 @@ export class PostgresCompatClient {
 }
 
 export function createPostgresServerClient() {
+  if (process.env.STAGING_DATA_MODE === "fixture") return null;
   if (!process.env.DATABASE_URL) return null;
   return new PostgresCompatClient();
 }

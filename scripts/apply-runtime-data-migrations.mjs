@@ -11,6 +11,14 @@ const explicitMappingRules = JSON.parse(readFileSync(mappingPath, "utf8"));
 const menuPricing = JSON.parse(readFileSync(menuPricingPath, "utf8"));
 const hotdogVariants = JSON.parse(readFileSync(hotdogVariantsPath, "utf8"));
 const databaseUrl = process.env.DATABASE_URL;
+if (process.env.STAGING_DATA_MODE === "fixture") {
+  if (process.env.STAGING_UI_MODE !== "true") {
+    console.error("STAGING_DATA_MODE=fixture requires STAGING_UI_MODE=true.");
+    process.exit(1);
+  }
+  console.log("Data migrations skipped: autonomous staging fixtures; PostgreSQL disabled.");
+  process.exit(0);
+}
 
 function normalizeName(value) {
   return String(value ?? "")

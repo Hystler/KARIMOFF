@@ -23,6 +23,8 @@ async function withEnv(values, run) {
 
 function checkoutHarness({
   staging = true,
+  fixture = false,
+  fixtureValidator = () => null,
   deliveryFlag = "true",
   customer = { id: randomUUID(), name: "Обычный клиент", phone: "+79990000000", birthday: null },
   settings = { delivery_enabled: false, delivery_coverage_enabled: false, pickup_enabled: true },
@@ -40,6 +42,7 @@ function checkoutHarness({
   const schema = loadTypeScript("src/lib/order-schema.ts", { zod });
   const stagingHelper = loadTypeScript("src/lib/staging-ui-mode.ts", { "server-only": {} });
   const imports = {
+    "@/lib/staging-fixtures": { validateFixtureCart: fixtureValidator },
     "node:crypto": { randomUUID },
     "@/lib/customer-auth": { getCurrentCustomer: async () => { calls.currentCustomer += 1; return customer; } },
     "@/lib/database/server": { createDatabaseServerClient: () => {
@@ -89,7 +92,8 @@ function checkoutHarness({
     "@/lib/staging-ui-mode": stagingHelper
   };
   const api = loadTypeScript("src/app/actions/orders.ts", imports);
-  const env = { STAGING_UI_MODE: staging ? "true" : "false", DELIVERY_ENABLED: deliveryFlag };
+  const env = { STAGING_UI_MODE: staging ? "true" : "false", DELIVERY_ENABLED: deliveryFlag,
+    STAGING_DATA_MODE: fixture ? "fixture" : undefined };
   return { api, calls, demo, run: fn => withEnv(env, fn) };
 }
 
@@ -104,6 +108,38 @@ function orderForm({ deliveryType = "pickup", addressId = "", cart = [{ product_
   form.set("idempotency_key", randomUUID());
   return form;
 }
+
+test("fixture checkout validates cart on server and returns trusted totals without business writes/providers", async () => {
+  const id = randomUUID();
+  const harness = checkoutHarness({ fixture: true, fixtureValidator: cart => cart[0].product_id === id ? 2499 : null });
+  await harness.run(async () => {
+    const result = await harness.api.createOrderAction({}, orderForm({ cart: [{ product_id: id, quantity: 1 }] }));
+    assert.equal(result.stagingPreview, true);
+    assert.match(result.message, /2499/);
+    const forged = await harness.api.createOrderAction({}, orderForm());
+    assert.equal(forged.status, "error");
+    assert.equal(harness.calls.order, 0);
+    assert.equal(harness.calls.payment, 0);
+    assert.equal(harness.calls.consentWrite, 0);
+    assert.equal(harness.calls.profileRead, 0);
+  });
+});
+
+test("fixture delivery preview uses the server subtotal for the free-delivery threshold", async () => {
+  const locationId = "00000000-0000-4000-8000-000000000001";
+  const addressId = randomUUID();
+  for (const [subtotal, fee] of [[2499, 200], [2500, 0], [2501, 0]]) {
+    const harness = checkoutHarness({ fixture: true, fixtureValidator: () => subtotal,
+      address: { id: addressId, location_id: locationId, is_available: true, longitude: 38.05, latitude: 55.9 } });
+    await harness.run(async () => {
+      const result = await harness.api.createOrderAction({}, orderForm({ deliveryType: "delivery", addressId }));
+      assert.equal(result.stagingPreview, true);
+      assert.ok(result.message.includes(`доставка: ${fee} ₽`));
+      assert.equal(harness.calls.order, 0);
+      assert.equal(harness.calls.payment, 0);
+    });
+  }
+});
 
 test("STAGING_UI_MODE defaults off and does not change existing payment eligibility", async () => {
   await withEnv({ STAGING_UI_MODE: undefined, PAYMENTS_ENABLED: "true", TEST_ORDER_MODE: "false" }, () => {

@@ -349,10 +349,16 @@ export function CartDrawer() {
   }, [mode]);
 
   useEffect(() => {
+    if (orderState.status !== "success" || !orderState.stagingPreview) return undefined;
+    // Each preview response is new even when the previous preview also succeeded.
+    const timeoutId = window.setTimeout(() => setMode("success"), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [orderState]);
+
+  useEffect(() => {
     if (orderState.status === "success") {
       if (orderState.stagingPreview) {
-        const timeoutId = window.setTimeout(() => setMode("success"), 0);
-        return () => window.clearTimeout(timeoutId);
+        return undefined;
       }
       if (orderState.paymentConfirmationUrl) {
         if (orderState.paymentId && checkoutRequestId) {
