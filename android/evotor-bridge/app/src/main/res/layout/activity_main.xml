@@ -79,6 +79,15 @@
             android:textColor="@color/secondary_text"
             android:textSize="14sp" />
 
+        <TextView
+            android:id="@+id/background_service_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="@string/background_service_starting"
+            android:textColor="@color/secondary_text"
+            android:textSize="14sp" />
+
         <EditText
             android:id="@+id/pairing_code"
             android:layout_width="match_parent"
