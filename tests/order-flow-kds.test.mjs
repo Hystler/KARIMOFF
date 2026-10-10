@@ -119,6 +119,53 @@ test("KDS SLA and role transitions remain deterministic", () => {
   assert.match(evotorPosPayments, /set payment_status = 'paid', fiscal_status = 'issued', is_operational = true/);
 });
 
+test("KDS SLA stops at readiness and ignores stale or missing terminal timestamps", () => {
+  const fixture = orderFlowFixture();
+  let result;
+  try {
+    result = runTypeScript(`
+      const sla = await import(${JSON.stringify(fixture.url("sla"))});
+      const startedAt = "2026-08-15T11:50:00Z";
+      const readyAt = "2026-08-15T11:56:00Z";
+      const now = new Date("2026-08-15T12:00:00Z");
+      const settings = { warningSeconds: 300, criticalSeconds: 480 };
+      const readyElapsed = sla.kitchenSlaElapsedSeconds("ready", startedAt, readyAt, now);
+      const latePrepElapsed = sla.kitchenSlaElapsedSeconds(
+        "handed_out", startedAt, "2026-08-15T11:59:00Z", new Date("2026-08-15T12:20:00Z")
+      );
+      console.log(JSON.stringify({
+        active: sla.kitchenSlaElapsedSeconds("cooking", startedAt, null, now),
+        ready: readyElapsed,
+        afterPickupWait: sla.kitchenSlaElapsedSeconds("ready", startedAt, readyAt, new Date("2026-08-15T12:20:00Z")),
+        courier: sla.kitchenSlaElapsedSeconds("handed_to_courier", startedAt, readyAt, now),
+        handedOut: sla.kitchenSlaElapsedSeconds("handed_out", startedAt, readyAt, now),
+        readyTone: sla.classifySla(readyElapsed, settings),
+        actualLatePrepTone: sla.classifySla(latePrepElapsed, settings),
+        missingReadyAt: sla.kitchenSlaElapsedSeconds("handed_out", startedAt, null, now),
+        staleReady: sla.kitchenSlaElapsedSeconds(
+          "ready", "2026-07-01T10:00:00Z", "2026-07-01T10:08:00Z", now
+        ),
+        futureReady: sla.kitchenSlaElapsedSeconds("ready", startedAt, "2026-08-15T12:10:00Z", now)
+      }));
+    `);
+  } finally {
+    fixture.cleanup();
+  }
+  assert.deepEqual(result, {
+    active: 600,
+    ready: 360,
+    afterPickupWait: 360,
+    courier: 360,
+    handedOut: 360,
+    readyTone: "warning",
+    actualLatePrepTone: "critical",
+    missingReadyAt: null,
+    staleReady: null,
+    futureReady: null
+  });
+  assert.equal((kitchen.match(/kitchenSlaElapsedSeconds\(order\.kitchenStatus, anchor, order\.readyAt, now\)/g) ?? []).length, 2);
+});
+
 test("daily A/B numbering is atomic, location-scoped, and date-scoped", () => {
   assert.match(migration, /primary key \(location_id, business_date, prefix\)/);
   assert.match(migration, /on conflict \(location_id, business_date, prefix\)[\s\S]+last_value = public\.order_number_counters\.last_value \+ 1/);
