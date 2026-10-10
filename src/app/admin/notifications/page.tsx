@@ -57,12 +57,12 @@ export default async function NotificationsPage({ searchParams }: {
 
       <section className="admin-toned-section" data-accent="emerald">
         <h2 className="text-lg font-bold">Конфигурация</h2>
-        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-          {[["Telegram: токен задан", configuration.telegramConfigured], ["MAX: токен задан", configuration.maxConfigured], ["HTTPS-адрес кабинета корректен", configuration.appOriginValid]].map(([label, configured]) => (
+        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          {[["Telegram: токен задан", configuration.telegramConfigured], ["MAX: токен задан", configuration.maxConfigured], ["MAX: секрет событий задан", configuration.maxWebhookSecretConfigured], ["HTTPS-адрес кабинета корректен", configuration.appOriginValid]].map(([label, configured]) => (
             <div key={String(label)}><dt className="text-karimoff-muted">{label}</dt><dd className={`mt-1 font-bold ${configured ? "text-emerald-700" : "text-red-700"}`}>{configured ? "Да" : "Нет"}</dd></div>
           ))}
         </dl>
-        <p className="mt-4 text-sm text-karimoff-muted">Доступность API, действительность токенов и разрешение получателя не проверены.</p>
+        <p className="mt-4 text-sm text-karimoff-muted">Действительность токенов проверяется отдельно. Для MAX доставка разрешена только после события bot_started; bot_stopped и dialog_removed блокируют отправку.</p>
         <p className="mt-3 text-sm text-karimoff-muted">Telegram: для привязок без подтверждённого адресата Bot API нужен повторный обычный вход. До этого отправка заблокирована.</p>
       </section>
 

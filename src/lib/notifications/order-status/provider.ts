@@ -11,6 +11,11 @@ export function getTelegramBotRecipientId(value: unknown): string | null {
   return Number.isSafeInteger(Number(value)) ? value : null;
 }
 
+export function getMaxBotRecipientId(value: unknown): string | null {
+  if (typeof value !== "string" || !/^[1-9][0-9]{0,18}$/.test(value)) return null;
+  return value.length === 19 && value > "9223372036854775807" ? null : value;
+}
+
 export class NotificationProviderError extends Error {
   constructor(
     readonly code: string,
@@ -59,7 +64,9 @@ function classifyHttpFailure(provider: OrderNotificationProvider, status: number
     return new NotificationProviderError(`${provider}_outcome_unknown`, false);
   }
   if (status >= 500) {
-    return new NotificationProviderError(`${provider}_temporary_failure`, true);
+    return provider === "max"
+      ? new NotificationProviderError("max_outcome_unknown", false)
+      : new NotificationProviderError("telegram_temporary_failure", true);
   }
   return new NotificationProviderError(`${provider}_delivery_rejected`, false);
 }
@@ -162,6 +169,9 @@ export async function sendOrderStatusNotification(params: {
   const configuration = getNotificationConfiguration();
   if (!configuration.enabled || configuration.maintenance) {
     throw new NotificationProviderError("delivery_disabled", false);
+  }
+  if (params.provider === "max" && !configuration.maxWebhookSecretConfigured) {
+    throw new NotificationProviderError("max_access_tracking_not_configured", false);
   }
   const returnUrl = getOrderNotificationReturnUrl();
   if (!returnUrl) throw new NotificationProviderError("app_origin_not_configured", false);

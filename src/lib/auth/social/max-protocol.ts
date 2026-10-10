@@ -137,6 +137,18 @@ function cleanOptionalString(value: unknown, maxLength: number) {
   return cleaned;
 }
 
+export function parseMaxUserId(value: unknown) {
+  let userId: string | null = null;
+  if (typeof value === "number") {
+    if (Number.isSafeInteger(value) && value > 0) userId = String(value);
+  } else if (typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value)) {
+    userId = value;
+  }
+
+  if (!userId || (userId.length === 19 && userId > "9223372036854775807")) return null;
+  return userId;
+}
+
 function parseUser(value: string | undefined) {
   if (!value || value.length > 8192) throw new MaxValidationError("init_data_user_invalid");
   let candidate: MaxInitUser;
@@ -148,9 +160,7 @@ function parseUser(value: string | undefined) {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     throw new MaxValidationError("init_data_user_invalid");
   }
-  const providerUserId = typeof candidate.id === "number"
-    ? Number.isSafeInteger(candidate.id) && candidate.id > 0 ? String(candidate.id) : null
-    : /^\d{1,32}$/.test(candidate.id) ? candidate.id : null;
+  const providerUserId = parseMaxUserId(candidate.id);
   if (!providerUserId) throw new MaxValidationError("init_data_user_invalid");
 
   const givenName = cleanOptionalString(candidate.first_name, 80);

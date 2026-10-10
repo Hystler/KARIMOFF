@@ -2,9 +2,10 @@ import "server-only";
 
 import { logOperationalError, logOperationalEvent } from "@/lib/observability";
 import { getPostgresSql } from "@/lib/postgres/server";
-import { getNotificationConfiguration } from "./configuration";
+import { getMaxBotWebhookSecret, getNotificationConfiguration } from "./configuration";
 import {
   NotificationProviderError,
+  getMaxBotRecipientId,
   getTelegramBotRecipientId,
   sendOrderStatusNotification,
   type OrderNotificationEvent,
@@ -34,7 +35,9 @@ async function claimDueDeliveries(limit: number) {
   const sql = getPostgresSql();
   const telegramConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
   const maxConfigured = Boolean(process.env.MAX_BOT_TOKEN?.trim());
-  if (!telegramConfigured && !maxConfigured) return [] as ClaimedDelivery[];
+  const maxAccessTrackingConfigured = Boolean(getMaxBotWebhookSecret());
+  const maxEligible = maxConfigured && maxAccessTrackingConfigured;
+  if (!telegramConfigured && !maxEligible) return [] as ClaimedDelivery[];
 
   // An expired POST lease is not proof of non-delivery. Never send it again blindly.
   await sql`
@@ -56,32 +59,63 @@ async function claimDueDeliveries(limit: number) {
     where status in ('pending', 'retry') and attempts >= 8
   `;
 
-  return sql<ClaimedDelivery[]>`
-    with due as (
-      select delivery.id
-      from public.order_notification_deliveries delivery
-      where delivery.status in ('pending', 'retry')
-        and delivery.attempts < 8
-        and delivery.sent_at is null and delivery.provider_message_id is null
-        and delivery.available_at <= now()
-        and (
+  const batchLimit = Number.isFinite(limit) ? Math.max(1, Math.min(25, Math.trunc(limit))) : 10;
+  const claim = async (includeMax: boolean) => {
+    const providerPredicate = includeMax
+      ? sql`(
           (${telegramConfigured} and delivery.provider = 'telegram')
-          or (${maxConfigured} and delivery.provider = 'max')
-        )
-      order by delivery.available_at, delivery.created_at
-      for update skip locked
-      limit ${Number.isFinite(limit) ? Math.max(1, Math.min(25, Math.trunc(limit))) : 10}
-    )
-    update public.order_notification_deliveries delivery
-    set status = 'processing',
-        attempts = delivery.attempts + 1,
-        locked_at = now(),
-        updated_at = now()
-    from due
-    where delivery.id = due.id
-    returning delivery.id, delivery.order_id, delivery.provider,
-      delivery.provider_user_id, delivery.event_type, delivery.attempts
-  `;
+          or (${maxConfigured} and delivery.provider = 'max' and exists (
+            select 1 from public.max_bot_recipient_access access
+            where access.identity_id = delivery.identity_id and access.can_send
+          ) and not exists (
+            select 1 from public.order_notification_deliveries previous
+            where previous.provider = 'max'
+              and previous.provider_user_id = delivery.provider_user_id
+              and (
+                (previous.status in ('pending', 'retry') and previous.available_at <= now()
+                  and (previous.available_at, previous.created_at, previous.id)
+                    < (delivery.available_at, delivery.created_at, delivery.id))
+                or (previous.status = 'processing'
+                  and previous.locked_at >= now() - interval '5 minutes')
+                or (previous.status = 'sent'
+                  and previous.sent_at >= now() - interval '1 second')
+              )
+          ))
+        )`
+      : sql`(${telegramConfigured} and delivery.provider = 'telegram')`;
+    return sql<ClaimedDelivery[]>`
+      with due as (
+        select delivery.id
+        from public.order_notification_deliveries delivery
+        where delivery.status in ('pending', 'retry')
+          and delivery.attempts < 8
+          and delivery.sent_at is null and delivery.provider_message_id is null
+          and delivery.available_at <= now()
+          and ${providerPredicate}
+        order by delivery.available_at, delivery.created_at
+        for update skip locked
+        limit ${batchLimit}
+      )
+      update public.order_notification_deliveries delivery
+      set status = 'processing',
+          attempts = delivery.attempts + 1,
+          locked_at = now(),
+          updated_at = now()
+      from due
+      where delivery.id = due.id
+      returning delivery.id, delivery.order_id, delivery.provider,
+        delivery.provider_user_id, delivery.event_type, delivery.attempts
+    `;
+  };
+
+  try {
+    return await claim(maxEligible);
+  } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
+    if (!maxEligible || (code !== "42P01" && code !== "42703")) throw error;
+    logOperationalError("max.bot_access.schema_missing", { code: "schema_missing" });
+    return telegramConfigured ? claim(false) : [];
+  }
 }
 
 async function markSuperseded(delivery: ClaimedDelivery) {
@@ -89,6 +123,16 @@ async function markSuperseded(delivery: ClaimedDelivery) {
   await sql`
     update public.order_notification_deliveries
     set status = 'superseded', locked_at = null, updated_at = now()
+    where id = ${delivery.id}::uuid and status = 'processing' and attempts = ${delivery.attempts}
+  `;
+}
+
+async function releaseUnsentMaxDelivery(delivery: ClaimedDelivery) {
+  const sql = getPostgresSql();
+  await sql`
+    update public.order_notification_deliveries
+    set status = 'pending', attempts = greatest(0, attempts - 1),
+        locked_at = null, updated_at = now()
     where id = ${delivery.id}::uuid and status = 'processing' and attempts = ${delivery.attempts}
   `;
 }
@@ -163,10 +207,26 @@ async function processDelivery(delivery: ClaimedDelivery) {
   // OIDC sub identifies the login, not the Bot API recipient. Never fall back to it.
   const recipientId = delivery.provider === "telegram"
     ? getTelegramBotRecipientId(order.telegram_bot_user_id)
-    : delivery.provider_user_id;
+    : getMaxBotRecipientId(delivery.provider_user_id);
   if (!recipientId) {
-    await markFailed(delivery, new NotificationProviderError("telegram_recipient_unverified", false));
+    const errorCode = delivery.provider === "telegram"
+      ? "telegram_recipient_unverified"
+      : "max_recipient_unverified";
+    await markFailed(delivery, new NotificationProviderError(errorCode, false));
     return "failed" as const;
+  }
+
+  if (delivery.provider === "max") {
+    const [access] = await sql<{ can_send: boolean }[]>`
+      select access.can_send
+      from public.order_notification_deliveries delivery
+      join public.max_bot_recipient_access access on access.identity_id = delivery.identity_id
+      where delivery.id = ${delivery.id}::uuid
+    `;
+    if (!access?.can_send) {
+      await releaseUnsentMaxDelivery(delivery);
+      return "skipped" as const;
+    }
   }
 
   let providerMessageId: string;

@@ -13,7 +13,8 @@ const id = "11111111-1111-4111-8111-111111111111";
 const owner = { id, role: "owner", legacy: false };
 const config = {
   ORDER_STATUS_NOTIFICATIONS_ENABLED: "true", APP_ORIGIN: "https://example.test",
-  TELEGRAM_BOT_TOKEN: "test-telegram-secret", MAX_BOT_TOKEN: "test-max-secret"
+  TELEGRAM_BOT_TOKEN: "test-telegram-secret", MAX_BOT_TOKEN: "test-max-secret",
+  MAX_BOT_WEBHOOK_SECRET: "test-max-webhook-secret"
 };
 const delivery = { id, attempts: 1, provider: "max", provider_user_id: "123", event_type: "ready", order_id: id };
 const relevantOrder = { display_number: "A-001", kitchen_status: "ready", telegram_bot_user_id: null };
@@ -51,6 +52,14 @@ export function notificationHarness(options = {}) {
     "server-only": {},
     "@/lib/admin-auth": { getCurrentStaff: async () => options.staff === undefined ? owner : options.staff },
     "@/lib/postgres/server": { getPostgresSql: () => { connections++; return sql; } },
+    "@/lib/auth/social/crypto": { safeSecretEqual: (left, right) => left === right },
+    "@/lib/auth/social/max-protocol": {
+      parseMaxUserId: (value) => {
+        const id = typeof value === "number" && Number.isSafeInteger(value) ? String(value) : value;
+        return typeof id === "string" && /^[1-9][0-9]{0,18}$/.test(id)
+          && (id.length < 19 || id <= "9223372036854775807") ? id : null;
+      }
+    },
     "@/lib/observability": {
       logOperationalEvent: (...args) => logs.push(args), logOperationalError: (...args) => logs.push(args)
     },
@@ -100,7 +109,8 @@ test("configuration exposes only booleans and validates HTTPS links without cred
   const subject = notificationHarness();
   const configuration = subject.load("src/lib/notifications/order-status/configuration.ts");
   assert.deepEqual(plain(configuration.getNotificationConfiguration()), {
-    enabled: true, maintenance: false, appOriginValid: true, telegramConfigured: true, maxConfigured: true
+    enabled: true, maintenance: false, appOriginValid: true, telegramConfigured: true,
+    maxConfigured: true, maxWebhookSecretConfigured: true
   });
   for (const origin of ["", "invalid", "http://example.test", "https://user:secret@example.test", "javascript:alert(1)"]) {
     subject.env.APP_ORIGIN = origin;
@@ -108,6 +118,8 @@ test("configuration exposes only booleans and validates HTTPS links without cred
   }
   subject.env.APP_ORIGIN = "https://example.test/ignored?session=secret#secret";
   assert.equal(configuration.getOrderNotificationReturnUrl(), "https://example.test/profile/orders");
+  subject.env.MAX_BOT_WEBHOOK_SECRET = "bad secret";
+  assert.equal(configuration.getNotificationConfiguration().maxWebhookSecretConfigured, false);
 });
 
 test("official request and success envelopes retain message IDs and only the generic account link", async () => {
@@ -139,7 +151,8 @@ test("preflight gates prevent every HTTP request when disabled, in maintenance o
     [{ ORDER_STATUS_NOTIFICATIONS_ENABLED: "TRUE" }, "delivery_disabled"],
     [{ MAINTENANCE_MODE: "true" }, "delivery_disabled"],
     [{ APP_ORIGIN: "invalid" }, "app_origin_not_configured"],
-    [{ MAX_BOT_TOKEN: " " }, "max_not_configured"]
+    [{ MAX_BOT_TOKEN: " " }, "max_not_configured"],
+    [{ MAX_BOT_WEBHOOK_SECRET: " " }, "max_access_tracking_not_configured"]
   ]) {
     let sent = 0;
     const subject = notificationHarness({ env, fetch: () => { sent++; throw new Error(); } });
@@ -167,11 +180,13 @@ test("ambiguous POST outcomes never become success or automatic retry", async ()
 });
 
 test("provider rejections distinguish rate limits, temporary errors and permanent refusal", async () => {
-  for (const channel of ["telegram", "max"]) {
-    for (const [status, code, retryable] of [[403, "delivery_rejected", false], [500, "temporary_failure", true], [429, "rate_limited", true]]) {
-      const subject = notificationHarness({ fetch: async () => Response.json({ ok: false, error_code: status }, { status }) });
-      await assert.rejects(provider(subject).sendOrderStatusNotification({ ...sendParams, provider: channel }), providerError(`${channel}_${code}`, retryable));
-    }
+  for (const [status, code, retryable] of [[403, "delivery_rejected", false], [500, "temporary_failure", true], [429, "rate_limited", true]]) {
+    const subject = notificationHarness({ fetch: async () => Response.json({ ok: false, error_code: status }, { status }) });
+    await assert.rejects(provider(subject).sendOrderStatusNotification({ ...sendParams, provider: "telegram" }), providerError(`telegram_${code}`, retryable));
+  }
+  for (const [status, code, retryable] of [[403, "delivery_rejected", false], [500, "outcome_unknown", false], [429, "rate_limited", true]]) {
+    const subject = notificationHarness({ fetch: async () => Response.json({ code: "api_error" }, { status }) });
+    await assert.rejects(provider(subject).sendOrderStatusNotification(sendParams), providerError(`max_${code}`, retryable));
   }
   for (const [header, expected] of [[null, 30_000], ["120", 120_000], ["invalid", 30_000]]) {
     const subject = notificationHarness({ fetch: async () => new Response(null, { status: 429, headers: header ? { "retry-after": header } : {} }) });
@@ -202,13 +217,17 @@ test("expired and legacy ambiguous deliveries are quarantined; claims exclude ex
   assert.match(subject.calls[2].query, /status in \('pending', 'retry'\) and delivery.attempts < 8/);
   assert.match(subject.calls[2].query, /sent_at is null and delivery.provider_message_id is null/);
   assert.match(subject.calls[2].query, /for update skip locked/);
+  assert.match(subject.calls[2].query, /max_bot_recipient_access/);
+  assert.match(subject.calls[2].query, /access\.can_send/);
+  assert.match(subject.calls[2].query, /previous\.sent_at >= now\(\) - interval '1 second'/);
   assert.equal(subject.calls[2].parameters.at(-1), 10);
 });
 
-function workerHarness({ claimed = delivery, order = relevantOrder, fetch, failSent = false } = {}) {
+function workerHarness({ claimed = delivery, order = relevantOrder, fetch, failSent = false, maxAccess = true } = {}) {
   return notificationHarness({ fetch, query: ({ query }) => {
     if (query.startsWith("with due")) return [claimed];
     if (query.startsWith("select order_row")) return order ? [order] : [];
+    if (query.startsWith("select access.can_send")) return maxAccess ? [{ can_send: true }] : [];
     if (failSent && query.includes("set status = 'sent'")) throw new Error("database-secret");
     return [];
   } });
@@ -240,6 +259,53 @@ test("obsolete, test, unlinked or reassigned orders cannot reach the provider", 
     assert.match(select, /delivery.attempts = \?/);
     assert.match(select, /delivery.locked_at >= now\(\) - interval '5 minutes'/);
   }
+});
+
+test("MAX recipient is rechecked against current bot-start state before POST", async () => {
+  let sends = 0;
+  const subject = workerHarness({ maxAccess: false, fetch: async () => { sends++; throw new Error(); } });
+  const result = await service(subject).processOrderNotificationBatch();
+  assert.equal(result.skipped, 1);
+  assert.equal(sends, 0);
+  const access = subject.calls.find(({ query }) => query.startsWith("select access.can_send"));
+  assert.match(access.query, /max_bot_recipient_access/);
+  const released = subject.calls.find(({ query }) => query.includes("set status = 'pending'"));
+  assert.ok(released);
+  assert.match(released.query, /attempts = greatest\(0, attempts - 1\)/);
+});
+
+test("MAX webhook requires its secret and stores only monotonic dialog access state", async () => {
+  const subject = notificationHarness({
+    mocks: { "@/lib/auth/social/max-protocol": { parseMaxUserId: (value) => String(value) } }
+  });
+  const route = subject.load("src/app/api/integrations/max/webhook/route.ts");
+  const post = (update) => route.POST(new Request("https://example.test/api/integrations/max/webhook", {
+    method: "POST",
+    headers: { "x-max-bot-api-secret": "test-max-webhook-secret" },
+    body: JSON.stringify(update)
+  }));
+  const started = await post({ update_type: "bot_started", timestamp: 1_800_000_000_000, chat_id: 123, user: { user_id: 123, name: "must not persist" } });
+  assert.equal(started.status, 200);
+  const startQuery = subject.calls[0];
+  assert.match(startQuery.query, /insert into public\.max_bot_recipient_access/);
+  assert.match(startQuery.query, /on conflict \(identity_id\) do update/);
+  assert.match(startQuery.query, /excluded\.last_event_timestamp_ms > max_bot_recipient_access\.last_event_timestamp_ms/);
+  assert.match(startQuery.query, /max_bot_recipient_access\.can_send and excluded\.can_send/);
+  assert.deepEqual(startQuery.parameters, [true, "bot_started", 1_800_000_000_000, "123"]);
+  assert.match(startQuery.query, /from public\.user_identities/);
+  assert.doesNotMatch(startQuery.query, /order_notification_deliveries|name|username|payload/i);
+
+  await post({ update_type: "bot_stopped", timestamp: 1_800_000_000_001, chat_id: 123, user: { user_id: 123 } });
+  assert.equal(subject.calls[1].parameters[0], false);
+  assert.equal(subject.calls[1].parameters[1], "bot_stopped");
+
+  const denied = notificationHarness({ env: { MAX_BOT_WEBHOOK_SECRET: "" } });
+  const deniedRoute = denied.load("src/app/api/integrations/max/webhook/route.ts");
+  const missingSecret = await deniedRoute.POST(new Request("https://example.test/webhook", {
+    method: "POST", body: JSON.stringify({ update_type: "bot_started", timestamp: 10, chat_id: 123, user: { user_id: 123 } })
+  }));
+  assert.equal(missingSecret.status, 503);
+  assert.equal(denied.calls.length, 0);
 });
 
 test("Telegram recipient fails closed without a positive safe signed profile ID; no sub fallback", async () => {

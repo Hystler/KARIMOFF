@@ -71,6 +71,21 @@ test("MAX validates official WebAppData HMAC, freshness and signed start_param",
   });
 });
 
+test("MAX user IDs stay canonical and within the API int64 range", () => {
+  const output = importTypescriptScript("src/lib/auth/social/max-protocol.ts", `
+    console.log(JSON.stringify([
+      subject.parseMaxUserId(123), subject.parseMaxUserId("123"),
+      subject.parseMaxUserId("9223372036854775807"), subject.parseMaxUserId(0),
+      subject.parseMaxUserId("000123"), subject.parseMaxUserId("9223372036854775808"),
+      subject.parseMaxUserId(9007199254740992), subject.parseMaxUserId("1.2")
+    ]));
+  `);
+  assert.deepEqual(JSON.parse(output), [
+    "123", "123", "9223372036854775807", null,
+    null, null, null, null
+  ]);
+});
+
 test("MAX contact validation binds a fresh signed phone to the validated user", () => {
   const output = importTypescriptScript("src/lib/auth/social/max-protocol.ts", `
     const { createHmac } = await import("node:crypto");

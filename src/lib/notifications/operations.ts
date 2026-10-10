@@ -83,6 +83,9 @@ export function notificationErrorLabel(code: string | null) {
   if (["app_origin_not_configured", "telegram_not_configured", "max_not_configured"].includes(code)) return "Нет корректной конфигурации";
   if (["delivery_outcome_unknown", "telegram_outcome_unknown", "max_outcome_unknown", "telegram_network_failure", "max_network_failure", "telegram_unknown_failure", "max_unknown_failure"].includes(code)) return "Результат неизвестен; нужна проверка";
   if (["telegram_rate_limited", "max_rate_limited"].includes(code)) return "Лимит провайдера";
+  if (code === "max_recipient_not_authorized") return "Получатель остановил бота MAX";
+  if (code === "max_recipient_unverified") return "ID получателя MAX не подтверждён";
+  if (code === "max_access_tracking_not_configured") return "Не настроено подтверждение доступа MAX";
   if (["telegram_temporary_failure", "max_temporary_failure"].includes(code)) return "Временный отказ провайдера";
   if (["telegram_delivery_rejected", "max_delivery_rejected"].includes(code)) return "Отказ провайдера";
   if (code === "attempts_exhausted") return "Попытки исчерпаны";
