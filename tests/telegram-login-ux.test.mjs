@@ -103,6 +103,17 @@ test("Telegram identity admin view keeps account status and dates without social
   assert.doesNotMatch(`${detail}\n${list}`, /access_token|refresh_token|client_secret/i);
 });
 
+test("profile offers a safe Telegram reauthorization when the Bot API recipient id is missing", () => {
+  const identity = read("src/lib/auth/social/identity.ts");
+  const profile = read("src/app/profile/page.tsx");
+  const telegram = read("src/components/auth/TelegramLoginButton.tsx");
+  assert.match(identity, /telegramBotUserIdPresent: Boolean\(row\.telegram_bot_user_id_present\)/);
+  assert.match(profile, /Вход подключён; подтвердите Telegram для уведомлений/);
+  assert.match(profile, /identity\.telegramBotUserIdPresent === false/);
+  assert.match(profile, /linkLabel="Подтвердить Telegram"/);
+  assert.match(telegram, /linkLabel\?: string/);
+});
+
 test("Telegram notifications use only a signed numeric profile id, never substitute OIDC sub", () => {
   const output = importTypescriptScript("src/lib/auth/social/telegram-protocol.ts", `
     console.log(JSON.stringify([987654321, "987654321", undefined, null, "@guest", "001", -1, 0,

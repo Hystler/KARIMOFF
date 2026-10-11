@@ -28,6 +28,7 @@ export type UserIdentityView = {
   phoneVerified: boolean;
   linkedAt: string;
   lastLoginAt: string | null;
+  telegramBotUserIdPresent?: boolean;
 };
 
 export type SocialCompletionAttempt = {
@@ -267,22 +268,41 @@ export async function completeProviderCallback(
 export async function getUserIdentities(userId: string): Promise<UserIdentityView[]> {
   const database = createDatabaseServerClient();
   if (!database) return [];
-  const { data } = await database
-    .from("user_identities")
-    .select("id, provider, phone_verified, linked_at, last_login_at")
-    .eq("user_id", userId)
-    .in("provider", ["phone", "telegram", "max"])
-    .order("linked_at", { ascending: true });
+  try {
+    const sql = getPostgresSql();
+    const rows = await sql<{
+      id: string;
+      provider: UserIdentityView["provider"];
+      phone_verified: boolean;
+      linked_at: string | Date;
+      last_login_at: string | Date | null;
+      telegram_bot_user_id_present: boolean;
+    }[]>`
+      select id::text as id, provider, phone_verified, linked_at::text as linked_at,
+        last_login_at::text as last_login_at,
+        case
+          when coalesce(metadata->>'telegramBotUserId', '') ~ '^[1-9][0-9]{0,15}$'
+          then (metadata->>'telegramBotUserId')::numeric <= 9007199254740991
+          else false
+        end as telegram_bot_user_id_present
+      from public.user_identities
+      where user_id = ${userId}::uuid and provider in ('phone', 'telegram', 'max')
+      order by linked_at asc
+    `;
 
-  return (data ?? []).map((row) => {
-    return {
+    return rows.map((row) => ({
       id: String(row.id),
-      provider: row.provider as UserIdentityView["provider"],
+      provider: row.provider,
       phoneVerified: Boolean(row.phone_verified),
       linkedAt: String(row.linked_at),
-      lastLoginAt: typeof row.last_login_at === "string" ? row.last_login_at : null
-    };
-  });
+      lastLoginAt: row.last_login_at === null ? null : String(row.last_login_at),
+      ...(row.provider === "telegram"
+        ? { telegramBotUserIdPresent: Boolean(row.telegram_bot_user_id_present) }
+        : {})
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function syncPhoneIdentity(params: {

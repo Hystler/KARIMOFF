@@ -58,7 +58,10 @@ test("social claim storage is limited to the provider id and authentication sign
   const migration = read("database/migrations/20261008120000_minimize_social_identity_data.sql");
   assert.match(identity, /provider_user_id, phone_verified, linked_at, last_login_at/);
   assert.match(identity, /set username = null,[\s\S]+email = null,[\s\S]+metadata = excluded\.metadata/);
-  assert.match(identity, /select\("id, provider, phone_verified, linked_at, last_login_at"\)/);
+  assert.match(identity, /metadata->>'telegramBotUserId'/);
+  assert.match(identity, /telegramBotUserIdPresent\?: boolean/);
+  assert.match(view, /telegramBotUserIdPresent\?: boolean/);
+  assert.doesNotMatch(view, /telegramBotUserIdPresent\?: string/);
   assert.doesNotMatch(types, /username:|avatarUrl:|email:|metadata:/);
   assert.match(types, /telegramBotUserId\?: string \| null/);
   assert.match(identity, /telegramBotUserId: z\.string\(\)\.regex/);
