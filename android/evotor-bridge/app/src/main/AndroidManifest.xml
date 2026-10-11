@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
         <package android:name="ru.atol.tabletpos" />
@@ -45,6 +49,16 @@
                 android:name="ru.evotor.launcher.BACKGROUND_COLOR"
                 android:value="#202124" />
         </activity>
+
+        <service
+            android:name=".BridgePollingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Maintains the paired KARIMOFF POS terminal command listener while the terminal operator uses another app; no payment is initiated by the listener." />
+        </service>
     </application>
 
 </manifest>

@@ -60,4 +60,23 @@
     <string name="payment_server_unknown">Результат сохранён для ручной проверки в POS. Не запускайте оплату повторно.</string>
     <string name="payment_server_cancelled">Оплата не запускалась. Заказ можно отправить повторно из POS.</string>
     <string name="payment_result_network_error">Не удалось передать результат на сервер: %1$s. Приложение повторит отправку.</string>
+    <string name="background_service_starting">Фоновая служба запускается…</string>
+    <string name="background_service_connected">Фоновая служба активна. Bridge получает POS-задания.</string>
+    <string name="background_service_reconnecting">Нет соединения. Bridge повторяет подключение.</string>
+    <string name="background_service_payment_waiting">POS-задание получено. Откройте Bridge, чтобы продолжить на кассе.</string>
+    <string name="background_service_operation_pending">Проверяется незавершённая операция. Повторная оплата заблокирована.</string>
+    <string name="background_service_pairing_required">Фоновая служба не запущена: сначала привяжите кассу.</string>
+    <string name="background_service_error">Фоновая служба требует внимания. Откройте Bridge.</string>
+    <string name="background_service_notification_disabled">Уведомления Bridge отключены. Включите их в настройках приложения, чтобы видеть состояние после сворачивания.</string>
+    <string name="background_notification_channel">Работа кассы KARIMOFF</string>
+    <string name="background_notification_channel_description">Состояние фонового подключения POS-кассы.</string>
+    <string name="background_notification_title">KARIMOFF Bridge · POS</string>
+    <string name="background_notification_starting">Запускаю фоновый канал кассы…</string>
+    <string name="background_notification_connected">Касса на связи. Ожидаю POS-задания.</string>
+    <string name="background_notification_reconnecting">Нет сети. Повторяю подключение.</string>
+    <string name="background_notification_payment_waiting">Задание получено. Нажмите, чтобы открыть Bridge.</string>
+    <string name="background_notification_operation_pending">Операция сверяется. Повторная оплата заблокирована.</string>
+    <string name="background_notification_open_receipt">На Эвоторе открыт чек. Проверьте его перед новым POS-заказом.</string>
+    <string name="background_notification_pairing_required">Откройте Bridge и привяжите кассу.</string>
+    <string name="background_notification_error">Откройте Bridge и проверьте состояние кассы.</string>
 </resources>
