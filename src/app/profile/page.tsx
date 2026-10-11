@@ -174,20 +174,26 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                       <p className="font-black">{providerLabels[provider]}</p>
                       <p className="profile-muted mt-1 truncate text-xs font-semibold">
                         {identity
-                          ? provider === "telegram" && identity.telegramBotUserIdPresent === false
-                            ? "Вход подключён; подтвердите Telegram для уведомлений"
-                            : "Подключено"
+                          ? provider === "telegram" && !isConfigured
+                            ? "Вход подключён; Telegram Login не настроен"
+                            : provider === "telegram" && identity.telegramBotUserIdPresent === false
+                              ? "Вход подключён; подтвердите Telegram для уведомлений"
+                              : "Подключено"
                           : isConfigured ? "Не подключено" : "Будет доступно после настройки"}
                       </p>
                     </div>
                   </div>
                   {identity ? (
                     <div className="flex shrink-0 flex-wrap items-center gap-3">
-                      <span className="profile-success-badge rounded-full px-3 py-2 text-xs font-bold">Подключено</span>
-                      {provider === "telegram" && identity.telegramBotUserIdPresent === false && isConfigured ? (
+                      <span className="profile-success-badge rounded-full px-3 py-2 text-xs font-bold">
+                        {provider === "telegram" && (!isConfigured || identity.telegramBotUserIdPresent === false)
+                          ? "Вход подключён"
+                          : "Подключено"}
+                      </span>
+                      {provider === "telegram" && isConfigured ? (
                         <TelegramLoginButton
                           intent="link"
-                          linkLabel="Подтвердить Telegram"
+                          linkLabel={identity.telegramBotUserIdPresent === false ? "Подтвердить Telegram" : "Перепроверить Telegram"}
                           returnTo="/profile?identity=linked"
                           variant="compact"
                         />

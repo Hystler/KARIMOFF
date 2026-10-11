@@ -103,14 +103,17 @@ test("Telegram identity admin view keeps account status and dates without social
   assert.doesNotMatch(`${detail}\n${list}`, /access_token|refresh_token|client_secret/i);
 });
 
-test("profile offers a safe Telegram reauthorization when the Bot API recipient id is missing", () => {
+test("profile offers Telegram verification without replacing the existing login identity", () => {
   const identity = read("src/lib/auth/social/identity.ts");
   const profile = read("src/app/profile/page.tsx");
   const telegram = read("src/components/auth/TelegramLoginButton.tsx");
   assert.match(identity, /telegramBotUserIdPresent: Boolean\(row\.telegram_bot_user_id_present\)/);
   assert.match(profile, /Вход подключён; подтвердите Telegram для уведомлений/);
-  assert.match(profile, /identity\.telegramBotUserIdPresent === false/);
-  assert.match(profile, /linkLabel="Подтвердить Telegram"/);
+  assert.match(profile, /Вход подключён; Telegram Login не настроен/);
+  assert.match(profile, /provider === "telegram" && isConfigured/);
+  assert.match(profile, /identity\.telegramBotUserIdPresent === false \? "Подтвердить Telegram" : "Перепроверить Telegram"/);
+  assert.match(identity, /providerIdentity\.user_id !== userId/);
+  assert.match(identity, /userProviderIdentity\.provider_user_id !== claims\.providerUserId/);
   assert.match(telegram, /linkLabel\?: string/);
 });
 
