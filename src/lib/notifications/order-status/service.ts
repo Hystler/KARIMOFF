@@ -134,6 +134,7 @@ async function markFailed(delivery: ClaimedDelivery, error: NotificationProvider
 async function processDelivery(delivery: ClaimedDelivery) {
   if (!areOrderStatusNotificationsEnabled()) return "skipped" as const;
   if (!isOrderNotificationAllowed(delivery.provider, {
+    event: delivery.event_type,
     orderId: delivery.order_id, orderCreatedAt: delivery.order_created_at, deliveryCreatedAt: delivery.created_at
   })) return "skipped" as const;
   const sql = getPostgresSql();

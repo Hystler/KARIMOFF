@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { OrderNotificationProvider } from "./provider";
+import type { OrderNotificationEvent, OrderNotificationProvider } from "./provider";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -44,6 +44,7 @@ export function getOrderNotificationPolicy(provider: OrderNotificationProvider) 
 }
 
 export type NotificationDeliveryContext = {
+  event: OrderNotificationEvent;
   orderId: string;
   orderCreatedAt: Date | string;
   deliveryCreatedAt: Date | string;
@@ -52,7 +53,7 @@ export type NotificationDeliveryContext = {
 export function isOrderNotificationAllowed(provider: OrderNotificationProvider, context: NotificationDeliveryContext) {
   const policy = getOrderNotificationPolicy(provider);
   if (!policy.enabled || !policy.notBefore || !uuid.test(context.orderId)) return false;
-  if (policy.canary && context.orderId.toLowerCase() !== policy.canaryOrderId) return false;
+  if (policy.canary && (context.orderId.toLowerCase() !== policy.canaryOrderId || context.event !== "ready")) return false;
   const times = [context.orderCreatedAt, context.deliveryCreatedAt].map((value) =>
     value instanceof Date ? value.getTime() : Date.parse(activationTime(value) ?? ""));
   const start = Date.parse(policy.notBefore);

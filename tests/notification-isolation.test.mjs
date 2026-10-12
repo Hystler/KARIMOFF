@@ -35,13 +35,13 @@ function scopeAllows(statement, item) {
   assert.ok(offset >= 0, "queue mutation must include the authorization scope");
   assert.match(statement.query, /delivery\.created_at >= \?::timestamptz/);
   assert.match(statement.query, /scope_order\.created_at >= \?::timestamptz/);
-  assert.match(statement.query, /\? or delivery\.order_id = \?::uuid/);
+  assert.match(statement.query, /\? or \(delivery\.order_id = \?::uuid and delivery\.event_type = 'ready'\)/);
   const position = (statement.query.slice(0, offset).match(/\?/g) ?? []).length;
   const [tg, tgStart, allOrders, canaryId, tgOrderStart, max, maxStart, maxOrderStart] = statement.parameters.slice(position);
   const after = (value, boundary) => boundary !== null && Date.parse(value) >= Date.parse(boundary);
   return item.provider === "telegram"
     ? tg && after(item.created_at, tgStart) && after(item.order_created_at, tgOrderStart)
-      && (allOrders || item.order_id === canaryId)
+      && (allOrders || (item.order_id === canaryId && item.event_type === "ready"))
     : max && after(item.created_at, maxStart) && after(item.order_created_at, maxOrderStart);
 }
 
@@ -67,7 +67,7 @@ function queueHarness(items, env = {}, options = {}) {
         const r = rows.find((r) => r.id === parameters[0]);
         if (!r || !scopeAllows(statement, r)) return [];
         options.beforeSend?.(subject);
-        return [{ display_number: "A-001", kitchen_status: "ready", telegram_bot_user_id: "123",
+        return [{ display_number: "A-001", kitchen_status: options.kitchenStatus ?? "ready", telegram_bot_user_id: "123",
           order_created_at: r.order_created_at, delivery_created_at: r.created_at }];
       }
       if (query.includes("set status = 'sent'")) {
@@ -139,8 +139,8 @@ test("MAX permission remains independent when Telegram is OFF", async () => {
   assert.deepEqual(requests, ["https://platform-api2.max.ru/messages?user_id=123"]);
 });
 
-test("processing independently rejects injected MAX, old and non-canary claims", async () => {
-  for (const injected of [row({ provider: "max" }), row({ created_at: old }), row({ order_id: other })]) {
+test("processing independently rejects injected MAX, old, non-canary and cancelled claims", async () => {
+  for (const injected of [row({ provider: "max" }), row({ created_at: old }), row({ order_id: other }), row({ event_type: "cancelled" })]) {
     const { subject, requests } = queueHarness([], {
       TELEGRAM_ORDER_STATUS_NOTIFICATIONS_MODE: "canary",
       TELEGRAM_ORDER_STATUS_NOTIFICATIONS_CANARY_ORDER_ID: id
@@ -164,6 +164,34 @@ test("canary processes only its Telegram order; other orders and MAX remain unto
   assert.deepEqual(rows.slice(1), others);
   assert.equal(requests.length, 1);
   await assert.rejects(provider(subject).sendOrderStatusNotification(send({ orderId: other })), (e) => e.code === "delivery_disabled");
+});
+
+test("canary ready → cancelled sends at most one notification, leaves cancellation untouched and blocks HTTP", async () => {
+  const options = { kitchenStatus: "ready" };
+  const { subject, rows, requests } = queueHarness([row()], {
+    TELEGRAM_ORDER_STATUS_NOTIFICATIONS_MODE: "canary",
+    TELEGRAM_ORDER_STATUS_NOTIFICATIONS_CANARY_ORDER_ID: id
+  }, options);
+  assert.equal((await service(subject).processOrderNotificationBatch()).sent, 1);
+  const accepted = structuredClone(rows[0]);
+  const cancelled = row({ id: other, event_type: "cancelled" });
+  rows.push(structuredClone(cancelled));
+  options.kitchenStatus = "cancelled";
+  for (let run = 0; run < 3; run++) {
+    assert.equal((await service(subject).processOrderNotificationBatch()).claimed, 0);
+  }
+  assert.deepEqual(rows, [accepted, cancelled]);
+  await assert.rejects(provider(subject).sendOrderStatusNotification(send({ event: "cancelled" })), (e) => e.code === "delivery_disabled");
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].body.text, /готов к выдаче/);
+});
+
+test("live still delivers cancelled events", async () => {
+  const { subject, rows, requests } = queueHarness([row({ event_type: "cancelled" })], {}, { kitchenStatus: "cancelled" });
+  assert.equal((await service(subject).processOrderNotificationBatch()).sent, 1);
+  assert.equal(rows[0].status, "sent");
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].body.text, /отменён/);
 });
 
 test("missing/invalid canary ID, unknown mode and missing launch boundary fail closed", async () => {
@@ -215,7 +243,7 @@ test("sent deliveries are not replayed across repeated worker runs or master off
 
 test("manual retry enforces channel, launch and canary scope and cannot revive excluded/sent rows", async () => {
   for (const extra of [{ provider: "max" }, { created_at: old }, { order_created_at: old },
-    { order_id: other }, { status: "superseded" }, { status: "sent", sent_at: fresh }]) {
+    { order_id: other }, { event_type: "cancelled" }, { status: "superseded" }, { status: "sent", sent_at: fresh }]) {
     const item = row({ status: "permanent_failure", attempts: 1, last_error_code: "telegram_not_configured", ...extra });
     const { subject, rows, requests } = queueHarness([item], {
       TELEGRAM_ORDER_STATUS_NOTIFICATIONS_MODE: "canary", TELEGRAM_ORDER_STATUS_NOTIFICATIONS_CANARY_ORDER_ID: id
