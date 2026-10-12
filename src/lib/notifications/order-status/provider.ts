@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { getNotificationConfiguration, getOrderNotificationReturnUrl } from "./configuration";
+import { isOrderNotificationAllowed, type NotificationDeliveryContext } from "./policy";
 
 export type OrderNotificationEvent = "cancelled" | "ready";
 export type OrderNotificationProvider = "max" | "telegram";
@@ -153,7 +154,7 @@ async function sendMaxMessage(params: {
   return payload.data.message.body.mid;
 }
 
-export async function sendOrderStatusNotification(params: {
+export async function sendOrderStatusNotification(params: NotificationDeliveryContext & {
   event: OrderNotificationEvent;
   orderNumber: string;
   provider: OrderNotificationProvider;
@@ -165,6 +166,9 @@ export async function sendOrderStatusNotification(params: {
   }
   const returnUrl = getOrderNotificationReturnUrl();
   if (!returnUrl) throw new NotificationProviderError("app_origin_not_configured", false);
+  if (!isOrderNotificationAllowed(params.provider, params)) {
+    throw new NotificationProviderError("delivery_disabled", false);
+  }
   return params.provider === "telegram"
     ? sendTelegramMessage({ ...params, returnUrl })
     : sendMaxMessage({ ...params, returnUrl });

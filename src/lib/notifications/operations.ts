@@ -5,6 +5,7 @@ import { getCurrentStaff } from "@/lib/admin-auth";
 import { logOperationalError } from "@/lib/observability";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { getNotificationConfiguration } from "./order-status/configuration";
+import { orderNotificationScope } from "./order-status/scope";
 
 export const notificationStatuses = ["pending", "processing", "retry", "sent", "permanent_failure", "superseded"] as const;
 export type NotificationStatus = typeof notificationStatuses[number];
@@ -37,8 +38,7 @@ function safeRetryPredicate(sql: ReturnType<typeof getPostgresSql>) {
       'app_origin_not_configured', 'telegram_not_configured', 'max_not_configured',
       'telegram_recipient_unverified'
     )
-    and ((${config.telegramConfigured} and delivery.provider = 'telegram')
-      or (${config.maxConfigured} and delivery.provider = 'max'))
+    and (${orderNotificationScope(sql)})
     and exists (
       select 1 from public.orders order_row
       join public.user_identities identity_row on identity_row.id = delivery.identity_id
@@ -138,7 +138,9 @@ export async function retryNotificationDelivery(id: string, confirmed: boolean) 
   const staff = await requireNotificationStaff();
   if (!confirmed || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return false;
   const configuration = getNotificationConfiguration();
-  if (!configuration.enabled || configuration.maintenance || !configuration.appOriginValid) return false;
+  if (!configuration.enabled || configuration.maintenance || !configuration.appOriginValid
+    || !((configuration.telegramEnabled && configuration.telegramConfigured)
+      || (configuration.maxEnabled && configuration.maxConfigured))) return false;
   const sql = getPostgresSql();
   return sql.begin(async (transaction) => {
     const rows = await transaction<{ id: string }[]>`

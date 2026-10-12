@@ -26,7 +26,7 @@ test("transactional Telegram and MAX notifications are queued exactly once and d
   assert.doesNotMatch(provider, /TELEGRAM_OIDC_CLIENT_SECRET/);
   assert.match(service, /for update skip locked/);
   assert.match(service, /attempts >= 8/);
-  assert.match(service, /ORDER_STATUS_NOTIFICATIONS_ENABLED === "true"/);
+  assert.match(read("src/lib/notifications/order-status/policy.ts"), /ORDER_STATUS_NOTIFICATIONS_ENABLED === "true"/);
   assert.match(scheduler, /setInterval\(\(\) => void run\(state\), 10_000\)/);
   assert.match(instrumentation, /startOrderNotificationScheduler/);
   assert.match(env, /^ORDER_STATUS_NOTIFICATIONS_ENABLED=false$/m);
