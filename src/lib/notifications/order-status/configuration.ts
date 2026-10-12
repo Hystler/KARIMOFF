@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getOrderNotificationPolicy } from "./policy";
+
 export function getOrderNotificationReturnUrl() {
   try {
     const origin = new URL(process.env.APP_ORIGIN?.trim() ?? "");
@@ -16,7 +18,9 @@ export function getNotificationConfiguration() {
     maintenance: process.env.MAINTENANCE_MODE === "true",
     appOriginValid: Boolean(getOrderNotificationReturnUrl()),
     telegramConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
-    maxConfigured: Boolean(process.env.MAX_BOT_TOKEN?.trim())
+    maxConfigured: Boolean(process.env.MAX_BOT_TOKEN?.trim()),
+    telegramEnabled: getOrderNotificationPolicy("telegram").enabled,
+    maxEnabled: getOrderNotificationPolicy("max").enabled
   };
 }
 

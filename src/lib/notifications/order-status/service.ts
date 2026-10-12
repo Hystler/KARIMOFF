@@ -3,6 +3,8 @@ import "server-only";
 import { logOperationalError, logOperationalEvent } from "@/lib/observability";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { getNotificationConfiguration } from "./configuration";
+import { isOrderNotificationAllowed } from "./policy";
+import { orderNotificationScope } from "./scope";
 import {
   NotificationProviderError,
   getTelegramBotRecipientId,
@@ -18,11 +20,14 @@ type ClaimedDelivery = {
   order_id: string;
   provider: OrderNotificationProvider;
   provider_user_id: string;
+  created_at: Date;
+  order_created_at: Date;
 };
 
 export function areOrderStatusNotificationsEnabled() {
-  return process.env.ORDER_STATUS_NOTIFICATIONS_ENABLED === "true"
-    && process.env.MAINTENANCE_MODE !== "true";
+  const config = getNotificationConfiguration();
+  return config.enabled && !config.maintenance
+    && ((config.telegramEnabled && config.telegramConfigured) || (config.maxEnabled && config.maxConfigured));
 }
 
 export function getOrderNotificationRetryDelay(attempt: number) {
@@ -32,42 +37,38 @@ export function getOrderNotificationRetryDelay(attempt: number) {
 
 async function claimDueDeliveries(limit: number) {
   const sql = getPostgresSql();
-  const telegramConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
-  const maxConfigured = Boolean(process.env.MAX_BOT_TOKEN?.trim());
-  if (!telegramConfigured && !maxConfigured) return [] as ClaimedDelivery[];
+  if (!areOrderStatusNotificationsEnabled()) return [] as ClaimedDelivery[];
 
   // An expired POST lease is not proof of non-delivery. Never send it again blindly.
   await sql`
-    update public.order_notification_deliveries
+    update public.order_notification_deliveries delivery
     set status = 'permanent_failure', last_error_code = 'delivery_outcome_unknown',
         locked_at = null, updated_at = now()
-    where (status = 'processing'
+    where (${orderNotificationScope(sql)}) and ((status = 'processing'
       and (locked_at is null or locked_at < now() - interval '5 minutes'))
       or (status in ('pending', 'retry') and (
         last_error_code in ('telegram_network_failure', 'max_network_failure',
           'telegram_unknown_failure', 'max_unknown_failure')
         or sent_at is not null or provider_message_id is not null
-      ))
+      )))
   `;
   await sql`
-    update public.order_notification_deliveries
+    update public.order_notification_deliveries delivery
     set status = 'permanent_failure', last_error_code = 'attempts_exhausted',
         locked_at = null, updated_at = now()
-    where status in ('pending', 'retry') and attempts >= 8
+    where (${orderNotificationScope(sql)}) and status in ('pending', 'retry') and attempts >= 8
   `;
 
   return sql<ClaimedDelivery[]>`
     with due as (
-      select delivery.id
+      select delivery.id, (select created_at from public.orders scope_order
+        where scope_order.id = delivery.order_id) as order_created_at
       from public.order_notification_deliveries delivery
       where delivery.status in ('pending', 'retry')
         and delivery.attempts < 8
         and delivery.sent_at is null and delivery.provider_message_id is null
         and delivery.available_at <= now()
-        and (
-          (${telegramConfigured} and delivery.provider = 'telegram')
-          or (${maxConfigured} and delivery.provider = 'max')
-        )
+        and (${orderNotificationScope(sql)})
       order by delivery.available_at, delivery.created_at
       for update skip locked
       limit ${Number.isFinite(limit) ? Math.max(1, Math.min(25, Math.trunc(limit))) : 10}
@@ -80,23 +81,25 @@ async function claimDueDeliveries(limit: number) {
     from due
     where delivery.id = due.id
     returning delivery.id, delivery.order_id, delivery.provider,
-      delivery.provider_user_id, delivery.event_type, delivery.attempts
+      delivery.provider_user_id, delivery.event_type, delivery.attempts,
+      delivery.created_at, due.order_created_at
   `;
 }
 
 async function markSuperseded(delivery: ClaimedDelivery) {
   const sql = getPostgresSql();
   await sql`
-    update public.order_notification_deliveries
+    update public.order_notification_deliveries delivery
     set status = 'superseded', locked_at = null, updated_at = now()
     where id = ${delivery.id}::uuid and status = 'processing' and attempts = ${delivery.attempts}
+      and (${orderNotificationScope(sql)})
   `;
 }
 
 async function markSent(delivery: ClaimedDelivery, providerMessageId: string) {
   const sql = getPostgresSql();
   await sql`
-    update public.order_notification_deliveries
+    update public.order_notification_deliveries delivery
     set status = 'sent', sent_at = now(), provider_message_id = ${providerMessageId || null},
         last_error_code = null, locked_at = null, updated_at = now()
     where id = ${delivery.id}::uuid and attempts = ${delivery.attempts}
@@ -114,7 +117,7 @@ async function markFailed(delivery: ClaimedDelivery, error: NotificationProvider
     getOrderNotificationRetryDelay(delivery.attempts) * 1_000
   ) / 1_000);
   await sql`
-    update public.order_notification_deliveries
+    update public.order_notification_deliveries delivery
     set status = ${permanent ? "permanent_failure" : "retry"},
         available_at = case
           when ${permanent} then available_at
@@ -124,18 +127,25 @@ async function markFailed(delivery: ClaimedDelivery, error: NotificationProvider
         locked_at = null,
         updated_at = now()
     where id = ${delivery.id}::uuid and status = 'processing' and attempts = ${delivery.attempts}
+      and (${orderNotificationScope(sql)})
   `;
 }
 
 async function processDelivery(delivery: ClaimedDelivery) {
   if (!areOrderStatusNotificationsEnabled()) return "skipped" as const;
+  if (!isOrderNotificationAllowed(delivery.provider, {
+    orderId: delivery.order_id, orderCreatedAt: delivery.order_created_at, deliveryCreatedAt: delivery.created_at
+  })) return "skipped" as const;
   const sql = getPostgresSql();
   const [order] = await sql<{
     display_number: string;
     telegram_bot_user_id: string | null;
     kitchen_status: string;
+    order_created_at: Date;
+    delivery_created_at: Date;
   }[]>`
     select order_row.display_number, order_row.kitchen_status,
+      order_row.created_at as order_created_at, delivery.created_at as delivery_created_at,
       identity_row.metadata->>'telegramBotUserId' as telegram_bot_user_id
     from public.orders order_row
     join public.order_notification_deliveries delivery
@@ -151,6 +161,7 @@ async function processDelivery(delivery: ClaimedDelivery) {
       and delivery.attempts = ${delivery.attempts}
       and delivery.locked_at >= now() - interval '5 minutes'
       and order_row.is_test = false
+      and (${orderNotificationScope(sql)})
   `;
   const stillRelevant = delivery.event_type === "ready"
     ? order?.kitchen_status === "ready"
@@ -175,7 +186,10 @@ async function processDelivery(delivery: ClaimedDelivery) {
       event: delivery.event_type,
       orderNumber: order.display_number,
       provider: delivery.provider,
-      recipientId
+      recipientId,
+      orderId: delivery.order_id,
+      orderCreatedAt: order.order_created_at,
+      deliveryCreatedAt: order.delivery_created_at
     });
   } catch (error) {
     const safeError = error instanceof NotificationProviderError

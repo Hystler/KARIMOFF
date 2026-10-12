@@ -19,7 +19,9 @@ export default async function NotificationsPage({ searchParams }: {
   const attentionOnly = params.view === "attention";
   const workspace = await getNotificationWorkspace(attentionOnly);
   const { configuration, counts, deliveries } = workspace;
-  const enabled = configuration.enabled && !configuration.maintenance;
+  const enabled = configuration.enabled && !configuration.maintenance && configuration.appOriginValid
+    && ((configuration.telegramEnabled && configuration.telegramConfigured)
+      || (configuration.maxEnabled && configuration.maxConfigured));
   const due = counts.reduce((sum, row) => sum + row.overdue, 0);
   const stale = counts.reduce((sum, row) => sum + row.stale, 0);
   const old = counts.reduce((sum, row) => sum + row.older_than_day, 0);
@@ -58,7 +60,9 @@ export default async function NotificationsPage({ searchParams }: {
       <section className="admin-toned-section" data-accent="emerald">
         <h2 className="text-lg font-bold">Конфигурация</h2>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-          {[["Telegram: токен задан", configuration.telegramConfigured], ["MAX: токен задан", configuration.maxConfigured], ["HTTPS-адрес кабинета корректен", configuration.appOriginValid]].map(([label, configured]) => (
+          {[["Telegram: токен задан", configuration.telegramConfigured], ["Telegram: отправка разрешена", configuration.telegramEnabled],
+            ["MAX: токен задан", configuration.maxConfigured], ["MAX: отправка разрешена", configuration.maxEnabled],
+            ["HTTPS-адрес кабинета корректен", configuration.appOriginValid]].map(([label, configured]) => (
             <div key={String(label)}><dt className="text-karimoff-muted">{label}</dt><dd className={`mt-1 font-bold ${configured ? "text-emerald-700" : "text-red-700"}`}>{configured ? "Да" : "Нет"}</dd></div>
           ))}
         </dl>
