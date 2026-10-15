@@ -1,11 +1,11 @@
 import "server-only";
 
 import { getPostgresSql } from "@/lib/postgres/server";
-import { buildPurchasePlan, type PlanningIngredient, type PlanningRecipe, type PlanningSale } from "./planning-math";
+import { buildPurchasePlan, PLANNING_HORIZONS, type PlanningIngredient, type PlanningRecipe, type PlanningSale } from "./planning-math";
 import { addCalendarDays, getDateKey, startOfZonedDay } from "./periods";
 import { getAnalyticsScope } from "./permissions";
 
-export const PLANNING_HORIZONS = [1, 2, 3, 7, 14] as const;
+export { PLANNING_HORIZONS } from "./planning-math";
 export const PLANNING_HISTORY = [28, 56, 84] as const;
 
 export function parsePlanningOptions(params: Record<string, string | string[] | undefined>) {
@@ -29,14 +29,22 @@ export async function getPurchasePlanning(options: ReturnType<typeof parsePlanni
     const sales = await sql<PlanningSale[]>`
       select i.product_id::text as "productId", coalesce(p.name, i.product_name) as name,
         extract(dow from s.analytics_at at time zone 'Europe/Moscow')::integer as weekday,
-        sum(i.quantity)::float8 as quantity, coalesce(p.is_active, false) as active
+        sum(i.quantity)::float8 as quantity, coalesce(p.is_active, false) as active,
+        case when exists (
+          select 1 from public.product_modifier_groups variant_group
+          left join public.product_modifier_options variant_option on variant_option.group_id = variant_group.id
+          where variant_group.product_id = p.id
+            and (variant_group.name = 'Размер порции' or variant_option.modifier_type = 'replace')
+        ) or (i.source <> 'pos_evotor' and exists (
+          select 1 from public.order_item_modifiers modifier where modifier.order_item_id = i.source_record_id
+        )) then 'Состав варианта требует проверки' end as "recipeIssue"
       from public.canonical_analytics_sales s
       join public.analytics_sale_items i on i.sale_id = s.sale_id
       left join public.products p on p.id = i.product_id
       where s.analytics_included and s.sale_count_eligible and i.operation_type = 'sale'
         and s.analytics_at >= ${startOfZonedDay(from).toISOString()}::timestamptz
         and s.analytics_at < ${startOfZonedDay(today).toISOString()}::timestamptz
-      group by i.product_id, coalesce(p.name, i.product_name), 3, p.is_active
+      group by i.product_id, coalesce(p.name, i.product_name), 3, p.is_active, 6
     `;
     const counts = await sql<{ sales: number; active_days: number }[]>`
       select count(*)::integer as sales,

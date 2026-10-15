@@ -29,10 +29,10 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
     dateTo: filters.dateTo
   });
   const scope = await getAnalyticsScope();
-  const dashboard = await getAnalyticsDashboard({ filters, range, scope });
-  const deliverySummary = filters.fulfillment === "pickup"
-    ? null
-    : await getDeliveryAnalyticsSummary({ filters, range, scope });
+  const [dashboard, deliverySummary] = await Promise.all([
+    getAnalyticsDashboard({ filters, range, scope }),
+    filters.fulfillment === "pickup" ? Promise.resolve(null) : getDeliveryAnalyticsSummary({ filters, range, scope })
+  ]);
   const updatedLabel = dashboard.updatedAt
     ? new Intl.DateTimeFormat("ru-RU", {
         day: "2-digit",

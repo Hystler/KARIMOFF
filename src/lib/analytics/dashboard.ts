@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { analyticsCategorySql } from "./categories";
 import { channelLabels } from "./channels";
@@ -290,7 +291,7 @@ function mergeTimelineRows(
   });
 }
 
-export async function getAnalyticsFilterOptions(scope: AnalyticsScope): Promise<AnalyticsFilterOptions> {
+async function loadAnalyticsFilterOptions(scope: AnalyticsScope): Promise<AnalyticsFilterOptions> {
   const scopeWhere = buildScopeWhere(scope, "s");
   const itemCategory = analyticsCategorySql("i");
   const [saleOptions, itemOptions, history] = await Promise.all([
@@ -842,7 +843,7 @@ async function getUpdatedAt(filters: AnalyticsFilters, range: AnalyticsRange, sc
   return rows[0]?.updated_at ?? null;
 }
 
-export async function getAnalyticsDashboard(params: {
+async function loadAnalyticsDashboard(params: {
   filters: AnalyticsFilters;
   range: AnalyticsRange;
   scope: AnalyticsScope;
@@ -1029,5 +1030,42 @@ export async function getAnalyticsDashboard(params: {
     itemFiltered: hasItemFilters(filters),
     intelligence,
     error: null
+  };
+}
+
+export const getAnalyticsFilterOptions = unstable_cache(
+  loadAnalyticsFilterOptions,
+  ["karimoff-analytics-filter-options-v1"],
+  { revalidate: 60, tags: ["karimoff-analytics"] }
+);
+
+const getCurrentDashboard = unstable_cache(
+  loadAnalyticsDashboard,
+  ["karimoff-analytics-dashboard-current-v1"],
+  { revalidate: 30, tags: ["karimoff-analytics"] }
+);
+
+const getHistoricalDashboard = unstable_cache(
+  loadAnalyticsDashboard,
+  ["karimoff-analytics-dashboard-history-v1"],
+  { revalidate: 300, tags: ["karimoff-analytics"] }
+);
+
+export async function getAnalyticsDashboard(params: {
+  filters: AnalyticsFilters;
+  range: AnalyticsRange;
+  scope: AnalyticsScope;
+}): Promise<AnalyticsDashboard> {
+  // All filters and the freshly authorized staff scope are part of the cache key.
+  const cached = await (params.range.to.getTime() > Date.now()
+    ? getCurrentDashboard(params) : getHistoricalDashboard(params));
+  const lastSync = cached.intelligence.lastEvotorSyncAt;
+  return {
+    ...cached,
+    filters: params.filters,
+    // Next's data cache serializes dates; preserve the public Date contract.
+    range: params.range,
+    comparisonRange: getComparisonRange(params.range, params.filters.comparison),
+    intelligence: { ...cached.intelligence, stale: Boolean(lastSync && Date.now() - new Date(lastSync).getTime() > 10 * 60_000) }
   };
 }

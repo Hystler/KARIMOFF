@@ -42,12 +42,41 @@ test("weekday rates include zero-sale days and use the exact future weekday sequ
   approx(plan.rows[0].daysLeft, 5.4);
 });
 
-test("1, 2, 3, 7 and 14 day horizons and safety stock share one calculation", () => {
-  for (const horizon of [1, 2, 3, 7, 14]) {
+test("1, 2, 3, 7, 14 and 30 day horizons and safety stock share one calculation", () => {
+  for (const horizon of [1, 2, 3, 7, 14, 30]) {
     const plan = buildPurchasePlan(input({ horizon, ingredients: [ingredient({ minimum: 25 })] }));
     assert.equal(plan.rows[0].demand, horizon * 100);
     assert.equal(plan.rows[0].target, (horizon + 1) * 100 + 25);
   }
+});
+
+test("30 days plus the maximum buffer requires 37 future days and rejects unsupported horizons", () => {
+  assert.equal(buildPurchasePlan(input({ horizon: 30, bufferDays: 7 })).rows[0].target, 3700);
+  assert.throws(() => buildPurchasePlan(input({ horizon: 30, bufferDays: 7, futureWeekdays: Array(36).fill(1) })));
+  for (const horizon of [0, 4, 15, 29, 31, 30.5, NaN, Infinity]) assert.throws(() => buildPurchasePlan(input({ horizon })));
+});
+
+test("negative recorded stock is known debt, not missing inventory or a free zero", () => {
+  const plan = buildPurchasePlan(input({ ingredients: [ingredient({ stock: -150, reserved: 50 })] }));
+  const row = plan.rows[0];
+  assert.equal(row.recordedStock, -150);
+  assert.equal(row.available, 0);
+  assert.equal(row.stockDeficit, 200);
+  assert.equal(row.shortage, 1000);
+  assert.equal(row.daysLeft, 0);
+  assert.equal(plan.negativeStock, 1);
+  assert.equal(plan.missingStock, 0);
+});
+
+test("unresolved portions or modifications cannot borrow the base recipe of the same product", () => {
+  const plan = buildPurchasePlan(input({ sales: [
+    { productId: "shawarma", name: "Shawarma", weekday: 1, quantity: 4, active: true },
+    { productId: "shawarma", name: "Shawarma", weekday: 1, quantity: 4, active: true, recipeIssue: "Состав варианта требует проверки" }
+  ] }));
+  assert.equal(plan.products.length, 2);
+  assert.equal(plan.coverage, 50);
+  assert.equal(plan.products.filter(row => row.issue).length, 1);
+  assert.equal(plan.rows[0].demand, 100);
 });
 
 test("unknown stock or price never silently becomes zero cost or a confident purchase recommendation", () => {
@@ -102,6 +131,10 @@ test("empty history, excessive reservations and exact package boundaries are saf
   assert.equal(buildPurchasePlan(input({ sales: [] })).coverage, null);
   const exhausted = buildPurchasePlan(input({ ingredients: [ingredient({ reserved: 600 })] }));
   assert.equal(exhausted.rows[0].available, 0);
+  assert.equal(exhausted.rows[0].stockDeficit, 100);
+  assert.equal(exhausted.rows[0].shortage, 900);
+  assert.equal(exhausted.stockDeficits, 1);
+  assert.equal(exhausted.negativeStock, 0);
   assert.equal(exhausted.rows[0].daysLeft, 0);
   const exact = buildPurchasePlan(input({ horizon: 7, bufferDays: 3, ingredients: [ingredient({ stock: 0, reserved: 0 })] }));
   assert.equal(exact.rows[0].packages, 1);

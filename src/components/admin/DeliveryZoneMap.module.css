@@ -1,0 +1,10 @@
+.frame { position: relative; min-width: 0; isolation: isolate; }
+.map { width: 100%; height: 520px; max-height: 70dvh; min-height: 340px; background: var(--admin-surface-raised); }
+.map:focus-visible { outline: 3px solid var(--admin-accent-text); outline-offset: -3px; }
+.map :global(.leaflet-bar) { border: 1px solid var(--admin-border); box-shadow: var(--admin-shadow); }
+.map :global(.leaflet-bar a) { width: 40px; height: 40px; line-height: 40px; background: var(--admin-surface); color: var(--admin-text); border-color: var(--admin-border); }
+.map :global(.leaflet-bar a:hover), .map :global(.leaflet-bar a:focus-visible) { background: var(--admin-surface-raised); color: var(--admin-accent-text); }
+.map :global(.leaflet-control-attribution) { max-width: calc(100% - 12px); background: var(--admin-surface); color: var(--admin-muted); font-size: 11px; }
+.map :global(.leaflet-control-attribution a) { color: var(--admin-accent-text); }
+.map :global(.leaflet-control-scale-line), .map :global(.leaflet-tooltip) { background: var(--admin-surface); color: var(--admin-text); border-color: var(--admin-border); }
+.notice { margin: 0; padding: 10px 14px; background: var(--admin-warning-bg); color: var(--admin-warning-text); font-size: 12px; }

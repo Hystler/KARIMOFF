@@ -113,7 +113,7 @@ export function ProductRecipeComposer({ ingredients }: { ingredients: Ingredient
   }
 
   return (
-    <fieldset className="grid gap-4 rounded-lg border border-karimoff-line bg-karimoff-cream/50 p-4 sm:p-5">
+    <fieldset className="admin-inset-surface grid gap-4 rounded-lg border border-karimoff-line p-4 sm:p-5">
       <legend className="px-2 text-sm font-bold text-karimoff-black">Состав, себестоимость и КБЖУ</legend>
       <input type="hidden" name="composition_json" value={JSON.stringify(serializedLines)} />
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { getPostgresSql } from "@/lib/postgres/server";
 import { countAnalyticsCalendarDays } from "./periods";
 import { buildSalesWhere } from "./query";
@@ -24,7 +25,7 @@ function number(value: string | number | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export async function getDeliveryAnalyticsSummary(params: {
+async function loadDeliveryAnalyticsSummary(params: {
   filters: AnalyticsFilters;
   range: AnalyticsRange;
   scope: AnalyticsScope;
@@ -84,3 +85,9 @@ export async function getDeliveryAnalyticsSummary(params: {
     ordersPerDay: days ? deliveredOrders / days : null
   };
 }
+
+export const getDeliveryAnalyticsSummary = unstable_cache(
+  loadDeliveryAnalyticsSummary,
+  ["karimoff-analytics-delivery-v1"],
+  { revalidate: 30, tags: ["karimoff-analytics"] }
+);

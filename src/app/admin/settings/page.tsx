@@ -192,7 +192,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               <textarea name="hero_subtitle" rows={3} defaultValue={settings.hero_subtitle ?? ""} className="resize-none rounded-lg border border-karimoff-line px-4 py-3 outline-none focus:border-karimoff-orange" placeholder="Ресторанный вкус по цене обычного перекуса" />
             </label>
 
-            <section className="rounded-lg border border-karimoff-line bg-karimoff-cream/60 p-4 sm:p-5">
+            <section className="admin-inset-surface rounded-lg border border-karimoff-line p-4 sm:p-5">
               <div className="max-w-3xl">
                 <p className="text-sm font-semibold text-karimoff-orange">Фоны страниц</p>
                 <h2 className="mt-2 text-2xl font-black">Hero-фото для главной и разделов</h2>

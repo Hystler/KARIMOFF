@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, PackageCheck, ShoppingBasket } from "lucide-react";
 import { formatRub } from "@/lib/format";
 import type { getPurchasePlanning } from "@/lib/analytics/planning";
+import { PLANNING_HORIZONS } from "@/lib/analytics/planning-math";
 
 type Plan = Awaited<ReturnType<typeof getPurchasePlanning>>;
 const number = (value: number, digits = 1) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: digits }).format(value);
@@ -19,7 +20,7 @@ export function PurchasePlanning({ plan }: { plan: Plan }) {
       </label>
       <label className="grid gap-2 text-sm font-semibold">Закупка на
         <select name="days" defaultValue={plan.options.horizon} className="min-h-11 rounded-lg border border-karimoff-line bg-white px-3">
-          {[1, 2, 3, 7, 14].map((days) => <option key={days} value={days}>{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
+          {PLANNING_HORIZONS.map((days) => <option key={days} value={days}>{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
         </select>
       </label>
       <label className="grid gap-2 text-sm font-semibold">Страховой запас
@@ -38,10 +39,11 @@ export function PurchasePlanning({ plan }: { plan: Plan }) {
       <div><p className="text-sm text-karimoff-muted">Закупка по известным ценам</p><p className="mt-2 text-2xl font-bold text-emerald-700">{formatRub(plan.knownBudget, 0)}</p></div>
     </section>
 
-    {plan.activeDays < plan.days || plan.missingStock > 0 || plan.missingPrices > 0 || incomplete.length > 0 ? <div role="status" className="my-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+    {plan.activeDays < plan.days || plan.missingStock > 0 || plan.stockDeficits > 0 || plan.missingPrices > 0 || incomplete.length > 0 ? <div role="status" className="my-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
       <AlertTriangle size={19} className="mt-1 shrink-0" /><div>
         <p className="font-bold">Прогноз требует проверки покрытия</p>
         <p>Дней с продажами: {plan.activeDays} из {plan.days}. Без складского остатка: {plan.missingStock}. Без цены закупки: {plan.missingPrices}. Товаров вне расчёта: {incomplete.length}.</p>
+        {plan.stockDeficits > 0 ? <p>Дефицит с учётом резервов: {plan.stockDeficits}. Отрицательных остатков: {plan.negativeStock}. Дефицит включён в рекомендацию закупки; перед закупкой проверьте историю движений.</p> : null}
         <p>Дни без продаж включены в среднее. Пропуски синхронизации могут занижать прогноз.</p>
       </div>
     </div> : null}
@@ -55,7 +57,7 @@ export function PurchasePlanning({ plan }: { plan: Plan }) {
             <td className="max-w-[240px] px-3 py-4 font-semibold"><Link href={`/admin/ingredients/${row.id}/edit`} className="hover:underline">{row.name}</Link></td>
             <td className="whitespace-nowrap px-3 py-4 tabular-nums">{quantity(row.perDay, row.unit)}</td>
             <td className="whitespace-nowrap px-3 py-4 tabular-nums">{quantity(row.demand, row.unit)}</td>
-            <td className="px-3 py-4 tabular-nums">{quantity(row.available, row.unit)}</td>
+            <td className="px-3 py-4 tabular-nums">{quantity(row.available, row.unit)}{row.stockDeficit !== null && row.stockDeficit > 0 ? <Link href={`/admin/inventory/movements?ingredient_id=${row.id}`} className="mt-1 block text-xs text-red-700 underline">{row.recordedStock !== null && row.recordedStock < 0 ? `В учёте: ${quantity(row.recordedStock, row.unit)}` : `Дефицит с резервами: ${quantity(row.stockDeficit, row.unit)}`} · история</Link> : null}</td>
             <td className={`px-3 py-4 font-semibold tabular-nums ${row.daysLeft !== null && row.daysLeft < plan.options.horizon ? "text-red-700" : "text-emerald-700"}`}>{row.available === null ? "—" : row.daysLeft === null ? ">365" : number(row.daysLeft)}</td>
             <td className="whitespace-nowrap px-3 py-4 font-semibold tabular-nums">{row.purchase === null ? "Уточнить остаток" : quantity(row.purchase, row.unit)}</td>
             <td className="px-3 py-4 tabular-nums">{row.packages === null ? "—" : number(row.packages, 0)}</td>

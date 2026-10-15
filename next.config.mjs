@@ -32,7 +32,7 @@ const mediaOrigins = [
   cdnPattern ? `https://${cdnPattern.hostname}${cdnPattern.port ? `:${cdnPattern.port}` : ""}` : null
 ].filter(Boolean);
 
-function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false } = {}) {
+function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false, deliveryMap = false } = {}) {
   const telegramOrigin = telegramLogin ? ` ${telegramLoginOrigin}` : "";
   const maxBridgeOrigin = maxMiniApp ? " https://st.max.ru" : "";
   const frameAncestors = maxMiniApp ? "https://max.ru https://*.max.ru" : "'none'";
@@ -40,7 +40,7 @@ function buildContentSecurityPolicy({ telegramLogin = false, maxMiniApp = false 
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}${telegramOrigin}${maxBridgeOrigin}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${mediaOrigins.join(" ")}`,
+    `img-src 'self' data: blob: ${mediaOrigins.join(" ")}${deliveryMap ? " https://tile.openstreetmap.org" : ""}`,
     "font-src 'self' data:",
     `connect-src 'self'${telegramOrigin}`,
     `media-src 'self' ${mediaOrigins.join(" ")}`,
@@ -121,6 +121,10 @@ const nextConfig = {
           { key: "Cache-Control", value: "private, no-store" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }
         ]
+      },
+      {
+        source: "/admin/delivery-zone",
+        headers: [{ key: "Content-Security-Policy", value: buildContentSecurityPolicy({ deliveryMap: true }) }]
       },
       {
         source: "/integrations/max/app",

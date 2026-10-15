@@ -92,8 +92,9 @@ export default async function AdminCookiesPage() {
           ) : rows.length === 0 ? (
             <div className="p-8 text-karimoff-muted">Согласий пока нет.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="admin-table min-w-[900px]">
+            <div className="overflow-x-auto" role="region" aria-label="Cookie-согласия" tabIndex={0}>
+              <table className="admin-table admin-cookie-table">
+                <colgroup>{[140, 130, 220, 220, 240, 260].map((width, index) => <col key={index} style={{ width }} />)}</colgroup>
                 <thead className="border-b border-karimoff-line bg-karimoff-soft text-xs text-karimoff-muted">
                   <tr>
                     <th className="px-4 py-4 font-bold">Дата</th>
@@ -107,16 +108,16 @@ export default async function AdminCookiesPage() {
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.id} className="border-b border-karimoff-line last:border-b-0">
-                      <td className="px-4 py-4 font-semibold">{formatDate(row.created_at)}</td>
+                      <td className="whitespace-nowrap px-4 py-4 font-semibold">{formatDate(row.created_at)}</td>
                       <td className="px-4 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-black ${row.accepted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                        <span className={`admin-status rounded-full px-3 py-1 text-xs font-black ${row.accepted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                           {row.accepted ? "Принято" : "Ограничено"}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-xs text-karimoff-muted">{row.consent_id ?? "—"}</td>
                       <td className="px-4 py-4 text-xs text-karimoff-muted">{row.customer_id ?? "Гость"}</td>
                       <td className="px-4 py-4 text-xs text-karimoff-muted">{JSON.stringify(row.categories ?? {})}</td>
-                      <td className="max-w-[260px] truncate px-4 py-4 text-xs text-karimoff-muted">{row.page_url ?? "—"}</td>
+                      <td className="px-4 py-4 text-xs text-karimoff-muted">{row.page_url ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

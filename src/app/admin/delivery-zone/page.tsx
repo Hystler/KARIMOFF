@@ -1,10 +1,12 @@
 import { CircleAlert, MapPinned } from "lucide-react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DeliveryZonePreview } from "@/components/admin/DeliveryZonePreview";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { getDeliveryLocationSettings } from "@/lib/delivery/settings";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { referrer: "strict-origin-when-cross-origin" };
 
 export default async function DeliveryZonePage() {
   const staff = await getCurrentStaff();

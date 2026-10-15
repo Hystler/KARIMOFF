@@ -273,7 +273,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                               </p>
                             </div>
                             <span
-                              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                              className={`admin-product-status shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
                                 product.is_active
                                   ? "bg-karimoff-orange/10 text-karimoff-orange"
                                   : "bg-karimoff-black/5 text-karimoff-muted"
@@ -380,7 +380,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                           </td>
                           <td>
                             <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
+                              className={`admin-product-status inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
                                 product.is_active
                                   ? "bg-karimoff-orange/10 text-karimoff-orange"
                                   : "bg-karimoff-black/5 text-karimoff-muted"

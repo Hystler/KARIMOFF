@@ -17,6 +17,7 @@ async function dashboardQueries() {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
   const imports = {
+    "next/cache": { unstable_cache: (fn) => fn },
     "@/lib/postgres/server": { getPostgresSql: () => ({ unsafe: async (text) => {
       captured.push(text);
       return [];

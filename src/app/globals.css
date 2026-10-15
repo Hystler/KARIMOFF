@@ -57,6 +57,16 @@
   --admin-border: #d4dae0;
   --admin-sidebar: #15171a;
   --admin-shadow: 0 8px 24px rgba(18, 18, 20, 0.07);
+  --admin-success-bg: #e9f5ed;
+  --admin-success-text: #176343;
+  --admin-warning-bg: #fff4da;
+  --admin-warning-text: #805217;
+  --admin-danger-bg: #fdecee;
+  --admin-danger-text: #a92330;
+  --admin-info-bg: #eaf1fc;
+  --admin-info-text: #235c9f;
+  --admin-accent-bg: #fff0e6;
+  --admin-accent-text: #9d3900;
 }
 
 html[data-theme="dark"] {
@@ -80,6 +90,16 @@ html[data-theme="dark"] {
   --admin-border: #343a42;
   --admin-sidebar: #0b0d0f;
   --admin-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --admin-success-bg: #19362a;
+  --admin-success-text: #8cdeb2;
+  --admin-warning-bg: #382c18;
+  --admin-warning-text: #f9ce83;
+  --admin-danger-bg: #3d2028;
+  --admin-danger-text: #ff9ca5;
+  --admin-info-bg: #1b304b;
+  --admin-info-text: #a4c9ff;
+  --admin-accent-bg: #3d281c;
+  --admin-accent-text: #ffae76;
 }
 
 .product-photo { background: var(--product-photo-bg); }
@@ -1848,7 +1868,7 @@ button:not(:disabled),
   .audience-hero-coverage { @apply grid content-center border-t border-white/10 bg-white/[0.045] px-5 py-6 lg:border-l lg:border-t-0; }
   .audience-hero-coverage strong { @apply text-4xl font-black tabular-nums text-[#67D7B1]; }
   .audience-hero-coverage span { @apply mt-2 text-sm font-black leading-snug; }
-  .audience-hero-coverage small { @apply mt-2 text-[10px] font-bold text-white/45; }
+  .audience-hero-coverage small { @apply mt-2 text-[10px] font-bold text-white/60; }
 
   .audience-metric-grid { @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4; }
   .audience-metric { @apply flex min-h-[142px] items-start gap-4 rounded-lg border border-black/[0.08] bg-white p-5 shadow-[0_8px_24px_rgba(18,18,20,0.045)]; }
@@ -1950,6 +1970,10 @@ button:not(:disabled),
 .admin-workspace .admin-table :is(th, td) { padding: 10px 12px; }
 .admin-workspace .admin-table th { font-size: 11px; }
 .admin-workspace .admin-table :is(input, select) { max-width: 100%; }
+.admin-workspace :is(.admin-status, .admin-product-status) { display: inline-flex; white-space: nowrap; overflow-wrap: normal; flex-shrink: 0; }
+.admin-workspace .admin-cookie-table { width: 1210px; min-width: 1210px; table-layout: fixed; }
+.admin-workspace .admin-cookie-table td { vertical-align: top; overflow-wrap: anywhere; }
+.admin-workspace .admin-cookie-table td:first-child { overflow-wrap: normal; }
 .admin-workspace .admin-page > div > header { gap: 12px; }
 .admin-workspace .admin-page > div > header :is(a, button) { border-radius: 6px; }
 .admin-workspace .admin-control,
@@ -2413,6 +2437,34 @@ html[data-theme="dark"] .admin-product-nutrition-missing strong {
 html[data-theme="dark"] .admin-root :where(.bg-karimoff-cream, .bg-karimoff-soft, [class*="bg-[#FA"], [class*="bg-[#F8"], [class*="bg-[#F7"]) {
   background-color: var(--admin-surface-raised) !important;
 }
+
+/* Legacy utility colours are bridged only inside the administrative shell. */
+html[data-theme="dark"] .admin-workspace .admin-main :where(.bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100) { background-color: var(--admin-surface-raised); color: var(--admin-muted); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.bg-amber-50, .bg-amber-100, .bg-yellow-50) { background-color: var(--admin-warning-bg); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.text-amber-700, .text-amber-800, .text-amber-900, .text-amber-950, .text-yellow-700) { color: var(--admin-warning-text); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.bg-emerald-50, .bg-emerald-100, .bg-green-50) { background-color: var(--admin-success-bg); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-green-700) { color: var(--admin-success-text); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.bg-red-50, .bg-red-100) { background-color: var(--admin-danger-bg); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.text-red-500, .text-red-600, .text-red-700, .text-red-800) { color: var(--admin-danger-text); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.bg-blue-50, .bg-blue-100, .bg-sky-50) { background-color: var(--admin-info-bg); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.text-blue-600, .text-blue-700, .text-blue-800, .text-sky-700) { color: var(--admin-info-text); }
+html[data-theme="dark"] .admin-workspace :where(.admin-table, .analytics-table) tbody tr:hover { background-color: var(--admin-surface-raised); }
+html[data-theme="dark"] .admin-workspace .admin-secondary-button:hover { background: var(--admin-surface-raised); color: var(--admin-accent-text); }
+html[data-theme="dark"] .admin-workspace .admin-danger-button { background: var(--admin-danger-bg); color: var(--admin-danger-text); }
+html[data-theme="dark"] .admin-workspace .admin-danger-button:hover { border-color: var(--admin-danger-text); }
+html[data-theme="dark"] .admin-workspace .admin-order-actions { background: var(--admin-surface-raised); }
+.admin-workspace .analytics-fulfillment-row button.is-active { background: var(--admin-success-bg); color: var(--admin-success-text); }
+.admin-workspace .analytics-fulfillment-row button:hover:not(.is-active) { background: var(--admin-surface-raised); color: var(--admin-text); }
+.admin-workspace .analytics-fulfillment-row button:focus-visible { outline: 2px solid var(--admin-accent-text); outline-offset: 2px; }
+.admin-workspace .analytics-fulfillment-row button:disabled { opacity: .55; cursor: not-allowed; }
+.admin-workspace .economics-date-range-note { background: var(--admin-surface-raised); color: var(--admin-muted); }
+.admin-workspace .admin-inset-surface { background: var(--admin-surface-raised); }
+.admin-workspace .admin-heading .admin-status { background: var(--admin-accent-bg); color: var(--admin-accent-text); }
+.admin-workspace .admin-overview-workflow > header > a { color: var(--admin-accent-text); }
+.admin-workspace .admin-overview-attention a { color: var(--admin-warning-text); }
+html[data-theme="dark"] .admin-workspace .admin-main table tbody tr:hover { background: var(--admin-surface-raised); }
+html[data-theme="dark"] .admin-workspace .admin-main :where(.border-amber-200, .border-amber-300) { border-color: color-mix(in srgb, var(--admin-warning-text) 35%, var(--admin-border)); }
+html[data-theme="dark"] .admin-workspace .audience-metric-icon { background: var(--admin-surface-strong); color: var(--admin-text); }
 
 @container (max-width: 920px) {
   .admin-workspace .admin-order-card { grid-template-columns: minmax(0, 1fr); }

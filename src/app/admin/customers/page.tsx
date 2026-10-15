@@ -49,14 +49,17 @@ export default async function AdminCustomersPage() {
             </Link>
             <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Пользователи</h1>
           </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
-            >
-              Выйти
-            </button>
-          </form>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/admin/analytics/audience" className="admin-secondary-button">Сегменты клиентов</Link>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="rounded-full border border-karimoff-black/20 bg-white px-5 py-3 text-sm font-semibold text-karimoff-black transition hover:border-karimoff-orange hover:text-karimoff-orange"
+              >
+                Выйти
+              </button>
+            </form>
+          </div>
         </header>
 
         <section className="mt-8 rounded-lg border border-karimoff-line bg-white shadow-card">
