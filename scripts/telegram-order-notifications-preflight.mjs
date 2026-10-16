@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 const TEST_CHAT_ID_ENV = "TELEGRAM_SAFE_TEST_CHAT_ID";
 const EXPECTED_BOT_ENV = "TELEGRAM_EXPECTED_BOT_USERNAME";
 const SAFE_CHAT_ID = /^[1-9][0-9]{0,15}$/;
-const QUEUE_PROVIDERS = ["telegram", "max"];
+const QUEUE_PROVIDERS = ["telegram"];
 const QUEUE_STATUSES = ["pending", "processing", "retry", "sent", "permanent_failure", "superseded"];
 
 function getOrderUrl() {
@@ -103,6 +103,7 @@ async function inspectDatabase(chatId) {
         count(*) filter (where status = 'processing'
           and (locked_at is null or locked_at < now() - interval '5 minutes'))::int as stale_locks
       from public.order_notification_deliveries
+      where provider = 'telegram'
       group by provider, status
     `;
 
@@ -186,7 +187,6 @@ export async function runPreflight({ sendOnce = false } = {}) {
   const orderUrl = getOrderUrl();
   const notificationsEnabled = process.env.ORDER_STATUS_NOTIFICATIONS_ENABLED === "true";
   const maintenance = process.env.MAINTENANCE_MODE === "true";
-  const maxTokenConfigured = Boolean(process.env.MAX_BOT_TOKEN?.trim());
   const expectedUsernameConfigured = Boolean(normalizeUsername(process.env[EXPECTED_BOT_ENV]));
 
   const [bot, database] = await Promise.all([inspectBot(), inspectDatabase(chatId)]);
@@ -199,7 +199,7 @@ export async function runPreflight({ sendOnce = false } = {}) {
     : null;
   const queueAndConfigPreflightPassed = Boolean(
     !notificationsEnabled && !maintenance && orderUrl && bot.reachable
-      && bot.expectedUsernameMatches && database.available && maxTokenConfigured
+      && bot.expectedUsernameMatches && database.available
       && queuesAreClear === true
   );
   const testReady = Boolean(
@@ -210,7 +210,7 @@ export async function runPreflight({ sendOnce = false } = {}) {
 
   const result = {
     bot,
-    worker: { notificationsEnabled, maintenance, maxTokenConfigured },
+    worker: { notificationsEnabled, maintenance },
     appOrderLinkConfigured: Boolean(orderUrl),
     databaseAvailable: database.available,
     notificationQueues: database.queues,

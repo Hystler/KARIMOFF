@@ -266,13 +266,13 @@ test("health reads are bounded, read-only, secret-free and distinguish unavailab
   }
 });
 
-test("shared notification preflight reads both queues and blocks on either channel backlog", () => {
+test("Telegram transport preflight reads only its queue and does not require MAX readiness", () => {
   const preflight = readFileSync(resolve(root, "scripts/telegram-order-notifications-preflight.mjs"), "utf8");
-  assert.match(preflight, /QUEUE_PROVIDERS = \["telegram", "max"\]/);
+  assert.match(preflight, /QUEUE_PROVIDERS = \["telegram"\]/);
   assert.match(preflight, /group by provider, status/);
   assert.match(preflight, /queue\.pending \+ queue\.retry \+ queue\.processing === 0 && queue\.staleLocks === 0/);
-  assert.match(preflight, /database\.available && maxTokenConfigured/);
-  assert.doesNotMatch(preflight, /where provider = 'telegram'/);
+  assert.doesNotMatch(preflight, /MAX_BOT_TOKEN|maxTokenConfigured/);
+  assert.match(preflight, /where provider = 'telegram'/);
 });
 
 test("manual retry is confirmed, single-row, conditional, audited and never directly sends", async () => {
