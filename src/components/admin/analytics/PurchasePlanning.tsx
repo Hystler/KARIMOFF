@@ -3,78 +3,87 @@ import { AlertTriangle, CalendarDays, PackageCheck, ShoppingBasket } from "lucid
 import { formatRub } from "@/lib/format";
 import type { getPurchasePlanning } from "@/lib/analytics/planning";
 import { PLANNING_HORIZONS } from "@/lib/analytics/planning-math";
+import styles from "./PurchasePlanning.module.css";
 
 type Plan = Awaited<ReturnType<typeof getPurchasePlanning>>;
 const number = (value: number, digits = 1) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: digits }).format(value);
-const quantity = (value: number | null, unit: string) => value === null ? "Нет остатка в учёте" : `${number(value)} ${unit === "g" ? "г" : unit === "ml" ? "мл" : "шт"}`;
+const quantity = (value: number | null, unit: string) => value === null ? "Неизвестно" : `${number(value)} ${unit === "g" ? "г" : unit === "ml" ? "мл" : "шт"}`;
 const date = (value: string) => new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(new Date(`${value}T12:00:00Z`));
+const percent = (value: number | null) => value === null ? "Нет продаж" : `${number(value)}%`;
 
 export function PurchasePlanning({ plan }: { plan: Plan }) {
   const incomplete = plan.products.filter((product) => product.issue);
-  return <>
-    <form className="flex flex-wrap items-end gap-4 border-y border-karimoff-line py-5" method="get">
-      <label className="grid gap-2 text-sm font-semibold">История продаж
-        <select name="history" defaultValue={plan.options.history} className="min-h-11 rounded-lg border border-karimoff-line bg-white px-3">
-          <option value="28">4 недели</option><option value="56">8 недель</option><option value="84">12 недель</option>
-        </select>
-      </label>
-      <label className="grid gap-2 text-sm font-semibold">Закупка на
-        <select name="days" defaultValue={plan.options.horizon} className="min-h-11 rounded-lg border border-karimoff-line bg-white px-3">
-          {PLANNING_HORIZONS.map((days) => <option key={days} value={days}>{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
-        </select>
-      </label>
-      <label className="grid gap-2 text-sm font-semibold">Страховой запас
-        <select name="buffer" defaultValue={plan.options.bufferDays} className="min-h-11 rounded-lg border border-karimoff-line bg-white px-3">
-          <option value="0">Без запаса</option>{[1, 2, 3, 7].map((days) => <option key={days} value={days}>+{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
-        </select>
-      </label>
-      <button className="public-button-primary min-h-11 px-5" type="submit"><CalendarDays size={17} />Рассчитать</button>
-      <span className="pb-3 text-sm text-karimoff-muted">{date(plan.from)} — {date(plan.through)} · все каналы</span>
+  return <div className={styles.plan}>
+    <form className={styles.filters} method="get">
+      <label>История продаж<select name="history" defaultValue={plan.options.history}>
+        <option value="28">4 недели · 28 дней</option><option value="56">8 недель · 56 дней</option><option value="84">12 недель · 84 дня</option>
+      </select></label>
+      <label>Закупка на<select name="days" defaultValue={plan.options.horizon}>
+        {PLANNING_HORIZONS.map((days) => <option key={days} value={days}>{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
+      </select></label>
+      <label>Страховой запас<select name="buffer" defaultValue={plan.options.bufferDays}>
+        <option value="0">Без запаса</option>{[1, 2, 3, 7].map((days) => <option key={days} value={days}>+{days} {days === 1 ? "день" : days < 5 ? "дня" : "дней"}</option>)}
+      </select></label>
+      <button className="public-button-primary" type="submit"><CalendarDays size={17} />Рассчитать</button>
     </form>
+    <p className={styles.period}>{date(plan.from)} — {date(plan.through)} · {plan.days} дней истории · все каналы · прогноз на {plan.options.horizon} дней</p>
 
-    <section className="grid gap-5 border-b border-karimoff-line py-6 sm:grid-cols-2 xl:grid-cols-4" aria-label="Показатели планирования">
-      <div><p className="text-sm text-karimoff-muted">Заказов в день, без возвратов</p><p className="mt-2 text-2xl font-bold">{number(plan.averageOrders)}</p></div>
-      <div><p className="text-sm text-karimoff-muted">Продажи с полной рецептурой</p><p className="mt-2 text-2xl font-bold">{plan.coverage === null ? "Нет продаж" : `${number(plan.coverage)}%`}</p></div>
-      <div><p className="text-sm text-karimoff-muted">Закончится раньше закупочного периода</p><p className="mt-2 text-2xl font-bold text-red-700">{plan.rows.filter((row) => row.daysLeft !== null && row.daysLeft < plan.options.horizon).length}</p></div>
-      <div><p className="text-sm text-karimoff-muted">Закупка по известным ценам</p><p className="mt-2 text-2xl font-bold text-emerald-700">{formatRub(plan.knownBudget, 0)}</p></div>
+    <section className={styles.metrics} aria-label="Показатели планирования">
+      <div><span>Продажи за историю</span><strong>{formatRub(plan.totalRevenue, 0)}</strong><small>{number(plan.totalUnits)} позиций · {number(plan.averageOrders)} заказов в день</small></div>
+      <div><span>Покрытие состава</span><strong>{percent(plan.coverage)}</strong><small>По количеству · по выручке: {percent(plan.revenueCoverage)}</small></div>
+      <div><span>Риск дефицита</span><strong className={styles.danger}>{plan.rows.filter((row) => row.daysLeft !== null && row.daysLeft < plan.options.horizon).length}</strong><small>Ингредиентов до конца периода</small></div>
+      <div><span>{plan.budgetComplete ? "Бюджет закупки" : "Рассчитанная часть бюджета"}</span><strong>{formatRub(plan.knownBudget, 0)}</strong><small>{plan.budgetComplete ? "По учётным закупочным ценам" : "Не является полным бюджетом"}</small></div>
     </section>
 
-    {plan.activeDays < plan.days || plan.missingStock > 0 || plan.stockDeficits > 0 || plan.missingPrices > 0 || incomplete.length > 0 ? <div role="status" className="my-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-      <AlertTriangle size={19} className="mt-1 shrink-0" /><div>
-        <p className="font-bold">Прогноз требует проверки покрытия</p>
-        <p>Дней с продажами: {plan.activeDays} из {plan.days}. Без складского остатка: {plan.missingStock}. Без цены закупки: {plan.missingPrices}. Товаров вне расчёта: {incomplete.length}.</p>
-        {plan.stockDeficits > 0 ? <p>Дефицит с учётом резервов: {plan.stockDeficits}. Отрицательных остатков: {plan.negativeStock}. Дефицит включён в рекомендацию закупки; перед закупкой проверьте историю движений.</p> : null}
-        <p>Дни без продаж включены в среднее. Пропуски синхронизации могут занижать прогноз.</p>
+    {!plan.budgetComplete || plan.activeDays < plan.days || plan.stockDeficits > 0 ? <div role="status" className={styles.warning}>
+      <AlertTriangle size={20} aria-hidden="true" /><div>
+        <strong>{plan.budgetComplete ? "Проверьте исходные данные" : "Бюджет рассчитан не полностью"}</strong>
+        <p>Вне расчёта: {incomplete.length} составов · {number(plan.totalUnits - plan.coveredUnits)} позиций · {formatRub(plan.totalRevenue - plan.coveredRevenue, 0)} выручки. Без остатка: {plan.missingStock}. Без цены закупки: {plan.missingPrices}. Без размера упаковки: {plan.missingPackages}.</p>
+        {incomplete.length ? <a href="#planning-products">Исключённые позиции и причины</a> : null}
+        {plan.stockDeficits > 0 ? <p>Дефицит с резервами: {plan.stockDeficits}; отрицательных остатков: {plan.negativeStock}. Дефицит включён в закупку, учётные данные не изменены.</p> : null}
+        <p>Дней с продажами: {plan.activeDays} из {plan.days}. Дни без продаж включены в среднее.</p>
       </div>
     </div> : null}
-    <section className="py-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-xl font-bold"><ShoppingBasket size={21} />Ингредиенты к закупке</h2><Link href="/admin/inventory" className="text-sm font-semibold underline underline-offset-4">Складские остатки</Link></header>
-      <p className="mb-4 text-sm leading-6 text-karimoff-muted">Продажи без возвратов, базовые рецептуры, дни недели и технологические отходы. Платные добавки, срок годности и время поставки в прогноз не включены.</p>
-      <div className="overflow-x-auto">
-        <table aria-label="Ингредиенты к закупке" className="w-full min-w-[940px] text-left text-sm">
-          <thead className="border-y border-karimoff-line bg-gray-50 text-xs text-gray-600"><tr>{["Ингредиент", "В день", "На период", "Доступно", "Запас, дней", "К закупке", "Упаковок", "Сумма"].map((label) => <th key={label} className="px-3 py-3 font-semibold">{label}</th>)}</tr></thead>
-          <tbody>{plan.rows.map((row) => <tr key={row.id} className="border-b border-karimoff-line hover:bg-gray-50">
-            <td className="max-w-[240px] px-3 py-4 font-semibold"><Link href={`/admin/ingredients/${row.id}/edit`} className="hover:underline">{row.name}</Link></td>
-            <td className="whitespace-nowrap px-3 py-4 tabular-nums">{quantity(row.perDay, row.unit)}</td>
-            <td className="whitespace-nowrap px-3 py-4 tabular-nums">{quantity(row.demand, row.unit)}</td>
-            <td className="px-3 py-4 tabular-nums">{quantity(row.available, row.unit)}{row.stockDeficit !== null && row.stockDeficit > 0 ? <Link href={`/admin/inventory/movements?ingredient_id=${row.id}`} className="mt-1 block text-xs text-red-700 underline">{row.recordedStock !== null && row.recordedStock < 0 ? `В учёте: ${quantity(row.recordedStock, row.unit)}` : `Дефицит с резервами: ${quantity(row.stockDeficit, row.unit)}`} · история</Link> : null}</td>
-            <td className={`px-3 py-4 font-semibold tabular-nums ${row.daysLeft !== null && row.daysLeft < plan.options.horizon ? "text-red-700" : "text-emerald-700"}`}>{row.available === null ? "—" : row.daysLeft === null ? ">365" : number(row.daysLeft)}</td>
-            <td className="whitespace-nowrap px-3 py-4 font-semibold tabular-nums">{row.purchase === null ? "Уточнить остаток" : quantity(row.purchase, row.unit)}</td>
-            <td className="px-3 py-4 tabular-nums">{row.packages === null ? "—" : number(row.packages, 0)}</td>
-            <td className="whitespace-nowrap px-3 py-4 tabular-nums">{row.budget === null ? "Не рассчитана" : formatRub(row.budget, 0)}</td>
+
+    <section className={styles.section}>
+      <header><h2><ShoppingBasket size={21} aria-hidden="true" />Ингредиенты к закупке</h2><Link href="/admin/inventory">Складские остатки</Link></header>
+      <p className={styles.note}>Подтверждённые составы и добавки, спрос по дням недели. Количества — брутто; отходы учтены один раз. Готовые полуфабрикаты остаются отдельными ингредиентами, без предположений о сырье.</p>
+      <div className={styles.scroll} tabIndex={0} role="region" aria-label="Ингредиенты к закупке">
+        <table className={styles.ingredients}>
+          <thead><tr>{["Ингредиент", "В день", "На период", "В учёте / резерв", "Доступно", "Запас, дней", "К закупке", "Упаковка / кол-во", "Сумма"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
+          <tbody>{plan.rows.map((row) => <tr key={row.id}>
+            <th scope="row"><Link href={`/admin/ingredients/${row.id}/edit`}>{row.name}</Link></th>
+            <td>{quantity(row.perDay, row.unit)}</td><td>{quantity(row.demand, row.unit)}<small>Цель с запасом: {quantity(row.target, row.unit)}</small></td>
+            <td>{quantity(row.recordedStock, row.unit)}<small>Резерв: {quantity(row.reserved, row.unit)}</small>
+              {row.stockDeficit !== null && row.stockDeficit > 0 ? <Link className={styles.danger} href={`/admin/inventory/movements?ingredient_id=${row.id}`}>Дефицит: {quantity(row.stockDeficit, row.unit)} · история</Link> : null}
+            </td>
+            <td>{quantity(row.available, row.unit)}</td>
+            <td className={row.daysLeft !== null && row.daysLeft < plan.options.horizon ? styles.danger : undefined}>{row.available === null ? "Неизвестно" : row.daysLeft === null ? ">365" : number(row.daysLeft)}</td>
+            <td>{row.purchase === null ? "Уточнить остаток" : quantity(row.purchase, row.unit)}{row.shortage !== null ? <small>Не хватает: {quantity(row.shortage, row.unit)}</small> : null}</td>
+            <td>{row.packageSize === null ? "Размер неизвестен" : quantity(row.packageSize, row.unit)}<small>{row.packages === null ? "Без округления до упаковки" : `${number(row.packages, 0)} уп.`}</small></td>
+            <td>{row.budget === null ? "Цена или остаток неизвестны" : formatRub(row.budget, 0)}</td>
           </tr>)}</tbody>
         </table>
       </div>
-      {!plan.rows.length ? <p className="py-8 text-karimoff-muted">Нет продаж с полной рецептурой за выбранный период.</p> : null}
-      <p className="mt-4 text-sm leading-6 text-karimoff-muted">Остаток за вычетом резервов. Закупка включает страховой запас и минимальный остаток, округляется до упаковки, если её размер известен. Складские движения не создаются.</p>
+      {!plan.rows.length ? <p className={styles.note}>Нет продаж с достоверным составом за выбранный период.</p> : null}
+      <p className={styles.note}>Закупка включает страховой запас и минимальный остаток. Цены — текущие учётные закупочные; отсутствующие цены не заменяются нулём. Сроки поставки и годности не включены.</p>
     </section>
 
-    <section className="border-t border-karimoff-line py-6">
-      <h2 className="mb-4 flex items-center gap-2 text-xl font-bold"><PackageCheck size={21} />План по блюдам</h2>
-      <div className="overflow-x-auto"><table className="w-full min-w-[600px] text-left text-sm">
-        <thead className="border-y border-karimoff-line bg-gray-50"><tr>{["Товар", "Продано", "В день", "На период", "Рецептура"].map((label) => <th key={label} className="px-3 py-3 font-semibold">{label}</th>)}</tr></thead>
-        <tbody>{plan.products.map((product, index) => <tr key={`${product.id ?? product.name}-${index}`} className="border-b border-karimoff-line"><td className="px-3 py-3 font-semibold">{product.name}</td><td className="px-3 py-3 tabular-nums">{number(product.sold)}</td><td className="px-3 py-3 tabular-nums">{number(product.perDay)}</td><td className="px-3 py-3 tabular-nums">{product.issue ? "—" : number(product.forecast)}</td><td className={`px-3 py-3 ${product.issue ? "text-amber-800" : "text-emerald-700"}`}>{product.issue ?? "Учтена"}</td></tr>)}</tbody>
-      </table></div>
+    <section className={styles.section} id="planning-products">
+      <header><h2><PackageCheck size={21} aria-hidden="true" />Прогноз и диагностика по товарам</h2><span>{plan.products.length} составов · исключено {incomplete.length}</span></header>
+      <div className={styles.scroll} tabIndex={0} role="region" aria-label="Прогноз по товарам и причины исключения">
+        <table className={styles.products}>
+          <thead><tr>{["Товар / SKU", "Продано", "Выручка", "В день", "Прогноз", "Сопоставление и состав"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
+          <tbody>{plan.products.map((product) => <tr key={product.key}>
+            <th scope="row">{product.name}{product.sku ? <small className={styles.sku}>SKU: {product.sku}</small> : null}</th>
+            <td>{number(product.sold)}</td><td>{formatRub(product.revenue, 0)}</td><td>{number(product.perDay)}</td><td>{number(product.forecast)}</td>
+            <td className={styles.status}><span className={product.issue ? styles.caution : styles.success}>{product.issue ?? product.compositionSource}</span>
+              {product.issue ? <small>{product.detail}{product.recipePresent ? " · Базовая техкарта есть" : " · Подтверждённой техкарты нет"}</small> : <details><summary>Состав брутто на единицу</summary><ul>{product.components.map((line, index) => <li key={`${line.ingredientId}-${index}`}>{line.name}: {quantity(line.gross, line.unit)}</li>)}</ul></details>}
+            </td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <p className={styles.note}>Возвраты не создают отрицательный спрос. Исторические снимки заказов и подтверждённые SKU имеют приоритет над базовой техкартой. Неизвестный размер или модификация исключаются из закупки, но остаются в прогнозе продаж и знаменателе покрытия.</p>
     </section>
-  </>;
+  </div>;
 }
