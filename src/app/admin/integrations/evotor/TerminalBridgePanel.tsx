@@ -17,11 +17,13 @@ const initialTerminalBridgeActionState: TerminalBridgeActionState = {
 export function TerminalBridgePanel({
   enabled,
   devices,
-  locationId
+  locationId,
+  connectionOnly = false
 }: {
   enabled: boolean;
   devices: TerminalBridgeDevice[];
   locationId: string;
+  connectionOnly?: boolean;
 }) {
   const [pairing, pairingAction, pairingPending] = useActionState(
     createTerminalPairingCodeAction,
@@ -39,9 +41,7 @@ export function TerminalBridgePanel({
           <p className="admin-eyebrow">Смарт-терминал</p>
           <h2 id="terminal-bridge-title" className="mt-2 text-xl font-black">KARIMOFF Terminal Bridge</h2>
           <p className="mt-2 text-sm leading-6 text-karimoff-muted">
-            Привязка приложения Bridge к точке и проверка связи. Кнопка «Отправить тестовый заказ»
-            только показывает состав и сумму: чек и эквайринг не запускаются. Оплата из KARIMOFF POS
-            доступна после сопоставления Bridge с облачной кассой ниже.
+            {connectionOnly ? "Привязка кассы к точке и проверка связи. Продажи поступают из облака Эвотор." : <>Привязка приложения Bridge к точке и проверка связи. Кнопка «Отправить тестовый заказ» только показывает состав и сумму: чек и эквайринг не запускаются. Оплата из KARIMOFF POS доступна после сопоставления Bridge с облачной кассой ниже.</>}
           </p>
         </div>
         <span className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs font-black ${
@@ -73,7 +73,7 @@ export function TerminalBridgePanel({
           </button>
         </form>
 
-        <form action={previewAction} className="rounded-lg border border-karimoff-line p-4">
+        {!connectionOnly ? <form action={previewAction} className="rounded-lg border border-karimoff-line p-4">
           <h3 className="flex items-center gap-2 font-black"><Send size={18} /> Проверка сервера</h3>
           <label className="mt-3 grid gap-2 text-sm font-bold">
             Касса
@@ -98,7 +98,7 @@ export function TerminalBridgePanel({
           <button type="submit" className="admin-primary-button mt-4" disabled={!enabled || !devices.length || previewPending}>
             <Send size={17} /> {previewPending ? "Отправляем…" : "Отправить тестовый заказ"}
           </button>
-        </form>
+        </form> : null}
       </div>
     </section>
   );

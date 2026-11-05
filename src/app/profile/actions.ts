@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { writeAuditLog } from "@/lib/audit";
@@ -12,6 +14,7 @@ import { canUnlinkPublicSocialMethod } from "@/lib/auth/social/linking-rules";
 import { getConfiguredSocialProviders } from "@/lib/auth/social/config";
 
 export async function updateMarketingConsentAction(formData: FormData) {
+  assertEditionActionAllowed("/profile");
   await assertTrustedRequestOrigin();
   const customer = await getCurrentCustomer();
 
@@ -48,12 +51,14 @@ export async function updateMarketingConsentAction(formData: FormData) {
 }
 
 export async function logoutCustomerAction() {
+  assertEditionActionAllowed("/profile");
   await assertTrustedRequestOrigin();
   await clearCustomerSession();
   redirect("/");
 }
 
 export async function unlinkSocialIdentityAction(formData: FormData) {
+  assertEditionActionAllowed("/profile");
   await assertTrustedRequestOrigin();
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login?redirectTo=/profile");

@@ -1,3 +1,5 @@
+import { getProductEdition } from "@/lib/product-edition";
+import { RustamOverview } from "@/components/admin/RustamOverview";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -56,6 +58,8 @@ export default async function AdminPage() {
   if (!staff) redirect("/admin/login");
   if (staff.role === "cook") redirect("/kitchen");
   if (staff.role === "cashier") redirect("/pos");
+
+  if (getProductEdition() === "analytics") return <RustamOverview />;
 
   const locations = await getAccessibleOrderLocations(staff);
   const locationIds = staff.legacy || ["owner", "admin"].includes(staff.role)

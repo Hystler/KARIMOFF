@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
@@ -72,6 +74,7 @@ function normalizeOptionalPhone(value: string | undefined) {
 }
 
 export async function updateSiteSettingsAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/settings");
   await requireAdmin();
 
   const parsed = siteSettingsSchema.safeParse({

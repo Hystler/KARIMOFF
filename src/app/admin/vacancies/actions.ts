@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -89,6 +91,7 @@ function revalidateVacancyViews() {
 }
 
 export async function createVacancyAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/vacancies");
   await requireAdmin();
 
   const parsed = parseVacancyForm(formData);
@@ -109,6 +112,7 @@ export async function createVacancyAction(formData: FormData) {
 }
 
 export async function updateVacancyAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/vacancies");
   await requireAdmin();
 
   const id = getVacancyId(formData);
@@ -130,6 +134,7 @@ export async function updateVacancyAction(formData: FormData) {
 }
 
 export async function toggleVacancyActiveAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/vacancies");
   await requireAdmin();
 
   const id = getVacancyId(formData);
@@ -146,6 +151,7 @@ export async function toggleVacancyActiveAction(formData: FormData) {
 }
 
 export async function deleteVacancyAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/vacancies");
   await requireAdmin();
 
   const id = getVacancyId(formData);

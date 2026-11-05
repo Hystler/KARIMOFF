@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
@@ -11,6 +13,7 @@ export async function createLeadAction(
   _previousState: LeadActionState,
   formData: FormData
 ): Promise<LeadActionState> {
+  assertEditionActionAllowed("/");
   if (isStagingUiMode()) {
     return {
       status: "error",

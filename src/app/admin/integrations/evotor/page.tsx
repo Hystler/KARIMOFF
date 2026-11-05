@@ -1,3 +1,4 @@
+import { getProductEdition } from "@/lib/product-edition";
 import {
   Cable,
   CheckCircle2,
@@ -61,6 +62,7 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
   if (!staff) redirect("/admin/login");
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");
 
+  const cabinet = getProductEdition() === "analytics";
   const params = searchParams ? await searchParams : {};
   const [data, terminalLocations] = await Promise.all([
     getEvotorAdminData(),
@@ -93,12 +95,12 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
           <h1>Эвотор</h1>
           <p>Подключения облака, магазины, кассы и безопасная синхронизация продаж.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {!cabinet ? <div className="flex flex-wrap gap-2">
           <Link href="/admin/integrations/evotor/pos-payments" className="admin-secondary-button">Цепочка POS и чека</Link>
           <Link href="/admin/integrations/evotor/reconciliation" className="admin-secondary-button">
             <Cable size={17} /> Сопоставление продаж
           </Link>
-        </div>
+        </div> : null}
       </header>
 
       {params.queued ? (
@@ -116,13 +118,14 @@ export default async function EvotorIntegrationPage({ searchParams }: PageProps)
       {terminalLocations[0] ? (
         <TerminalBridgePanel
           enabled={terminalBridgeReady()}
+          connectionOnly={cabinet}
           devices={terminalDevices}
           locationId={terminalLocations[0].id}
         />
       ) : null}
       {terminalDevices.length ? <section className="admin-card mt-6 p-5 sm:p-6">
         <h2 className="text-xl font-black">Сопоставление Bridge и облачной кассы</h2>
-        <p className="mt-2 text-sm text-karimoff-muted">Перед оплатой выберите для каждого Bridge ровно ту кассу, которая указана в облаке Эвотор. Изменение во время незавершённой операции заблокировано.</p>
+        <p className="mt-2 text-sm text-karimoff-muted">Выберите для каждого Bridge соответствующую кассу из облака Эвотор. Изменение во время незавершённой операции заблокировано.</p>
         <div className="mt-4 space-y-4">{terminalDevices.map((device) => {
           const options = cloudOptions.filter((option) => option.location_id === device.locationId);
           return <form key={device.id} action={bindTerminalCloudDeviceAction} className="rounded-lg border border-karimoff-line p-4">

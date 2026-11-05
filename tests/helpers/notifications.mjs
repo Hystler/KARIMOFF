@@ -70,6 +70,7 @@ export function notificationHarness(options = {}) {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true }
     }).outputText;
     const importModule = (specifier) => {
+      if (specifier === "@/lib/product-edition") return load("src/lib/product-edition.ts");
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
       if (specifier.startsWith("@/lib/notifications/")) return load(`src/${specifier.slice(2)}.ts`);
       if (specifier.startsWith(".")) return load(`${resolve(dirname(file), specifier)}.ts`);
@@ -78,7 +79,7 @@ export function notificationHarness(options = {}) {
     };
     const setTimer = (callback) => { timers.push(callback); return { unref() {} }; };
     runInNewContext(source, {
-      exports: loadedModule.exports, module: loadedModule, require: importModule, process: { env },
+      exports: loadedModule.exports, module: loadedModule, require: importModule, process: { env: new Proxy(env, { get: (target, key) => key === "KARIMOFF_EDITION" ? (target[key] ?? "full") : target[key] }) },
       fetch: options.fetch ?? (() => { throw new Error("Network forbidden in notification tests"); }),
       URL, AbortSignal, Response, Date,
       setInterval: setTimer, setTimeout: setTimer

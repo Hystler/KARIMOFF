@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
@@ -41,6 +43,7 @@ export async function requestSocialPhoneCodeAction(
   _state: SocialCompleteState,
   formData: FormData
 ): Promise<SocialCompleteState> {
+  assertEditionActionAllowed("/login/social/complete");
   if (isStagingUiMode()) return { status: "error", message: "Вход отключён в тестовом режиме." };
   await assertTrustedRequestOrigin();
   if (!(await readPendingSocialIdentity())) return { status: "error", message: "Сессия входа истекла. Начните заново." };
@@ -60,6 +63,7 @@ export async function completeSocialPhoneAction(
   _state: SocialCompleteState,
   formData: FormData
 ): Promise<SocialCompleteState> {
+  assertEditionActionAllowed("/login/social/complete");
   if (isStagingUiMode()) return { status: "error", message: "Вход отключён в тестовом режиме." };
   await assertTrustedRequestOrigin();
   const pending = await readPendingSocialIdentity();

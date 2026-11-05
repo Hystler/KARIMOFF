@@ -1,4 +1,5 @@
 import "server-only";
+import { isEditionOwnerAllowed } from "@/lib/product-edition";
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
@@ -173,7 +174,8 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
   if (error || !session) return null;
 
   if (session.subject_type === "admin") {
-    if (!isConfigured() || session.subject_ref_hash !== getAdminActorHash()) return null;
+    if (!isConfigured() || session.subject_ref_hash !== getAdminActorHash()
+      || !isEditionOwnerAllowed({id:null,role:"admin",legacy:true})) return null;
     return {
       id: null,
       name: "Владелец",
@@ -193,6 +195,7 @@ export async function getCurrentStaff(): Promise<CurrentStaff | null> {
 
   if (!staff || !["owner", "admin", "manager", "cashier", "cook"].includes(String(staff.role))) return null;
 
+  if (!isEditionOwnerAllowed({id:String(staff.id),role:String(staff.role),legacy:false})) return null;
   return {
     id: String(staff.id),
     name: String(staff.name),

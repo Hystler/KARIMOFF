@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
@@ -241,6 +243,7 @@ function redirectToProductEdit(productId: string, search = "saved=1") {
 }
 
 export async function createProductAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const parsed = parseProductForm(formData);
@@ -275,6 +278,7 @@ export async function createProductAction(formData: FormData) {
 }
 
 export async function updateProductAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const id = getProductId(formData);
@@ -308,6 +312,7 @@ export async function updateProductAction(formData: FormData) {
 }
 
 export async function toggleProductActiveAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const id = getProductId(formData);
@@ -333,6 +338,7 @@ export async function toggleProductActiveAction(formData: FormData) {
 }
 
 export async function deleteProductAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const id = getProductId(formData);
@@ -357,6 +363,7 @@ export async function deleteProductAction(formData: FormData) {
 }
 
 export async function uploadProductImagesAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const productId = getProductId(formData);
@@ -406,6 +413,7 @@ export async function uploadProductImagesAction(formData: FormData) {
 }
 
 export async function updateProductImageAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const productId = getProductId(formData);
@@ -433,6 +441,7 @@ export async function updateProductImageAction(formData: FormData) {
 }
 
 export async function setPrimaryProductImageAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const productId = getProductId(formData);
@@ -471,6 +480,7 @@ export async function setPrimaryProductImageAction(formData: FormData) {
 }
 
 export async function deleteProductImageAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/products");
   await requireAdmin();
 
   const productId = getProductId(formData);

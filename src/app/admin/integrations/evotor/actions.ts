@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { after } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,6 +21,7 @@ import {
 import { isStagingUiMode } from "@/lib/staging-ui-mode";
 
 export async function bindTerminalCloudDeviceAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/integrations/evotor");
   const staff = await terminalBridgeStaff();
   const bridgeDeviceId = String(formData.get("bridge_device_id") ?? "");
   const cloudDeviceId = String(formData.get("cloud_device_id") ?? "");
@@ -102,14 +105,17 @@ async function queueAdminSync(formData: FormData, syncType: "manual" | "check" |
 }
 
 export async function syncEvotorAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/integrations/evotor");
   return queueAdminSync(formData, "manual");
 }
 
 export async function checkEvotorAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/integrations/evotor");
   return queueAdminSync(formData, "check");
 }
 
 export async function incrementalEvotorAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/integrations/evotor");
   return queueAdminSync(formData, "incremental");
 }
 
@@ -117,6 +123,7 @@ export async function createTerminalPairingCodeAction(
   _state: TerminalBridgeActionState,
   formData: FormData
 ): Promise<TerminalBridgeActionState> {
+  assertEditionActionAllowed("/admin/integrations/evotor");
   const staff = await terminalBridgeStaff();
   if (!terminalBridgeReady()) return { status: "error", message: "Мост кассы пока выключен на сервере." };
   const locationId = String(formData.get("location_id") ?? "");
@@ -158,6 +165,7 @@ export async function queueTerminalTestPreviewAction(
   _state: TerminalBridgeActionState,
   formData: FormData
 ): Promise<TerminalBridgeActionState> {
+  assertEditionActionAllowed("/admin/integrations/evotor/terminal-preview");
   const staff = await terminalBridgeStaff();
   if (!terminalBridgeReady()) return { status: "error", message: "Мост кассы пока выключен на сервере." };
   const deviceId = String(formData.get("device_id") ?? "");

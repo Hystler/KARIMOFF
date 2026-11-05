@@ -34,6 +34,7 @@ function loader(stubs = {}, globals = {}) {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
     }).outputText;
     const require = (name) => {
+      if (name === "@/lib/product-edition") return load("src/lib/product-edition.ts");
       if (Object.hasOwn(stubs, name)) return stubs[name];
       if (name === "server-only") return {};
       if (name === "node:crypto") return nativeRequire(name);
@@ -42,7 +43,7 @@ function loader(stubs = {}, globals = {}) {
     };
     runInNewContext(code, {
       module: loadedModule, exports: loadedModule.exports, require, Buffer, Response, URL, AbortController, Error,
-      setTimeout, clearTimeout,
+      setTimeout, clearTimeout, process: { env: { KARIMOFF_EDITION: "full" } },
       fetch: () => { throw new Error("Real network forbidden in payment tests"); },
       ...globals
     }, { filename });
@@ -432,7 +433,7 @@ test("Evotor manual reconciliation refuses cross-location and unauthorized links
       "next/navigation": { redirect: (url) => { redirects.push(decodeURIComponent(url)); throw new Error("NEXT_REDIRECT"); } },
       "@/lib/admin-auth": { getCurrentStaff: async () => ({ id: paymentId, role: "manager", legacy: false }) },
       "@/lib/postgres/server": { getPostgresSql: () => sql }
-    }, { process: { env: {} } })("src/app/admin/integrations/evotor/reconciliation/actions.ts");
+    }, { process: { env: { KARIMOFF_EDITION: "full" } } })("src/app/admin/integrations/evotor/reconciliation/actions.ts");
     const values = new Map([["order_id", orderId], ["receipt_id", receiptId]]);
     await assert.rejects(actions.confirmSaleReconciliationAction(values), /NEXT_REDIRECT/);
     assert.ok(redirects.at(-1).includes(wrongLocation ? "разным точкам" : "недоступна"));

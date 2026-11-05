@@ -1,3 +1,4 @@
+import { getProductEdition, isEditionPathAllowed } from "@/lib/product-edition";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   isMaintenanceMode,
@@ -18,6 +19,16 @@ function adminResponseHeaders(response: NextResponse) {
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const edition = getProductEdition();
+  if (edition === "analytics") {
+    if (pathname === "/" && isReadOnlyRequest(request.method)) {
+      return adminResponseHeaders(NextResponse.redirect(new URL("/admin", request.url)));
+    }
+    if (!isEditionPathAllowed(pathname, edition)) {
+      return adminResponseHeaders(new NextResponse("Not found", { status: 404 }));
+    }
+  }
+
 
   const stagingBlockedPrefixes = [
     "/api/auth",
@@ -91,5 +102,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets/).*)"]
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|assets/).*)"]
 };

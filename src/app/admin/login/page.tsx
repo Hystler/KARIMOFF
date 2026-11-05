@@ -1,3 +1,4 @@
+import { getProductEdition } from "@/lib/product-edition";
 import Link from "next/link";
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { isAdminTotpConfigured } from "@/lib/admin-auth";
@@ -29,7 +30,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
     <main className="admin-page">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <Link href="/" className="mb-5 text-sm font-semibold text-karimoff-muted transition hover:text-karimoff-orange">
-          На сайт KARIMOFF
+          {getProductEdition() === "analytics" ? "В кабинет KARIMOFF" : "На сайт KARIMOFF"}
         </Link>
         <section className="rounded-lg border border-karimoff-line bg-white p-6 shadow-card sm:p-8">
           <h1 className="text-3xl font-black leading-tight">Вход</h1>

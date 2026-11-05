@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { randomUUID } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
@@ -32,10 +34,12 @@ import {
 } from "@/lib/staging-ui-mode";
 
 export async function getCurrentCustomerAction() {
+  assertEditionActionAllowed("/");
   return getCurrentCustomer();
 }
 
 export async function getCheckoutContextAction() {
+  assertEditionActionAllowed("/");
   const stagingUiMode = isStagingUiMode();
   const [customer, settings, deliveryConfig] = await Promise.all([
     stagingUiMode ? Promise.resolve(getStagingDemoCustomer()) : getCurrentCustomer(),
@@ -106,6 +110,7 @@ export async function getCheckoutContextAction() {
 }
 
 export async function suggestDeliveryStreetsAction(query: string) {
+  assertEditionActionAllowed("/");
   const customer = isStagingUiMode() ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { streets: [], error: "Войдите, чтобы оформить заказ." };
   if (isStagingUiMode() && !isStagingDeliveryUiEnabled()) {
@@ -122,6 +127,7 @@ export async function suggestDeliveryStreetsAction(query: string) {
 }
 
 export async function listDeliveryHousesAction(street: string) {
+  assertEditionActionAllowed("/");
   const customer = isStagingUiMode() ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { houses: [], error: "Войдите, чтобы оформить заказ." };
   if (isStagingUiMode() && !isStagingDeliveryUiEnabled()) {
@@ -138,6 +144,7 @@ export async function listDeliveryHousesAction(street: string) {
 }
 
 export async function validateDeliveryAddressAction(input: { deliveryAddressId?: string }) {
+  assertEditionActionAllowed("/");
   const stagingUiMode = isStagingUiMode();
   const customer = stagingUiMode ? getStagingDemoCustomer() : await getCurrentCustomer();
   if (!customer) return { available: false, message: "Войдите, чтобы оформить заказ." };
@@ -168,6 +175,7 @@ export async function createOrderAction(
   _previousState: OrderActionState = initialOrderActionState,
   formData: FormData
 ): Promise<OrderActionState> {
+  assertEditionActionAllowed("/");
   void _previousState;
 
   if (process.env.MAINTENANCE_MODE === "true") {

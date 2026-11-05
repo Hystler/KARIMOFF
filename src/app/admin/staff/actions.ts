@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -25,6 +27,7 @@ async function requireOwnerAdmin() {
 }
 
 export async function createStaffAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/staff");
   await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const name = String(formData.get("name") || "").trim();
@@ -93,6 +96,7 @@ function logStaffManagementFailure(stage: string, error: unknown) {
 }
 
 export async function updateStaffAccessAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/staff");
   await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const id = String(formData.get("id") || "");
@@ -139,6 +143,7 @@ export async function updateStaffAccessAction(formData: FormData) {
 }
 
 export async function toggleStaffAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/staff");
   await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const id = String(formData.get("id") || "");
@@ -167,6 +172,7 @@ export async function toggleStaffAction(formData: FormData) {
 }
 
 export async function deleteStaffAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/staff");
   await assertTrustedRequestOrigin();
   const actor = await requireOwnerAdmin();
   const id = String(formData.get("id") || "");

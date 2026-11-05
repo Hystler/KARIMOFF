@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -48,6 +50,7 @@ function revalidateProduction() {
 }
 
 export async function saveProductionRecipeAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/production");
   const staff = await requireProductionStaff();
   const parsed = productionRecipeSchema.safeParse({
     id: formData.get("id") || null,
@@ -114,6 +117,7 @@ export async function saveProductionRecipeAction(formData: FormData) {
 }
 
 export async function saveProductionOverheadAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/production");
   const staff = await requireProductionStaff();
   const parsed = productionOverheadSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -161,6 +165,7 @@ export async function saveProductionOverheadAction(formData: FormData) {
 }
 
 export async function deleteProductionOverheadAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/production");
   const staff = await requireProductionStaff();
   const id = String(formData.get("id") || "");
   if (!id) redirect("/admin/production?error=missing_overhead");
@@ -180,6 +185,7 @@ export async function deleteProductionOverheadAction(formData: FormData) {
 }
 
 export async function completeProductionRunAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/production");
   const staff = await requireProductionStaff();
   const parsed = productionRunSchema.safeParse({
     recipe_id: formData.get("recipe_id"),

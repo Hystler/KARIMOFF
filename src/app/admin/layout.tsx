@@ -1,3 +1,4 @@
+import { getProductEdition } from "@/lib/product-edition";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AdminWorkspaceShell } from "@/components/admin/AdminWorkspaceShell";
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const staff = await getCurrentStaff();
   if (!staff) return children;
-  return <AdminWorkspaceShell staff={staff}>{children}</AdminWorkspaceShell>;
+  return <AdminWorkspaceShell staff={staff} edition={getProductEdition()}>{children}</AdminWorkspaceShell>;
 }

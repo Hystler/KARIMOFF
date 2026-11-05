@@ -34,6 +34,7 @@ import { useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/login/actions";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { BrandWordmark } from "@/components/Logo";
+import { isEditionPathAllowed, type ProductEdition } from "@/lib/product-edition";
 import type { CurrentStaff } from "@/lib/admin-auth";
 
 const navigation = [
@@ -70,11 +71,11 @@ const roleLabels = {
   cook: "Повар"
 };
 
-export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
+export function AdminWorkspaceShell({ staff, children, edition = "full" }: { staff: CurrentStaff; children: ReactNode; edition?: ProductEdition }) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
-  const items = navigation.filter((item) => (item.roles as readonly string[]).includes(staff.role));
+  const items = navigation.filter((item) => (item.roles as readonly string[]).includes(staff.role) && isEditionPathAllowed(item.href, edition));
   const activeHref = items.filter(({ href }) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
@@ -83,7 +84,7 @@ export function AdminWorkspaceShell({ staff, children }: { staff: CurrentStaff; 
       {isOpen ? <button type="button" className="admin-sidebar-overlay" aria-label="Закрыть меню" onClick={() => setIsOpen(false)} /> : null}
       <aside className={`admin-sidebar ${isOpen ? "admin-sidebar-open" : ""}`}>
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-          <Link href={staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} aria-label="KARIMOFF" className="inline-flex min-h-11 items-center">
+          <Link href={edition === "analytics" ? "/admin" : staff.role === "cook" ? "/kitchen" : staff.role === "cashier" ? "/pos" : "/admin"} aria-label="KARIMOFF" className="inline-flex min-h-11 items-center">
             <BrandWordmark inverse decorative size="sm" />
           </Link>
           <button type="button" onClick={() => setIsOpen(false)} className="admin-sidebar-close" aria-label="Закрыть">

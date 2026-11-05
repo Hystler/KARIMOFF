@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -31,6 +33,7 @@ function getOrderId(formData: FormData) {
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/orders");
   const staff = await requireStaff();
 
   const id = getOrderId(formData);
@@ -94,6 +97,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 }
 
 export async function cancelAndRefundDeliveryAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/orders");
   const staff = await requireStaff();
   const id = getOrderId(formData);
   if (staff.legacy || !["owner", "admin"].includes(staff.role)) {
@@ -208,6 +212,7 @@ export async function cancelAndRefundDeliveryAction(formData: FormData) {
 }
 
 export async function checkYooKassaPaymentStatusAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/orders");
   const staff = await requireStaff();
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) {
     redirect("/admin/orders?error=payment_permission");

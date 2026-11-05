@@ -1,4 +1,6 @@
 "use server";
+
+import { assertEditionActionAllowed } from "@/lib/product-edition";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -14,6 +16,7 @@ function refresh() {
   for (const path of ["/menu", "/pos", "/admin/ingredients", "/admin/ingredients/extras"]) revalidatePath(path, "layout");
 }
 export async function installExtrasAction() {
+  assertEditionActionAllowed("/admin/ingredients/extras");
   await authorize();
   let message = "";
   try {
@@ -24,6 +27,7 @@ export async function installExtrasAction() {
   redirect(`/admin/ingredients/extras?${message ? `error=${encodeURIComponent(message)}` : "saved=1"}`);
 }
 export async function updateExtraPriceAction(data: FormData) {
+  assertEditionActionAllowed("/admin/ingredients/extras");
   await authorize();
   const parsed = z.object({ ingredientId: z.uuid(), label: z.string().min(1).max(120), price: z.coerce.number().positive().max(10000).multipleOf(0.01) })
     .safeParse({ ingredientId: data.get("ingredient_id"), label: data.get("label"), price: String(data.get("price") ?? "").replace(/\s/g, "").replace(",", ".") });

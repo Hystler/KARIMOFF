@@ -1,5 +1,7 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -46,6 +48,7 @@ function validUuid(value: string) {
 }
 
 export async function saveManualDeliveryAddressAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/delivery-addresses");
   const staff = await requireDeliveryAdmin();
   const locationId = await getLocationId();
   const city = clean(formData.get("city"), 100) || null;
@@ -112,6 +115,7 @@ export async function saveManualDeliveryAddressAction(formData: FormData) {
 }
 
 export async function updateDeliveryAddressDisplayNameAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/delivery-addresses");
   const staff = await requireDeliveryAdmin();
   const locationId = await getLocationId();
   const id = clean(formData.get("id"), 36);
@@ -135,6 +139,7 @@ export async function updateDeliveryAddressDisplayNameAction(formData: FormData)
 }
 
 export async function setDeliveryAddressAvailabilityAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/delivery-addresses");
   const staff = await requireDeliveryAdmin();
   const locationId = await getLocationId();
   const id = clean(formData.get("id"), 36);
@@ -169,6 +174,7 @@ export async function setDeliveryAddressAvailabilityAction(formData: FormData) {
 }
 
 export async function bulkReviewDeliveryAddressesAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/delivery-addresses");
   const staff = await requireDeliveryAdmin();
   const locationId = await getLocationId();
   const action = String(formData.get("review_action") ?? "");

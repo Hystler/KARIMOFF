@@ -35,6 +35,7 @@ function createLoader({ mocks = {}, env = {}, consoleMock = console } = {}) {
     }).outputText;
 
     function importModule(specifier) {
+      if (specifier === "@/lib/product-edition") return load("src/lib/product-edition.ts");
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
       if (specifier === "@/lib/phone") return load("src/lib/phone.ts");
       if (specifier === "@/lib/request-security") return load("src/lib/request-security.ts");
@@ -56,7 +57,7 @@ function createLoader({ mocks = {}, env = {}, consoleMock = console } = {}) {
       exports: loadedModule.exports,
       module: loadedModule,
       require: importModule,
-      process: { env },
+      process: { env: new Proxy(env, { get: (target, key) => key === "KARIMOFF_EDITION" ? (target[key] ?? "full") : target[key] }) },
       console: consoleMock,
       Buffer,
       URL,

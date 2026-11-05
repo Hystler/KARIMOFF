@@ -1,11 +1,14 @@
 "use server";
 
+import { assertEditionActionAllowed } from "@/lib/product-edition";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function deleteLeadAction(formData: FormData) {
+  assertEditionActionAllowed("/admin/leads");
   const isAuthed = await isAdminAuthenticated();
 
   if (!isAuthed) {

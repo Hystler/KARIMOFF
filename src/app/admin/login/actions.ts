@@ -1,5 +1,7 @@
 "use server";
 
+import { isEditionOwnerAllowed } from "@/lib/product-edition";
+
 import { redirect } from "next/navigation";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { writeAuditLog } from "@/lib/audit";
@@ -76,6 +78,7 @@ export async function loginAction(formData: FormData) {
   const staff = findRussianPhoneLookupCandidate(staffRows, phone);
 
   if (staff?.is_active && (await verifyPassword(password, String(staff.password_hash)))) {
+    if (!isEditionOwnerAllowed({id:staff.id,role:staff.role,legacy:false})) redirect("/admin/login?error=invalid");
     await clearAuthFailures("admin_login", normalizedPhone);
     try {
       await setStaffSession(String(staff.id));
@@ -115,6 +118,7 @@ export async function loginAction(formData: FormData) {
   }
 
   await clearAuthFailures("admin_login", normalizedPhone);
+  if (!isEditionOwnerAllowed({id:null,role:"admin",legacy:true})) redirect("/admin/login?error=invalid");
   await setAdminSession();
   await writeAuditLog({
     action: "admin.login",
