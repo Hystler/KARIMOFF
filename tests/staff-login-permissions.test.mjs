@@ -35,6 +35,7 @@ function createLoader({ mocks = {}, env = {}, consoleMock = console } = {}) {
     }).outputText;
 
     function importModule(specifier) {
+    if (specifier === "@/lib/staging-access") return { assertStagingBusinessWriteAllowed() {}, isLiveReadonlyStaging: () => false, withStagingAuthWrites: fn => fn(), stagingAuthWriteAllowed: () => false };
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
       if (specifier === "@/lib/phone") return load("src/lib/phone.ts");
       if (specifier === "@/lib/request-security") return load("src/lib/request-security.ts");

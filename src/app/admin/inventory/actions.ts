@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -64,6 +66,7 @@ function redirectWithResult(path: string, result: { ok: boolean; message?: strin
 }
 
 export async function createInventoryItemAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const ingredientId = getIngredientId(formData);
@@ -78,6 +81,7 @@ export async function createInventoryItemAction(formData: FormData) {
 }
 
 export async function updateInventoryCardAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const ingredientId = getIngredientId(formData);
@@ -93,6 +97,7 @@ export async function updateInventoryCardAction(formData: FormData) {
 }
 
 export async function receiptInventoryAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const ingredientId = getIngredientId(formData);
@@ -108,6 +113,7 @@ export async function receiptInventoryAction(formData: FormData) {
 }
 
 export async function writeOffInventoryAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const ingredientId = getIngredientId(formData);
@@ -122,6 +128,7 @@ export async function writeOffInventoryAction(formData: FormData) {
 }
 
 export async function correctInventoryAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const ingredientId = getIngredientId(formData);

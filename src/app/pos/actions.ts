@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -34,6 +36,7 @@ export async function createPosOrderAction(
   _previous: PosOrderActionState,
   formData: FormData
 ): Promise<PosOrderActionState> {
+  assertStagingBusinessWriteAllowed();
   if (isStagingUiMode()) {
     return { status: "error", message: "Кассовые операции отключены в тестовом режиме." };
   }

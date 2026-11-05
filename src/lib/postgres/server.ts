@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isLiveReadonlyStaging, stagingAuthWriteAllowed } from "@/lib/staging-access";
 import postgres, { type Sql } from "postgres";
 
 type Row = Record<string, unknown>;
@@ -90,6 +91,7 @@ const allowedTables = new Set([
 ]);
 
 let sharedSql: Sql | null = null;
+let authSql: Sql | null = null;
 
 function quoteIdentifier(value: string) {
   if (!identifierPattern.test(value)) {
@@ -121,20 +123,21 @@ function databaseError(error: unknown) {
   };
 }
 
-function getSql() {
+function getSql(authWrite = false) {
   if (process.env.STAGING_DATA_MODE === "fixture") {
     throw new Error("PostgreSQL access is disabled in staging fixture mode.");
   }
-  if (sharedSql) return sharedSql;
+  if (authWrite && authSql) return authSql;
+  if (!authWrite && sharedSql) return sharedSql;
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is not configured.");
 
-  sharedSql = postgres(databaseUrl, {
+  const client = postgres(databaseUrl, {
     connect_timeout: 10,
     idle_timeout: 20,
-    max: 10,
+    max: isLiveReadonlyStaging() ? (authWrite ? 2 : 4) : 10,
     prepare: false,
-    ...(process.env.STAGING_UI_MODE === "true"
+    ...((process.env.STAGING_UI_MODE === "true" || isLiveReadonlyStaging()) && !authWrite
       ? {
           connection: {
             application_name: "karimoff-staging-ui-readonly",
@@ -143,7 +146,8 @@ function getSql() {
         }
       : {})
   });
-  return sharedSql;
+  if (authWrite) authSql = client; else sharedSql = client;
+  return client;
 }
 
 export function getPostgresSql() {
@@ -291,7 +295,7 @@ class PostgresQueryBuilder implements PromiseLike<QueryResult> {
   }
 
   private async execute(): Promise<QueryResult> {
-    const sql = getSql();
+    const sql = getSql(this.operation !== "select" && stagingAuthWriteAllowed(this.table, this.operation));
     const parameters: unknown[] = [];
 
     try {
@@ -411,7 +415,7 @@ export class PostgresCompatClient {
       return { count: null, data: null, error: { message: "Unsupported database function." } };
     }
 
-    const sql = getSql();
+    const sql = getSql(stagingAuthWriteAllowed(name, "rpc"));
     const parameters = Object.values(args);
     const namedArguments = Object.keys(args)
       .map((key, index) => `${quoteIdentifier(key)} => $${index + 1}`)

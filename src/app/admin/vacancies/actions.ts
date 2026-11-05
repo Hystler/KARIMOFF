@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -89,6 +91,7 @@ function revalidateVacancyViews() {
 }
 
 export async function createVacancyAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const parsed = parseVacancyForm(formData);
@@ -109,6 +112,7 @@ export async function createVacancyAction(formData: FormData) {
 }
 
 export async function updateVacancyAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getVacancyId(formData);
@@ -130,6 +134,7 @@ export async function updateVacancyAction(formData: FormData) {
 }
 
 export async function toggleVacancyActiveAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getVacancyId(formData);
@@ -146,6 +151,7 @@ export async function toggleVacancyActiveAction(formData: FormData) {
 }
 
 export async function deleteVacancyAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getVacancyId(formData);

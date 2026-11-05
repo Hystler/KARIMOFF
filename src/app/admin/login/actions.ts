@@ -1,5 +1,7 @@
 "use server";
 
+import { isLiveReadonlyStaging, withStagingAuthWrites } from "@/lib/staging-access";
+
 import { redirect } from "next/navigation";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { writeAuditLog } from "@/lib/audit";
@@ -31,6 +33,10 @@ function logLoginFailure(stage: string, error: unknown) {
 }
 
 export async function loginAction(formData: FormData) {
+  return withStagingAuthWrites(() => loginImpl(formData));
+}
+
+async function loginImpl(formData: FormData) {
   if (!verifyStaffLoginCsrfToken(String(formData.get("csrf_token") || ""))) {
     console.warn(JSON.stringify({ event: "staff.login.security_rejected", stage: "csrf", error_type: "InvalidCsrfToken" }));
     redirect("/admin/login?error=session_expired");
@@ -50,6 +56,18 @@ export async function loginAction(formData: FormData) {
 
   if (!limit.allowed) {
     redirect(`/admin/login?error=${encodeURIComponent(limit.message ?? "Слишком много попыток входа.")}`);
+  }
+
+  if (isLiveReadonlyStaging()) {
+    if (!(await verifyAdminCredentials(phone, password, totp))) {
+      await recordAuthFailure("admin_login", normalizedPhone);
+      await writeAuditLog({ action: "admin.login_failed", actorRefHash: getAdminActorHash(), actorType: "admin", sourcePath: "/admin/login" });
+      redirect("/admin/login?error=invalid");
+    }
+    await clearAuthFailures("admin_login", normalizedPhone);
+    await setAdminSession();
+    await writeAuditLog({ action: "admin.login", actorRefHash: getAdminActorHash(), actorType: "admin", sourcePath: "/admin/login" });
+    redirect("/admin");
   }
 
   const database = createDatabaseServerClient();
@@ -126,6 +144,10 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  return withStagingAuthWrites(logoutImpl);
+}
+
+async function logoutImpl() {
   await assertTrustedRequestOrigin();
   await writeAuditLog({
     action: "admin.logout",

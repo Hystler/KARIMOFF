@@ -1,4 +1,6 @@
 "use server";
+
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -7,6 +9,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { saveProductPortions } from "@/lib/product-portions-service";
 
 export async function saveProductPortionsAction(data: FormData) {
+  assertStagingBusinessWriteAllowed();
   const staff = await getCurrentStaff();
   if (!staff || !["owner", "admin"].includes(staff.role)) redirect("/admin/login");
   const parsed = z.object({ id: z.uuid(), quantities: z.array(z.coerce.number().positive().max(10000)).min(2).max(4),

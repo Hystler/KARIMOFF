@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { redirect } from "next/navigation";
 import { clearAuthFailures, checkAuthRateLimit, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { writeAuditLog } from "@/lib/audit";
@@ -100,6 +102,7 @@ export async function requestRegisterCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();
@@ -140,6 +143,7 @@ export async function registerWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();
@@ -234,6 +238,7 @@ export async function confirmRegisterAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();
@@ -323,6 +328,7 @@ export async function requestLoginCodeAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();
@@ -376,6 +382,7 @@ export async function loginWithPasswordAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();
@@ -454,6 +461,7 @@ export async function confirmLoginAction(
   _previousState: AuthActionState = initialAuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  assertStagingBusinessWriteAllowed();
   void _previousState;
   if (isStagingUiMode()) return stagingAuthUnavailable();
   await assertTrustedRequestOrigin();

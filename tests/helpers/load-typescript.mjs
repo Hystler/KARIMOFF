@@ -9,6 +9,7 @@ export function loadTypeScript(file, imports = {}) {
   }).outputText;
   const exports = {};
   new Function('require', 'exports', code)(id => {
+    if (id === "@/lib/staging-access") return { assertStagingBusinessWriteAllowed() {}, isLiveReadonlyStaging: () => false, withStagingAuthWrites: fn => fn(), stagingAuthWriteAllowed: () => false };
     if (id in imports) return imports[id];
     if (id.startsWith('.')) {
       const target = resolve(dirname(path), id);

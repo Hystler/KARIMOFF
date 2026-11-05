@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { getCurrentStaff } from "@/lib/admin-auth";
 import { canStaffAccessOrder } from "@/lib/order-flow/access";
@@ -13,6 +15,7 @@ export async function transitionKitchenOrderAction(
   _previous: KitchenActionState,
   formData: FormData
 ): Promise<KitchenActionState> {
+  assertStagingBusinessWriteAllowed();
   if (process.env.MAINTENANCE_MODE === "true") {
     return { status: "error", message: "Сервис временно обновляется. Попробуйте снова через несколько минут." };
   }

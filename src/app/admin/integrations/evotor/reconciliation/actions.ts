@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/admin-auth";
@@ -20,6 +22,7 @@ function fail(code: string): never {
 }
 
 export async function confirmSaleReconciliationAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   if (process.env.MAINTENANCE_MODE === "true") fail("Сервис временно обновляется.");
   const staff = await requireReconciliationStaff();
   const orderId = String(formData.get("order_id") ?? "");
@@ -150,6 +153,7 @@ export async function confirmSaleReconciliationAction(formData: FormData) {
 }
 
 export async function removeSaleReconciliationAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   if (process.env.MAINTENANCE_MODE === "true") fail("Сервис временно обновляется.");
   const staff = await requireReconciliationStaff();
   const linkId = String(formData.get("link_id") ?? "");

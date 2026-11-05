@@ -74,6 +74,7 @@ export function notificationHarness(options = {}) {
       if (specifier.startsWith("@/lib/notifications/")) return load(`src/${specifier.slice(2)}.ts`);
       if (specifier.startsWith(".")) return load(`${resolve(dirname(file), specifier)}.ts`);
       if (["zod", "react/jsx-runtime", "lucide-react"].includes(specifier)) return require(specifier);
+      if (specifier === "@/lib/staging-access") return { assertStagingBusinessWriteAllowed() {}, isLiveReadonlyStaging: () => false, withStagingAuthWrites: fn => fn(), stagingAuthWriteAllowed: () => false };
       throw new Error(`Unexpected import: ${specifier}`);
     };
     const setTimer = (callback) => { timers.push(callback); return { unref() {} }; };

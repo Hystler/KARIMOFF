@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { leadFormSchema, type LeadActionState } from "@/lib/lead-schema";
 import { getShortUserAgent, isChecked } from "@/lib/legal-consents";
 import { normalizeRussianPhone } from "@/lib/phone";
@@ -11,6 +13,7 @@ export async function createLeadAction(
   _previousState: LeadActionState,
   formData: FormData
 ): Promise<LeadActionState> {
+  assertStagingBusinessWriteAllowed();
   if (isStagingUiMode()) {
     return {
       status: "error",

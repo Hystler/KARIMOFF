@@ -34,6 +34,7 @@ function loader(stubs = {}, globals = {}) {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
     }).outputText;
     const require = (name) => {
+      if (name === "@/lib/staging-access") return { assertStagingBusinessWriteAllowed() {}, isLiveReadonlyStaging: () => false, withStagingAuthWrites: fn => fn(), stagingAuthWriteAllowed: () => false };
       if (Object.hasOwn(stubs, name)) return stubs[name];
       if (name === "server-only") return {};
       if (name === "node:crypto") return nativeRequire(name);

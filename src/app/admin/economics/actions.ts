@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -20,6 +22,7 @@ export async function saveEconomicsSettingsAction(
   _state: EconomicsSaveState,
   formData: FormData
 ): Promise<EconomicsSaveState> {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const database = createDatabaseServerClient();

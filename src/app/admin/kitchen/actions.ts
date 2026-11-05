@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -20,6 +22,7 @@ const schema = z.object({
 });
 
 export async function saveKitchenSlaAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   const staff = await getCurrentStaff();
   if (!staff) redirect("/admin/login");
   if (!staff.legacy && !["owner", "admin", "manager"].includes(staff.role)) redirect("/admin");

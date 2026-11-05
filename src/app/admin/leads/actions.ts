@@ -1,11 +1,14 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function deleteLeadAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   const isAuthed = await isAdminAuthenticated();
 
   if (!isAuthed) {

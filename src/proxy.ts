@@ -1,3 +1,4 @@
+import { isLiveReadonlyStaging } from "@/lib/staging-access";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   isMaintenanceMode,
@@ -18,6 +19,9 @@ function adminResponseHeaders(response: NextResponse) {
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  if (isLiveReadonlyStaging()) return stagingProxy(request);
+
+
 
   const stagingBlockedPrefixes = [
     "/api/auth",
@@ -90,6 +94,25 @@ export function proxy(request: NextRequest) {
   });
 }
 
+async function stagingProxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const { getStaffForSessionToken } = await import("@/lib/admin-auth");
+    const read = isReadOnlyRequest(request.method);
+    const login = pathname === "/admin/login";
+    const health = pathname === "/api/health" && read;
+    const forbiddenApi = pathname.startsWith("/api/") && !health
+      && !/^\/api\/admin\/(?:analytics\/(?:performance|report\/export|sales\/export)|products\/[0-9a-f-]{36}\/images)$/.test(pathname);
+    if (forbiddenApi || (!read && !login)) return adminResponseHeaders(NextResponse.json({ok:false,error:"Staging is read-only."},{status:403}));
+    if (!login && !health) {
+      const staff = await getStaffForSessionToken(request.cookies.get("karimoff_admin_session")?.value);
+      if (!staff?.legacy) {
+        if (pathname.startsWith("/api/")) return adminResponseHeaders(NextResponse.json({ok:false},{status:401}));
+        return adminResponseHeaders(NextResponse.redirect(new URL("/admin/login", request.url)));
+      }
+    }
+    const headers = getOpaqueStaffLoginOriginHeaders(request);
+    return adminResponseHeaders(headers ? NextResponse.next({request:{headers}}) : NextResponse.next());
+  }
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets/).*)"]
 };

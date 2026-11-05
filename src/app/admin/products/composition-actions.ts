@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -56,6 +58,7 @@ function compositionSaveError(message: string) {
 }
 
 export async function addProductIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const parsed = productIngredientFormSchema.safeParse({
@@ -97,6 +100,7 @@ export async function addProductIngredientAction(formData: FormData) {
 }
 
 export async function updateProductIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = String(formData.get("id") || "");
@@ -138,6 +142,7 @@ export async function updateProductIngredientAction(formData: FormData) {
 }
 
 export async function deleteProductIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = String(formData.get("id") || "");

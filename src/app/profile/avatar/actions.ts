@@ -1,11 +1,14 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { avatarSchema } from "@/lib/avatar-schema";
 import { createDatabaseServerClient } from "@/lib/database/server";
 
 export async function saveAvatarAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   const customer = await getCurrentCustomer();
 
   if (!customer) {

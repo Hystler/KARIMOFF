@@ -1,6 +1,7 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.STAGING_UI_MODE === "true") return;
+  if (process.env.STAGING_LIVE_READONLY === "true") return;
   const { startEvotorBackgroundScheduler } = await import(
     "@/lib/integrations/evotor/scheduler"
   );

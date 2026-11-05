@@ -157,7 +157,10 @@ export async function clearAdminSession() {
 
 export async function getCurrentStaff(): Promise<CurrentStaff | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  return getStaffForSessionToken(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
+}
+
+export async function getStaffForSessionToken(token: string | undefined): Promise<CurrentStaff | null> {
   const database = createDatabaseServerClient();
   if (!token || !database) return null;
 

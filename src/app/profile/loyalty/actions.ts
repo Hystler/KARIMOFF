@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
@@ -9,6 +11,7 @@ import { ensureLoyaltyCard, rotateLoyaltyCard } from "@/lib/loyalty-card";
 import { assertTrustedRequestOrigin } from "@/lib/security/csrf";
 
 export async function rotateLoyaltyCardAction() {
+  assertStagingBusinessWriteAllowed();
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login?redirectTo=/profile/loyalty");
   await rotateLoyaltyCard(customer.id);
@@ -16,6 +19,7 @@ export async function rotateLoyaltyCardAction() {
 }
 
 export async function joinLoyaltyAction() {
+  assertStagingBusinessWriteAllowed();
   await assertTrustedRequestOrigin();
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login?redirectTo=/profile/loyalty");

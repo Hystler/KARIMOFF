@@ -1,11 +1,14 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireNotificationStaff, retryNotificationDelivery } from "@/lib/notifications/operations";
 import { logOperationalError } from "@/lib/observability";
 
 export async function retryNotificationAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireNotificationStaff();
   let outcome = "not_allowed";
   try {

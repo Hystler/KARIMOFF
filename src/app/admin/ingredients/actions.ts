@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
@@ -96,6 +98,7 @@ function revalidateIngredientViews() {
 }
 
 export async function updateIngredientPriceAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const parsed = ingredientPriceSchema.safeParse({
@@ -148,6 +151,7 @@ export async function updateIngredientPriceAction(formData: FormData) {
 }
 
 export async function createIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const parsed = toPayload(formData);
@@ -176,6 +180,7 @@ export async function createIngredientAction(formData: FormData) {
 }
 
 export async function updateIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getIngredientId(formData);
@@ -206,6 +211,7 @@ export async function updateIngredientAction(formData: FormData) {
 }
 
 export async function toggleIngredientActiveAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getIngredientId(formData);
@@ -232,6 +238,7 @@ export async function toggleIngredientActiveAction(formData: FormData) {
 }
 
 export async function archiveIngredientAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const id = getIngredientId(formData);

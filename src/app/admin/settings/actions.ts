@@ -1,5 +1,7 @@
 "use server";
 
+import { assertStagingBusinessWriteAllowed } from "@/lib/staging-access";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminActorHash, isAdminAuthenticated } from "@/lib/admin-auth";
@@ -72,6 +74,7 @@ function normalizeOptionalPhone(value: string | undefined) {
 }
 
 export async function updateSiteSettingsAction(formData: FormData) {
+  assertStagingBusinessWriteAllowed();
   await requireAdmin();
 
   const parsed = siteSettingsSchema.safeParse({
